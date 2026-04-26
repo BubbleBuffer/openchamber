@@ -777,8 +777,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
     const activeProjectId = useProjectsStore((state) => state.activeProjectId);
     const setActiveProjectIdOnly = useProjectsStore((state) => state.setActiveProjectIdOnly);
 
-    const currentProviderId = useConfigStore((state) => state.currentProviderId);
-    const currentModelId = useConfigStore((state) => state.currentModelId);
+    const getEffectiveModel = useConfigStore((state) => state.getEffectiveModel);
     const currentVariant = useConfigStore((state) => state.currentVariant);
     const currentAgentName = useConfigStore((state) => state.currentAgentName);
     const setAgent = useConfigStore((state) => state.setAgent);
@@ -1261,13 +1260,14 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
             messageToQueue = appendInlineComments(messageToQueue, drafts);
         }
         const attachmentsToQueue = sanitizeAttachmentsForSend(sendableAttachedFiles);
+        const queueEffectiveModel = getEffectiveModel();
 
         addToQueue(currentSessionId, {
             content: messageToQueue,
             attachments: attachmentsToQueue.length > 0 ? attachmentsToQueue : undefined,
-            sendConfig: currentProviderId && currentModelId ? {
-                providerID: currentProviderId,
-                modelID: currentModelId,
+            sendConfig: queueEffectiveModel.providerId && queueEffectiveModel.modelId ? {
+                providerID: queueEffectiveModel.providerId,
+                modelID: queueEffectiveModel.modelId,
                 agent: currentAgentName ?? undefined,
                 variant: currentVariant ?? undefined,
             } : undefined,
@@ -1285,7 +1285,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
         if (!isMobile) {
             textareaRef.current?.focus();
         }
-    }, [hasContent, currentSessionId, message, sendableAttachedFiles, sanitizeAttachmentsForSend, addToQueue, clearAttachedFiles, isMobile, consumeDrafts, currentProviderId, currentModelId, currentAgentName, currentVariant]);
+    }, [hasContent, currentSessionId, message, sendableAttachedFiles, sanitizeAttachmentsForSend, addToQueue, clearAttachedFiles, isMobile, consumeDrafts, getEffectiveModel, currentAgentName, currentVariant]);
 
     const handleQueuedMessageEdit = React.useCallback((content: string) => {
         setMessage(content);
@@ -1319,7 +1319,8 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
             return;
         }
 
-        if (!currentProviderId || !currentModelId) {
+        const effectiveModel = getEffectiveModel();
+        if (!effectiveModel.providerId || !effectiveModel.modelId) {
             console.warn('Cannot send message: provider or model not selected');
             return;
         }
@@ -1483,10 +1484,11 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                     const { opencodeClient } = await import('@/lib/opencode/client');
                     const sdk = opencodeClient.getSdkClient();
                     const configState = useConfigStore.getState();
+                    const compactEffectiveModel = configState.getEffectiveModel();
                     await sdk.session.summarize({
                         sessionID: currentSessionId,
-                        modelID: configState.currentModelId || '',
-                        providerID: configState.currentProviderId || '',
+                        modelID: compactEffectiveModel.modelId || '',
+                        providerID: compactEffectiveModel.providerId || '',
                     });
                 } catch (error) {
                     toast.error(error instanceof Error ? error.message : 'Failed to compact session');
@@ -1507,8 +1509,8 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                     const instructionsText = await renderMagicPrompt('session.summary.instructions', { topic_block: topicBlock });
                     await sendMessage(
                         visibleText,
-                        currentProviderId,
-                        currentModelId,
+                        effectiveModel.providerId,
+                        effectiveModel.modelId,
                         currentAgentName,
                         [],
                         agentMentionName,
@@ -1529,8 +1531,8 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                     const instructionsText = await renderMagicPrompt('session.review.instructions');
                     await sendMessage(
                         visibleText,
-                        currentProviderId,
-                        currentModelId,
+                        effectiveModel.providerId,
+                        effectiveModel.modelId,
                         currentAgentName,
                         [],
                         agentMentionName,
@@ -1554,8 +1556,8 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
 
         const sendPromise = sendMessage(
             primaryText,
-            currentProviderId,
-            currentModelId,
+            effectiveModel.providerId,
+            effectiveModel.modelId,
             currentAgentName,
             primaryAttachments,
             agentMentionName,
