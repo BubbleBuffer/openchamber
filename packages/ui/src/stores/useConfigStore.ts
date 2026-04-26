@@ -552,6 +552,8 @@ interface ConfigStore {
     loadAgents: (options?: { directory?: string | null }) => Promise<boolean>;
     setProvider: (providerId: string) => void;
     setModel: (modelId: string) => void;
+    isAutoModel: boolean;
+    setAutoModel: (isAuto: boolean) => void;
     setCurrentVariant: (variant: string | undefined) => void;
     cycleCurrentVariant: () => void;
     getCurrentModelVariants: () => string[];
@@ -601,6 +603,7 @@ export const useConfigStore = create<ConfigStore>()(
                 agents: [],
                 currentProviderId: "",
                 currentModelId: "",
+                isAutoModel: true,
                 currentVariant: undefined,
                 currentAgentName: undefined,
                 selectedProviderId: "",
@@ -1090,6 +1093,10 @@ export const useConfigStore = create<ConfigStore>()(
                             },
                         };
                     });
+                },
+
+                setAutoModel: (isAuto: boolean) => {
+                    set({ isAutoModel: isAuto });
                 },
 
                 setCurrentVariant: (variant: string | undefined) => {
@@ -2060,6 +2067,7 @@ export const useConfigStore = create<ConfigStore>()(
                     currentProviderId: state.currentProviderId,
                     currentModelId: state.currentModelId,
                     currentVariant: state.currentVariant,
+                    isAutoModel: state.isAutoModel,
                     currentAgentName: state.currentAgentName,
                     selectedProviderId: state.selectedProviderId,
                     agentModelSelections: state.agentModelSelections,
