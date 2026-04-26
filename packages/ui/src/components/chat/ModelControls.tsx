@@ -1019,6 +1019,12 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
 
     const handleProviderAndModelChange = (providerId: string, modelId: string) => {
         try {
+            // Close panels immediately on any selection attempt
+            setAgentMenuOpen(false);
+            if (isCompact) {
+                closeMobilePanel();
+            }
+
             const result = tryApplyModelSelection(providerId, modelId, currentAgentName || undefined);
             if (result !== 'applied') {
                 if (result === 'provider-missing') {
@@ -1030,9 +1036,8 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
             }
             // Add to recent models on successful selection
             addRecentModel(providerId, modelId);
-            setAgentMenuOpen(false);
+
             if (isCompact) {
-                closeMobilePanel();
                 if (onMobilePanelSelection) {
                     requestAnimationFrame(() => {
                         onMobilePanelSelection();
