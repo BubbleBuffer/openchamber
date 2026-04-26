@@ -17,8 +17,6 @@ import { streamDebugEnabled } from "@/stores/utils/streamDebug";
 const MODELS_DEV_API_URL = "https://models.dev/api.json";
 const MODELS_DEV_PROXY_URL = "/api/openchamber/models-metadata";
 
-const FALLBACK_PROVIDER_ID = "opencode";
-const FALLBACK_MODEL_ID = "big-pickle";
 const GIT_UTILITY_PROVIDER_ID = "zen";
 const GIT_UTILITY_PREFERRED_MODEL_ID = "big-pickle";
 
@@ -1434,19 +1432,13 @@ export const useConfigStore = create<ConfigStore>()(
                                 }
                             }
 
-                            // 3. Fall back to opencode/big-pickle
+                            // 3. Last resort: first provider's first model
                             if (!resolvedProviderId) {
-                                if (validateModel(FALLBACK_PROVIDER_ID, FALLBACK_MODEL_ID)) {
-                                    resolvedProviderId = FALLBACK_PROVIDER_ID;
-                                    resolvedModelId = FALLBACK_MODEL_ID;
-                                } else {
-                                    // Last resort: first provider's first model
-                                    const firstProvider = providers[0];
-                                    const firstModel = firstProvider?.models[0];
-                                    if (firstProvider && firstModel) {
-                                        resolvedProviderId = firstProvider.id;
-                                        resolvedModelId = firstModel.id;
-                                    }
+                                const firstProvider = providers[0];
+                                const firstModel = firstProvider?.models[0];
+                                if (firstProvider && firstModel) {
+                                    resolvedProviderId = firstProvider.id;
+                                    resolvedModelId = firstModel.id;
                                 }
                             }
 
