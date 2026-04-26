@@ -1039,6 +1039,7 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
             }
             // Add to recent models on successful selection
             addRecentModel(providerId, modelId);
+            setAutoModel(false);
 
             if (isCompact) {
                 if (onMobilePanelSelection) {
@@ -1086,6 +1087,7 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
     };
 
     const getCurrentModelDisplayName = () => {
+        if (isAutoModel) return 'Auto';
         if (!currentProviderId || !currentModelId) return 'Not selected';
         if (models.length === 0) return 'Not selected';
         const currentModel = models.find((m: ProviderModel) => m.id === currentModelId);
@@ -2233,7 +2235,9 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                                         buttonHeight
                                     )}
                                 >
-                                    {currentProviderId ? (
+                                    {isAutoModel ? (
+                                        <RiSparklingLine className={cn(controlIconSize, 'text-primary/70 flex-shrink-0')} />
+                                    ) : currentProviderId ? (
                                         <>
                                             <ProviderLogo
                                                 providerId={currentProviderId}
