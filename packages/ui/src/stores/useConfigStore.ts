@@ -573,6 +573,7 @@ interface ConfigStore {
     initializeApp: () => Promise<void>;
     getCurrentProvider: () => ProviderWithModelList | undefined;
     getCurrentModel: () => ProviderModel | undefined;
+    getEffectiveModel: () => { providerId: string; modelId: string };
     getCurrentAgent: () => Agent | undefined;
     getModelMetadata: (providerId: string, modelId: string) => ModelMetadata | undefined;
     // Returns only visible agents (excludes hidden internal agents like title, compaction, summary)
@@ -2015,6 +2016,22 @@ export const useConfigStore = create<ConfigStore>()(
                         return undefined;
                     }
                     return provider.models.find((model) => model.id === currentModelId);
+                },
+
+                getEffectiveModel: () => {
+                    const { isAutoModel, currentProviderId, currentModelId, currentAgentName, agents, providers } = get();
+                    if (!isAutoModel) {
+                        return { providerId: currentProviderId, modelId: currentModelId };
+                    }
+                    const agent = agents.find((a) => a.name === currentAgentName);
+                    if (agent?.model?.providerID && agent?.model?.modelID) {
+                        const provider = providers.find((p) => p.id === agent.model!.providerID);
+                        const model = provider?.models.find((m) => m.id === agent.model!.modelID);
+                        if (model) {
+                            return { providerId: agent.model!.providerID, modelId: agent.model!.modelID };
+                        }
+                    }
+                    return { providerId: currentProviderId, modelId: currentModelId };
                 },
 
                 getCurrentAgent: () => {

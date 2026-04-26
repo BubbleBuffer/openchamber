@@ -2455,7 +2455,9 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                             buttonHeight
                         )}
                     >
-                        {currentProviderId ? (
+                        {isAutoModel ? (
+                            <RiSparklingLine className={cn(controlIconSize, 'text-primary/70 flex-shrink-0')} />
+                        ) : currentProviderId ? (
                             <ProviderLogo
                                 providerId={currentProviderId}
                                 className={cn(controlIconSize, 'flex-shrink-0')}

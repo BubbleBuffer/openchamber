@@ -131,8 +131,7 @@ export function useBrowserVoice(): UseBrowserVoiceReturn {
   const sendMessage = useSessionUIStore((s) => s.sendMessage);
   const setPendingInputText = useInputStore((s) => s.setPendingInputText);
   const createSession = useSessionUIStore((s) => s.createSession);
-  const currentProviderId = useConfigStore((state) => state.currentProviderId);
-  const currentModelId = useConfigStore((state) => state.currentModelId);
+  const getEffectiveModel = useConfigStore((state) => state.getEffectiveModel);
   const currentAgentName = useConfigStore((state) => state.currentAgentName);
   const voiceModeEnabled = useConfigStore((state) => state.voiceModeEnabled);
   const voiceProvider = useConfigStore((state) => state.voiceProvider);
@@ -348,7 +347,8 @@ export function useBrowserVoice(): UseBrowserVoiceReturn {
     lastTranscriptRef.current = finalText.trim();
 
     // Check if provider and model are configured
-    if (!currentProviderId || !currentModelId) {
+    const effectiveModel = getEffectiveModel();
+    if (!effectiveModel.providerId || !effectiveModel.modelId) {
       setError('No provider or model configured. Please configure them in settings.');
       setStatus('error');
       return;
@@ -389,8 +389,8 @@ export function useBrowserVoice(): UseBrowserVoiceReturn {
       // Send message to AI
       await sendMessage(
         finalText.trim(),
-        currentProviderId,
-        currentModelId,
+        effectiveModel.providerId,
+        effectiveModel.modelId,
         currentAgentName ?? undefined
       );
       
@@ -581,7 +581,7 @@ export function useBrowserVoice(): UseBrowserVoiceReturn {
       setStatus('error');
       processingMessageRef.current = false;
     }
-  }, [currentSessionId, currentProviderId, currentModelId, currentAgentName, language, sendMessage, setPendingInputText, createSession, speechRate, speechPitch, speechVolume, isMobile, isServerTTSAvailable, speakServerTTS, isSayTTSAvailable, speakSayTTS, voiceProvider, sayVoice, browserVoice, openaiVoice, openaiCompatibleVoice, openaiCompatibleUrl, openaiCompatibleTtsModel, summarizeVoiceConversation, summarizeCharacterThreshold, conversationMode, sttProvider]);
+  }, [currentSessionId, getEffectiveModel, currentAgentName, language, sendMessage, setPendingInputText, createSession, speechRate, speechPitch, speechVolume, isMobile, isServerTTSAvailable, speakServerTTS, isSayTTSAvailable, speakSayTTS, voiceProvider, sayVoice, browserVoice, openaiVoice, openaiCompatibleVoice, openaiCompatibleUrl, openaiCompatibleTtsModel, summarizeVoiceConversation, summarizeCharacterThreshold, conversationMode, sttProvider]);
 
   // Handle speech recognition result
   const handleSpeechResult = useCallback(async (text: string, isFinal: boolean) => {
