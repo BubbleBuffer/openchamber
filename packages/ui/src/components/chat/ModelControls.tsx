@@ -1460,6 +1460,24 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                         </div>
                     )}
 
+                    {!mobileModelQuery && (
+                        <button
+                            type="button"
+                            onClick={handleAutoSelect}
+                            className={cn(
+                                'flex items-center gap-2 w-full rounded-xl px-3 py-2.5 border transition-colors text-left',
+                                isAutoModel
+                                    ? 'border-primary/40 bg-primary/5'
+                                    : 'border-border/40 bg-[var(--surface-elevated)] hover:bg-interactive-hover/50',
+                            )}
+                        >
+                            <RiSparklingLine className="h-4 w-4 text-primary/70 flex-shrink-0" />
+                            <span className="flex-1 typography-body font-medium text-foreground">Auto</span>
+                            <span className="text-xs text-muted-foreground">use agent default</span>
+                            {isAutoModel && <RiCheckLine className="h-4 w-4 text-primary flex-shrink-0" />}
+                        </button>
+                    )}
+
                     {/* Favorites Section for Mobile */}
                     {!mobileModelQuery && favoriteModelsList.length > 0 && (
                         <div className="rounded-xl border border-border/40 bg-[var(--surface-elevated)] overflow-hidden">
