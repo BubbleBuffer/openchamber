@@ -17,6 +17,7 @@ import {
     RiPencilAiLine,
     RiQuestionLine,
     RiSearchLine,
+    RiSparklingLine,
     RiStarFill,
     RiStarLine,
     RiText,
@@ -310,6 +311,8 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
     const getModelMetadata = useConfigStore((state) => state.getModelMetadata);
     const getCurrentAgent = useConfigStore((state) => state.getCurrentAgent);
     const getVisibleAgents = useConfigStore((state) => state.getVisibleAgents);
+    const isAutoModel = useConfigStore((s) => s.isAutoModel);
+    const setAutoModel = useConfigStore((s) => s.setAutoModel);
 
     // Use visible agents (excludes hidden internal agents)
     const agents = getVisibleAgents();
@@ -1054,6 +1057,19 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
         } catch (error) {
             console.error('[ModelControls] Handle model change error:', error);
         }
+    };
+
+    const handleAutoSelect = () => {
+        setAgentMenuOpen(false);
+        if (isCompact) {
+            closeMobilePanel();
+            if (onMobilePanelSelection) {
+                requestAnimationFrame(() => {
+                    onMobilePanelSelection();
+                });
+            }
+        }
+        setAutoModel(true);
     };
 
     const getModelDisplayName = (model: ProviderModel | undefined) => {
@@ -2243,6 +2259,33 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                                     />
                                 </div>
                             </div>
+
+                            {!desktopModelQuery && (
+                                <div
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={handleAutoSelect}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            handleAutoSelect();
+                                        }
+                                    }}
+                                    className={cn(
+                                        'typography-meta group flex items-center gap-1.5 rounded-md px-2 py-1.5 cursor-pointer',
+                                        isAutoModel
+                                            ? 'bg-primary/10 hover:bg-primary/10'
+                                            : 'hover:bg-interactive-hover/50',
+                                    )}
+                                >
+                                    <span className="flex h-4 w-4 items-center justify-center text-muted-foreground">
+                                        <RiSparklingLine className="h-4 w-4" />
+                                    </span>
+                                    <span className="flex-1 font-medium text-foreground">Auto</span>
+                                    <span className="text-[10px] text-muted-foreground font-normal">use agent default</span>
+                                    {isAutoModel && <RiCheckLine className="h-4 w-4 text-primary flex-shrink-0" />}
+                                </div>
+                            )}
 
                             {/* Scrollable content */}
                             <ScrollableOverlay
