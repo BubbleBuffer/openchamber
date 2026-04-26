@@ -38,7 +38,9 @@ When `isAutoModel` is `true`, `currentProviderId` and `currentModelId` are irrel
 
 ### Persistence
 
-"Auto" state is per-session (stored in `useSelectionStore` alongside per-session model/agent selections). Persisted via `sessionAgentModelSelections` in localStorage.
+`isAutoModel` is stored in `useConfigStore` (which uses zustand persist middleware), so it survives page reloads. It's a session-scoped display mode flag — the underlying `currentProviderId`/`currentModelId` are still set to the agent's resolved model for API calls.
+
+When "Auto" is selected, the visible selection is "cleared" (display says "Auto"). The resolved model IDs remain populated from the agent's config for actual LLM calls. This way the API call pipeline works without changes.
 
 ## 2. Default to "Auto"
 
@@ -54,9 +56,9 @@ On fresh start or new session, `currentProviderId`/`currentModelId` default to a
 
 ### Implementation
 
-In `useConfigStore` initial state and wherever model defaults are set:
-- Set `isAutoModel: true` instead of defaulting to a specific provider/model.
-- Remove any hardcoded fallback to "big pickle" or any other specific model.
+- Set `isAutoModel: true` in the config store's initial state.
+- In `loadProviders` initialization (lines ~1430-1444), skip the `opencode/big-pickle` fallback level. If no settings default and no agent model exist, fall straight to "first available provider/model."
+- Remove the `FALLBACK_PROVIDER_ID` / `FALLBACK_MODEL_ID` constants if they are unused after the change.
 
 ## 3. Mobile Panel Auto-Close Fix
 
