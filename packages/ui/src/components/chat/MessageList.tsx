@@ -15,6 +15,7 @@ import { FadeInDisabledProvider } from './message/FadeInOnReveal';
 import { hasPendingUserSendAnimation, consumePendingUserSendAnimation } from '@/lib/userSendAnimation';
 import { streamPerfCount, streamPerfMeasure } from '@/stores/utils/streamDebug';
 import type { StreamPhase } from './message/types';
+import { LoadOlderButton } from './turn/LoadOlderButton';
 
 const MESSAGE_LIST_VIRTUALIZE_THRESHOLD = 15;
 const MESSAGE_LIST_OVERSCAN = 6;
@@ -1597,23 +1598,11 @@ const MessageList = React.forwardRef<MessageListHandle, MessageListProps>(({
 
     return (
         <div>
-                {(turnStart > 0 || hasMoreAbove) && (
-                    <div className="flex justify-center py-3">
-                        {isLoadingOlder ? (
-                            <span className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                                Loading…
-                            </span>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={stableOnLoadOlder}
-                                className="text-xs uppercase tracking-wide text-muted-foreground/80 hover:text-foreground"
-                            >
-                                Load older messages
-                            </button>
-                        )}
-                    </div>
-                )}
+                <LoadOlderButton
+                    hasMoreAbove={turnStart > 0 || hasMoreAbove}
+                    isLoadingOlder={isLoadingOlder}
+                    onLoadOlder={stableOnLoadOlder}
+                />
 
                 <FadeInDisabledProvider disabled={disableFadeIn}>
                     <div className="relative w-full">
