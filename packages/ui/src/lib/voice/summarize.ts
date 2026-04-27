@@ -6,6 +6,7 @@
  */
 
 import { useConfigStore } from '@/stores/useConfigStore';
+import { useVoiceSettingsStore } from '@/stores/useVoiceSettingsStore';
 
 const resolveSummarizeUrl = (): string => {
     if (typeof window === 'undefined') {
@@ -37,9 +38,10 @@ export async function summarizeText(
         mode?: 'tts' | 'note';
     }
 ): Promise<string> {
-    const store = useConfigStore.getState();
-    const threshold = options?.threshold ?? store.summarizeCharacterThreshold;
-    const maxLength = options?.maxLength ?? store.summarizeMaxLength;
+    const voiceSettings = useVoiceSettingsStore.getState();
+    const configStore = useConfigStore.getState();
+    const threshold = options?.threshold ?? voiceSettings.summarizeCharacterThreshold;
+    const maxLength = options?.maxLength ?? voiceSettings.summarizeMaxLength;
     const mode = options?.mode ?? 'tts';
     const normalizedSource = text.replace(/\s+/g, ' ').trim();
     
@@ -52,7 +54,7 @@ export async function summarizeText(
     }
     
     try {
-        const zenModel = store.settingsZenModel;
+        const zenModel = configStore.settingsZenModel;
          const response = await fetch(resolveSummarizeUrl(), {
             method: 'POST',
             headers: {
@@ -108,7 +110,7 @@ export function shouldSummarize(
     text: string,
     context: 'message' | 'voice'
 ): boolean {
-    const store = useConfigStore.getState();
+    const store = useVoiceSettingsStore.getState();
     
     const isEnabled = context === 'message' 
         ? store.summarizeMessageTTS 

@@ -26,7 +26,7 @@ import { useUIStore } from '@/stores/useUIStore';
 import { flattenAssistantTextParts, suggestPlanTitleFromText } from '@/lib/messages/messageText';
 import { MULTIRUN_EXECUTION_FORK_PROMPT_META_TEXT } from '@/lib/messages/executionMeta';
 import { useMessageTTS } from '@/hooks/useMessageTTS';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useVoiceSettingsStore } from '@/stores/useVoiceSettingsStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 import { TextSelectionMenu } from './TextSelectionMenu';
 import { copyTextToClipboard } from '@/lib/clipboard';
@@ -724,8 +724,8 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
 
     // TTS for message playback
     const { isPlaying: isTTSPlaying, play: playTTS, stop: stopTTS } = useMessageTTS();
-    const showMessageTTSButtons = useConfigStore((state) => state.showMessageTTSButtons);
-    const voiceProvider = useConfigStore((state) => state.voiceProvider);
+    const showMessageTTSButtons = useVoiceSettingsStore((state) => state.showMessageTTSButtons);
+    const voiceProvider = useVoiceSettingsStore((state) => state.voiceProvider);
 
     const readAloudTooltip = React.useMemo(() => {
         if (isTTSPlaying) {

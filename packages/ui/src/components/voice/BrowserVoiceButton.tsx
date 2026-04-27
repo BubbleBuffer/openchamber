@@ -12,7 +12,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useBrowserVoice } from '@/hooks/useBrowserVoice';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useVoiceSettingsStore } from '@/stores/useVoiceSettingsStore';
 import { browserVoiceService } from '@/lib/voice/browserVoiceService';
 import { isVSCodeRuntime } from '@/lib/desktop';
 import { Button } from '@/components/ui/button';
@@ -70,7 +70,7 @@ const normalizeVoiceErrorMessage = (error: string): string => {
  * Browser Voice Button with language selection
  */
 export function BrowserVoiceButton() {
-    const voiceModeEnabled = useConfigStore((s) => s.voiceModeEnabled);
+    const voiceModeEnabled = useVoiceSettingsStore((s) => s.voiceModeEnabled);
     
     const {
         status,

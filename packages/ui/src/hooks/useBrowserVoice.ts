@@ -32,6 +32,7 @@ import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useInputStore } from '@/sync/input-store';
 import { getSyncMessages, getSyncParts } from '@/sync/sync-refs';
 import { useConfigStore } from '@/stores/useConfigStore';
+import { useVoiceSettingsStore } from '@/stores/useVoiceSettingsStore';
 import { useServerTTS } from './useServerTTS';
 import { useSayTTS } from './useSayTTS';
 import { summarizeText, shouldSummarize, sanitizeForTTS } from '@/lib/voice/summarize';
@@ -133,30 +134,30 @@ export function useBrowserVoice(): UseBrowserVoiceReturn {
   const createSession = useSessionUIStore((s) => s.createSession);
   const getEffectiveModel = useConfigStore((state) => state.getEffectiveModel);
   const currentAgentName = useConfigStore((state) => state.currentAgentName);
-  const voiceModeEnabled = useConfigStore((state) => state.voiceModeEnabled);
-  const voiceProvider = useConfigStore((state) => state.voiceProvider);
-  const speechRate = useConfigStore((state) => state.speechRate);
-  const speechPitch = useConfigStore((state) => state.speechPitch);
-  const speechVolume = useConfigStore((state) => state.speechVolume);
-  const sayVoice = useConfigStore((state) => state.sayVoice);
-  const browserVoice = useConfigStore((state) => state.browserVoice);
-  const openaiVoice = useConfigStore((state) => state.openaiVoice);
-  const openaiCompatibleVoice = useConfigStore((state) => state.openaiCompatibleVoice);
-  const openaiCompatibleUrl = useConfigStore((state) => state.openaiCompatibleUrl);
-  const openaiCompatibleTtsModel = useConfigStore((state) => state.openaiCompatibleTtsModel);
-  const summarizeVoiceConversation = useConfigStore((state) => state.summarizeVoiceConversation);
-  const summarizeCharacterThreshold = useConfigStore((state) => state.summarizeCharacterThreshold);
+  const voiceModeEnabled = useVoiceSettingsStore((state) => state.voiceModeEnabled);
+  const voiceProvider = useVoiceSettingsStore((state) => state.voiceProvider);
+  const speechRate = useVoiceSettingsStore((state) => state.speechRate);
+  const speechPitch = useVoiceSettingsStore((state) => state.speechPitch);
+  const speechVolume = useVoiceSettingsStore((state) => state.speechVolume);
+  const sayVoice = useVoiceSettingsStore((state) => state.sayVoice);
+  const browserVoice = useVoiceSettingsStore((state) => state.browserVoice);
+  const openaiVoice = useVoiceSettingsStore((state) => state.openaiVoice);
+  const openaiCompatibleVoice = useVoiceSettingsStore((state) => state.openaiCompatibleVoice);
+  const openaiCompatibleUrl = useVoiceSettingsStore((state) => state.openaiCompatibleUrl);
+  const openaiCompatibleTtsModel = useVoiceSettingsStore((state) => state.openaiCompatibleTtsModel);
+  const summarizeVoiceConversation = useVoiceSettingsStore((state) => state.summarizeVoiceConversation);
+  const summarizeCharacterThreshold = useVoiceSettingsStore((state) => state.summarizeCharacterThreshold);
 
   const shouldCheckOpenAIAvailability = voiceModeEnabled && (voiceProvider === 'openai' || voiceProvider === 'openai-compatible');
   const shouldCheckSayAvailability = voiceModeEnabled && voiceProvider === 'say';
 
   // STT provider config
-  const sttProvider = useConfigStore((state) => state.sttProvider);
-  const sttServerUrl = useConfigStore((state) => state.sttServerUrl);
-  const sttModel = useConfigStore((state) => state.sttModel);
-  const sttLanguage = useConfigStore((state) => state.sttLanguage);
-  const sttSilenceThresholdDb = useConfigStore((state) => state.sttSilenceThresholdDb);
-  const sttSilenceHoldMs = useConfigStore((state) => state.sttSilenceHoldMs);
+  const sttProvider = useVoiceSettingsStore((state) => state.sttProvider);
+  const sttServerUrl = useVoiceSettingsStore((state) => state.sttServerUrl);
+  const sttModel = useVoiceSettingsStore((state) => state.sttModel);
+  const sttLanguage = useVoiceSettingsStore((state) => state.sttLanguage);
+  const sttSilenceThresholdDb = useVoiceSettingsStore((state) => state.sttSilenceThresholdDb);
+  const sttSilenceHoldMs = useVoiceSettingsStore((state) => state.sttSilenceHoldMs);
 
   const isSupported = sttProvider === 'server'
     ? audioStreamService.isSupported()

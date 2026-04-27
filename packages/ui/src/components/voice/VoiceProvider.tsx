@@ -1,6 +1,6 @@
 import React from 'react';
 import { useVoiceContext } from '@/hooks/useVoiceContext';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useVoiceSettingsStore } from '@/stores/useVoiceSettingsStore';
 
 const VoiceContextBridge = React.memo(function VoiceContextBridge() {
     useVoiceContext();
@@ -19,7 +19,7 @@ const VoiceContextBridge = React.memo(function VoiceContextBridge() {
  * ```
  */
 export function VoiceProvider({ children }: { children: React.ReactNode }) {
-    const voiceModeEnabled = useConfigStore((state) => state.voiceModeEnabled);
+    const voiceModeEnabled = useVoiceSettingsStore((state) => state.voiceModeEnabled);
 
     return (
         <>

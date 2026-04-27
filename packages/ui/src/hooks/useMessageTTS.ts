@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useState } from 'react';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useVoiceSettingsStore } from '@/stores/useVoiceSettingsStore';
 import { useServerTTS } from './useServerTTS';
 import { useSayTTS } from './useSayTTS';
 import { browserVoiceService } from '@/lib/voice/browserVoiceService';
@@ -24,19 +24,19 @@ export interface UseMessageTTSReturn {
 export function useMessageTTS(): UseMessageTTSReturn {
     const [isPlaying, setIsPlaying] = useState(false);
     
-    const voiceProvider = useConfigStore((state) => state.voiceProvider);
-    const speechRate = useConfigStore((state) => state.speechRate);
-    const speechPitch = useConfigStore((state) => state.speechPitch);
-    const speechVolume = useConfigStore((state) => state.speechVolume);
-    const sayVoice = useConfigStore((state) => state.sayVoice);
-    const browserVoice = useConfigStore((state) => state.browserVoice);
-    const openaiVoice = useConfigStore((state) => state.openaiVoice);
-    const openaiCompatibleVoice = useConfigStore((state) => state.openaiCompatibleVoice);
-    const openaiCompatibleUrl = useConfigStore((state) => state.openaiCompatibleUrl);
-    const openaiCompatibleTtsModel = useConfigStore((state) => state.openaiCompatibleTtsModel);
-    const summarizeMessageTTS = useConfigStore((state) => state.summarizeMessageTTS);
-    const summarizeCharacterThreshold = useConfigStore((state) => state.summarizeCharacterThreshold);
-    const showMessageTTSButtons = useConfigStore((state) => state.showMessageTTSButtons);
+    const voiceProvider = useVoiceSettingsStore((state) => state.voiceProvider);
+    const speechRate = useVoiceSettingsStore((state) => state.speechRate);
+    const speechPitch = useVoiceSettingsStore((state) => state.speechPitch);
+    const speechVolume = useVoiceSettingsStore((state) => state.speechVolume);
+    const sayVoice = useVoiceSettingsStore((state) => state.sayVoice);
+    const browserVoice = useVoiceSettingsStore((state) => state.browserVoice);
+    const openaiVoice = useVoiceSettingsStore((state) => state.openaiVoice);
+    const openaiCompatibleVoice = useVoiceSettingsStore((state) => state.openaiCompatibleVoice);
+    const openaiCompatibleUrl = useVoiceSettingsStore((state) => state.openaiCompatibleUrl);
+    const openaiCompatibleTtsModel = useVoiceSettingsStore((state) => state.openaiCompatibleTtsModel);
+    const summarizeMessageTTS = useVoiceSettingsStore((state) => state.summarizeMessageTTS);
+    const summarizeCharacterThreshold = useVoiceSettingsStore((state) => state.summarizeCharacterThreshold);
+    const showMessageTTSButtons = useVoiceSettingsStore((state) => state.showMessageTTSButtons);
 
     const isServerProvider = voiceProvider === 'openai' || voiceProvider === 'openai-compatible';
     const shouldCheckOpenAIAvailability = showMessageTTSButtons && isServerProvider;

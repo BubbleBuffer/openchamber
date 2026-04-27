@@ -18,6 +18,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useConfigStore } from '@/stores/useConfigStore';
+import { useVoiceSettingsStore } from '@/stores/useVoiceSettingsStore';
 
 interface ServerTTSStatusCache {
   available: boolean;
@@ -137,10 +138,10 @@ export function useServerTTS(options: UseServerTTSOptions = {}): UseServerTTSRet
   // Get current model, threshold, and max length from config store for summarization
   const currentProviderId = useConfigStore((state) => state.currentProviderId);
   const currentModelId = useConfigStore((state) => state.currentModelId);
-  const summarizeCharacterThreshold = useConfigStore((state) => state.summarizeCharacterThreshold);
-  const summarizeMaxLength = useConfigStore((state) => state.summarizeMaxLength);
-  const openaiApiKey = useConfigStore((state) => state.openaiApiKey);
-  const openaiCompatibleUrl = useConfigStore((state) => state.openaiCompatibleUrl);
+  const summarizeCharacterThreshold = useVoiceSettingsStore((state) => state.summarizeCharacterThreshold);
+  const summarizeMaxLength = useVoiceSettingsStore((state) => state.summarizeMaxLength);
+  const openaiApiKey = useVoiceSettingsStore((state) => state.openaiApiKey);
+  const openaiCompatibleUrl = useVoiceSettingsStore((state) => state.openaiCompatibleUrl);
   const settingsZenModel = useConfigStore((state) => state.settingsZenModel);
 
   // Check if server TTS is available
