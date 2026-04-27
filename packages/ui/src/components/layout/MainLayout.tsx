@@ -25,6 +25,7 @@ import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { cn } from '@/lib/utils';
 import { isDesktopShell } from '@/lib/desktop';
 import { lazyWithChunkRecovery } from '@/lib/chunkLoadRecovery';
+import { OfflineIndicator } from '@/components/ui/OfflineIndicator';
 
 import { ChatView } from '@/components/views';
 
@@ -961,6 +962,7 @@ export const MainLayout: React.FC = () => {
             )}
 
         </div>
+        <OfflineIndicator />
     </DiffWorkerProvider>
     );
 };

@@ -503,6 +503,7 @@ export const useAgentConfigStore = create<AgentConfigStore>()(
 
                 setAgent: (agentName: string | undefined) => {
                     const { agents, settingsDefaultModel, settingsDefaultVariant } = get();
+                    const { providers } = useProviderConfigStore.getState();
 
                     // Set agent name in agent store
                     set({ currentAgentName: agentName });
