@@ -20,14 +20,11 @@ import { opencodeClient } from "@/lib/opencode/client"
 import { useConfigStore } from "@/stores/useConfigStore"
 import { useProjectsStore } from "@/stores/useProjectsStore"
 import { useDirectoryStore } from "@/stores/useDirectoryStore"
-import { useSessionFoldersStore } from "@/stores/useSessionFoldersStore"
-import { useCommandsStore } from "@/stores/useCommandsStore"
+import { sendMessage as sendMessageImpl, routeMessage } from "./send-message"
+import { createSession as createSessionImpl, deleteSessions as deleteSessionsImpl, archiveSessions as archiveSessionsImpl } from "./session-ops"
 import { getSafeStorage } from "@/stores/utils/safeStorage"
-import { markPendingUserSendAnimation } from "@/lib/userSendAnimation"
 import { flattenAssistantTextParts } from "@/lib/messages/messageText"
 import { EXECUTION_FORK_META_TEXT } from "@/lib/messages/executionMeta"
-import { waitForWorktreeBootstrap } from "@/lib/worktrees/worktreeBootstrap"
-import { waitForPendingDraftWorktreeRequest } from "@/lib/worktrees/pendingDraftWorktree"
 import { resolveProjectForSessionDirectory } from "@/lib/projectResolution"
 import {
   getSyncSessions,
@@ -39,13 +36,11 @@ import {
 import { markSessionViewed } from "./notification-store"
 import { setActiveSession } from "./sync-context"
 import {
-  createSession as createSessionAction,
   deleteSession as deleteSessionAction,
   archiveSession as archiveSessionAction,
   updateSessionTitle as updateSessionTitleAction,
   shareSession as shareSessionAction,
   unshareSession as unshareSessionAction,
-  optimisticSend,
 } from "./session-actions"
 import { useInputStore, type SyntheticContextPart } from "./input-store"
 import { useSelectionStore } from "./selection-store"
@@ -55,82 +50,7 @@ import { getAttachedSessionDirectory } from "./session-worktree-contract"
 
 export type { AttachedFile }
 
-// ---------------------------------------------------------------------------
-// Send routing — shell mode, slash commands, or normal prompt
-// ---------------------------------------------------------------------------
 
-function routeMessage(params: {
-  sessionId: string
-  content: string
-  providerID: string
-  modelID: string
-  agent?: string
-  variant?: string
-  inputMode?: "normal" | "shell"
-  files?: Array<{ type: "file"; mime: string; url: string; filename: string }>
-  additionalParts?: Array<{ text: string; synthetic?: boolean; files?: Array<{ type: "file"; mime: string; url: string; filename: string }> }>
-}): Promise<void> {
-  const sdk = opencodeClient.getSdkClient()
-
-  if (params.inputMode === "shell") {
-    const dir = opencodeClient.getDirectory() || undefined
-    return sdk.session.shell({
-      sessionID: params.sessionId,
-      directory: dir,
-      agent: params.agent,
-      model: { providerID: params.providerID, modelID: params.modelID },
-      command: params.content,
-    }).then(() => {})
-  }
-
-  // Slash commands — fire and forget, SSE delivers messages and status
-  if (params.content.startsWith("/")) {
-    const [head, ...tail] = params.content.split(" ")
-    const cmdName = head.slice(1)
-
-    const dirState = getDirectoryState()
-    const syncCommands = dirState?.command ?? []
-    const storeCommands = useCommandsStore.getState().commands
-
-    const isCommand = syncCommands.find((c) => c.name === cmdName)
-      || storeCommands.find((c) => c.name === cmdName)
-
-    if (isCommand) {
-      const dir = opencodeClient.getDirectory() || undefined
-      return sdk.session.command({
-        sessionID: params.sessionId,
-        directory: dir,
-        command: cmdName,
-        arguments: tail.join(" "),
-        agent: params.agent,
-        model: `${params.providerID}/${params.modelID}`,
-        variant: params.variant,
-        parts: params.files,
-      }).then(() => {})
-    }
-  }
-
-  // Normal prompt — optimistic insert so message appears instantly
-  return optimisticSend({
-    sessionId: params.sessionId,
-    content: params.content,
-    providerID: params.providerID,
-    modelID: params.modelID,
-    agent: params.agent,
-    files: params.files,
-    send: (messageID) => opencodeClient.sendMessage({
-      id: params.sessionId,
-      providerID: params.providerID,
-      modelID: params.modelID,
-      text: params.content,
-      agent: params.agent,
-      variant: params.variant,
-      files: params.files,
-      additionalParts: params.additionalParts,
-      messageId: messageID,
-    }).then(() => {}),
-  })
-}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -666,251 +586,27 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
   },
 
   // ---------------------------------------------------------------------------
-  // sendMessage — calls SDK, reads domain data from sync
+  // sendMessage — delegates to standalone module
   // ---------------------------------------------------------------------------
-  sendMessage: async (
-    content: string,
-    providerID: string,
-    modelID: string,
-    agent?: string,
-    attachments?: AttachedFile[],
-    agentMentionName?: string,
-    additionalParts?: Array<{ text: string; attachments?: AttachedFile[]; synthetic?: boolean }>,
-    variant?: string,
-    inputMode?: "normal" | "shell",
-  ) => {
-    // Clear non-Git changed-files bar on new user message for current session
-    const sid = get().currentSessionId;
-    if (sid) {
-      const map = new Map(get().pendingChangesBarDismissed);
-      map.delete(sid);
-      set({ pendingChangesBarDismissed: map });
-    }
-
-    const draft = get().newSessionDraft
-    const trimmedAgent = typeof agent === "string" && agent.trim().length > 0 ? agent.trim() : undefined
-
-    // ---- New session from draft ----
-    if (draft?.open) {
-      const draftTargetFolderId = draft.targetFolderId
-      let draftDirectoryOverride = draft.bootstrapPendingDirectory ?? draft.directoryOverride ?? null
-      const draftProjectId = draft.selectedProjectId ?? null
-
-      if (draft.pendingWorktreeRequestId) {
-        draftDirectoryOverride = await waitForPendingDraftWorktreeRequest(draft.pendingWorktreeRequestId)
-        get().resolvePendingDraftWorktreeTarget(draft.pendingWorktreeRequestId, draftDirectoryOverride)
-      }
-
-      const created = await get().createSession(draft.title, draftDirectoryOverride, draft.parentID ?? null)
-      if (!created?.id) throw new Error("Failed to create session")
-
-      persistDraftTarget({
-        projectId: draftProjectId,
-        directory: normalizePath(draftDirectoryOverride ?? created.directory ?? null),
-      })
-
-      const draftSyntheticParts = draft.syntheticParts
-      await activateConfigForDirectory(draftDirectoryOverride ?? created.directory ?? null)
-
-      const configState = useConfigStore.getState()
-      const draftAgentName = configState.currentAgentName
-      const effectiveDraftAgent = trimmedAgent ?? draftAgentName
-
-      if (configState.currentProviderId && configState.currentModelId) {
-        useSelectionStore.getState().saveSessionModelSelection(created.id, configState.currentProviderId, configState.currentModelId)
-      }
-
-      if (effectiveDraftAgent) {
-        useSelectionStore.getState().saveSessionAgentSelection(created.id, effectiveDraftAgent)
-        if (configState.currentProviderId && configState.currentModelId) {
-          useSelectionStore.getState().saveAgentModelForSession(created.id, effectiveDraftAgent, configState.currentProviderId, configState.currentModelId)
-          useSelectionStore.getState().saveAgentModelVariantForSession(created.id, effectiveDraftAgent, configState.currentProviderId, configState.currentModelId, variant)
-        }
-      }
-
-      get().initializeNewOpenChamberSession(created.id, configState.agents ?? [])
-
-      const createdDirectory = normalizePath(draftDirectoryOverride ?? created.directory ?? null)
-
-      get().closeNewSessionDraft()
-      get().setCurrentSession(created.id, createdDirectory)
-
-      if (draftTargetFolderId) {
-        const scopeKey = draftDirectoryOverride || created.directory || null
-        if (scopeKey) {
-          useSessionFoldersStore.getState().addSessionToFolder(scopeKey, draftTargetFolderId, created.id)
-        }
-      }
-
-      const mergedAdditionalParts = draftSyntheticParts?.length
-        ? [...(additionalParts || []), ...draftSyntheticParts]
-        : additionalParts
-
-      if (createdDirectory) {
-        await waitForWorktreeBootstrap(createdDirectory)
-      }
-
-      markPendingUserSendAnimation(created.id)
-
-      const files = attachments?.map((a) => ({
-        type: "file" as const,
-        mime: a.mimeType,
-        url: a.dataUrl,
-        filename: a.filename,
-      }))
-
-      await routeMessage({
-        sessionId: created.id,
-        content,
-        providerID,
-        modelID,
-        agent: effectiveDraftAgent,
-        variant,
-        inputMode,
-        files,
-        additionalParts: mergedAdditionalParts?.map((p) => ({
-          text: p.text,
-          synthetic: p.synthetic,
-          files: p.attachments?.map((a: AttachedFile) => ({
-            type: "file" as const,
-            mime: a.mimeType,
-            url: a.dataUrl,
-            filename: a.filename,
-          })),
-        })),
-      })
-      return
-    }
-
-    // ---- Existing session ----
-    const currentSessionId = get().currentSessionId
-    const sessionAgentSelection = currentSessionId
-      ? useSelectionStore.getState().getSessionAgentSelection(currentSessionId)
-      : null
-    const configAgentName = useConfigStore.getState().currentAgentName
-    const effectiveAgent = trimmedAgent || sessionAgentSelection || configAgentName || undefined
-
-    if (currentSessionId && effectiveAgent) {
-      useSelectionStore.getState().saveSessionAgentSelection(currentSessionId, effectiveAgent)
-      useSelectionStore.getState().saveAgentModelVariantForSession(currentSessionId, effectiveAgent, providerID, modelID, variant)
-    }
-
-    if (currentSessionId) {
-      const viewportState = useViewportStore.getState()
-      const memState = viewportState.sessionMemoryState.get(currentSessionId)
-      if (!memState || !memState.lastUserMessageAt) {
-        const newMemState = new Map(viewportState.sessionMemoryState)
-        newMemState.set(currentSessionId, {
-          viewportAnchor: memState?.viewportAnchor ?? 0,
-          isStreaming: memState?.isStreaming ?? false,
-          lastAccessedAt: Date.now(),
-          backgroundMessageCount: memState?.backgroundMessageCount ?? 0,
-          lastUserMessageAt: Date.now(),
-        })
-        useViewportStore.setState({ sessionMemoryState: newMemState })
-      }
-    }
-
-    const currentSessionDirectory = currentSessionId
-      ? normalizePath(get().getDirectoryForSession(currentSessionId))
-      : null
-    if (currentSessionDirectory) {
-      await waitForWorktreeBootstrap(currentSessionDirectory)
-    }
-
-    if (currentSessionId) {
-      fetch(`/api/sessions/${currentSessionId}/message-sent`, { method: "POST" })
-        .catch(() => { /* ignore */ })
-    }
-
-    if (currentSessionId) {
-      markPendingUserSendAnimation(currentSessionId)
-    }
-
-    const files = attachments?.map((a) => ({
-      type: "file" as const,
-      mime: a.mimeType,
-      url: a.dataUrl,
-      filename: a.filename,
-    }))
-
-    await routeMessage({
-      sessionId: currentSessionId || "",
-      content,
-      providerID,
-      modelID,
-      agent: effectiveAgent,
-      variant,
-      inputMode,
-      files,
-      additionalParts: additionalParts?.map((p) => ({
-        text: p.text,
-        synthetic: p.synthetic,
-        files: p.attachments?.map((a) => ({
-          type: "file" as const,
-          mime: a.mimeType,
-          url: a.dataUrl,
-          filename: a.filename,
-        })),
-      })),
-    })
-  },
+  sendMessage: (content, providerID, modelID, agent, attachments, agentMentionName, additionalParts, variant, inputMode) =>
+    sendMessageImpl(content, providerID, modelID, agent, attachments, agentMentionName, additionalParts, variant, inputMode),
 
   // ---------------------------------------------------------------------------
-  // createSession
+  // createSession — delegates to standalone module
   // ---------------------------------------------------------------------------
-  createSession: async (title, directoryOverride, parentID) => {
-    const draft = get().newSessionDraft
-    const targetFolderId = draft.targetFolderId
-    get().closeNewSessionDraft()
-
-    try {
-      const dir = directoryOverride ?? opencodeClient.getDirectory()
-      const session = await createSessionAction(title, dir, parentID ?? null)
-      if (!session) return null
-
-      if (targetFolderId) {
-        const scopeKey = directoryOverride || get().lastLoadedDirectory || session.directory
-        if (scopeKey) {
-          useSessionFoldersStore.getState().addSessionToFolder(scopeKey, targetFolderId, session.id)
-        }
-      }
-
-      return session
-    } catch (e) {
-      console.error("[session-ui-store] createSession failed", e)
-      return null
-    }
-  },
+  createSession: (title, directoryOverride, parentID) =>
+    createSessionImpl(title, directoryOverride, parentID),
 
   // ---------------------------------------------------------------------------
   // deleteSession — calls SDK, SSE event updates child store
   // ---------------------------------------------------------------------------
   deleteSession: (id) => deleteSessionAction(id),
 
-  deleteSessions: async (ids) => {
-    const deletedIds: string[] = []
-    const failedIds: string[] = []
-    for (const id of ids) {
-      const ok = await deleteSessionAction(id)
-      if (ok) deletedIds.push(id)
-      else failedIds.push(id)
-    }
-    return { deletedIds, failedIds }
-  },
+  deleteSessions: (ids) => deleteSessionsImpl(ids),
 
   archiveSession: (id) => archiveSessionAction(id),
 
-  archiveSessions: async (ids) => {
-    const archivedIds: string[] = []
-    const failedIds: string[] = []
-    for (const id of ids) {
-      const ok = await archiveSessionAction(id)
-      if (ok) archivedIds.push(id)
-      else failedIds.push(id)
-    }
-    return { archivedIds, failedIds }
-  },
+  archiveSessions: (ids) => archiveSessionsImpl(ids),
 
   // ---------------------------------------------------------------------------
   // updateSessionTitle — calls SDK, SSE event updates child store
@@ -1171,3 +867,6 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
     return get().sessionPlanAvailable.get(sessionId) ?? false
   },
 }))
+
+export { sendMessage, routeMessage } from "./send-message"
+export { createSession, deleteSessions, archiveSessions } from "./session-ops"
