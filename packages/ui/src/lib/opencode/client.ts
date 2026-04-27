@@ -11,9 +11,26 @@ import type {
   Agent,
   TextPartInput,
   FilePartInput,
+  Event,
+  SessionStatus,
+  PermissionRequest,
+  QuestionRequest,
+  Project,
+  Todo,
+  TextPart,
+  ReasoningPart,
+  ToolPart,
+  ToolState,
+  AssistantMessage,
+  Command,
+  LspStatus,
+  McpStatus,
+  VcsInfo,
+  PermissionConfig,
+  Path,
+  ProviderAuthResponse,
+  ProviderListResponse,
 } from "@opencode-ai/sdk/v2";
-import type { PermissionRequest } from "@/types/permission";
-import type { QuestionRequest } from "@/types/question";
 import { waitForWorktreeBootstrap } from "@/lib/worktrees/worktreeBootstrap";
 
 // Use relative path by default (works with both dev and nginx proxy server)
@@ -1595,5 +1612,33 @@ class OpencodeService {
 export const opencodeClient = new OpencodeService();
 
 // Exported types
-export type { Session, Message, Part, Provider, Config, Model };
-export type { App };
+export type {
+  Session,
+  Message,
+  Part,
+  Provider,
+  Config,
+  Model,
+  App,
+  Agent,
+  OpencodeClient,
+  Event,
+  SessionStatus,
+  PermissionRequest,
+  QuestionRequest,
+  Project,
+  Todo,
+  TextPart,
+  ReasoningPart,
+  ToolPart,
+  ToolState,
+  AssistantMessage,
+  Command,
+  LspStatus,
+  McpStatus,
+  VcsInfo,
+  PermissionConfig,
+  Path,
+  ProviderAuthResponse,
+  ProviderListResponse,
+};
