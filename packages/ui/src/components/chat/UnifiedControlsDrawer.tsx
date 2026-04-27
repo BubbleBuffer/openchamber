@@ -1,5 +1,5 @@
 import React from 'react';
-import { MobileOverlayPanel } from '@/components/ui/MobileOverlayPanel';
+import { MobileDrawerPanel } from '@/components/layout/MobileDrawerPanel';
 import { ProviderLogo } from '@/components/ui/ProviderLogo';
 import { cn } from '@/lib/utils';
 import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
@@ -156,7 +156,7 @@ export const UnifiedControlsDrawer: React.FC<UnifiedControlsDrawerProps> = ({
     };
 
     return (
-        <MobileOverlayPanel open={open} onClose={onClose} title="Controls">
+        <MobileDrawerPanel open={open} onClose={onClose} title="Controls">
             <div className="flex flex-col gap-3">
                 <div className="flex flex-col gap-2">
                     <div className="typography-meta font-semibold uppercase tracking-wide text-muted-foreground">
@@ -250,7 +250,7 @@ export const UnifiedControlsDrawer: React.FC<UnifiedControlsDrawerProps> = ({
                     </div>
                 )}
             </div>
-        </MobileOverlayPanel>
+        </MobileDrawerPanel>
     );
 };
 

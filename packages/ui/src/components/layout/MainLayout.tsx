@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { motion, useMotionValue, animate } from 'motion/react';
 import { Header } from './Header';
+import { MobileShell } from './MobileShell';
 import { BottomTerminalDock } from './BottomTerminalDock';
 import { Sidebar, SIDEBAR_CONTENT_WIDTH } from './Sidebar';
 import { RightSidebar, RIGHT_SIDEBAR_CONTENT_WIDTH } from './RightSidebar';
@@ -617,6 +618,7 @@ export const MainLayout: React.FC = () => {
                 <SessionDialogs />
 
                 {isMobile ? (
+                <MobileShell showHeader={false}>
                 <DrawerProvider value={{
                     leftDrawerOpen: mobileLeftDrawerOpen,
                     rightDrawerOpen: isRightSidebarOpen,
@@ -814,6 +816,7 @@ export const MainLayout: React.FC = () => {
                         </div>
                     )}
                 </DrawerProvider>
+                </MobileShell>
             ) : (
                 <>
                     {/* Desktop: Sidebar is a left column; header belongs to content column */}

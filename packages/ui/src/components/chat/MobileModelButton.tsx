@@ -25,7 +25,7 @@ export const MobileModelButton: React.FC<MobileModelButtonProps> = ({ onOpenMode
                 'focus:outline-none hover:bg-[var(--interactive-hover)]',
                 className
             )}
-            style={{ height: '26px', maxHeight: '26px', minHeight: '26px' }}
+            style={{ height: '44px', maxHeight: '44px', minHeight: '44px' }}
             title={modelLabel}
         >
             <span className="min-w-0 max-w-full overflow-x-auto whitespace-nowrap scrollbar-hidden">
