@@ -59,7 +59,6 @@ type HydratingToolSkeletonRow = {
 type ChatViewportProps = {
     currentSessionId: string;
     isDesktopExpandedInput: boolean;
-    isMobile: boolean;
     stickyUserHeader: boolean;
     scrollRef: React.RefObject<HTMLDivElement | null>;
     messageListRef: React.RefObject<MessageListHandle | null>;
@@ -89,7 +88,6 @@ type ChatViewportProps = {
 const ChatViewport = React.memo(({
     currentSessionId,
     isDesktopExpandedInput,
-    isMobile,
     stickyUserHeader,
     scrollRef,
     messageListRef,
@@ -110,6 +108,7 @@ const ChatViewport = React.memo(({
     sessionPermissions,
     isProgrammaticFollowActive,
 }: ChatViewportProps) => {
+    const { isMobile } = useDeviceInfo();
     return (
         <div
             className={cn(
@@ -174,7 +173,6 @@ const ChatViewport = React.memo(({
 }, (prev, next) => {
     return prev.currentSessionId === next.currentSessionId
         && prev.isDesktopExpandedInput === next.isDesktopExpandedInput
-        && prev.isMobile === next.isMobile
         && prev.stickyUserHeader === next.stickyUserHeader
         && prev.scrollRef === next.scrollRef
         && prev.messageListRef === next.messageListRef
@@ -721,7 +719,8 @@ export const ChatContainer: React.FC = () => {
                         'relative z-10',
 						isDesktopExpandedInput
 							? 'flex-1 min-h-0 bg-background'
-							: 'bg-background'
+							: 'bg-background',
+						isMobile && 'pb-[env(safe-area-inset-bottom,0px)]'
 					)}
 				>
 					<ChatInput scrollToBottom={resumeToLatestInstant} />
@@ -754,7 +753,8 @@ export const ChatContainer: React.FC = () => {
                         'relative z-10',
 						isDesktopExpandedInput
 							? 'flex-1 min-h-0 bg-background'
-							: 'bg-background'
+							: 'bg-background',
+						isMobile && 'pb-[env(safe-area-inset-bottom,0px)]'
 					)}
 				>
 					<ChatInput scrollToBottom={resumeToLatestInstant} />
@@ -769,7 +769,6 @@ export const ChatContainer: React.FC = () => {
 			<ChatViewport
 				currentSessionId={currentSessionId}
                 isDesktopExpandedInput={isDesktopExpandedInput}
-                isMobile={isMobile}
                 stickyUserHeader={stickyUserHeader}
                 scrollRef={scrollRef}
                 messageListRef={messageListRef}
