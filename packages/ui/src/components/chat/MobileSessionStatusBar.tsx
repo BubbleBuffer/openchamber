@@ -334,7 +334,7 @@ function SessionItem({
         onDoubleClick?.();
       }}
       className={cn(
-        "flex items-center gap-0.5 px-1.5 py-px text-left transition-colors",
+        "flex items-center gap-0.5 px-1.5 py-2.5 text-left transition-colors min-h-[44px]",
         "hover:bg-[var(--interactive-hover)] active:bg-[var(--interactive-selection)]",
         isCurrent && "bg-[var(--interactive-selection)]/30"
       )}
@@ -442,7 +442,7 @@ function SessionStatusHeader({
     <button
       type="button"
       onClick={onToggle}
-      className="w-full flex flex-col px-2 py-0.5 text-left transition-colors hover:bg-[var(--interactive-hover)]"
+      className="w-full flex flex-col px-2 py-2.5 text-left transition-colors hover:bg-[var(--interactive-hover)] min-h-[44px]"
     >
       {!isExpanded && currentProjectLabel && (
         <div className="flex flex-col items-start">
@@ -645,13 +645,13 @@ function SortableProjectItem({
       )}
     >
       {/* Drag handle */}
-      <button
+        <button
         type="button"
-        className="flex-shrink-0 p-1.5 text-[var(--surface-mutedForeground)] hover:text-[var(--surface-foreground)] cursor-grab active:cursor-grabbing touch-none"
+        className="flex-shrink-0 p-2.5 text-[var(--surface-mutedForeground)] hover:text-[var(--surface-foreground)] cursor-grab active:cursor-grabbing touch-none"
         {...attributes}
         {...listeners}
       >
-        <RiDragMove2Line className="h-4 w-4" />
+        <RiDragMove2Line className="h-5 w-5" />
       </button>
 
       {/* Project info */}
@@ -689,17 +689,17 @@ function SortableProjectItem({
           type="button"
           onClick={onMoveUp}
           disabled={isFirst}
-          className="p-1.5 rounded text-[var(--surface-mutedForeground)] hover:text-[var(--surface-foreground)] hover:bg-[var(--interactive-hover)] disabled:opacity-30 disabled:cursor-not-allowed"
+          className="p-2.5 rounded text-[var(--surface-mutedForeground)] hover:text-[var(--surface-foreground)] hover:bg-[var(--interactive-hover)] disabled:opacity-30 disabled:cursor-not-allowed"
         >
-          <RiArrowUpLine className="h-4 w-4" />
+          <RiArrowUpLine className="h-5 w-5" />
         </button>
         <button
           type="button"
           onClick={onMoveDown}
           disabled={isLast}
-          className="p-1.5 rounded text-[var(--surface-mutedForeground)] hover:text-[var(--surface-foreground)] hover:bg-[var(--interactive-hover)] disabled:opacity-30 disabled:cursor-not-allowed"
+          className="p-2.5 rounded text-[var(--surface-mutedForeground)] hover:text-[var(--surface-foreground)] hover:bg-[var(--interactive-hover)] disabled:opacity-30 disabled:cursor-not-allowed"
         >
-          <RiArrowDownLine className="h-4 w-4" />
+          <RiArrowDownLine className="h-5 w-5" />
         </button>
 
         <div className="w-px h-5 bg-[var(--interactive-border)] mx-1" />
@@ -708,18 +708,18 @@ function SortableProjectItem({
         <button
           type="button"
           onClick={onEdit}
-          className="p-1.5 rounded text-[var(--surface-mutedForeground)] hover:text-[var(--primary-base)] hover:bg-[var(--primary-base)]/10"
+          className="p-2.5 rounded text-[var(--surface-mutedForeground)] hover:text-[var(--primary-base)] hover:bg-[var(--primary-base)]/10"
         >
-          <RiEditLine className="h-4 w-4" />
+          <RiEditLine className="h-5 w-5" />
         </button>
 
         {/* Delete button */}
         <button
           type="button"
           onClick={onDelete}
-          className="p-1.5 rounded text-[var(--surface-mutedForeground)] hover:text-[var(--status-error)] hover:bg-[var(--status-error)]/10"
+          className="p-2.5 rounded text-[var(--surface-mutedForeground)] hover:text-[var(--status-error)] hover:bg-[var(--status-error)]/10"
         >
-          <RiDeleteBinLine className="h-4 w-4" />
+          <RiDeleteBinLine className="h-5 w-5" />
         </button>
       </div>
     </div>
@@ -1017,10 +1017,10 @@ function ProjectBar({
         <button
           type="button"
           onClick={onAddProject}
-          className="flex items-center justify-center !py-1.5 px-2 rounded-md border border-[var(--primary-base)]/60 bg-[var(--primary-base)]/5 text-[var(--primary-base)]/80 hover:text-[var(--primary-base)] hover:bg-[var(--primary-base)]/10 !min-h-0"
+          className="flex items-center justify-center py-2 px-3 rounded-md border border-[var(--primary-base)]/60 bg-[var(--primary-base)]/5 text-[var(--primary-base)]/80 hover:text-[var(--primary-base)] hover:bg-[var(--primary-base)]/10 min-h-[44px] min-w-[44px]"
           aria-label="Add project"
         >
-          <RiAddLine className="h-3 w-3" />
+          <RiAddLine className="h-5 w-5" />
         </button>
       </div>
     );
@@ -1093,10 +1093,10 @@ function ProjectBar({
       <button
         type="button"
         onClick={onAddProject}
-        className="flex items-center justify-center !py-1.5 px-2 rounded-md border border-[var(--primary-base)]/60 bg-[var(--primary-base)]/5 text-[var(--primary-base)]/80 hover:text-[var(--primary-base)] hover:bg-[var(--primary-base)]/10 shrink-0 !min-h-0"
+        className="flex items-center justify-center py-2 px-3 rounded-md border border-[var(--primary-base)]/60 bg-[var(--primary-base)]/5 text-[var(--primary-base)]/80 hover:text-[var(--primary-base)] hover:bg-[var(--primary-base)]/10 shrink-0 min-h-[44px] min-w-[44px]"
         aria-label="Add project"
       >
-        <RiAddLine className="h-3.5 w-3.5" />
+        <RiAddLine className="h-5 w-5" />
       </button>
 
       {/* Delete confirmation dialog */}
@@ -1218,7 +1218,7 @@ function CollapsedView({
             e.stopPropagation();
             onNewSession();
           }}
-          className="flex items-center gap-0.5 px-2 py-1 text-[12px] leading-tight !min-h-0 rounded border border-[var(--primary-base)]/60 bg-[var(--primary-base)]/5 text-[var(--primary-base)]/80 hover:text-[var(--primary-base)] hover:bg-[var(--primary-base)]/10 self-center"
+          className="flex items-center gap-0.5 px-3 py-2 text-[12px] leading-tight min-h-[44px] rounded border border-[var(--primary-base)]/60 bg-[var(--primary-base)]/5 text-[var(--primary-base)]/80 hover:text-[var(--primary-base)] hover:bg-[var(--primary-base)]/10 self-center"
         >
           New
         </button>
@@ -1355,7 +1355,7 @@ function ExpandedView({
           />
         </div>
         <div
-          className="flex items-center gap-2 flex-shrink-0 cursor-pointer !min-h-0"
+          className="flex items-center gap-2 flex-shrink-0 cursor-pointer min-h-[44px] px-2"
           onClick={onToggleCollapse}
           tabIndex={0}
           role="button"
@@ -1375,7 +1375,7 @@ function ExpandedView({
               e.stopPropagation();
               onNewSession();
             }}
-            className="flex items-center gap-0.5 px-2 py-1 text-[12px] leading-tight !min-h-0 rounded border border-[var(--primary-base)]/60 bg-[var(--primary-base)]/5 text-[var(--primary-base)]/80 hover:text-[var(--primary-base)] hover:bg-[var(--primary-base)]/10 self-start"
+            className="flex items-center gap-0.5 px-3 py-2 text-[12px] leading-tight min-h-[44px] rounded border border-[var(--primary-base)]/60 bg-[var(--primary-base)]/5 text-[var(--primary-base)]/80 hover:text-[var(--primary-base)] hover:bg-[var(--primary-base)]/10 self-start"
           >
             New
           </button>
