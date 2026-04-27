@@ -54,7 +54,6 @@ export async function createSession(
 
 export async function deleteSessions(
   ids: string[],
-  _options?: Record<string, unknown>,
 ): Promise<{ deletedIds: string[]; failedIds: string[] }> {
   const deletedIds: string[] = []
   const failedIds: string[] = []
@@ -68,7 +67,6 @@ export async function deleteSessions(
 
 export async function archiveSessions(
   ids: string[],
-  options?: Record<string, unknown>,
 ): Promise<{ archivedIds: string[]; failedIds: string[] }> {
   const archivedIds: string[] = []
   const failedIds: string[] = []

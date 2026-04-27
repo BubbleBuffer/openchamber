@@ -9,8 +9,6 @@ interface MobileDrawerPanelProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   className?: string;
-  /** Height constraint e.g. 'max-h-[min(85dvh,640px)]' */
-  maxHeight?: string;
   /** Show drag handle at top */
   showDragHandle?: boolean;
   renderHeader?: (closeButton: React.ReactNode) => React.ReactNode;
@@ -23,7 +21,6 @@ export const MobileDrawerPanel: React.FC<MobileDrawerPanelProps> = ({
   children,
   footer,
   className,
-  maxHeight = 'max-h-[min(85dvh,640px)]',
   showDragHandle = true,
   renderHeader,
 }) => {

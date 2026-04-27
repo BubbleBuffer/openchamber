@@ -232,11 +232,6 @@ export const useAgentConfigStore = create<AgentConfigStore>()(
                     if (existing) return existing;
 
                     const promise = (async (): Promise<boolean> => {
-                    // Read providers from provider store for fallback
-                    const providerStateCurrent = useProviderConfigStore.getState();
-                    const providers = providerStateCurrent.activeDirectoryKey === directoryKey
-                        ? providerStateCurrent.providers
-                        : (providerStateCurrent.directoryScoped[directoryKey]?.providers ?? []);
                     let lastError: unknown = null;
 
                     for (let attempt = 0; attempt < 3; attempt++) {
@@ -508,8 +503,6 @@ export const useAgentConfigStore = create<AgentConfigStore>()(
 
                 setAgent: (agentName: string | undefined) => {
                     const { agents, settingsDefaultModel, settingsDefaultVariant } = get();
-                    // Cross-read providers from provider store
-                    const { providers, activeDirectoryKey } = useProviderConfigStore.getState();
 
                     // Set agent name in agent store
                     set({ currentAgentName: agentName });

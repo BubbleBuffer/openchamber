@@ -40,7 +40,7 @@ export interface DialogStore {
 
 export const useDialogStore = create<DialogStore>()(
   devtools(
-    (set, get) => ({
+    (set) => ({
       isQuickOpenOpen: false,
       isCommandPaletteOpen: false,
       isHelpDialogOpen: false,
@@ -67,7 +67,7 @@ export const useDialogStore = create<DialogStore>()(
       setOpenCodeStatusText: (text) => set({ openCodeStatusText: text }),
       setSessionCreateDialogOpen: (open) => set({ isSessionCreateDialogOpen: open }),
       setScheduledTasksDialogOpen: (open) => set({ isScheduledTasksDialogOpen: open }),
-      setSettingsDialogOpen: (open) => set((s) => {
+      setSettingsDialogOpen: (open) => set(() => {
         if (!open) return { isSettingsDialogOpen: false };
         return { isSettingsDialogOpen: true };
       }),
