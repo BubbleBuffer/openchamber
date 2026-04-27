@@ -2,7 +2,7 @@ import React from 'react';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { ProviderLogo } from '@/components/ui/ProviderLogo';
 import { Button } from '@/components/ui/button';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 import { RiAddLine, RiStackLine } from '@remixicon/react';
 import { cn } from '@/lib/utils';
@@ -36,9 +36,9 @@ interface ProvidersSidebarProps {
 }
 
 export const ProvidersSidebar: React.FC<ProvidersSidebarProps> = ({ onItemSelect }) => {
-  const providers = useConfigStore((state) => state.providers);
-  const selectedProviderId = useConfigStore((state) => state.selectedProviderId);
-  const setSelectedProvider = useConfigStore((state) => state.setSelectedProvider);
+  const providers = useProviderConfigStore((state) => state.providers);
+  const selectedProviderId = useProviderConfigStore((state) => state.selectedProviderId);
+  const setSelectedProvider = useProviderConfigStore((state) => state.setSelectedProvider);
   const activeProjectId = useProjectsStore((s) => s.activeProjectId);
   const [sourcesByProvider, setSourcesByProvider] = React.useState<Record<string, ProviderSources>>({});
   const directory = React.useMemo(() => {

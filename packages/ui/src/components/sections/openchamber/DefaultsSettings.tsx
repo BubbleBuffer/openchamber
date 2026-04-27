@@ -4,7 +4,8 @@ import { AgentSelector } from '@/components/sections/commands/AgentSelector';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { updateDesktopSettings } from '@/lib/persistence';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 import { cn } from '@/lib/utils';
@@ -23,18 +24,18 @@ const getDisplayModel = (
 };
 
 export const DefaultsSettings: React.FC = () => {
-  const setProvider = useConfigStore((state) => state.setProvider);
-  const setModel = useConfigStore((state) => state.setModel);
-  const setAgent = useConfigStore((state) => state.setAgent);
-  const setCurrentVariant = useConfigStore((state) => state.setCurrentVariant);
-  const setSettingsDefaultModel = useConfigStore((state) => state.setSettingsDefaultModel);
-  const setSettingsDefaultVariant = useConfigStore((state) => state.setSettingsDefaultVariant);
-  const setSettingsDefaultAgent = useConfigStore((state) => state.setSettingsDefaultAgent);
-  const setSettingsDefaultFileViewerPreview = useConfigStore((state) => state.setSettingsDefaultFileViewerPreview);
-  const settingsDefaultFileViewerPreview = useConfigStore((state) => state.settingsDefaultFileViewerPreview);
+  const setProvider = useProviderConfigStore((state) => state.setProvider);
+  const setModel = useProviderConfigStore((state) => state.setModel);
+  const setAgent = useAgentConfigStore((state) => state.setAgent);
+  const setCurrentVariant = useProviderConfigStore((state) => state.setCurrentVariant);
+  const setSettingsDefaultModel = useAgentConfigStore((state) => state.setSettingsDefaultModel);
+  const setSettingsDefaultVariant = useAgentConfigStore((state) => state.setSettingsDefaultVariant);
+  const setSettingsDefaultAgent = useAgentConfigStore((state) => state.setSettingsDefaultAgent);
+  const setSettingsDefaultFileViewerPreview = useAgentConfigStore((state) => state.setSettingsDefaultFileViewerPreview);
+  const settingsDefaultFileViewerPreview = useAgentConfigStore((state) => state.settingsDefaultFileViewerPreview);
+  const providers = useProviderConfigStore((state) => state.providers);
   const showDeletionDialog = useUIStore((state) => state.showDeletionDialog);
   const setShowDeletionDialog = useUIStore((state) => state.setShowDeletionDialog);
-  const providers = useConfigStore((state) => state.providers);
 
   const [defaultModel, setDefaultModel] = React.useState<string | undefined>();
   const [defaultVariant, setDefaultVariant] = React.useState<string | undefined>();

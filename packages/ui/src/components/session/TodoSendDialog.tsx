@@ -14,7 +14,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ModelSelector } from '@/components/sections/agents/ModelSelector';
 import { AgentSelector } from '@/components/sections/commands/AgentSelector';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { useAgentsStore } from '@/stores/useAgentsStore';
 import { isPrimaryMode } from '@/components/chat/mobileControlsUtils';
 import { cn } from '@/lib/utils';
@@ -100,14 +101,14 @@ const ThinkingPill = ({ value, options, disabled, onChange }: ThinkingPillProps)
 export function TodoSendDialog(props: TodoSendDialogProps) {
   const { open, onOpenChange, target, projectDirectory, submitting = false, onConfirm } = props;
 
-  const loadProviders = useConfigStore((state) => state.loadProviders);
-  const loadConfigAgents = useConfigStore((state) => state.loadAgents);
+  const loadProviders = useProviderConfigStore((state) => state.loadProviders);
+  const loadConfigAgents = useAgentConfigStore((state) => state.loadAgents);
   const loadAgentsStoreAgents = useAgentsStore((state) => state.loadAgents);
-  const providers = useConfigStore((state) => state.providers);
-  const currentProviderID = useConfigStore((state) => state.currentProviderId);
-  const currentModelID = useConfigStore((state) => state.currentModelId);
-  const currentVariant = useConfigStore((state) => state.currentVariant || '');
-  const currentAgentName = useConfigStore((state) => state.currentAgentName || '');
+  const providers = useProviderConfigStore((state) => state.providers);
+  const currentProviderID = useProviderConfigStore((state) => state.currentProviderId);
+  const currentModelID = useProviderConfigStore((state) => state.currentModelId);
+  const currentVariant = useProviderConfigStore((state) => state.currentVariant || '');
+  const currentAgentName = useAgentConfigStore((state) => state.currentAgentName || '');
 
   const [execution, setExecution] = React.useState<TodoSendExecution>(() => getInitialExecution({
     providerID: currentProviderID,

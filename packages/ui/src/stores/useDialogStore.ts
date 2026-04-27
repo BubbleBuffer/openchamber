@@ -2,7 +2,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 
-interface DialogStore {
+export interface DialogStore {
   isQuickOpenOpen: boolean;
   isCommandPaletteOpen: boolean;
   isHelpDialogOpen: boolean;

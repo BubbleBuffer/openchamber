@@ -3,7 +3,8 @@ import type { AttachedFile } from '@/stores/types/sessionTypes';
 import { useMessageQueueStore, type QueuedMessage } from '@/stores/messageQueueStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
 import { useContextStore } from '@/stores/contextStore';
 import { parseAgentMentions } from '@/lib/messages/agentMentions';
 import { getSyncSessionStatus } from '@/sync/sync-refs';
@@ -22,7 +23,7 @@ const hasRecentAbort = (sessionId: string): boolean => {
 };
 
 const buildQueuedPayload = (queue: QueuedMessage[]) => {
-  const agents = useConfigStore.getState().getVisibleAgents();
+  const agents = useAgentConfigStore.getState().getVisibleAgents();
   let primaryText = '';
   let primaryAttachments: AttachedFile[] = [];
   let agentMentionName: string | undefined;
@@ -57,13 +58,14 @@ const buildQueuedPayload = (queue: QueuedMessage[]) => {
 
 const resolveSessionSendConfig = (sessionId: string) => {
   const context = useContextStore.getState();
-  const config = useConfigStore.getState();
+  const agentConfig = useAgentConfigStore.getState();
+  const providerConfig = useProviderConfigStore.getState();
   const selection = useSelectionStore.getState();
 
   const selectedAgent =
     context.getSessionAgentSelection(sessionId)
     ?? context.getCurrentAgent(sessionId)
-    ?? config.currentAgentName
+    ?? agentConfig.currentAgentName
     ?? undefined;
 
   const sessionModel = context.getSessionModelSelection(sessionId);
@@ -74,12 +76,12 @@ const resolveSessionSendConfig = (sessionId: string) => {
   const providerID =
     agentModel?.providerId
     ?? sessionModel?.providerId
-    ?? config.currentProviderId
+    ?? providerConfig.currentProviderId
     ?? selection.lastUsedProvider?.providerID;
   const modelID =
     agentModel?.modelId
     ?? sessionModel?.modelId
-    ?? config.currentModelId
+    ?? providerConfig.currentModelId
     ?? selection.lastUsedProvider?.modelID;
 
   const variant =

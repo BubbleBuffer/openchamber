@@ -10,33 +10,13 @@ import {
   updateConfigUpdateMessage,
 } from "@/lib/configUpdate";
 import { getSafeStorage } from "./utils/safeStorage";
-import { useConfigStore } from "@/stores/useConfigStore";
+import { useProviderConfigStore } from "@/stores/useProviderConfigStore"
+import { useAgentConfigStore } from "@/stores/useAgentConfigStore";
 import { useCommandsStore } from "@/stores/useCommandsStore";
 import { useProjectsStore } from "@/stores/useProjectsStore";
 import { useSkillsCatalogStore } from "@/stores/useSkillsCatalogStore";
 import { useSkillsStore } from "@/stores/useSkillsStore";
-
-// Note: useDirectoryStore cannot be imported at top level to avoid circular dependency
-// useDirectoryStore -> useAgentsStore (for refreshAfterOpenCodeRestart)
-// useAgentsStore -> useDirectoryStore (for currentDirectory)
-const getCurrentDirectory = (): string | null => {
-  const opencodeDirectory = opencodeClient.getDirectory();
-  if (typeof opencodeDirectory === 'string' && opencodeDirectory.trim().length > 0) {
-    return opencodeDirectory;
-  }
-
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const store = (window as any).__zustand_directory_store__;
-    if (store) {
-      return store.getState().currentDirectory;
-    }
-  } catch {
-    // ignore
-  }
-
-  return null;
-};
+import { useDirectoryStore } from "@/stores/useDirectoryStore";
 
 const getConfigDirectory = (): string | null => {
   try {
@@ -174,7 +154,7 @@ interface AgentsStore {
 
   setSelectedAgent: (name: string | null) => void;
   setAgentDraft: (draft: AgentDraft | null) => void;
-  loadAgents: () => Promise<boolean>;
+  loadAgents: (options?: { directory?: string | null }) => Promise<boolean>;
   createAgent: (config: AgentConfig) => Promise<boolean>;
   updateAgent: (name: string, config: Partial<AgentConfig>) => Promise<boolean>;
   deleteAgent: (name: string) => Promise<boolean>;
@@ -207,8 +187,8 @@ export const useAgentsStore = create<AgentsStore>()(
           set({ agentDraft: draft });
         },
 
-        loadAgents: async () => {
-          const configDirectory = getConfigDirectory();
+        loadAgents: async (options?: { directory?: string | null }) => {
+          const configDirectory = options?.directory ?? null;
           const cacheKey = getAgentsCacheKey(configDirectory);
           const now = Date.now();
           const loadedAt = agentsLastLoadedAt.get(cacheKey) ?? 0;
@@ -355,7 +335,7 @@ export const useAgentsStore = create<AgentsStore>()(
               return true;
             }
 
-            const loaded = await get().loadAgents();
+            const loaded = await get().loadAgents({ directory: configDirectory });
             if (loaded) {
               emitConfigChange("agents", { source: CONFIG_EVENT_SOURCE });
             }
@@ -416,7 +396,7 @@ export const useAgentsStore = create<AgentsStore>()(
               return true;
             }
 
-            const loaded = await get().loadAgents();
+            const loaded = await get().loadAgents({ directory: configDirectory });
             if (loaded) {
               emitConfigChange("agents", { source: CONFIG_EVENT_SOURCE });
             }
@@ -462,7 +442,7 @@ export const useAgentsStore = create<AgentsStore>()(
               return true;
             }
 
-            const loaded = await get().loadAgents();
+            const loaded = await get().loadAgents({ directory: configDirectory });
             if (loaded) {
               emitConfigChange("agents", { source: CONFIG_EVENT_SOURCE });
             }
@@ -587,7 +567,8 @@ async function performConfigRefresh(options: {
   try {
     await waitForOpenCodeConnection(delayMs);
 
-    const configStore = useConfigStore.getState();
+    const configStore = useProviderConfigStore.getState();
+    const agentConfig = useAgentConfigStore.getState();
     const agentConfigStore = useAgentsStore.getState();
     const commandsStore = useCommandsStore.getState();
     const skillsStore = useSkillsStore.getState();
@@ -599,7 +580,7 @@ async function performConfigRefresh(options: {
     const refreshCommands = scopes.includes("all") || scopes.includes("commands");
     const refreshSkills = scopes.includes("all") || scopes.includes("skills");
 
-    const currentDirectory = getCurrentDirectory();
+    const currentDirectory = useDirectoryStore.getState().currentDirectory;
     const projects = mode === "projects" ? useProjectsStore.getState().projects : [];
     const directoriesToRefresh = Array.from(
       new Set([
@@ -609,7 +590,7 @@ async function performConfigRefresh(options: {
     );
 
     if (scopes.includes("all") && mode === "projects") {
-      useConfigStore.setState({ directoryScoped: {} });
+      useProviderConfigStore.setState({ directoryScoped: {} });
     }
 
     const sdkRefreshTasks: Promise<void>[] = [];
@@ -618,13 +599,13 @@ async function performConfigRefresh(options: {
         sdkRefreshTasks.push(configStore.loadProviders({ directory }).then(() => undefined));
       }
       if (refreshSdkAgents) {
-        sdkRefreshTasks.push(configStore.loadAgents({ directory }).then(() => undefined));
+        sdkRefreshTasks.push(agentConfig.loadAgents({ directory }).then(() => undefined));
       }
     }
 
     const uiRefreshTasks: Promise<void>[] = [];
     if (refreshAgentConfigs) {
-      uiRefreshTasks.push(agentConfigStore.loadAgents().then(() => undefined));
+      uiRefreshTasks.push(agentConfigStore.loadAgents({ directory: currentDirectory }).then(() => undefined));
     }
     if (refreshCommands) {
       uiRefreshTasks.push(commandsStore.loadCommands().then(() => undefined));
@@ -709,7 +690,8 @@ if (!unsubscribeAgentsConfigChanges) {
 
     if (scopeMatches(event, "agents")) {
       const { loadAgents } = useAgentsStore.getState();
-      void loadAgents();
+      const directory = useDirectoryStore.getState().currentDirectory;
+      void loadAgents({ directory });
     }
   });
 }

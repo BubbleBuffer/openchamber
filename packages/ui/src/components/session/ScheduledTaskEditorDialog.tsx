@@ -15,7 +15,8 @@ import { AgentSelector } from '@/components/sections/commands/AgentSelector';
 import { isPrimaryMode } from '@/components/chat/mobileControlsUtils';
 import { CommandAutocomplete, type CommandAutocompleteHandle, type CommandInfo } from '@/components/chat/CommandAutocomplete';
 import { FileMentionAutocomplete, type FileMentionHandle } from '@/components/chat/FileMentionAutocomplete';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
 import type { ScheduledTask } from '@/lib/scheduledTasksApi';
 
@@ -577,13 +578,13 @@ export function ScheduledTaskEditorDialog(props: {
   onSave: (draft: Partial<ScheduledTask>) => Promise<void>;
 }) {
   const { open, task, onOpenChange, onSave } = props;
-  const loadProviders = useConfigStore((state) => state.loadProviders);
-  const loadAgents = useConfigStore((state) => state.loadAgents);
-  const providers = useConfigStore((state) => state.providers);
-  const currentProviderID = useConfigStore((state) => state.currentProviderId);
-  const currentModelID = useConfigStore((state) => state.currentModelId);
-  const currentVariant = useConfigStore((state) => state.currentVariant || '');
-  const currentAgentName = useConfigStore((state) => state.currentAgentName || '');
+  const loadProviders = useProviderConfigStore((state) => state.loadProviders);
+  const loadAgents = useAgentConfigStore((state) => state.loadAgents);
+  const providers = useProviderConfigStore((state) => state.providers);
+  const currentProviderID = useProviderConfigStore((state) => state.currentProviderId);
+  const currentModelID = useProviderConfigStore((state) => state.currentModelId);
+  const currentVariant = useProviderConfigStore((state) => state.currentVariant || '');
+  const currentAgentName = useAgentConfigStore((state) => state.currentAgentName || '');
   const timeFormatPreference = useUIStore((state) => state.timeFormatPreference);
   const weekStartPreference = useUIStore((state) => state.weekStartPreference);
   const isMobile = useUIStore((state) => state.isMobile);

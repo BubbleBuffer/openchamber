@@ -7,7 +7,8 @@
 import { toast } from '@/components/ui';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useProjectsStore } from '@/stores/useProjectsStore';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
 import { useContextStore } from '@/stores/contextStore';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { checkIsGitRepository, previewGitWorktree } from '@/lib/gitApi';
@@ -57,7 +58,7 @@ let isCreatingWorktreeSession = false;
 
 
 
-const applyDefaultAgentAndModelSelection = (sessionId: string, configState = useConfigStore.getState()) => {
+const applyDefaultAgentAndModelSelection = (sessionId: string, configState = useAgentConfigStore.getState()) => {
   try {
     const visibleAgents = configState.getVisibleAgents();
     let agentName: string | undefined;
@@ -93,7 +94,8 @@ const applyDefaultAgentAndModelSelection = (sessionId: string, configState = use
     }
 
     const [providerId, modelId] = parts;
-    const modelMetadata = configState.getModelMetadata(providerId, modelId);
+    const providerConfigState = useProviderConfigStore.getState();
+    const modelMetadata = providerConfigState.getModelMetadata(providerId, modelId);
     if (!modelMetadata) {
       return;
     }
@@ -106,14 +108,14 @@ const applyDefaultAgentAndModelSelection = (sessionId: string, configState = use
       return;
     }
 
-    const provider = configState.providers.find((p) => p.id === providerId);
+    const provider = providerConfigState.providers.find((p) => p.id === providerId);
     const model = provider?.models.find((m: Record<string, unknown>) => (m as { id?: string }).id === modelId) as
       | { variants?: Record<string, unknown> }
       | undefined;
     const variants = model?.variants;
 
     if (variants && Object.prototype.hasOwnProperty.call(variants, settingsDefaultVariant)) {
-      configState.setCurrentVariant(settingsDefaultVariant);
+      providerConfigState.setCurrentVariant(settingsDefaultVariant);
       useContextStore
         .getState()
         .saveAgentModelVariantForSession(sessionId, agentName, providerId, modelId, settingsDefaultVariant);
@@ -133,7 +135,7 @@ const initializeSessionForWorktree = (sessionId: string, metadata: {
   kind?: 'pr' | 'standard';
 }) => {
   const sessionStore = useSessionUIStore.getState();
-  const configState = useConfigStore.getState();
+  const configState = useAgentConfigStore.getState();
   sessionStore.initializeNewOpenChamberSession(sessionId, configState.agents);
   sessionStore.setSessionDirectory(sessionId, metadata.path);
   sessionStore.setWorktreeMetadata(sessionId, metadata);

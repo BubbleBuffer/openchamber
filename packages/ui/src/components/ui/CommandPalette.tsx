@@ -10,6 +10,7 @@ import {
   CommandShortcut,
 } from '@/components/ui/command';
 import { useUIStore } from '@/stores/useUIStore';
+import { useDialogStore } from '@/stores/useDialogStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
@@ -39,12 +40,12 @@ import { SETTINGS_PAGE_METADATA, SETTINGS_GROUP_LABELS, type SettingsRuntimeCont
 import { getSettingsNavIcon } from '@/components/views/SettingsView';
 
 export const CommandPalette: React.FC = () => {
-  const isCommandPaletteOpen = useUIStore((s) => s.isCommandPaletteOpen);
-  const setCommandPaletteOpen = useUIStore((s) => s.setCommandPaletteOpen);
-  const setHelpDialogOpen = useUIStore((s) => s.setHelpDialogOpen);
-  const setQuickOpenOpen = useUIStore((s) => s.setQuickOpenOpen);
+  const isCommandPaletteOpen = useDialogStore((s) => s.isCommandPaletteOpen);
+  const setCommandPaletteOpen = useDialogStore((s) => s.setCommandPaletteOpen);
+  const setHelpDialogOpen = useDialogStore((s) => s.setHelpDialogOpen);
+  const setQuickOpenOpen = useDialogStore((s) => s.setQuickOpenOpen);
   const setActiveMainTab = useUIStore((s) => s.setActiveMainTab);
-  const setSettingsDialogOpen = useUIStore((s) => s.setSettingsDialogOpen);
+  const setSettingsDialogOpen = useDialogStore((s) => s.setSettingsDialogOpen);
   const setSettingsPage = useUIStore((s) => s.setSettingsPage);
   const setSessionSwitcherOpen = useUIStore((s) => s.setSessionSwitcherOpen);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);

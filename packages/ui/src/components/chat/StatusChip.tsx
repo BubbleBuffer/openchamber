@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useContextStore } from '@/stores/contextStore';
 import { formatEffortLabel, getAgentDisplayName, getModelDisplayName } from './mobileControlsUtils';
@@ -11,12 +12,12 @@ interface StatusChipProps {
 }
 
 export const StatusChip: React.FC<StatusChipProps> = ({ onClick, className }) => {
-    const currentModelId = useConfigStore((state) => state.currentModelId);
-    const currentVariant = useConfigStore((state) => state.currentVariant);
-    const currentAgentName = useConfigStore((state) => state.currentAgentName);
-    const getCurrentProvider = useConfigStore((state) => state.getCurrentProvider);
-    const getCurrentModelVariants = useConfigStore((state) => state.getCurrentModelVariants);
-    const getVisibleAgents = useConfigStore((state) => state.getVisibleAgents);
+    const currentModelId = useProviderConfigStore((state) => state.currentModelId);
+    const currentVariant = useProviderConfigStore((state) => state.currentVariant);
+    const currentAgentName = useAgentConfigStore((state) => state.currentAgentName);
+    const getCurrentProvider = useProviderConfigStore((state) => state.getCurrentProvider);
+    const getCurrentModelVariants = useProviderConfigStore((state) => state.getCurrentModelVariants);
+    const getVisibleAgents = useAgentConfigStore((state) => state.getVisibleAgents);
     const currentSessionId = useSessionUIStore((state) => state.currentSessionId);
     const sessionAgentName = useContextStore((state) =>
         currentSessionId ? state.getSessionAgentSelection(currentSessionId) : null

@@ -7,13 +7,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from '@/components/ui';
-import { useUIStore } from '@/stores/useUIStore';
+import { useDialogStore } from '@/stores/useDialogStore';
 import { copyTextToClipboard } from '@/lib/clipboard';
 
 export const OpenCodeStatusDialog: React.FC = () => {
-  const isOpenCodeStatusDialogOpen = useUIStore((state) => state.isOpenCodeStatusDialogOpen);
-  const setOpenCodeStatusDialogOpen = useUIStore((state) => state.setOpenCodeStatusDialogOpen);
-  const openCodeStatusText = useUIStore((state) => state.openCodeStatusText);
+  const isOpenCodeStatusDialogOpen = useDialogStore((state) => state.isOpenCodeStatusDialogOpen);
+  const setOpenCodeStatusDialogOpen = useDialogStore((state) => state.setOpenCodeStatusDialogOpen);
+  const openCodeStatusText = useDialogStore((state) => state.openCodeStatusText);
 
   const handleCopy = React.useCallback(async () => {
     if (!openCodeStatusText) {

@@ -37,6 +37,7 @@ import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui';
 import { isTauriShell, isDesktopShell } from '@/lib/desktop';
 import { useUIStore } from '@/stores/useUIStore';
+import { useDialogStore } from '@/stores/useDialogStore';
 import {
   desktopHostProbe,
   desktopHostsGet,
@@ -246,7 +247,7 @@ export function DesktopHostSwitcherDialog({
   embedded = false,
   onHostSwitched,
 }: DesktopHostSwitcherDialogProps) {
-  const setSettingsDialogOpen = useUIStore((state) => state.setSettingsDialogOpen);
+  const setSettingsDialogOpen = useDialogStore((state) => state.setSettingsDialogOpen);
   const setSettingsPage = useUIStore((state) => state.setSettingsPage);
 
   const [configHosts, setConfigHosts] = React.useState<DesktopHost[]>([]);

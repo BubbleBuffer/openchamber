@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
 import { getModelDisplayName } from './mobileControlsUtils';
 
 interface MobileModelButtonProps {
@@ -9,8 +9,8 @@ interface MobileModelButtonProps {
 }
 
 export const MobileModelButton: React.FC<MobileModelButtonProps> = ({ onOpenModel, className }) => {
-    const currentModelId = useConfigStore((state) => state.currentModelId);
-    const getCurrentProvider = useConfigStore((state) => state.getCurrentProvider);
+    const currentModelId = useProviderConfigStore((state) => state.currentModelId);
+    const getCurrentProvider = useProviderConfigStore((state) => state.getCurrentProvider);
     const currentProvider = getCurrentProvider();
     const modelLabel = getModelDisplayName(currentProvider, currentModelId);
 

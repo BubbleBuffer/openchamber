@@ -23,7 +23,8 @@ import { isDesktopShell, isVSCodeRuntime, isWebRuntime } from '@/lib/desktop';
 import { useDeviceInfo } from '@/lib/device';
 import { usePwaDetection } from '@/hooks/usePwaDetection';
 import { updateDesktopSettings } from '@/lib/persistence';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useDialogStore } from '@/stores/useDialogStore';
 import {
     setDirectoryShowHidden,
     useDirectoryShowHidden,
@@ -274,9 +275,9 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
     const setWeekStartPreference = useUIStore(state => state.setWeekStartPreference);
     const showMobileSessionStatusBar = useUIStore(state => state.showMobileSessionStatusBar);
     const setShowMobileSessionStatusBar = useUIStore(state => state.setShowMobileSessionStatusBar);
-    const messageStreamTransport = useConfigStore((state) => state.settingsMessageStreamTransport);
-    const setMessageStreamTransport = useConfigStore((state) => state.setSettingsMessageStreamTransport);
-    const isSettingsDialogOpen = useUIStore(state => state.isSettingsDialogOpen);
+    const messageStreamTransport = useAgentConfigStore((state) => state.settingsMessageStreamTransport);
+    const setMessageStreamTransport = useAgentConfigStore((state) => state.setSettingsMessageStreamTransport);
+    const isSettingsDialogOpen = useDialogStore(state => state.isSettingsDialogOpen);
     const {
         themeMode,
         setThemeMode,

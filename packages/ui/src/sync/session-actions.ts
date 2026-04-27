@@ -10,7 +10,7 @@ import { useInputStore } from "./input-store"
 import type { ChildStoreManager } from "./child-store"
 import { opencodeClient } from "@/lib/opencode/client"
 import { useGlobalSessionsStore } from "@/stores/useGlobalSessionsStore"
-import { useConfigStore } from "@/stores/useConfigStore"
+import { useProviderConfigStore } from "@/stores/useProviderConfigStore"
 import { registerSessionDirectory } from "./sync-refs"
 
 // Reference set by SyncProvider — allows actions to access SDK and stores
@@ -55,7 +55,7 @@ function dir() {
 }
 
 function connectionLostError(): Error {
-  const { hasEverConnected, lastDisconnectReason } = useConfigStore.getState()
+  const { hasEverConnected, lastDisconnectReason } = useProviderConfigStore.getState()
   const suffix = lastDisconnectReason
     ? ` (${lastDisconnectReason})`
     : hasEverConnected
@@ -73,10 +73,10 @@ const CONNECTION_GRACE_MS = 2000
 export async function waitForConnectionOrThrow(): Promise<void> {
   const deadline = Date.now() + CONNECTION_GRACE_MS
   while (Date.now() < deadline) {
-    if (useConfigStore.getState().isConnected) return
+    if (useProviderConfigStore.getState().isConnected) return
     const remainingMs = deadline - Date.now()
     if (remainingMs <= 0) break
-    if (await useConfigStore.getState().probeConnection({ timeoutMs: Math.min(500, remainingMs) })) return
+    if (await useProviderConfigStore.getState().probeConnection({ timeoutMs: Math.min(500, remainingMs) })) return
     const sleepMs = Math.min(100, deadline - Date.now())
     if (sleepMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, sleepMs))

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSessionUIStore } from '@/sync/session-ui-store';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { useFireworksCelebration } from '@/contexts/FireworksContext';
 import type { GitIdentityProfile, CommitFileEntry } from '@/lib/api/types';
 import { useGitIdentitiesStore } from '@/stores/useGitIdentitiesStore';
@@ -384,7 +384,7 @@ export const GitView: React.FC = () => {
     return gitViewSnapshots.get(currentDirectory) ?? null;
   }, [currentDirectory]);
 
-  const settingsGitmojiEnabled = useConfigStore((state) => state.settingsGitmojiEnabled);
+  const settingsGitmojiEnabled = useAgentConfigStore((state) => state.settingsGitmojiEnabled);
   const [rootBranchHint, setRootBranchHint] = React.useState<string | null>(null);
 
   React.useEffect(() => {

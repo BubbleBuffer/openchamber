@@ -6,7 +6,7 @@ import { AgentGroupDetail } from './AgentGroupDetail';
 import { cn } from '@/lib/utils';
 import { useAgentGroupsStore } from '@/stores/useAgentGroupsStore';
 import { useMultiRunStore } from '@/stores/useMultiRunStore';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import type { CreateMultiRunParams } from '@/types/multirun';
 
@@ -28,8 +28,8 @@ export const AgentManagerView: React.FC<AgentManagerViewProps> = ({ className })
             'connecting' | 'connected' | 'error' | 'disconnected' | undefined
         : 'connecting') || 'connecting'
   );
-  const configInitialized = useConfigStore((s) => s.isInitialized);
-  const initializeApp = useConfigStore((s) => s.initializeApp);
+  const configInitialized = useProviderConfigStore((s) => s.isInitialized);
+  const initializeApp = useProviderConfigStore((s) => s.initializeProviders);
   const setDirectory = useDirectoryStore((s) => s.setDirectory);
   const currentDirectory = useDirectoryStore((s) => s.currentDirectory);
   const bootstrapAttemptAt = React.useRef<number>(0);

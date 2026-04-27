@@ -14,6 +14,7 @@ import { useSync } from '@/sync/use-sync';
 import { useSessionPrefetch } from './sidebar/hooks/useSessionPrefetch';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useDialogStore } from '@/stores/useDialogStore';
 import { getSafeStorage } from '@/stores/utils/safeStorage';
 import { useGitStore, useGitAllBranches, useGitRepoStatusMap } from '@/stores/useGitStore';
 import { isVSCodeRuntime } from '@/lib/desktop';
@@ -229,13 +230,13 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
 
   const setActiveMainTab = useUIStore((state) => state.setActiveMainTab);
   const openContextPanelTab = useUIStore((state) => state.openContextPanelTab);
-  const setSettingsDialogOpen = useUIStore((state) => state.setSettingsDialogOpen);
-  const toggleHelpDialog = useUIStore((state) => state.toggleHelpDialog);
-  const setAboutDialogOpen = useUIStore((state) => state.setAboutDialogOpen);
   const setSessionSwitcherOpen = useUIStore((state) => state.setSessionSwitcherOpen);
-  const setScheduledTasksDialogOpen = useUIStore((state) => state.setScheduledTasksDialogOpen);
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
-  const openMultiRunLauncher = useUIStore((state) => state.openMultiRunLauncher);
+  const setSettingsDialogOpen = useDialogStore((state) => state.setSettingsDialogOpen);
+  const toggleHelpDialog = useDialogStore((state) => state.toggleHelpDialog);
+  const setAboutDialogOpen = useDialogStore((state) => state.setAboutDialogOpen);
+  const setScheduledTasksDialogOpen = useDialogStore((state) => state.setScheduledTasksDialogOpen);
+  const openMultiRunLauncher = useDialogStore((state) => state.openMultiRunLauncher);
   const notifyOnSubtasks = useUIStore((state) => state.notifyOnSubtasks);
   const showDeletionDialog = useUIStore((state) => state.showDeletionDialog);
   const setShowDeletionDialog = useUIStore((state) => state.setShowDeletionDialog);

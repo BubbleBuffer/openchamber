@@ -4,7 +4,8 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { defaultCodeDark, defaultCodeLight } from '@/lib/codeTheme';
 import { MessageFreshnessDetector } from '@/lib/messageFreshness';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useDialogStore } from '@/stores/useDialogStore';
 import { useFeatureFlagsStore } from '@/stores/useFeatureFlagsStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useContextStore } from '@/stores/contextStore';
@@ -165,7 +166,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
         streamPerfCount('ui.chat_message.render.streaming');
     }
 
-    const providers = useConfigStore.getState().providers;
+    const providers = useProviderConfigStore.getState().providers;
     const { showReasoningTraces, stickyUserHeader, chatRenderMode, showExpandedBashTools, showExpandedEditTools } = useUIStore(
         useShallow((state) => ({
             showReasoningTraces: state.showReasoningTraces,
@@ -830,7 +831,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
         onContentChange?.('structural');
     }, [isUser, onContentChange]);
 
-    const setImagePreviewOpen = useUIStore((state) => state.setImagePreviewOpen);
+    const setImagePreviewOpen = useDialogStore((state) => state.setImagePreviewOpen);
 
     const handleShowPopup = React.useCallback((content: ToolPopupContent) => {
 

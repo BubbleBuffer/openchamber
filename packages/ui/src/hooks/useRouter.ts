@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useUIStore } from '@/stores/useUIStore';
+import { useDialogStore } from '@/stores/useDialogStore';
 import { parseRoute, updateBrowserURL, hasRouteParams } from '@/lib/router';
 import type { RouteState, AppRouteState } from '@/lib/router';
 import type { MainTab } from '@/stores/useUIStore';
@@ -40,7 +41,7 @@ export function useRouter(): void {
   // Get store actions (stable references)
   const setCurrentSession = useSessionUIStore((state) => state.setCurrentSession);
   const setActiveMainTab = useUIStore((state) => state.setActiveMainTab);
-  const setSettingsDialogOpen = useUIStore((state) => state.setSettingsDialogOpen);
+  const setSettingsDialogOpen = useDialogStore((state) => state.setSettingsDialogOpen);
   const setSettingsPage = useUIStore((state) => state.setSettingsPage);
   const navigateToDiff = useUIStore((state) => state.navigateToDiff);
 
@@ -73,7 +74,7 @@ export function useRouter(): void {
         }
 
         // Close settings if URL has no settings section
-        if (useUIStore.getState().isSettingsDialogOpen) {
+        if (useDialogStore.getState().isSettingsDialogOpen) {
           setSettingsDialogOpen(false);
         }
 
@@ -99,11 +100,12 @@ export function useRouter(): void {
   const getCurrentAppState = React.useCallback((): AppRouteState => {
     const sessionState = useSessionUIStore.getState();
     const uiState = useUIStore.getState();
+    const dialogState = useDialogStore.getState();
 
     return {
       sessionId: sessionState.currentSessionId,
       tab: uiState.activeMainTab,
-      isSettingsOpen: uiState.isSettingsDialogOpen,
+      isSettingsOpen: dialogState.isSettingsDialogOpen,
       settingsPath: uiState.settingsPage,
       diffFile: uiState.pendingDiffFile,
     };
@@ -182,7 +184,7 @@ export function useRouter(): void {
     }
 
     let prevTab: MainTab = useUIStore.getState().activeMainTab;
-    let prevSettingsOpen: boolean = useUIStore.getState().isSettingsDialogOpen;
+    let prevSettingsOpen: boolean = useDialogStore.getState().isSettingsDialogOpen;
     let prevSettingsPath: string = useUIStore.getState().settingsPage;
     let prevDiffFile: string | null = useUIStore.getState().pendingDiffFile;
 
@@ -192,14 +194,15 @@ export function useRouter(): void {
         return;
       }
 
+      const currentSettingsOpen = useDialogStore.getState().isSettingsDialogOpen;
       const tabChanged = state.activeMainTab !== prevTab;
-      const settingsOpenChanged = state.isSettingsDialogOpen !== prevSettingsOpen;
+      const settingsOpenChanged = currentSettingsOpen !== prevSettingsOpen;
       const settingsPathChanged = state.settingsPage !== prevSettingsPath;
       const diffFileChanged = state.pendingDiffFile !== prevDiffFile && state.activeMainTab === 'diff';
 
       // Update tracking vars
       prevTab = state.activeMainTab;
-      prevSettingsOpen = state.isSettingsDialogOpen;
+      prevSettingsOpen = currentSettingsOpen;
       prevSettingsPath = state.settingsPage;
       prevDiffFile = state.pendingDiffFile;
 
@@ -221,6 +224,7 @@ export function useRouter(): void {
     const handlePopState = () => {
       // Parse the new URL and apply it
       const route = parseRoute();
+      const uiState = useUIStore.getState();
 
       // Check if this is a route with any params, or if we should restore defaults
       if (hasRouteParams()) {
@@ -228,8 +232,7 @@ export function useRouter(): void {
       } else {
         // URL has no route params - this might be a "back to home" navigation
         // Close settings if open, keep current session
-        const uiState = useUIStore.getState();
-        if (uiState.isSettingsDialogOpen) {
+        if (useDialogStore.getState().isSettingsDialogOpen) {
           setSettingsDialogOpen(false);
         }
         // Reset to chat tab if not already there
@@ -265,7 +268,7 @@ export function navigateToRoute(route: Partial<RouteState>): void {
     }
     if (route.settingsPath) {
       useUIStore.getState().setSettingsPage(resolveSettingsSlug(route.settingsPath));
-      useUIStore.getState().setSettingsDialogOpen(true);
+      useDialogStore.getState().setSettingsDialogOpen(true);
     } else if (route.tab) {
       useUIStore.getState().setActiveMainTab(route.tab);
     }
@@ -284,8 +287,8 @@ export function navigateToRoute(route: Partial<RouteState>): void {
   if (route.settingsPath) {
     params.set('settings', route.settingsPath);
   } else if (route.tab && route.tab !== 'chat') {
-    if (useUIStore.getState().isSettingsDialogOpen) {
-      useUIStore.getState().setSettingsDialogOpen(false);
+    if (useDialogStore.getState().isSettingsDialogOpen) {
+      useDialogStore.getState().setSettingsDialogOpen(false);
     }
     params.set('tab', route.tab);
   }
@@ -304,7 +307,7 @@ export function navigateToRoute(route: Partial<RouteState>): void {
   }
   if (route.settingsPath) {
     useUIStore.getState().setSettingsPage(resolveSettingsSlug(route.settingsPath));
-    useUIStore.getState().setSettingsDialogOpen(true);
+    useDialogStore.getState().setSettingsDialogOpen(true);
   } else if (route.tab) {
     useUIStore.getState().setActiveMainTab(route.tab);
   }
@@ -323,6 +326,7 @@ export function getShareableURL(): string {
 
   const sessionState = useSessionUIStore.getState();
   const uiState = useUIStore.getState();
+  const dialogState = useDialogStore.getState();
 
   const params = new URLSearchParams();
 
@@ -330,7 +334,7 @@ export function getShareableURL(): string {
     params.set('session', sessionState.currentSessionId);
   }
 
-  if (uiState.isSettingsDialogOpen) {
+  if (dialogState.isSettingsDialogOpen) {
     params.set('settings', uiState.settingsPage || 'home');
   } else if (uiState.activeMainTab !== 'chat') {
     params.set('tab', uiState.activeMainTab);

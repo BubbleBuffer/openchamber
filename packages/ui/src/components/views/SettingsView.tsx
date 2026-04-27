@@ -1,8 +1,10 @@
 import React from 'react';
 import { cn, getModifierLabel } from '@/lib/utils';
 import { useUIStore } from '@/stores/useUIStore';
+import { useDialogStore } from '@/stores/useDialogStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 import { useAgentsStore } from '@/stores/useAgentsStore';
+import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { useCommandsStore } from '@/stores/useCommandsStore';
 import { useMcpConfigStore } from '@/stores/useMcpConfigStore';
 import { useSkillsStore } from '@/stores/useSkillsStore';
@@ -246,7 +248,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
   const isMobile = forceMobile ?? deviceInfo.isMobile;
 
   const settingsPageRaw = useUIStore((state) => state.settingsPage);
-  const isSettingsDialogOpen = useUIStore((state) => state.isSettingsDialogOpen);
+  const isSettingsDialogOpen = useDialogStore((state) => state.isSettingsDialogOpen);
   const setSettingsPage = useUIStore((state) => state.setSettingsPage);
   const settingsSlug = resolveSettingsSlug(settingsPageRaw);
 
@@ -334,7 +336,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
     }
 
     if (settingsSlug === 'agents') {
-      void useAgentsStore.getState().loadAgents();
+      const directory = useDirectoryStore.getState().currentDirectory;
+      void useAgentsStore.getState().loadAgents({ directory });
       return;
     }
     if (settingsSlug === 'commands') {

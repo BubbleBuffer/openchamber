@@ -6,7 +6,8 @@ import { opencodeClient } from './opencode/client';
 import { renderMagicPrompt } from './magicPrompts';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useContextStore } from '@/stores/contextStore';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
 
 export type {
   GitStatus,
@@ -314,13 +315,14 @@ const resolveSessionGenerationContext = (): SessionGenerationContext | null => {
   }
 
   const context = useContextStore.getState();
-  const config = useConfigStore.getState();
+  const config = useAgentConfigStore.getState();
+  const providerConfig = useProviderConfigStore.getState();
 
   const agent = context.getSessionAgentSelection(sessionId) || config.currentAgentName || undefined;
   const sessionModel = context.getSessionModelSelection(sessionId);
   const agentModel = agent ? context.getAgentModelForSession(sessionId, agent) : null;
-  const selectedModel = agentModel || sessionModel || (config.currentProviderId && config.currentModelId
-    ? { providerId: config.currentProviderId, modelId: config.currentModelId }
+  const selectedModel = agentModel || sessionModel || (providerConfig.currentProviderId && providerConfig.currentModelId
+    ? { providerId: providerConfig.currentProviderId, modelId: providerConfig.currentModelId }
     : null);
 
   if (!selectedModel?.providerId || !selectedModel?.modelId) {

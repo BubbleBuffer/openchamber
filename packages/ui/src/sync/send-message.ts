@@ -8,7 +8,8 @@
 
 import type { AttachedFile } from "@/stores/types/sessionTypes"
 import { opencodeClient } from "@/lib/opencode/client"
-import { useConfigStore } from "@/stores/useConfigStore"
+import { useProviderConfigStore } from "@/stores/useProviderConfigStore"
+import { useAgentConfigStore } from "@/stores/useAgentConfigStore"
 import { useCommandsStore } from "@/stores/useCommandsStore"
 import { useSelectionStore } from "./selection-store"
 import { useViewportStore } from "./viewport-store"
@@ -46,7 +47,7 @@ const persistDraftTarget = (target: PersistedDraftTarget): void => {
 }
 
 const activateConfigForDirectory = async (directory: string | null | undefined): Promise<void> => {
-  await useConfigStore.getState().activateDirectory(normalizePath(directory))
+  await useProviderConfigStore.getState().activateDirectory(normalizePath(directory))
 }
 
 // ---------------------------------------------------------------------------
@@ -176,23 +177,23 @@ export async function sendMessage(
     const draftSyntheticParts = draft.syntheticParts
     await activateConfigForDirectory(draftDirectoryOverride ?? created.directory ?? null)
 
-    const configState = useConfigStore.getState()
-    const draftAgentName = configState.currentAgentName
+    const providerState = useProviderConfigStore.getState()
+    const draftAgentName = useAgentConfigStore.getState().currentAgentName
     const effectiveDraftAgent = trimmedAgent ?? draftAgentName
 
-    if (configState.currentProviderId && configState.currentModelId) {
-      useSelectionStore.getState().saveSessionModelSelection(created.id, configState.currentProviderId, configState.currentModelId)
+    if (providerState.currentProviderId && providerState.currentModelId) {
+      useSelectionStore.getState().saveSessionModelSelection(created.id, providerState.currentProviderId, providerState.currentModelId)
     }
 
     if (effectiveDraftAgent) {
       useSelectionStore.getState().saveSessionAgentSelection(created.id, effectiveDraftAgent)
-      if (configState.currentProviderId && configState.currentModelId) {
-        useSelectionStore.getState().saveAgentModelForSession(created.id, effectiveDraftAgent, configState.currentProviderId, configState.currentModelId)
-        useSelectionStore.getState().saveAgentModelVariantForSession(created.id, effectiveDraftAgent, configState.currentProviderId, configState.currentModelId, variant)
+      if (providerState.currentProviderId && providerState.currentModelId) {
+        useSelectionStore.getState().saveAgentModelForSession(created.id, effectiveDraftAgent, providerState.currentProviderId, providerState.currentModelId)
+        useSelectionStore.getState().saveAgentModelVariantForSession(created.id, effectiveDraftAgent, providerState.currentProviderId, providerState.currentModelId, variant)
       }
     }
 
-    useSessionUIStore.getState().initializeNewOpenChamberSession(created.id, configState.agents ?? [])
+    useSessionUIStore.getState().initializeNewOpenChamberSession(created.id, useAgentConfigStore.getState().agents ?? [])
 
     const createdDirectory = normalizePath(draftDirectoryOverride ?? created.directory ?? null)
 
@@ -251,7 +252,7 @@ export async function sendMessage(
   const sessionAgentSelection = currentSessionId
     ? useSelectionStore.getState().getSessionAgentSelection(currentSessionId)
     : null
-  const configAgentName = useConfigStore.getState().currentAgentName
+  const configAgentName = useAgentConfigStore.getState().currentAgentName
   const effectiveAgent = trimmedAgent || sessionAgentSelection || configAgentName || undefined
 
   if (currentSessionId && effectiveAgent) {

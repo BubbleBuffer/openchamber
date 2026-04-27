@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useUIStore } from "@/stores/useUIStore";
+import { useDialogStore, type DialogStore } from "@/stores/useDialogStore";
 import {
   RiAddLine,
   RiAiAgentLine,
@@ -53,8 +54,8 @@ const renderShortcut = (id: string, fallbackCombo: string, overrides: Record<str
 };
 
 export const HelpDialog: React.FC = () => {
-  const isHelpDialogOpen = useUIStore((state) => state.isHelpDialogOpen);
-  const setHelpDialogOpen = useUIStore((state) => state.setHelpDialogOpen);
+  const isHelpDialogOpen = useDialogStore((state) => state.isHelpDialogOpen);
+  const setHelpDialogOpen = useDialogStore((state: DialogStore) => state.setHelpDialogOpen);
   const shortcutOverrides = useUIStore((state) => state.shortcutOverrides);
   const mod = getModifierLabel();
 

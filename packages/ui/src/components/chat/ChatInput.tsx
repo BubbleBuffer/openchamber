@@ -17,7 +17,8 @@ import {
 } from '@remixicon/react';
 import { BrowserVoiceButton } from '@/components/voice';
 // sessionStore removed — currentSessionId comes from useSessionUIStore
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useMessageQueueStore, type QueuedMessage } from '@/stores/messageQueueStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
@@ -777,11 +778,11 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
     const activeProjectId = useProjectsStore((state) => state.activeProjectId);
     const setActiveProjectIdOnly = useProjectsStore((state) => state.setActiveProjectIdOnly);
 
-    const getEffectiveModel = useConfigStore((state) => state.getEffectiveModel);
-    const currentVariant = useConfigStore((state) => state.currentVariant);
-    const currentAgentName = useConfigStore((state) => state.currentAgentName);
-    const setAgent = useConfigStore((state) => state.setAgent);
-    const getVisibleAgents = useConfigStore((state) => state.getVisibleAgents);
+    const getEffectiveModel = useProviderConfigStore((state) => state.getEffectiveModel);
+    const currentVariant = useProviderConfigStore((state) => state.currentVariant);
+    const currentAgentName = useAgentConfigStore((state) => state.currentAgentName);
+    const setAgent = useAgentConfigStore((state) => state.setAgent);
+    const getVisibleAgents = useAgentConfigStore((state) => state.getVisibleAgents);
     const agents = getVisibleAgents();
     const primaryAgents = React.useMemo(() => agents.filter((agent) => agent.mode === 'primary'), [agents]);
     const isMobile = useUIStore((state) => state.isMobile);
@@ -1483,7 +1484,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                     await sessionActions.waitForConnectionOrThrow();
                     const { opencodeClient } = await import('@/lib/opencode/client');
                     const sdk = opencodeClient.getSdkClient();
-                    const configState = useConfigStore.getState();
+                    const configState = useProviderConfigStore.getState();
                     const compactEffectiveModel = configState.getEffectiveModel();
                     await sdk.session.summarize({
                         sessionID: currentSessionId,

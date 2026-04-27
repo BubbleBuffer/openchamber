@@ -17,7 +17,8 @@ import type { Session, Part, Message, TextPart } from "@/lib/opencode/client"
 import type { AttachedFile, SessionContextUsage, SessionWorktreeAttachment } from "@/stores/types/sessionTypes"
 import type { WorktreeMetadata } from "@/types/worktree"
 import { opencodeClient } from "@/lib/opencode/client"
-import { useConfigStore } from "@/stores/useConfigStore"
+import { useProviderConfigStore } from "@/stores/useProviderConfigStore"
+import { useAgentConfigStore } from "@/stores/useAgentConfigStore"
 import { useProjectsStore } from "@/stores/useProjectsStore"
 import { useDirectoryStore } from "@/stores/useDirectoryStore"
 import { sendMessage as sendMessageImpl, routeMessage } from "./send-message"
@@ -239,7 +240,7 @@ const resolveSessionDirectory = (
 }
 
 const activateConfigForDirectory = async (directory: string | null | undefined): Promise<void> => {
-  await useConfigStore.getState().activateDirectory(normalizePath(directory))
+  await useProviderConfigStore.getState().activateDirectory(normalizePath(directory))
 }
 
 const DEFAULT_DRAFT: NewSessionDraftState = {
@@ -757,7 +758,8 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
     const session = await get().createSession(undefined, directory ?? null, null)
     if (!session) return
 
-    const { currentProviderId, currentModelId, currentAgentName } = useConfigStore.getState()
+    const { currentProviderId, currentModelId } = useProviderConfigStore.getState()
+    const { currentAgentName } = useAgentConfigStore.getState()
     const pID = currentProviderId || useSelectionStore.getState().lastUsedProvider?.providerID
     const mID = currentModelId || useSelectionStore.getState().lastUsedProvider?.modelID
 

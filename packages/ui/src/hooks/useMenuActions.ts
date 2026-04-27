@@ -2,6 +2,7 @@ import React from 'react';
 import { toast } from '@/components/ui';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useUIStore } from '@/stores/useUIStore';
+import { useDialogStore } from '@/stores/useDialogStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
@@ -92,14 +93,14 @@ export const useMenuActions = (
   onToggleMemoryDebug?: () => void
 ) => {
   const openNewSessionDraft = useSessionUIStore((s) => s.openNewSessionDraft);
-  const toggleCommandPalette = useUIStore((s) => s.toggleCommandPalette);
-  const setQuickOpenOpen = useUIStore((s) => s.setQuickOpenOpen);
-  const toggleHelpDialog = useUIStore((s) => s.toggleHelpDialog);
+  const toggleCommandPalette = useDialogStore((s) => s.toggleCommandPalette);
+  const setQuickOpenOpen = useDialogStore((s) => s.setQuickOpenOpen);
+  const toggleHelpDialog = useDialogStore((s) => s.toggleHelpDialog);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const setSessionSwitcherOpen = useUIStore((s) => s.setSessionSwitcherOpen);
   const setActiveMainTab = useUIStore((s) => s.setActiveMainTab);
-  const setSettingsDialogOpen = useUIStore((s) => s.setSettingsDialogOpen);
-  const setAboutDialogOpen = useUIStore((s) => s.setAboutDialogOpen);
+  const setSettingsDialogOpen = useDialogStore((s) => s.setSettingsDialogOpen);
+  const setAboutDialogOpen = useDialogStore((s) => s.setAboutDialogOpen);
   const { addProject } = useProjectsStore();
   const checkForUpdates = useUpdateStore((state) => state.checkForUpdates);
   const { requestAccess, startAccessing } = useFileSystemAccess();

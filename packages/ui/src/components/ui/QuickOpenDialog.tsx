@@ -25,6 +25,7 @@ import { useFilesViewShowGitignored } from '@/lib/filesViewShowGitignored';
 import { useFileSearchStore } from '@/stores/useFileSearchStore';
 import { useFilesViewTabsStore } from '@/stores/useFilesViewTabsStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useDialogStore } from '@/stores/useDialogStore';
 
 type RecentQuickOpenFile = {
   path: string;
@@ -73,8 +74,8 @@ const getRelativePath = (root: string, filePath: string): string => {
 
 export const QuickOpenDialog: React.FC = () => {
   const { files } = useRuntimeAPIs();
-  const isQuickOpenOpen = useUIStore((state) => state.isQuickOpenOpen);
-  const setQuickOpenOpen = useUIStore((state) => state.setQuickOpenOpen);
+  const isQuickOpenOpen = useDialogStore((state) => state.isQuickOpenOpen);
+  const setQuickOpenOpen = useDialogStore((state) => state.setQuickOpenOpen);
   const openContextFile = useUIStore((state) => state.openContextFile);
   const effectiveDirectory = useEffectiveDirectory();
   const showHidden = useDirectoryShowHidden();

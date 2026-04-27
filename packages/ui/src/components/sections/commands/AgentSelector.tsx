@@ -7,7 +7,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAgentsStore, filterVisibleAgents } from '@/stores/useAgentsStore';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDeviceInfo } from '@/lib/device';
 import { RiArrowDownSLine, RiRobot2Line } from '@remixicon/react';
@@ -27,10 +27,10 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
     className,
     filter,
 }) => {
-    const configAgents = useConfigStore((state) => state.agents);
+    const configAgents = useAgentConfigStore((state) => state.agents);
     const agentsStoreAgents = useAgentsStore((state) => state.agents);
     const loadAgentsStore = useAgentsStore((state) => state.loadAgents);
-    const loadConfigAgents = useConfigStore((state) => state.loadAgents);
+    const loadConfigAgents = useAgentConfigStore((state) => state.loadAgents);
     const rawAgents = React.useMemo(() => {
         if (Array.isArray(configAgents) && configAgents.length > 0) return configAgents;
         return Array.isArray(agentsStoreAgents) ? agentsStoreAgents : [];

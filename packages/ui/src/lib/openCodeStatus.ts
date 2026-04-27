@@ -1,5 +1,6 @@
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { getSyncSessions } from '@/sync/sync-refs';
+import { useDialogStore } from '@/stores/useDialogStore';
 import { useUIStore } from '@/stores/useUIStore';
 
 declare const __APP_VERSION__: string | undefined;
@@ -357,7 +358,7 @@ export const buildOpenCodeStatusReport = async (): Promise<string> => {
 
 export const showOpenCodeStatus = async (): Promise<void> => {
   const text = await buildOpenCodeStatusReport();
-  const ui = useUIStore.getState();
-  ui.setOpenCodeStatusText(text);
-  ui.setOpenCodeStatusDialogOpen(true);
+  const dialog = useDialogStore.getState();
+  dialog.setOpenCodeStatusText(text);
+  dialog.setOpenCodeStatusDialogOpen(true);
 };

@@ -17,6 +17,7 @@ import { MultiRunLauncher } from '@/components/multirun';
 import { DrawerProvider } from '@/contexts/DrawerContext';
 
 import { useUIStore } from '@/stores/useUIStore';
+import { useDialogStore } from '@/stores/useDialogStore';
 import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useDeviceInfo } from '@/lib/device';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
@@ -75,11 +76,11 @@ export const MainLayout: React.FC = () => {
     const activeMainTab = useUIStore((state) => state.activeMainTab);
     const setIsMobile = useUIStore((state) => state.setIsMobile);
     const isSessionSwitcherOpen = useUIStore((state) => state.isSessionSwitcherOpen);
-    const isSettingsDialogOpen = useUIStore((state) => state.isSettingsDialogOpen);
-    const setSettingsDialogOpen = useUIStore((state) => state.setSettingsDialogOpen);
-    const isMultiRunLauncherOpen = useUIStore((state) => state.isMultiRunLauncherOpen);
-    const setMultiRunLauncherOpen = useUIStore((state) => state.setMultiRunLauncherOpen);
-    const multiRunLauncherPrefillPrompt = useUIStore((state) => state.multiRunLauncherPrefillPrompt);
+    const isSettingsDialogOpen = useDialogStore((state) => state.isSettingsDialogOpen);
+    const setSettingsDialogOpen = useDialogStore((state) => state.setSettingsDialogOpen);
+    const isMultiRunLauncherOpen = useDialogStore((state) => state.isMultiRunLauncherOpen);
+    const setMultiRunLauncherOpen = useDialogStore((state) => state.setMultiRunLauncherOpen);
+    const multiRunLauncherPrefillPrompt = useDialogStore((state) => state.multiRunLauncherPrefillPrompt);
 
     const { isMobile } = useDeviceInfo();
     const isDesktopShellRuntime = React.useMemo(() => isDesktopShell(), []);
@@ -218,33 +219,6 @@ export const MainLayout: React.FC = () => {
             setIsMobile(isMobile);
         }
     }, [isMobile, setIsMobile]);
-
-    React.useEffect(() => {
-        if (typeof window === 'undefined') {
-            return;
-        }
-
-        let timeoutId: number | undefined;
-
-        const handleResize = () => {
-            if (timeoutId !== undefined) {
-                window.clearTimeout(timeoutId);
-            }
-
-            timeoutId = window.setTimeout(() => {
-                useUIStore.getState().updateProportionalSidebarWidths();
-            }, 150);
-        };
-
-        window.addEventListener('resize', handleResize);
-
-        return () => {
-            window.removeEventListener('resize', handleResize);
-            if (timeoutId !== undefined) {
-                window.clearTimeout(timeoutId);
-            }
-        };
-    }, []);
 
     React.useEffect(() => {
         if (isContextPanelOpen) {

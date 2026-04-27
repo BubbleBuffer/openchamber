@@ -25,7 +25,8 @@ import { syncDebug } from "./debug"
 import { getReconnectCandidateSessionIds } from "./reconnect-recovery"
 import { opencodeClient } from "@/lib/opencode/client"
 import { usePermissionStore } from "@/stores/permissionStore"
-import { useConfigStore } from "@/stores/useConfigStore"
+import { useProviderConfigStore } from "@/stores/useProviderConfigStore"
+import { useAgentConfigStore } from "@/stores/useAgentConfigStore"
 import { useTodosPersistStore } from "@/stores/useTodosPersistStore"
 import { toast } from "@/components/ui"
 import { appendNotification } from "./notification-store"
@@ -1272,7 +1273,7 @@ export function SyncProvider(props: {
   directory: string
   children: React.ReactNode
 }) {
-  const messageStreamTransport = useConfigStore((state) => state.settingsMessageStreamTransport)
+  const messageStreamTransport = useAgentConfigStore((state) => state.settingsMessageStreamTransport)
   const childStoresRef = useRef<ChildStoreManager | null>(null)
   if (!childStoresRef.current) childStoresRef.current = new ChildStoreManager()
   const childStores = childStoresRef.current
@@ -1427,7 +1428,7 @@ export function SyncProvider(props: {
         handleEvent(directory, payload, childStores, routingIndex)
       },
       onReconnect: () => {
-        useConfigStore.setState({
+        useProviderConfigStore.setState({
           isConnected: true,
           hasEverConnected: true,
           connectionPhase: "connected",
@@ -1437,8 +1438,8 @@ export function SyncProvider(props: {
         }
       },
       onDisconnect: (reason) => {
-        const { hasEverConnected } = useConfigStore.getState()
-        useConfigStore.setState({
+        const { hasEverConnected } = useProviderConfigStore.getState()
+        useProviderConfigStore.setState({
           isConnected: false,
           connectionPhase: hasEverConnected ? "reconnecting" : "connecting",
           lastDisconnectReason: reason,
@@ -1448,7 +1449,7 @@ export function SyncProvider(props: {
         // Transport switched (e.g. WS timeout → SSE fallback) without a full
         // disconnect. If the active session missed the transition into a busy
         // turn, force a targeted resync for the viewed directory.
-        useConfigStore.setState({
+        useProviderConfigStore.setState({
           isConnected: true,
           hasEverConnected: true,
           connectionPhase: "connected",

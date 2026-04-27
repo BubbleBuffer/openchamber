@@ -1,7 +1,8 @@
 import React from 'react';
 import { RiInformationLine, RiRestartLine } from '@remixicon/react';
 import { useUIStore } from '@/stores/useUIStore';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { isDesktopShell, isVSCodeRuntime } from '@/lib/desktop';
 import { useDeviceInfo } from '@/lib/device';
 import { updateDesktopSettings } from '@/lib/persistence';
@@ -57,9 +58,9 @@ export const NotificationSettings: React.FC = () => {
   const setSummaryLength = useUIStore(state => state.setSummaryLength);
   const maxLastMessageLength = useUIStore(state => state.maxLastMessageLength);
   const setMaxLastMessageLength = useUIStore(state => state.setMaxLastMessageLength);
-  const providers = useConfigStore((state) => state.providers);
-  const settingsZenModel = useConfigStore((state) => state.settingsZenModel);
-  const setSettingsZenModel = useConfigStore((state) => state.setSettingsZenModel);
+  const providers = useProviderConfigStore((state) => state.providers);
+  const settingsZenModel = useAgentConfigStore((state) => state.settingsZenModel);
+  const setSettingsZenModel = useAgentConfigStore((state) => state.setSettingsZenModel);
 
   const [notificationPermission, setNotificationPermission] = React.useState<NotificationPermission>('default');
   const [pushSupported, setPushSupported] = React.useState(false);

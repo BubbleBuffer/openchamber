@@ -47,7 +47,9 @@ import { useDeviceInfo } from '@/lib/device';
 import { getEditModeColors } from '@/lib/permissions/editModeColors';
 import { cn, fuzzyMatch } from '@/lib/utils';
 import { useContextStore } from '@/stores/contextStore';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useDialogStore } from '@/stores/useDialogStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
 import { useDirectorySync, useSessionMessages } from '@/sync/sync-context';
@@ -294,25 +296,25 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
     onMobilePanelSelection,
     onAgentPanelSelection,
 }) => {
-    const providers = useConfigStore((state) => state.providers);
-    const currentProviderId = useConfigStore((state) => state.currentProviderId);
-    const currentModelId = useConfigStore((state) => state.currentModelId);
-    const currentVariant = useConfigStore((state) => state.currentVariant);
-    const currentAgentName = useConfigStore((state) => state.currentAgentName);
-    const settingsDefaultVariant = useConfigStore((state) => state.settingsDefaultVariant);
-    const settingsDefaultAgent = useConfigStore((state) => state.settingsDefaultAgent);
-    const setProvider = useConfigStore((state) => state.setProvider);
-    const setSelectedProvider = useConfigStore((state) => state.setSelectedProvider);
-    const setModel = useConfigStore((state) => state.setModel);
-    const setCurrentVariant = useConfigStore((state) => state.setCurrentVariant);
-    const getCurrentModelVariants = useConfigStore((state) => state.getCurrentModelVariants);
-    const setAgent = useConfigStore((state) => state.setAgent);
-    const getCurrentProvider = useConfigStore((state) => state.getCurrentProvider);
-    const getModelMetadata = useConfigStore((state) => state.getModelMetadata);
-    const getCurrentAgent = useConfigStore((state) => state.getCurrentAgent);
-    const getVisibleAgents = useConfigStore((state) => state.getVisibleAgents);
-    const isAutoModel = useConfigStore((s) => s.isAutoModel);
-    const setAutoModel = useConfigStore((s) => s.setAutoModel);
+    const providers = useProviderConfigStore((state) => state.providers);
+    const currentProviderId = useProviderConfigStore((state) => state.currentProviderId);
+    const currentModelId = useProviderConfigStore((state) => state.currentModelId);
+    const currentVariant = useProviderConfigStore((state) => state.currentVariant);
+    const currentAgentName = useAgentConfigStore((state) => state.currentAgentName);
+    const settingsDefaultVariant = useAgentConfigStore((state) => state.settingsDefaultVariant);
+    const settingsDefaultAgent = useAgentConfigStore((state) => state.settingsDefaultAgent);
+    const setProvider = useProviderConfigStore((state) => state.setProvider);
+    const setSelectedProvider = useProviderConfigStore((state) => state.setSelectedProvider);
+    const setModel = useProviderConfigStore((state) => state.setModel);
+    const setCurrentVariant = useProviderConfigStore((state) => state.setCurrentVariant);
+    const getCurrentModelVariants = useProviderConfigStore((state) => state.getCurrentModelVariants);
+    const setAgent = useAgentConfigStore((state) => state.setAgent);
+    const getCurrentProvider = useProviderConfigStore((state) => state.getCurrentProvider);
+    const getModelMetadata = useProviderConfigStore((state) => state.getModelMetadata);
+    const getCurrentAgent = useAgentConfigStore((state) => state.getCurrentAgent);
+    const getVisibleAgents = useAgentConfigStore((state) => state.getVisibleAgents);
+    const isAutoModel = useProviderConfigStore((s) => s.isAutoModel);
+    const setAutoModel = useProviderConfigStore((s) => s.setAutoModel);
 
     // Use visible agents (excludes hidden internal agents)
     const agents = getVisibleAgents();
@@ -361,9 +363,9 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
     const addRecentModel = useUIStore((state) => state.addRecentModel);
     const addRecentAgent = useUIStore((state) => state.addRecentAgent);
     const addRecentEffort = useUIStore((state) => state.addRecentEffort);
-    const isModelSelectorOpen = useUIStore((state) => state.isModelSelectorOpen);
-    const setModelSelectorOpen = useUIStore((state) => state.setModelSelectorOpen);
-    const setSettingsDialogOpen = useUIStore((state) => state.setSettingsDialogOpen);
+    const isModelSelectorOpen = useDialogStore((state) => state.isModelSelectorOpen);
+    const setModelSelectorOpen = useDialogStore((state) => state.setModelSelectorOpen);
+    const setSettingsDialogOpen = useDialogStore((state) => state.setSettingsDialogOpen);
     const setSettingsPage = useUIStore((state) => state.setSettingsPage);
     const hiddenModels = useUIStore((state) => state.hiddenModels);
     const collapsedProviderSet = React.useMemo(

@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 
 export interface AgentSelectorProps {
   /** Currently selected agent name (empty string for no agent) */
@@ -34,9 +34,9 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
   disabled,
   id,
 }) => {
-  const getVisibleAgents = useConfigStore((state) => state.getVisibleAgents);
-  const loadAgents = useConfigStore((state) => state.loadAgents);
-  const defaultAgentName = useConfigStore((state) => state.currentAgentName);
+  const getVisibleAgents = useAgentConfigStore((state) => state.getVisibleAgents);
+  const loadAgents = useAgentConfigStore((state) => state.loadAgents);
+  const defaultAgentName = useAgentConfigStore((state) => state.currentAgentName);
   const agents = getVisibleAgents();
   const selectableAgents = React.useMemo(
     () => agents.filter((agent) => agent.mode !== 'subagent'),

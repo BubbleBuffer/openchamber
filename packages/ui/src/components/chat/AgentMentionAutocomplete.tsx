@@ -1,7 +1,8 @@
 import React from 'react';
 import { cn, fuzzyMatch } from '@/lib/utils';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { useAgentsStore, isAgentBuiltIn, type AgentWithExtras } from '@/stores/useAgentsStore';
+import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 
 interface AgentInfo {
@@ -45,13 +46,14 @@ export const AgentMentionAutocomplete = React.forwardRef<AgentMentionAutocomplet
   const [agents, setAgents] = React.useState<AgentInfo[]>([]);
   const itemRefs = React.useRef<(HTMLDivElement | null)[]>([]);
   const ignoreTabClickRef = React.useRef(false);
-  const getVisibleAgents = useConfigStore((state) => state.getVisibleAgents);
+  const getVisibleAgents = useAgentConfigStore((state) => state.getVisibleAgents);
   const agentsWithMetadata = useAgentsStore((state) => state.agents);
   const loadAgents = useAgentsStore((state) => state.loadAgents);
 
   React.useEffect(() => {
     if (agentsWithMetadata.length === 0) {
-      void loadAgents();
+      const directory = useDirectoryStore.getState().currentDirectory;
+      void loadAgents({ directory });
     }
   }, [loadAgents, agentsWithMetadata.length]);
 

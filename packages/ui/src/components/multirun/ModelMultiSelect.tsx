@@ -7,7 +7,7 @@ import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { ProviderLogo } from '@/components/ui/ProviderLogo';
 import { cn } from '@/lib/utils';
 import { isIMECompositionEvent } from '@/lib/ime';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
 import { useModelLists } from '@/hooks/useModelLists';
 import type { ModelMetadata } from '@/types';
 
@@ -115,8 +115,8 @@ export const ModelMultiSelect: React.FC<ModelMultiSelectProps> = ({
   maxModels,
   addButtonClassName,
 }) => {
-  const providers = useConfigStore((state) => state.providers);
-  const modelsMetadata = useConfigStore((state) => state.modelsMetadata);
+  const providers = useProviderConfigStore((state) => state.providers);
+  const modelsMetadata = useProviderConfigStore((state) => state.modelsMetadata);
   const { favoriteModelsList, recentModelsList } = useModelLists();
   const [isOpen, setIsOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');

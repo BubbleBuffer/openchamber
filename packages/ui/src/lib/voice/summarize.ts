@@ -5,7 +5,7 @@
  * the opencode.ai zen API with gpt-5-nano.
  */
 
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { useVoiceSettingsStore } from '@/stores/useVoiceSettingsStore';
 
 const resolveSummarizeUrl = (): string => {
@@ -39,7 +39,7 @@ export async function summarizeText(
     }
 ): Promise<string> {
     const voiceSettings = useVoiceSettingsStore.getState();
-    const configStore = useConfigStore.getState();
+    const configStore = useAgentConfigStore.getState();
     const threshold = options?.threshold ?? voiceSettings.summarizeCharacterThreshold;
     const maxLength = options?.maxLength ?? voiceSettings.summarizeMaxLength;
     const mode = options?.mode ?? 'tts';

@@ -20,7 +20,8 @@ import { usePwaManifestSync } from '@/hooks/usePwaManifestSync';
 import { usePwaInstallPrompt } from '@/hooks/usePwaInstallPrompt';
 import { useWindowControlsOverlayLayout } from '@/hooks/useWindowControlsOverlayLayout';
 import { useWindowTitle } from '@/hooks/useWindowTitle';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { hasModifier } from '@/lib/utils';
 import { isDesktopLocalOriginActive, isDesktopShell, isTauriShell, restartDesktopApp } from '@/lib/desktop';
 import {
@@ -48,6 +49,7 @@ import { RuntimeAPIProvider } from '@/contexts/RuntimeAPIProvider';
 import { registerRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 import { VoiceProvider } from '@/components/voice';
 import { useUIStore } from '@/stores/useUIStore';
+import { useDialogStore } from '@/stores/useDialogStore';
 import { useGitHubAuthStore } from '@/stores/useGitHubAuthStore';
 import { useFeatureFlagsStore } from '@/stores/useFeatureFlagsStore';
 import type { RuntimeAPIs } from '@/lib/api/types';
@@ -63,8 +65,8 @@ const OnboardingScreen = lazyWithChunkRecovery(() =>
 );
 
 const AboutDialogWrapper: React.FC = () => {
-  const isAboutDialogOpen = useUIStore((s) => s.isAboutDialogOpen);
-  const setAboutDialogOpen = useUIStore((s) => s.setAboutDialogOpen);
+  const isAboutDialogOpen = useDialogStore((s) => s.isAboutDialogOpen);
+  const setAboutDialogOpen = useDialogStore((s) => s.setAboutDialogOpen);
   return (
     <AboutDialog
       open={isAboutDialogOpen}
@@ -178,13 +180,13 @@ function SyncAppEffects({ embeddedBackgroundWorkEnabled }: {
 }
 
 function App({ apis }: AppProps) {
-  const initializeApp = useConfigStore((s) => s.initializeApp);
-  const isInitialized = useConfigStore((s) => s.isInitialized);
-  const isConnected = useConfigStore((s) => s.isConnected);
-  const providersCount = useConfigStore((state) => state.providers.length);
-  const agentsCount = useConfigStore((state) => state.agents.length);
-  const loadProviders = useConfigStore((state) => state.loadProviders);
-  const loadAgents = useConfigStore((state) => state.loadAgents);
+  const initializeApp = useProviderConfigStore((s) => s.initializeProviders);
+  const isInitialized = useProviderConfigStore((s) => s.isInitialized);
+  const isConnected = useProviderConfigStore((s) => s.isConnected);
+  const providersCount = useProviderConfigStore((state) => state.providers.length);
+  const agentsCount = useAgentConfigStore((state) => state.agents.length);
+  const loadProviders = useProviderConfigStore((state) => state.loadProviders);
+  const loadAgents = useAgentConfigStore((state) => state.loadAgents);
   const error = useSessionUIStore((s) => s.error);
   const clearError = useSessionUIStore((s) => s.clearError);
   const currentDirectory = useDirectoryStore((state) => state.currentDirectory);
@@ -369,7 +371,7 @@ function App({ apis }: AppProps) {
 
     const retryInitialization = async () => {
       if (!active) return;
-      const state = useConfigStore.getState();
+      const state = useProviderConfigStore.getState();
       if (state.isInitialized) return;
       if (initializationInFlightRef.current) {
         retryTimer = setTimeout(retryInitialization, 1000);
@@ -378,12 +380,12 @@ function App({ apis }: AppProps) {
 
       initializationInFlightRef.current = true;
       try {
-        await state.initializeApp();
+        await state.initializeProviders();
       } finally {
         initializationInFlightRef.current = false;
       }
 
-      const next = useConfigStore.getState();
+      const next = useProviderConfigStore.getState();
       if (!active || next.isInitialized) return;
       retryTimer = setTimeout(retryInitialization, 1000);
     };
@@ -407,11 +409,12 @@ function App({ apis }: AppProps) {
     let retries = 0;
     const MAX_RETRIES = 15;
     const attempt = async () => {
-      const state = useConfigStore.getState();
-      if (state.providers.length > 0 && state.agents.length > 0) return;
+      const providerState = useProviderConfigStore.getState();
+      const agentState = useAgentConfigStore.getState();
+      if (providerState.providers.length > 0 && agentState.agents.length > 0) return;
       try {
-        if (state.providers.length === 0) await loadProviders();
-        if (useConfigStore.getState().agents.length === 0) await loadAgents();
+        if (providerState.providers.length === 0) await loadProviders();
+        if (useAgentConfigStore.getState().agents.length === 0) await loadAgents();
       } catch { /* retry next interval */ }
     };
 

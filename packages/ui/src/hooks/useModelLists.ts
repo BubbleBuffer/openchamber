@@ -1,5 +1,5 @@
 import React from 'react';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
 import type { Provider } from '@/lib/opencode/client';
 
@@ -14,7 +14,7 @@ export interface ModelListItem {
 }
 
 export const useModelLists = () => {
-  const providers = useConfigStore((state) => state.providers);
+  const providers = useProviderConfigStore((state) => state.providers);
   const favoriteModels = useUIStore((state) => state.favoriteModels);
   const recentModels = useUIStore((state) => state.recentModels);
   const hiddenModels = useUIStore((state) => state.hiddenModels);

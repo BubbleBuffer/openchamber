@@ -5,7 +5,8 @@ import { ChatView } from '@/components/views';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useViewportStore } from '@/sync/viewport-store';
 import { useSessions, useDirectorySync } from '@/sync/sync-context';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { ContextUsageDisplay } from '@/components/ui/ContextUsageDisplay';
 import { McpDropdown } from '@/components/mcp/McpDropdown';
 import { cn } from '@/lib/utils';
@@ -123,8 +124,8 @@ export const VSCodeLayout: React.FC = () => {
         'connecting' | 'connected' | 'error' | 'disconnected' | undefined
       : 'connecting') || 'connecting'
   );
-  const configInitialized = useConfigStore((state) => state.isInitialized);
-  const initializeConfig = useConfigStore((state) => state.initializeApp);
+  const configInitialized = useProviderConfigStore((state) => state.isInitialized);
+  const initializeConfig = useProviderConfigStore((state) => state.initializeProviders);
   const [hasInitializedOnce, setHasInitializedOnce] = React.useState<boolean>(() => configInitialized);
   const [isInitializing, setIsInitializing] = React.useState<boolean>(false);
   const lastBootstrapAttemptAt = React.useRef<number>(0);
@@ -247,27 +248,29 @@ export const VSCodeLayout: React.FC = () => {
         if (!configInitialized) {
           await initializeConfig();
         }
-        const configStore = useConfigStore.getState();
+        const configStore = useProviderConfigStore.getState();
+        const agentStore = useAgentConfigStore.getState();
 
         // Keep trying to fetch core datasets on cold starts.
         if (configStore.isConnected) {
           if (configStore.providers.length === 0) {
             await configStore.loadProviders();
           }
-          if (configStore.agents.length === 0) {
-            await configStore.loadAgents();
+          if (agentStore.agents.length === 0) {
+            await agentStore.loadAgents();
           }
         }
 
-        const configState = useConfigStore.getState();
+        const configState = useProviderConfigStore.getState();
+        const agentState = useAgentConfigStore.getState();
         // If OpenCode is still warming up, the initial provider/agent loads can fail and be swallowed by retries.
         // Only mark bootstrap complete when core datasets are present so we keep retrying on cold starts.
-        if (!configState.isInitialized || !configState.isConnected || configState.providers.length === 0 || configState.agents.length === 0) {
+        if (!configState.isInitialized || !configState.isConnected || configState.providers.length === 0 || agentState.agents.length === 0) {
           return;
         }
         if (debugEnabled) console.log('[OpenChamber][VSCode][bootstrap] post-load', {
           providers: configState.providers.length,
-          agents: configState.agents.length,
+          agents: agentState.agents.length,
         });
         setHasInitializedOnce(true);
       } catch {
@@ -496,7 +499,7 @@ interface VSCodeHeaderProps {
 }
 
 const VSCodeHeader: React.FC<VSCodeHeaderProps> = ({ title, showBack, onBack, onNewSession, onSettings, onAgentManager, showMcp, showContextUsage, showRateLimits }) => {
-  const getCurrentModel = useConfigStore((s) => s.getCurrentModel);
+  const getCurrentModel = useProviderConfigStore((s) => s.getCurrentModel);
   const getContextUsage = useSessionUIStore((state) => state.getContextUsage);
   const quotaResults = useQuotaStore((state) => state.results);
   const fetchAllQuotas = useQuotaStore((state) => state.fetchAllQuotas);

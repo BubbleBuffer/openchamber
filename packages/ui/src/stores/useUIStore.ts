@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 import type { SidebarSection } from '@/constants/sidebar';
 import { getSafeStorage } from './utils/safeStorage';
-import { SEMANTIC_TYPOGRAPHY, getTypographyVariable, type SemanticTypographyKey } from '@/lib/typography';
 import type { ShortcutCombo } from '@/lib/shortcuts';
 
 export type MainTab = 'chat' | 'plan' | 'git' | 'diff' | 'terminal' | 'files';
@@ -591,7 +590,6 @@ interface UIStore {
   consumePendingDiffFile: () => string | null;
   setIsMobile: (isMobile: boolean) => void;
   markSettingsOpenedOnce: () => void;
-  applyTheme: () => void;
   setSidebarSection: (section: SidebarSection) => void;
   setSettingsPage: (slug: string) => void;
   setSettingsProjectsSelectedId: (projectId: string | null) => void;
@@ -612,9 +610,6 @@ interface UIStore {
   setCornerRadius: (radius: number) => void;
   setInputBarOffset: (offset: number) => void;
   setKeyboardOpen: (open: boolean) => void;
-  applyTypography: () => void;
-  applyPadding: () => void;
-  updateProportionalSidebarWidths: () => void;
   toggleFavoriteModel: (providerID: string, modelID: string) => void;
   toggleHiddenModel: (providerID: string, modelID: string) => void;
   isHiddenModel: (providerID: string, modelID: string) => boolean;
@@ -764,7 +759,6 @@ export const useUIStore = create<UIStore>()(
 
         setTheme: (theme) => {
           set({ theme });
-          get().applyTheme();
         },
 
         toggleSidebar: () => {
@@ -1263,7 +1257,6 @@ export const useUIStore = create<UIStore>()(
           // Clamp between 50% and 200%
           const clampedSize = Math.max(50, Math.min(200, size));
           set({ fontSize: clampedSize });
-          get().applyTypography();
         },
 
         setTerminalFontSize: (size) => {
@@ -1276,68 +1269,10 @@ export const useUIStore = create<UIStore>()(
           // Clamp between 50% and 200%
           const clampedSize = Math.max(50, Math.min(200, size));
           set({ padding: clampedSize });
-          get().applyPadding();
         },
 
         setCornerRadius: (radius) => {
           set({ cornerRadius: radius });
-        },
-
-        applyTypography: () => {
-          const { fontSize } = get();
-          const root = document.documentElement;
-
-          // 100 = default (1.0x), 50 = half size (0.5x), 200 = double (2.0x)
-          const scale = fontSize / 100;
-
-          const entries = Object.entries(SEMANTIC_TYPOGRAPHY) as Array<[SemanticTypographyKey, string]>;
-
-          // Default must be SEMANTIC_TYPOGRAPHY (from CSS). Remove overrides.
-          if (scale === 1) {
-            for (const [key] of entries) {
-              root.style.removeProperty(getTypographyVariable(key));
-            }
-            return;
-          }
-
-          for (const [key, baseValue] of entries) {
-            const numericValue = parseFloat(baseValue);
-            if (!Number.isFinite(numericValue)) {
-              continue;
-            }
-            root.style.setProperty(getTypographyVariable(key), `${numericValue * scale}rem`);
-          }
-        },
-
-        applyPadding: () => {
-          const { padding } = get();
-          const root = document.documentElement;
-
-          const scale = padding / 100;
-
-          if (scale === 1) {
-            root.style.removeProperty('--padding-scale');
-            root.style.removeProperty('--line-height-tight');
-            root.style.removeProperty('--line-height-normal');
-            root.style.removeProperty('--line-height-relaxed');
-            root.style.removeProperty('--line-height-loose');
-            return;
-          }
-
-          // Apply padding as a percentage scale with non-linear scaling
-          // Use square root for more natural scaling at extremes
-          const adjustedScale = Math.sqrt(scale);
-
-          // Set the CSS custom property that all spacing tokens reference
-          root.style.setProperty('--padding-scale', adjustedScale.toString());
-
-          // Dampened line-height scaling at extremes
-          const lineHeightScale = 1 + (scale - 1) * 0.15;
-
-          root.style.setProperty('--line-height-tight', (1.25 * lineHeightScale).toFixed(3));
-          root.style.setProperty('--line-height-normal', (1.5 * lineHeightScale).toFixed(3));
-          root.style.setProperty('--line-height-relaxed', (1.625 * lineHeightScale).toFixed(3));
-          root.style.setProperty('--line-height-loose', (2 * lineHeightScale).toFixed(3));
         },
 
         setDiffLayoutPreference: (mode) => {
@@ -1515,36 +1450,6 @@ export const useUIStore = create<UIStore>()(
               },
             };
           });
-        },
-
-        updateProportionalSidebarWidths: () => {
-          if (typeof window === 'undefined') {
-            return;
-          }
-
-          set((state) => {
-            const updates: Partial<UIStore> = {};
-
-            if (state.isBottomTerminalOpen && !state.hasManuallyResizedBottomTerminal) {
-              updates.bottomTerminalHeight = Math.floor(window.innerHeight * 0.32);
-            }
-
-            return updates;
-          });
-        },
-
-        applyTheme: () => {
-          const { theme } = get();
-          const root = document.documentElement;
-
-          root.classList.remove('light', 'dark');
-
-          if (theme === 'system') {
-            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            root.classList.add(systemTheme);
-          } else {
-            root.classList.add(theme);
-          }
         },
 
         setNativeNotificationsEnabled: (value) => {
@@ -1811,6 +1716,3 @@ export const useUIStore = create<UIStore>()(
   )
 );
 
-// Facade re-export for backward compatibility during migration
-// TODO: Remove once all consumers are migrated to useDialogStore
-export { useDialogStore } from "./useDialogStore";

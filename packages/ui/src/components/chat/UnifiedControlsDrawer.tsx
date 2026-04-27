@@ -2,7 +2,7 @@ import React from 'react';
 import { MobileOverlayPanel } from '@/components/ui/MobileOverlayPanel';
 import { ProviderLogo } from '@/components/ui/ProviderLogo';
 import { cn } from '@/lib/utils';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
 import { useContextStore } from '@/stores/contextStore';
@@ -43,15 +43,15 @@ export const UnifiedControlsDrawer: React.FC<UnifiedControlsDrawerProps> = ({
     onOpenModel,
     onOpenEffort,
 }) => {
-    const providers = useConfigStore((state) => state.providers);
-    const currentProviderId = useConfigStore((state) => state.currentProviderId);
-    const currentModelId = useConfigStore((state) => state.currentModelId);
-    const currentVariant = useConfigStore((state) => state.currentVariant);
-    const setProvider = useConfigStore((state) => state.setProvider);
-    const setModel = useConfigStore((state) => state.setModel);
-    const setCurrentVariant = useConfigStore((state) => state.setCurrentVariant);
-    const getCurrentModelVariants = useConfigStore((state) => state.getCurrentModelVariants);
-    const getModelMetadata = useConfigStore((state) => state.getModelMetadata);
+    const providers = useProviderConfigStore((state) => state.providers);
+    const currentProviderId = useProviderConfigStore((state) => state.currentProviderId);
+    const currentModelId = useProviderConfigStore((state) => state.currentModelId);
+    const currentVariant = useProviderConfigStore((state) => state.currentVariant);
+    const setProvider = useProviderConfigStore((state) => state.setProvider);
+    const setModel = useProviderConfigStore((state) => state.setModel);
+    const setCurrentVariant = useProviderConfigStore((state) => state.setCurrentVariant);
+    const getCurrentModelVariants = useProviderConfigStore((state) => state.getCurrentModelVariants);
+    const getModelMetadata = useProviderConfigStore((state) => state.getModelMetadata);
     const addRecentModel = useUIStore((state) => state.addRecentModel);
     const addRecentEffort = useUIStore((state) => state.addRecentEffort);
     const recentEfforts = useUIStore((state) => state.recentEfforts);

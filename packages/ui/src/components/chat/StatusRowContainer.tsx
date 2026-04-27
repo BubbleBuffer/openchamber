@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { useAssistantStatus } from '@/hooks/useAssistantStatus';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { StatusRow } from './StatusRow';
 
@@ -21,7 +21,7 @@ export const StatusRowContainer: React.FC = React.memo(() => {
         }, [currentSessionId]),
     );
     const { working } = useAssistantStatus();
-    const currentAgentName = useConfigStore((state) => state.currentAgentName);
+    const currentAgentName = useAgentConfigStore((state) => state.currentAgentName);
 
     const wasAborted = Boolean(abortRecord && !abortRecord.acknowledged);
 

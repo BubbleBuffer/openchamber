@@ -3,10 +3,12 @@ import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
 import * as sessionActions from '@/sync/session-actions';
 import { useUIStore } from '@/stores/useUIStore';
+import { useDialogStore } from '@/stores/useDialogStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { useAssistantStatus } from '@/hooks/useAssistantStatus';
 import { createWorktreeSession } from '@/lib/worktreeSessionCreator';
-import { useConfigStore } from '@/stores/useConfigStore';
 import { isVSCodeRuntime } from '@/lib/desktop';
 import { showOpenCodeStatus } from '@/lib/openCodeStatus';
 import { eventMatchesShortcut, getEffectiveShortcutCombo } from '@/lib/shortcuts';
@@ -17,9 +19,9 @@ export const useKeyboardShortcuts = () => {
   const clearAbortPrompt = useSessionUIStore((s) => s.clearAbortPrompt);
   const currentSessionId = useSessionUIStore((s) => s.currentSessionId);
     const abortCurrentOperation = sessionActions.abortCurrentOperation;;
-  const toggleCommandPalette = useUIStore((s) => s.toggleCommandPalette);
-  const setQuickOpenOpen = useUIStore((s) => s.setQuickOpenOpen);
-  const toggleHelpDialog = useUIStore((s) => s.toggleHelpDialog);
+  const toggleCommandPalette = useDialogStore((s) => s.toggleCommandPalette);
+  const setQuickOpenOpen = useDialogStore((s) => s.setQuickOpenOpen);
+  const toggleHelpDialog = useDialogStore((s) => s.toggleHelpDialog);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const toggleRightSidebar = useUIStore((s) => s.toggleRightSidebar);
   const setRightSidebarOpen = useUIStore((s) => s.setRightSidebarOpen);
@@ -29,8 +31,8 @@ export const useKeyboardShortcuts = () => {
   const isMobile = useUIStore((s) => s.isMobile);
   const setSessionSwitcherOpen = useUIStore((s) => s.setSessionSwitcherOpen);
   const setActiveMainTab = useUIStore((s) => s.setActiveMainTab);
-  const setSettingsDialogOpen = useUIStore((s) => s.setSettingsDialogOpen);
-  const setModelSelectorOpen = useUIStore((s) => s.setModelSelectorOpen);
+  const setSettingsDialogOpen = useDialogStore((s) => s.setSettingsDialogOpen);
+  const setModelSelectorOpen = useDialogStore((s) => s.setModelSelectorOpen);
   const toggleExpandedInput = useUIStore((s) => s.toggleExpandedInput);
   const shortcutOverrides = useUIStore((s) => s.shortcutOverrides);
   const { themeMode, setThemeMode } = useThemeSystem();
@@ -121,7 +123,7 @@ export const useKeyboardShortcuts = () => {
 
       if (eventMatchesShortcut(e, combo('open_settings'))) {
         e.preventDefault();
-        const { isSettingsDialogOpen } = useUIStore.getState();
+        const { isSettingsDialogOpen } = useDialogStore.getState();
         setSettingsDialogOpen(!isSettingsDialogOpen);
         return;
       }
@@ -215,14 +217,16 @@ export const useKeyboardShortcuts = () => {
       // Cmd/Ctrl+Shift+M: Open model selector (same conditions as double-ESC: chat tab, no overlays)
       if (eventMatchesShortcut(e, combo('open_model_selector'))) {
         const {
+          activeMainTab,
+          isSessionSwitcherOpen,
+        } = useUIStore.getState();
+        const {
           isSettingsDialogOpen,
           isCommandPaletteOpen,
           isHelpDialogOpen,
-          isSessionSwitcherOpen,
           isAboutDialogOpen,
-          activeMainTab,
           isModelSelectorOpen,
-        } = useUIStore.getState();
+        } = useDialogStore.getState();
 
         // Skip if settings open
         if (isSettingsDialogOpen) {
@@ -245,13 +249,15 @@ export const useKeyboardShortcuts = () => {
       // Cmd/Ctrl+Shift+T: Cycle thinking variant (same gating as Shift+M)
       if (eventMatchesShortcut(e, combo('cycle_thinking_variant'))) {
         const {
+          activeMainTab,
+          isSessionSwitcherOpen,
+        } = useUIStore.getState();
+        const {
           isSettingsDialogOpen,
           isCommandPaletteOpen,
           isHelpDialogOpen,
-          isSessionSwitcherOpen,
           isAboutDialogOpen,
-          activeMainTab,
-        } = useUIStore.getState();
+        } = useDialogStore.getState();
 
         if (isSettingsDialogOpen) {
           return;
@@ -264,20 +270,21 @@ export const useKeyboardShortcuts = () => {
           return;
         }
 
-        const configState = useConfigStore.getState();
-        const variants = configState.getCurrentModelVariants();
+        e.preventDefault();
+
+        const providerConfig = useProviderConfigStore.getState();
+        const variants = providerConfig.getCurrentModelVariants();
         if (variants.length === 0) {
           return;
         }
 
-        e.preventDefault();
-        configState.cycleCurrentVariant();
+        providerConfig.cycleCurrentVariant();
 
-        const nextVariant = useConfigStore.getState().currentVariant;
+        const nextVariant = useProviderConfigStore.getState().currentVariant;
         const sessionId = useSessionUIStore.getState().currentSessionId;
-        const agentName = useConfigStore.getState().currentAgentName;
-        const providerId = useConfigStore.getState().currentProviderId;
-        const modelId = useConfigStore.getState().currentModelId;
+        const agentName = useAgentConfigStore.getState().currentAgentName;
+        const providerId = useProviderConfigStore.getState().currentProviderId;
+        const modelId = useProviderConfigStore.getState().currentModelId;
 
         if (sessionId && agentName && providerId && modelId) {
           useSelectionStore.getState().saveAgentModelVariantForSession(sessionId, agentName, providerId, modelId, nextVariant);
@@ -292,15 +299,17 @@ export const useKeyboardShortcuts = () => {
         eventMatchesShortcut(e, combo('cycle_favorite_model_backward'))
       ) {
         const {
-          isSettingsDialogOpen,
-          isCommandPaletteOpen,
-          isHelpDialogOpen,
-          isSessionSwitcherOpen,
-          isAboutDialogOpen,
           activeMainTab,
           favoriteModels,
           addRecentModel,
+          isSessionSwitcherOpen,
         } = useUIStore.getState();
+        const {
+          isSettingsDialogOpen,
+          isCommandPaletteOpen,
+          isHelpDialogOpen,
+          isAboutDialogOpen,
+        } = useDialogStore.getState();
 
         if (isSettingsDialogOpen) {
           return;
@@ -315,7 +324,7 @@ export const useKeyboardShortcuts = () => {
 
         e.preventDefault();
 
-        const { currentProviderId, currentModelId, setProvider, setModel } = useConfigStore.getState();
+        const { currentProviderId, currentModelId, setProvider, setModel } = useProviderConfigStore.getState();
         const len = favoriteModels.length;
         const currentIdx = favoriteModels.findIndex(
           (f) => f.providerID === currentProviderId && f.modelID === currentModelId,
@@ -349,15 +358,17 @@ export const useKeyboardShortcuts = () => {
         }
 
         const {
+          activeMainTab,
+          isSessionSwitcherOpen,
+        } = useUIStore.getState();
+        const {
           isSettingsDialogOpen,
           isCommandPaletteOpen,
           isHelpDialogOpen,
-          isSessionSwitcherOpen,
           isAboutDialogOpen,
           isMultiRunLauncherOpen,
           isImagePreviewOpen,
-          activeMainTab,
-        } = useUIStore.getState();
+        } = useDialogStore.getState();
 
         // If settings is open, close it
         if (isSettingsDialogOpen) {

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { useSessionUIStore } from '@/sync/session-ui-store';
-import { useConfigStore } from "@/stores/useConfigStore";
+import { useProviderConfigStore } from "@/stores/useProviderConfigStore";
+import { useAgentConfigStore } from "@/stores/useAgentConfigStore";
 import { getSyncPermissions } from "@/sync/sync-refs";
 import { respondToPermission } from "@/sync/session-actions";
 
@@ -33,7 +34,8 @@ export const realtimeClientTools = {
         }
 
         // Get current provider and model from config store
-        const { currentProviderId, currentModelId, currentAgentName } = useConfigStore.getState();
+        const { currentProviderId, currentModelId } = useProviderConfigStore.getState();
+        const { currentAgentName } = useAgentConfigStore.getState();
         if (!currentProviderId || !currentModelId) {
             console.error("[Voice] No provider/model selected");
             return "error (no provider or model selected)";

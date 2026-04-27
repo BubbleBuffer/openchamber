@@ -25,6 +25,7 @@ import {
   RiPulseLine,
 } from '@remixicon/react';
 import { useUIStore } from '@/stores/useUIStore';
+import { useDialogStore } from '@/stores/useDialogStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { refreshGlobalSessions } from '@/stores/useGlobalSessionsStore';
@@ -141,8 +142,8 @@ const toneStyle = (tone: StatusTone): React.CSSProperties => {
 };
 
 export function ScheduledTasksDialog() {
-  const open = useUIStore((state) => state.isScheduledTasksDialogOpen);
-  const setOpen = useUIStore((state) => state.setScheduledTasksDialogOpen);
+  const open = useDialogStore((state) => state.isScheduledTasksDialogOpen);
+  const setOpen = useDialogStore((state) => state.setScheduledTasksDialogOpen);
   const isMobile = useUIStore((state) => state.isMobile);
   const projects = useProjectsStore((state) => state.projects);
   const activeProject = useProjectsStore((state) => state.getActiveProject());

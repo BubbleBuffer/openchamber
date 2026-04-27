@@ -24,7 +24,9 @@ import { useProjectsStore } from '@/stores/useProjectsStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
 import * as sessionActions from '@/sync/session-actions';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useDialogStore } from '@/stores/useDialogStore';
 import { useContextStore } from '@/stores/contextStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useGitHubAuthStore } from '@/stores/useGitHubAuthStore';
@@ -80,7 +82,7 @@ export function GitHubIssuePickerDialog({
   const { github } = useRuntimeAPIs();
   const githubAuthStatus = useGitHubAuthStore((state) => state.status);
   const githubAuthChecked = useGitHubAuthStore((state) => state.hasChecked);
-  const setSettingsDialogOpen = useUIStore((state) => state.setSettingsDialogOpen);
+  const setSettingsDialogOpen = useDialogStore((state) => state.setSettingsDialogOpen);
   const setSettingsPage = useUIStore((state) => state.setSettingsPage);
   const isMobile = useUIStore((state) => state.isMobile);
   const activeProject = useProjectsStore((state) => state.getActiveProject());
@@ -205,7 +207,7 @@ export function GitHubIssuePickerDialog({
   const directNumber = React.useMemo(() => parseIssueNumber(query), [query]);
 
   const resolveDefaultAgentName = React.useCallback((): string | undefined => {
-    const configState = useConfigStore.getState();
+    const configState = useAgentConfigStore.getState();
     const visibleAgents = configState.getVisibleAgents();
 
     if (configState.settingsDefaultAgent) {
@@ -222,7 +224,7 @@ export function GitHubIssuePickerDialog({
   }, []);
 
   const resolveDefaultModelSelection = React.useCallback((): { providerID: string; modelID: string } | null => {
-    const configState = useConfigStore.getState();
+    const configState = useAgentConfigStore.getState();
     const settingsDefaultModel = configState.settingsDefaultModel;
     if (!settingsDefaultModel) {
       return null;
@@ -237,7 +239,8 @@ export function GitHubIssuePickerDialog({
       return null;
     }
 
-    const modelMetadata = configState.getModelMetadata(providerID, modelID);
+    const providerState = useProviderConfigStore.getState();
+    const modelMetadata = providerState.getModelMetadata(providerID, modelID);
     if (!modelMetadata) {
       return null;
     }
@@ -246,13 +249,14 @@ export function GitHubIssuePickerDialog({
   }, []);
 
   const resolveDefaultVariant = React.useCallback((providerID: string, modelID: string): string | undefined => {
-    const configState = useConfigStore.getState();
+    const configState = useAgentConfigStore.getState();
     const settingsDefaultVariant = configState.settingsDefaultVariant;
     if (!settingsDefaultVariant) {
       return undefined;
     }
 
-    const provider = configState.providers.find((p) => p.id === providerID);
+    const providerState = useProviderConfigStore.getState();
+    const provider = providerState.providers.find((p) => p.id === providerID);
     const model = provider?.models.find((m: Record<string, unknown>) => (m as { id?: string }).id === modelID) as
       | { variants?: Record<string, unknown> }
       | undefined;
@@ -266,9 +270,13 @@ export function GitHubIssuePickerDialog({
     return settingsDefaultVariant;
   }, []);
 
+  const title = mode === 'select' ? 'Link GitHub Issue' : 'New Session From GitHub Issue';
+  const description = mode === 'select'
+    ? 'Select an issue to link to this session.'
+    : 'Seeds a new session with hidden issue context (title/body/labels/comments).';
+
   const startSession = React.useCallback(async (issueNumber: number) => {
     if (mode === 'select') {
-      // In select mode, fetch full issue details and return via onSelect
       if (!projectDirectory) {
         toast.error('No active project');
         return;
@@ -303,14 +311,12 @@ export function GitHubIssuePickerDialog({
           return;
         }
         const comments = commentsRes.comments ?? [];
-
-        // Build full context text like in createSession mode
         const contextText = buildIssueContextText({ repo: issueRes.repo, issue, comments });
 
         if (onSelect) {
-          onSelect({ 
-            number: issue.number, 
-            title: issue.title, 
+          onSelect({
+            number: issue.number,
+            title: issue.title,
             url: issue.url,
             contextText,
             author: issue.author ? {
@@ -386,25 +392,24 @@ export function GitHubIssuePickerDialog({
         return session.id;
       })();
 
-      // Ensure worktree-based sessions also get the issue title.
       void sessionActions.updateSessionTitle(sessionId, sessionTitle).catch(() => undefined);
 
       try {
-        useSessionUIStore.getState().initializeNewOpenChamberSession(sessionId, useConfigStore.getState().agents);
+        useSessionUIStore.getState().initializeNewOpenChamberSession(sessionId, useAgentConfigStore.getState().agents);
       } catch {
         // ignore
       }
 
-      // Close modal immediately after session exists (don't wait for message send).
       onOpenChange(false);
 
-      const configState = useConfigStore.getState();
+      const providerState = useProviderConfigStore.getState();
+      const agentState = useAgentConfigStore.getState();
       const lastUsedProvider = useSelectionStore.getState().lastUsedProvider;
 
       const defaultModel = resolveDefaultModelSelection();
-      const providerID = defaultModel?.providerID || configState.currentProviderId || lastUsedProvider?.providerID;
-      const modelID = defaultModel?.modelID || configState.currentModelId || lastUsedProvider?.modelID;
-      const agentName = resolveDefaultAgentName() || configState.currentAgentName || undefined;
+      const providerID = defaultModel?.providerID || providerState.currentProviderId || lastUsedProvider?.providerID;
+      const modelID = defaultModel?.modelID || providerState.currentModelId || lastUsedProvider?.modelID;
+      const agentName = resolveDefaultAgentName() || agentState.currentAgentName || undefined;
       if (!providerID || !modelID) {
         toast.error('No model selected');
         return;
@@ -420,7 +425,7 @@ export function GitHubIssuePickerDialog({
 
       if (agentName) {
         try {
-          configState.setAgent(agentName);
+          agentState.setAgent(agentName);
         } catch {
           // ignore
         }
@@ -439,7 +444,7 @@ export function GitHubIssuePickerDialog({
 
         if (variant !== undefined) {
           try {
-            configState.setCurrentVariant(variant);
+            providerState.setCurrentVariant(variant);
           } catch {
             // ignore
           }
@@ -482,12 +487,7 @@ export function GitHubIssuePickerDialog({
     } finally {
       setStartingIssueNumber(null);
     }
-  }, [createInWorktree, github, mode, onOpenChange, onSelect, projectDirectory, resolveDefaultAgentName, resolveDefaultModelSelection, resolveDefaultVariant, startingIssueNumber]);
-
-  const title = mode === 'select' ? 'Link GitHub Issue' : 'New Session From GitHub Issue';
-  const description = mode === 'select'
-    ? 'Select an issue to link to this session.'
-    : 'Seeds a new session with hidden issue context (title/body/labels/comments).';
+  }, [mode, projectDirectory, github, startingIssueNumber, onSelect, onOpenChange, createInWorktree, resolveDefaultModelSelection, resolveDefaultAgentName, resolveDefaultVariant]);
 
   const content = (
     <>

@@ -42,7 +42,8 @@ import { useUIStore } from '@/stores/useUIStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
 import * as sessionActions from '@/sync/session-actions';
-import { useConfigStore } from '@/stores/useConfigStore';
+import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { useContextStore } from '@/stores/contextStore';
 import { validateWorktreeCreate, createWorktree } from '@/lib/worktrees/worktreeManager';
 import { withWorktreeUpstreamDefaults } from '@/lib/worktrees/worktreeCreate';
@@ -408,7 +409,7 @@ export function NewWorktreeDialog({
   const [validationAbortController, setValidationAbortController] = React.useState<AbortController | null>(null);
 
   const resolveDefaultAgentName = React.useCallback((): string | undefined => {
-    const configState = useConfigStore.getState();
+    const configState = useAgentConfigStore.getState();
     const visibleAgents = configState.getVisibleAgents();
 
     if (configState.settingsDefaultAgent) {
@@ -422,7 +423,7 @@ export function NewWorktreeDialog({
   }, []);
 
   const resolveDefaultModelSelection = React.useCallback((): { providerID: string; modelID: string } | null => {
-    const configState = useConfigStore.getState();
+    const configState = useAgentConfigStore.getState();
     const settingsDefaultModel = configState.settingsDefaultModel;
     if (!settingsDefaultModel) return null;
 
@@ -431,17 +432,19 @@ export function NewWorktreeDialog({
     const [providerID, modelID] = parts;
     if (!providerID || !modelID) return null;
 
-    const modelMetadata = configState.getModelMetadata(providerID, modelID);
+    const providerState = useProviderConfigStore.getState();
+    const modelMetadata = providerState.getModelMetadata(providerID, modelID);
     if (!modelMetadata) return null;
     return { providerID, modelID };
   }, []);
 
   const resolveDefaultVariant = React.useCallback((providerID: string, modelID: string): string | undefined => {
-    const configState = useConfigStore.getState();
+    const configState = useAgentConfigStore.getState();
     const settingsDefaultVariant = configState.settingsDefaultVariant;
     if (!settingsDefaultVariant) return undefined;
 
-    const provider = configState.providers.find((p) => p.id === providerID);
+    const providerState = useProviderConfigStore.getState();
+    const provider = providerState.providers.find((p) => p.id === providerID);
     const model = provider?.models.find((m: Record<string, unknown>) => (m as { id?: string }).id === modelID) as
       | { variants?: Record<string, unknown> }
       | undefined;
@@ -458,7 +461,7 @@ export function NewWorktreeDialog({
     agentName?: string;
     variant?: string;
   }) => {
-    const configState = useConfigStore.getState();
+    const configState = useAgentConfigStore.getState();
 
     try {
       useContextStore.getState().saveSessionModelSelection(args.sessionId, args.providerID, args.modelID);
@@ -487,7 +490,7 @@ export function NewWorktreeDialog({
     }
     if (args.variant !== undefined) {
       try {
-        configState.setCurrentVariant(args.variant);
+        useProviderConfigStore.getState().setCurrentVariant(args.variant);
       } catch {
         // ignore
       }
@@ -511,12 +514,13 @@ export function NewWorktreeDialog({
       return;
     }
 
-    const configState = useConfigStore.getState();
+    const agentState = useAgentConfigStore.getState();
+    const providerState = useProviderConfigStore.getState();
     const lastUsedProvider = useSelectionStore.getState().lastUsedProvider;
     const defaultModel = resolveDefaultModelSelection();
-    const providerID = defaultModel?.providerID || configState.currentProviderId || lastUsedProvider?.providerID;
-    const modelID = defaultModel?.modelID || configState.currentModelId || lastUsedProvider?.modelID;
-    const agentName = resolveDefaultAgentName() || configState.currentAgentName || undefined;
+    const providerID = defaultModel?.providerID || providerState.currentProviderId || lastUsedProvider?.providerID;
+    const modelID = defaultModel?.modelID || providerState.currentModelId || lastUsedProvider?.modelID;
+    const agentName = resolveDefaultAgentName() || agentState.currentAgentName || undefined;
 
     if (!providerID || !modelID) {
       toast.error('No model selected');
@@ -903,7 +907,7 @@ export function NewWorktreeDialog({
         void sessionActions.updateSessionTitle(session.id, sessionTitle).catch(() => undefined);
 
         try {
-          useSessionUIStore.getState().initializeNewOpenChamberSession(session.id, useConfigStore.getState().agents);
+          useSessionUIStore.getState().initializeNewOpenChamberSession(session.id, useAgentConfigStore.getState().agents);
         } catch {
           // ignore
         }
