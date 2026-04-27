@@ -1,4 +1,4 @@
-import type { Session } from '@opencode-ai/sdk/v2';
+import type { Session } from '@/lib/opencode/client';
 import type { WorktreeMetadata } from '@/types/worktree';
 
 export type SessionSummaryMeta = {

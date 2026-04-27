@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Session } from '@opencode-ai/sdk/v2';
+import type { Session } from '@/lib/opencode/client';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { getSyncMessages } from '@/sync/sync-refs';
 

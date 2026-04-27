@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, devtools, persist } from 'zustand/middleware';
-import type { Todo } from '@opencode-ai/sdk/v2/client';
+import type { Todo } from '@/lib/opencode/client';
 import { getSafeStorage } from './utils/safeStorage';
 
 const MAX_SESSIONS = 50;

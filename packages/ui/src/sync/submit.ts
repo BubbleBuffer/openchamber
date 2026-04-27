@@ -1,4 +1,4 @@
-import type { Message, Part } from "@opencode-ai/sdk/v2/client"
+import type { Message, Part } from "@/lib/opencode/client"
 import { useCallback } from "react"
 import { useSyncSDK } from "./sync-context"
 import { useDirectoryStore } from "./sync-context"

@@ -1,10 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useRef, useCallback, useMemo } from "react"
-import type { Event, Message, Part } from "@opencode-ai/sdk/v2/client"
-import type { Session } from "@opencode-ai/sdk/v2"
+import type { Event, Message, Part, Session, OpencodeClient } from "@/lib/opencode/client"
 import type { StoreApi } from "zustand"
 import { useStore } from "zustand"
-import type { OpencodeClient } from "@opencode-ai/sdk/v2/client"
 import { createEventPipeline } from "./event-pipeline"
 import { reduceGlobalEvent, applyGlobalProject, applyDirectoryEvent } from "./event-reducer"
 import { useGlobalSyncStore, type GlobalSyncStore } from "./global-sync-store"
@@ -32,7 +30,7 @@ import { useTodosPersistStore } from "@/stores/useTodosPersistStore"
 import { toast } from "@/components/ui"
 import { appendNotification } from "./notification-store"
 import type { State } from "./types"
-import type { SessionStatus } from "@opencode-ai/sdk/v2/client"
+import type { SessionStatus } from "@/lib/opencode/client"
 import type { PermissionRequest } from "@/types/permission"
 import type { QuestionRequest } from "@/types/question"
 import * as sessionActions from "./session-actions"
@@ -1198,6 +1196,7 @@ function handleEvent(
       break
     case "message.updated":
       draft.message = { ...current.message }
+      draft.session_status = { ...(current.session_status ?? {}) }
       break
     case "message.removed":
       draft.message = { ...current.message }

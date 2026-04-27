@@ -6,7 +6,7 @@ import { PatchDiff } from '@pierre/diffs/react';
 import { cn } from '@/lib/utils';
 import { SimpleMarkdownRenderer } from '../../MarkdownRenderer';
 import { getToolMetadata } from '@/lib/toolHelpers';
-import type { ToolPart as ToolPartType, ToolState as ToolStateUnion } from '@opencode-ai/sdk/v2';
+import type { ToolPart as ToolPartType, ToolState as ToolStateUnion } from '@/lib/opencode/client';
 import { toolDisplayStyles } from '@/lib/typography';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { useOptionalThemeSystem } from '@/contexts/useThemeSystem';
@@ -2139,12 +2139,12 @@ const ToolPart: React.FC<ToolPartProps> = ({
                     const childStores = getSyncChildStores();
                     childStores.update(currentDirectory, (prev) => {
                         const records = messages as SessionMessageWithParts[];
-                        const partPatch: Record<string, import('@opencode-ai/sdk/v2').Part[]> = { ...prev.part };
+                        const partPatch: Record<string, import('@/lib/opencode/client').Part[]> = { ...prev.part };
                         for (const rec of records) {
                             partPatch[rec.info.id] = rec.parts;
                         }
                         return {
-                            message: { ...prev.message, [capturedSessionId]: records.map((r) => r.info) as import('@opencode-ai/sdk/v2').Message[] },
+                            message: { ...prev.message, [capturedSessionId]: records.map((r) => r.info) as import('@/lib/opencode/client').Message[] },
                             part: partPatch,
                         };
                     });
@@ -2286,12 +2286,12 @@ const ToolPart: React.FC<ToolPartProps> = ({
                 const childStores = getSyncChildStores();
                 childStores.update(currentDirectory, (prev) => {
                     const records = messages as SessionMessageWithParts[];
-                    const partPatch: Record<string, import('@opencode-ai/sdk/v2').Part[]> = { ...prev.part };
+                    const partPatch: Record<string, import('@/lib/opencode/client').Part[]> = { ...prev.part };
                     for (const rec of records) {
                         partPatch[rec.info.id] = rec.parts;
                     }
                     return {
-                        message: { ...prev.message, [taskSessionId]: records.map((r) => r.info) as import('@opencode-ai/sdk/v2').Message[] },
+                        message: { ...prev.message, [taskSessionId]: records.map((r) => r.info) as import('@/lib/opencode/client').Message[] },
                         part: partPatch,
                     };
                 });

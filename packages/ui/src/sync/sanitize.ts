@@ -11,7 +11,7 @@
 // 2. Message loading — fetchMessages response
 // ---------------------------------------------------------------------------
 
-import type { Session, Message } from "@opencode-ai/sdk/v2/client"
+import type { Session, Message } from "@/lib/opencode/client"
 
 type DiffEntry = {
   file?: string

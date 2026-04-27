@@ -20,7 +20,7 @@ import {
 import { RiAddLine, RiAiAgentFill, RiAiAgentLine, RiDeleteBinLine, RiFileCopyLine, RiMore2Line, RiRobot2Line, RiRobotLine, RiRestartLine, RiEditLine } from '@remixicon/react';
 import { useAgentsStore, isAgentBuiltIn, isAgentHidden, type AgentScope, type AgentDraft } from '@/stores/useAgentsStore';
 import { cn } from '@/lib/utils';
-import type { Agent } from '@opencode-ai/sdk/v2';
+import type { Agent } from '@/lib/opencode/client';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { SettingsProjectSelector } from '@/components/sections/shared/SettingsProjectSelector';
 import { SidebarGroup } from '@/components/sections/shared/SidebarGroup';

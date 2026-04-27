@@ -5,7 +5,7 @@ import { useSessions, useAllSessionStatuses } from '@/sync/sync-context';
 import { useConfigStore } from '@/stores/useConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
-import type { Session } from '@opencode-ai/sdk/v2';
+import type { Session } from '@/lib/opencode/client';
 import type { ProjectEntry } from '@/lib/api/types';
 import { cn, formatDirectoryName } from '@/lib/utils';
 import { getAgentColor } from '@/lib/agentColors';

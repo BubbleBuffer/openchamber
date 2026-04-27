@@ -7,7 +7,7 @@
  * from the server via SSE bootstrap.
  */
 
-import type { VcsInfo } from "@opencode-ai/sdk/v2/client"
+import type { VcsInfo } from "@/lib/opencode/client"
 import type { ProjectMeta } from "./types"
 
 // ---------------------------------------------------------------------------

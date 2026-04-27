@@ -1,4 +1,4 @@
-import type { Message } from '@opencode-ai/sdk/v2';
+import type { Message } from '@/lib/opencode/client';
 
 export interface MessageRoleInfo {
     role: string;

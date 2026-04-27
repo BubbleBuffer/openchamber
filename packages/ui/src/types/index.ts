@@ -1,4 +1,4 @@
-import type { Session, Message, Part, Provider } from "@opencode-ai/sdk/v2";
+import type { Session, Message, Part, Provider } from "@/lib/opencode/client";
 
 export type { Session, Message, Part, Provider };
 export type {

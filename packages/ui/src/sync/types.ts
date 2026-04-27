@@ -16,7 +16,7 @@ import type {
   SessionStatus,
   Todo,
   VcsInfo,
-} from "@opencode-ai/sdk/v2/client"
+} from "@/lib/opencode/client"
 
 export type FileDiff = {
   file?: string

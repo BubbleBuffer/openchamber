@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import type { Message, SessionStatus } from "@opencode-ai/sdk/v2/client"
-import type { Session } from "@opencode-ai/sdk/v2"
+import type { Message, Session, SessionStatus } from "@/lib/opencode/client"
 import { getReconnectCandidateSessionIds } from "./reconnect-recovery"
 
 function createSession(id: string, overrides: Partial<Session> = {}): Session {

@@ -8,7 +8,7 @@
  * Abort controller created once at init, cleaned up via returned cleanup fn.
  */
 
-import type { Event, OpencodeClient } from "@opencode-ai/sdk/v2/client"
+import type { Event, OpencodeClient } from "@/lib/opencode/client"
 import { opencodeClient } from "@/lib/opencode/client"
 import { syncDebug } from "./debug"
 

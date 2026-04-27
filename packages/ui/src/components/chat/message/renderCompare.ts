@@ -1,4 +1,4 @@
-import type { Message, Part } from '@opencode-ai/sdk/v2';
+import type { Message, Part } from '@/lib/opencode/client';
 import type { TurnActivityGroup, TurnActivityRecord, TurnDiffStats, TurnGroupingContext } from '../lib/turns/types';
 
 type MessageRecord = {

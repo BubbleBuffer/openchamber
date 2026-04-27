@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { Part } from "@opencode-ai/sdk/v2";
+import type { Part } from "@/lib/opencode/client";
 import { isFullySyntheticMessage } from "@/lib/messages/synthetic";
 
 export interface MessageInfo {

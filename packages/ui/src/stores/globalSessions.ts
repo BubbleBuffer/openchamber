@@ -1,4 +1,4 @@
-import type { OpencodeClient, Session } from "@opencode-ai/sdk/v2";
+import type { OpencodeClient, Session } from "@/lib/opencode/client";
 import { retry } from "@/sync/retry";
 
 export type GlobalSessionRecord = Session & {

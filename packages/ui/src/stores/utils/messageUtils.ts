@@ -1,4 +1,4 @@
-import type { Part } from "@opencode-ai/sdk/v2";
+import type { Part } from "@/lib/opencode/client";
 import { isFinalToolStatus } from "@/lib/toolStatus";
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {

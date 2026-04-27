@@ -7,7 +7,7 @@
  */
 
 import { create } from "zustand"
-import type { Message, SessionStatus } from "@opencode-ai/sdk/v2/client"
+import type { Message, SessionStatus } from "@/lib/opencode/client"
 import type { State } from "./types"
 
 export type StreamPhase = "streaming" | "cooldown" | "completed"

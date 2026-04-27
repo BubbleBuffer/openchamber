@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Session } from '@opencode-ai/sdk/v2';
+import type { Session } from '@/lib/opencode/client';
 import { useSessionFoldersStore } from '@/stores/useSessionFoldersStore';
 import { dedupeSessionsById, getArchivedScopeKey, isSessionRelatedToProject, normalizePath } from '../utils';
 

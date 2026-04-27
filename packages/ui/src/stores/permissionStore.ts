@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { devtools, persist, createJSONStorage } from "zustand/middleware";
-import type { Session } from "@opencode-ai/sdk/v2/client";
+import type { Session } from "@/lib/opencode/client";
 import {
     autoRespondsPermission,
     type PermissionAutoAcceptMap,

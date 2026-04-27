@@ -1,5 +1,4 @@
-import type { SessionStatus, Message } from "@opencode-ai/sdk/v2/client"
-import type { Session } from "@opencode-ai/sdk/v2"
+import type { Session, SessionStatus, Message } from "@/lib/opencode/client"
 
 type ReconnectRecoveryState = {
   session: Session[]

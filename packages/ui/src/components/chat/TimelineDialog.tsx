@@ -11,7 +11,7 @@ import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSessionMessageRecords } from '@/sync/sync-context';
 import { RiLoader4Line, RiSearchLine, RiTimeLine, RiGitBranchLine, RiArrowGoBackLine } from '@remixicon/react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import type { Part } from '@opencode-ai/sdk/v2';
+import type { Part } from '@/lib/opencode/client';
 
 interface TimelineDialogProps {
     open: boolean;

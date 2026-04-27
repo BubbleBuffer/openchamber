@@ -9,7 +9,7 @@ import rehypeKatex from 'rehype-katex';
 import { marked, type Tokens } from 'marked';
 import remend from 'remend';
 import { FadeInOnReveal } from './message/FadeInOnReveal';
-import type { Part } from '@opencode-ai/sdk/v2';
+import type { Part } from '@/lib/opencode/client';
 import { cn } from '@/lib/utils';
 import { RiFileCopyLine, RiCheckLine, RiDownloadLine } from '@remixicon/react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';

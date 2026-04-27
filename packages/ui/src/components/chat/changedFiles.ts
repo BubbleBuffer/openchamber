@@ -1,4 +1,4 @@
-import type { ToolPart } from '@opencode-ai/sdk/v2';
+import type { ToolPart } from '@/lib/opencode/client';
 
 export interface ChangedFile {
     path: string;

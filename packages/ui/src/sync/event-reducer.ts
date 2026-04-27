@@ -8,7 +8,7 @@ import type {
   Session,
   SessionStatus,
   Todo,
-} from "@opencode-ai/sdk/v2/client"
+} from "@/lib/opencode/client"
 import { Binary } from "./binary"
 import type { FileDiff, GlobalState, State } from "./types"
 import { dropSessionCaches } from "./session-cache"
@@ -236,14 +236,27 @@ export function applyDirectoryEvent(
           syncDebug.reducer.messageUpdatedUnchanged(info.sessionID, info.id, info.role, (info as { finish?: unknown }).finish, (info.time as { completed?: number })?.completed)
           return false
         }
-        const next = [...messages]
-        next[result.index] = info
-        draft.message[info.sessionID] = next
-      } else {
-        const next = [...messages]
-        next.splice(result.index, 0, info)
-        draft.message[info.sessionID] = next
+      const next = [...messages]
+      next[result.index] = info
+      draft.message[info.sessionID] = next
+    } else {
+      const next = [...messages]
+      next.splice(result.index, 0, info)
+      draft.message[info.sessionID] = next
+    }
+
+      // Fallback: transition session_status to idle when an assistant message
+      // completes. OpenCode may not always send a session.status (idle) event
+      // after message.updated with finish='stop', leaving the UI stuck in busy.
+      if (
+        info.role === "assistant" &&
+        info.finish === "stop" &&
+        typeof info.time?.completed === "number" &&
+        draft.session_status?.[info.sessionID]?.type === "busy"
+      ) {
+        draft.session_status[info.sessionID] = { type: "idle" }
       }
+
       return true
     }
 

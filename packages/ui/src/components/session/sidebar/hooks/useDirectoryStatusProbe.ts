@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Session } from '@opencode-ai/sdk/v2';
+import type { Session } from '@/lib/opencode/client';
 import { opencodeClient } from '@/lib/opencode/client';
 import { mapWithConcurrency } from '@/lib/concurrency';
 import { normalizePath } from '../utils';

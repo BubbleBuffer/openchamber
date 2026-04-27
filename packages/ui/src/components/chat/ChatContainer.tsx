@@ -1,6 +1,6 @@
 import React from 'react';
 import { RiArrowLeftLine } from '@remixicon/react';
-import type { Message, Part, Session } from '@opencode-ai/sdk/v2';
+import type { Message, Part, Session } from '@/lib/opencode/client';
 
 import { ChatInput } from './ChatInput';
 import { useUIStore } from '@/stores/useUIStore';

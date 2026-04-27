@@ -5,7 +5,7 @@
  * session-actions) use them to read child-store domain data without hooks.
  */
 
-import type { OpencodeClient } from "@opencode-ai/sdk/v2/client"
+import type { OpencodeClient } from "@/lib/opencode/client"
 import type { ChildStoreManager } from "./child-store"
 import type { State } from "./types"
 

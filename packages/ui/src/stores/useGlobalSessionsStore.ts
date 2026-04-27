@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Session } from '@opencode-ai/sdk/v2';
+import type { Session } from '@/lib/opencode/client';
 import { opencodeClient } from '@/lib/opencode/client';
 import { listGlobalSessionPages } from '@/stores/globalSessions';
 
