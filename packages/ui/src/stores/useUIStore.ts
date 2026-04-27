@@ -460,8 +460,6 @@ const clampContextPanelRoots = (
 interface UIStore {
 
   theme: 'light' | 'dark' | 'system';
-  isMultiRunLauncherOpen: boolean;
-  multiRunLauncherPrefillPrompt: string;
   isSidebarOpen: boolean;
   sidebarWidth: number;
   hasManuallyResizedLeftSidebar: boolean;
@@ -483,16 +481,6 @@ interface UIStore {
   pendingFileFocusPath: string | null;
   isMobile: boolean;
   isKeyboardOpen: boolean;
-  isQuickOpenOpen: boolean;
-  isCommandPaletteOpen: boolean;
-  isHelpDialogOpen: boolean;
-  isAboutDialogOpen: boolean;
-  isOpenCodeStatusDialogOpen: boolean;
-  openCodeStatusText: string;
-  isSessionCreateDialogOpen: boolean;
-  isScheduledTasksDialogOpen: boolean;
-  isSettingsDialogOpen: boolean;
-  isModelSelectorOpen: boolean;
   sidebarSection: SidebarSection;
 
   // Settings IA (new shell)
@@ -529,8 +517,6 @@ interface UIStore {
   diffWrapLines: boolean;
   diffViewMode: 'single' | 'stacked';
   gitChangesViewMode: 'flat' | 'tree';
-  isTimelineDialogOpen: boolean;
-  isImagePreviewOpen: boolean;
   nativeNotificationsEnabled: boolean;
   notificationMode: 'always' | 'hidden-only';
   notifyOnSubtasks: boolean;
@@ -604,19 +590,7 @@ interface UIStore {
   navigateToDiff: (filePath: string) => void;
   consumePendingDiffFile: () => string | null;
   setIsMobile: (isMobile: boolean) => void;
-  setQuickOpenOpen: (open: boolean) => void;
-  toggleQuickOpen: () => void;
-  toggleCommandPalette: () => void;
-  setCommandPaletteOpen: (open: boolean) => void;
-  toggleHelpDialog: () => void;
-  setHelpDialogOpen: (open: boolean) => void;
-  setAboutDialogOpen: (open: boolean) => void;
-  setOpenCodeStatusDialogOpen: (open: boolean) => void;
-  setOpenCodeStatusText: (text: string) => void;
-  setSessionCreateDialogOpen: (open: boolean) => void;
-  setScheduledTasksDialogOpen: (open: boolean) => void;
-  setSettingsDialogOpen: (open: boolean) => void;
-  setModelSelectorOpen: (open: boolean) => void;
+  markSettingsOpenedOnce: () => void;
   applyTheme: () => void;
   setSidebarSection: (section: SidebarSection) => void;
   setSettingsPage: (slug: string) => void;
@@ -656,9 +630,6 @@ interface UIStore {
   setDiffWrapLines: (wrap: boolean) => void;
   setDiffViewMode: (mode: 'single' | 'stacked') => void;
   setGitChangesViewMode: (mode: 'flat' | 'tree') => void;
-  setMultiRunLauncherOpen: (open: boolean) => void;
-  setTimelineDialogOpen: (open: boolean) => void;
-  setImagePreviewOpen: (open: boolean) => void;
   setNativeNotificationsEnabled: (value: boolean) => void;
   setNotificationMode: (mode: 'always' | 'hidden-only') => void;
   setShowTerminalQuickKeysOnDesktop: (value: boolean) => void;
@@ -687,8 +658,6 @@ interface UIStore {
   setViewPagerPage: (page: 'left' | 'center' | 'right') => void;
   toggleExpandedInput: () => void;
   setExpandedInput: (value: boolean) => void;
-  openMultiRunLauncher: () => void;
-  openMultiRunLauncherWithPrompt: (prompt: string) => void;
   setReportUsage: (value: boolean) => void;
   setShortcutOverride: (actionId: string, combo: ShortcutCombo) => void;
   clearShortcutOverride: (actionId: string) => void;
@@ -702,8 +671,6 @@ export const useUIStore = create<UIStore>()(
       (set, get) => ({
 
         theme: 'system',
-        isMultiRunLauncherOpen: false,
-        multiRunLauncherPrefillPrompt: '',
         isSidebarOpen: true,
         sidebarWidth: LEFT_SIDEBAR_MIN_WIDTH,
         hasManuallyResizedLeftSidebar: false,
@@ -725,16 +692,6 @@ export const useUIStore = create<UIStore>()(
         pendingFileFocusPath: null,
         isMobile: false,
         isKeyboardOpen: false,
-        isQuickOpenOpen: false,
-        isCommandPaletteOpen: false,
-        isHelpDialogOpen: false,
-        isAboutDialogOpen: false,
-        isOpenCodeStatusDialogOpen: false,
-        openCodeStatusText: '',
-        isSessionCreateDialogOpen: false,
-        isScheduledTasksDialogOpen: false,
-        isSettingsDialogOpen: false,
-        isModelSelectorOpen: false,
         sidebarSection: 'sessions',
         settingsPage: 'home',
         settingsHasOpenedOnce: false,
@@ -767,8 +724,6 @@ export const useUIStore = create<UIStore>()(
         diffWrapLines: false,
         diffViewMode: 'stacked',
         gitChangesViewMode: 'flat',
-        isTimelineDialogOpen: false,
-        isImagePreviewOpen: false,
         nativeNotificationsEnabled: false,
         notificationMode: 'hidden-only',
         notifyOnSubtasks: true,
@@ -1239,64 +1194,8 @@ export const useUIStore = create<UIStore>()(
           set({ isMobile });
         },
 
-        setQuickOpenOpen: (open) => {
-          set({ isQuickOpenOpen: open });
-        },
-
-        toggleQuickOpen: () => {
-          set((state) => ({ isQuickOpenOpen: !state.isQuickOpenOpen }));
-        },
-
-        toggleCommandPalette: () => {
-          set((state) => ({ isCommandPaletteOpen: !state.isCommandPaletteOpen }));
-        },
-
-        setCommandPaletteOpen: (open) => {
-          set({ isCommandPaletteOpen: open });
-        },
-
-        toggleHelpDialog: () => {
-          set((state) => ({ isHelpDialogOpen: !state.isHelpDialogOpen }));
-        },
-
-        setHelpDialogOpen: (open) => {
-          set({ isHelpDialogOpen: open });
-        },
-
-        setAboutDialogOpen: (open) => {
-          set({ isAboutDialogOpen: open });
-        },
-
-        setOpenCodeStatusDialogOpen: (open) => {
-          set({ isOpenCodeStatusDialogOpen: open });
-        },
-
-        setOpenCodeStatusText: (text) => {
-          set({ openCodeStatusText: text });
-        },
-
-        setSessionCreateDialogOpen: (open) => {
-          set({ isSessionCreateDialogOpen: open });
-        },
-
-        setScheduledTasksDialogOpen: (open) => {
-          set({ isScheduledTasksDialogOpen: open });
-        },
-
-        setSettingsDialogOpen: (open) => {
-          set((state) => {
-            if (!open) {
-              return { isSettingsDialogOpen: false };
-            }
-            if (state.settingsHasOpenedOnce) {
-              return { isSettingsDialogOpen: true };
-            }
-            return { isSettingsDialogOpen: true, settingsHasOpenedOnce: true };
-          });
-        },
-
-        setModelSelectorOpen: (open) => {
-          set({ isModelSelectorOpen: open });
+        markSettingsOpenedOnce: () => {
+          set({ settingsHasOpenedOnce: true });
         },
 
         setSidebarSection: (section) => {
@@ -1648,37 +1547,6 @@ export const useUIStore = create<UIStore>()(
           }
         },
 
-        setMultiRunLauncherOpen: (open) => {
-          set((state) => ({
-            isMultiRunLauncherOpen: open,
-            multiRunLauncherPrefillPrompt: open ? state.multiRunLauncherPrefillPrompt : '',
-          }));
-        },
-
-        openMultiRunLauncher: () => {
-          set({
-            isMultiRunLauncherOpen: true,
-            multiRunLauncherPrefillPrompt: '',
-            isSessionSwitcherOpen: false,
-          });
-        },
-
-        openMultiRunLauncherWithPrompt: (prompt) => {
-          set({
-            isMultiRunLauncherOpen: true,
-            multiRunLauncherPrefillPrompt: prompt,
-            isSessionSwitcherOpen: false,
-          });
-        },
-
-        setTimelineDialogOpen: (open) => {
-          set({ isTimelineDialogOpen: open });
-        },
-
-        setImagePreviewOpen: (open) => {
-          set({ isImagePreviewOpen: open });
-        },
-
         setNativeNotificationsEnabled: (value) => {
           set({ nativeNotificationsEnabled: value });
         },
@@ -1886,8 +1754,6 @@ export const useUIStore = create<UIStore>()(
           settingsHasOpenedOnce: state.settingsHasOpenedOnce,
           settingsProjectsSelectedId: state.settingsProjectsSelectedId,
           settingsRemoteInstancesSelectedId: state.settingsRemoteInstancesSelectedId,
-          isSessionCreateDialogOpen: state.isSessionCreateDialogOpen,
-          // Note: isSettingsDialogOpen intentionally NOT persisted
           showReasoningTraces: state.showReasoningTraces,
           chatRenderMode: state.chatRenderMode,
           activityRenderMode: state.activityRenderMode,
@@ -1944,3 +1810,7 @@ export const useUIStore = create<UIStore>()(
     }
   )
 );
+
+// Facade re-export for backward compatibility during migration
+// TODO: Remove once all consumers are migrated to useDialogStore
+export { useDialogStore } from "./useDialogStore";
