@@ -58,6 +58,7 @@ import { QuickOpenDialog } from '@/components/ui/QuickOpenDialog';
 import { McpOAuthCallbackPage } from '@/components/sections/mcp/McpOAuthCallbackPage';
 import { MCP_OAUTH_CALLBACK_PATH } from '@/components/sections/mcp/mcpOAuth';
 import { lazyWithChunkRecovery } from '@/lib/chunkLoadRecovery';
+import { logClientError, logClientInfo, flushClientLogs } from '@/lib/clientErrorLogger';
 
 // Lazy-loaded heavy views — loaded on demand to reduce initial bundle size.
 const OnboardingScreen = lazyWithChunkRecovery(() =>
@@ -214,6 +215,44 @@ function App({ apis }: AppProps) {
   const embeddedBackgroundWorkEnabled = !embeddedSessionChat || isEmbeddedVisible;
   const isMcpOAuthCallback = React.useMemo(() => isMcpOAuthCallbackPath(), []);
 
+  // Global error handlers — capture uncaught errors/rejections before they crash the page.
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const onError = (event: ErrorEvent) => {
+      logClientError(event.error ?? new Error(event.message), {
+        source: 'window.onerror',
+        filename: event.filename ?? null,
+        lineno: event.lineno ?? null,
+        colno: event.colno ?? null,
+      });
+    };
+    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+      logClientError(event.reason, { source: 'unhandledrejection' });
+    };
+
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onUnhandledRejection);
+
+    logClientInfo('App init started', { userAgent: navigator.userAgent });
+
+    return () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onUnhandledRejection);
+    };
+  }, []);
+
+  // Flush logs on page unload.
+  React.useEffect(() => {
+    const onUnload = () => flushClientLogs();
+    window.addEventListener('beforeunload', onUnload);
+    window.addEventListener('pagehide', onUnload);
+    return () => {
+      window.removeEventListener('beforeunload', onUnload);
+      window.removeEventListener('pagehide', onUnload);
+    };
+  }, []);
+
   React.useEffect(() => {
     setStreamPerfEnabled(showMemoryDebug);
     return () => {
@@ -354,7 +393,12 @@ function App({ apis }: AppProps) {
       }
       initializationInFlightRef.current = true;
       try {
+        logClientInfo('App init: calling initializeApp');
         await initializeApp();
+        logClientInfo('App init: initializeApp succeeded');
+      } catch (err) {
+        logClientError(err, { source: 'initializeApp' });
+        throw err;
       } finally {
         initializationInFlightRef.current = false;
       }

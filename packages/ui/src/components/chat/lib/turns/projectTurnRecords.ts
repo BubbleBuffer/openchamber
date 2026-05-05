@@ -102,36 +102,50 @@ export const projectTurnRecords = (
     const turns: TurnRecord[] = [];
     const turnByUserId = new Map<string, TurnRecord>();
     const groupedMessageIds = new Set<string>();
+
+    // Pass 1: create turns for all user messages so turnByUserId is
+    // fully populated before any assistant is associated. This prevents
+    // an assistant whose parentID references a user message that appears
+    // later in the sorted-messages array from falling back to the wrong
+    // turn via currentTurn.
+    messages.forEach((message, index) => {
+        const role = resolveMessageRole(message);
+        if (role !== 'user') return;
+
+        const turn: TurnRecord = {
+            turnId: message.info.id,
+            userMessageId: message.info.id,
+            userMessage: message,
+            headerMessageId: undefined,
+            messages: [createTurnMessageRecord(message, index)],
+            assistantMessageIds: [],
+            assistantMessages: [],
+            activityParts: [],
+            activitySegments: [],
+            summary: {},
+            summaryText: undefined,
+            hasTools: false,
+            hasReasoning: false,
+            diffStats: undefined,
+            stream: {
+                isStreaming: false,
+                isRetrying: false,
+            },
+        };
+        turns.push(turn);
+        turnByUserId.set(turn.userMessageId, turn);
+        groupedMessageIds.add(message.info.id);
+    });
+
+    // Pass 2: associate assistant messages with their parent turns.
+    // All user turns are already in turnByUserId, so parentID lookups
+    // always succeed (no fallback needed for well-formed assistants).
     let currentTurn: TurnRecord | undefined;
 
     messages.forEach((message, index) => {
         const role = resolveMessageRole(message);
         if (role === 'user') {
-            const turnId = message.info.id;
-            const turn: TurnRecord = {
-                turnId,
-                userMessageId: message.info.id,
-                userMessage: message,
-                headerMessageId: undefined,
-                messages: [createTurnMessageRecord(message, index)],
-                assistantMessageIds: [],
-                assistantMessages: [],
-                activityParts: [],
-                activitySegments: [],
-                summary: {},
-                summaryText: undefined,
-                hasTools: false,
-                hasReasoning: false,
-                diffStats: undefined,
-                stream: {
-                    isStreaming: false,
-                    isRetrying: false,
-                },
-            };
-            turns.push(turn);
-            turnByUserId.set(turn.userMessageId, turn);
-            groupedMessageIds.add(message.info.id);
-            currentTurn = turn;
+            currentTurn = turnByUserId.get(message.info.id);
             return;
         }
 

@@ -7,6 +7,7 @@ export const createBootstrapRuntime = (dependencies) => {
     registerTtsRoutes,
     registerNotificationRoutes,
     registerOpenChamberRoutes,
+    registerClientLogRoutes,
     express,
   } = dependencies;
 
@@ -117,6 +118,12 @@ export const createBootstrapRuntime = (dependencies) => {
       readSettingsFromDiskMigrated,
       fetchFreeZenModels,
       getCachedZenModels,
+    });
+
+    registerClientLogRoutes(app, {
+      fs,
+      path,
+      openchamberDataDir,
     });
 
     return {

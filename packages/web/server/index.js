@@ -60,6 +60,7 @@ import { createStaticRoutesRuntime } from './lib/opencode/static-routes-runtime.
 import { createSettingsRuntime } from './lib/opencode/settings-runtime.js';
 import { createOpenCodeResolutionRuntime } from './lib/opencode/opencode-resolution-runtime.js';
 import { createBootstrapRuntime } from './lib/opencode/bootstrap-runtime.js';
+import { registerClientLogRoutes } from './lib/client-log.js';
 import { createSessionRuntime } from './lib/opencode/session-runtime.js';
 import { createOpenCodeWatcherRuntime } from './lib/opencode/watcher.js';
 import { createScheduledTasksRuntime } from './lib/scheduled-tasks/runtime.js';
@@ -782,6 +783,7 @@ const bootstrapRuntime = createBootstrapRuntime({
   registerTtsRoutes,
   registerNotificationRoutes,
   registerOpenChamberRoutes,
+  registerClientLogRoutes,
   express,
 });
 const tunnelWiringRuntime = createTunnelWiringRuntime({

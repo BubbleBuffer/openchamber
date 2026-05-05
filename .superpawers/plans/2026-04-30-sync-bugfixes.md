@@ -10,6 +10,25 @@
 
 ---
 
+## Review
+
+- **Status:** PASS (with minor notes)
+- **Reviewer:** main agent (inline review — reviewer subagent hit model error)
+- **Date:** 2026-04-30
+- **Findings:**
+  - Spec coverage: All 4 bugs mapped to tasks
+  - Placeholders: None found
+  - Type consistency: `applyDirectoryEvent(draft: State, event: Event)` matches source at `event-reducer.ts:130`. `createEventPipeline(input: EventPipelineInput)` exported at `event-pipeline.ts:157`. `State` type at `types.ts:42`.
+  - Dead references: None
+  - Structural flow: No cross-dependencies between tasks
+  - Goal clarity: All steps are specific and actionable
+  - Code accuracy: Verified against source files — VS Code webview (lines 1162-1197), event-pipeline `runSseAttempt` (lines 339-370), event-reducer `message.updated` case (lines 221-261), useConfigStore facade (7 lines)
+- **Notes:**
+  - Task 2 test should add `transport: "sse"` to `createEventPipeline` options to avoid WS attempt in test environment where bun may provide `WebSocket` global
+  - Task 1 test file `vscode-store-imports.test.ts` lives in `packages/ui/src/sync/` but tests store exports — acceptable but slightly misplaced
+
+---
+
 ## File Changes
 
 | File | Change |
@@ -222,7 +241,7 @@ describe("SSE silent stream end detection", () => {
           pipeline.cleanup()
           resolve()
         },
-        // Speed up test by using minimal reconnect delay
+        transport: "sse",
         reconnectDelayMs: 10,
         heartbeatTimeoutMs: 5000,
       })
@@ -250,6 +269,7 @@ describe("SSE silent stream end detection", () => {
           pipeline.cleanup()
           resolve()
         },
+        transport: "sse",
         reconnectDelayMs: 10,
         heartbeatTimeoutMs: 5000,
       })

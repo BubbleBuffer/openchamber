@@ -3,6 +3,7 @@ import { RiErrorWarningLine, RiRestartLine } from '@remixicon/react';
 import { Button } from './button';
 import { Card, CardContent, CardHeader, CardTitle } from './card';
 import { copyTextToClipboard } from '@/lib/clipboard';
+import { logClientError } from '@/lib/clientErrorLogger';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -30,6 +31,11 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     this.setState({ error, errorInfo, copied: false });
 
     console.error('Error caught by boundary:', error, errorInfo);
+
+    logClientError(error, {
+      componentStack: errorInfo.componentStack ?? null,
+      source: 'ErrorBoundary',
+    });
   }
 
   handleReset = () => {

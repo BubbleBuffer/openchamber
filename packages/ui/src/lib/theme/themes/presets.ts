@@ -19,6 +19,7 @@ import dracula_light_Raw from './dracula-light.json';
 // import github_light_Raw from './github-light.json';
 import gruvbox_dark_Raw from './gruvbox-dark.json';
 import gruvbox_light_Raw from './gruvbox-light.json';
+import gemini_dark_Raw from './gemini-dark.json';
 import kanagawa_dark_Raw from './kanagawa-dark.json';
 import kanagawa_light_Raw from './kanagawa-light.json';
 // import lucent_orng_dark_Raw from './lucent-orng-dark.json';
@@ -79,6 +80,7 @@ export const presetThemes: Theme[] = [
   // github_light_Raw as Theme,
   gruvbox_dark_Raw as Theme,
   gruvbox_light_Raw as Theme,
+  gemini_dark_Raw as Theme,
   kanagawa_dark_Raw as Theme,
   kanagawa_light_Raw as Theme,
   // lucent_orng_dark_Raw as Theme,
