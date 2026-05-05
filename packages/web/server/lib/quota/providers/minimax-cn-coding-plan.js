@@ -88,8 +88,8 @@ export const fetchQuota = async () => {
     const weeklyStartAt = toTimestamp(firstModel.weekly_start_time);
     const weeklyResetAt = toTimestamp(firstModel.weekly_end_time);
 
-    const intervalUsed = intervalTotal - intervalUsage;
-    const weeklyUsed = weeklyTotal - weeklyUsage;
+    const intervalUsed = intervalUsage;
+    const weeklyUsed = weeklyUsage;
 
     const intervalUsedPercent =
       intervalTotal > 0 && intervalUsed != null

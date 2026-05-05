@@ -1069,6 +1069,41 @@ git commit -m "fix: recover from localStorage quota errors in persist-cache"
 
 ---
 
+## Task 11: Fix MiniMax CN Coding Plan Usage Calculation
+
+**Priority:** Medium (quota shows inverted — remaining displayed as used)
+
+The `.cn` variant (`minimaxi.com`) still inverts the quota calculation: `intervalUsed = intervalTotal - intervalUsage` when it should be `intervalUsed = intervalUsage`. The `.io` variant was already fixed in commit `f639c2b0`. The CN API uses identical field names (`current_interval_usage_count` = quota used).
+
+**Files:**
+- Modify: `packages/web/server/lib/quota/providers/minimax-cn-coding-plan.js`
+
+- [ ] **Step 1: Apply the fix**
+
+In `packages/web/server/lib/quota/providers/minimax-cn-coding-plan.js` lines 91-92, replace the inversion with direct usage:
+
+```javascript
+    const intervalUsed = intervalUsage;
+    const weeklyUsed = weeklyUsage;
+```
+
+(Replaces `intervalTotal - intervalUsage` / `weeklyTotal - weeklyUsage`)
+
+- [ ] **Step 2: Run type check**
+
+Run: `bun run --cwd packages/web type-check`
+
+Expected: No errors.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add packages/web/server/lib/quota/providers/minimax-cn-coding-plan.js
+git commit -m "fix(quota): correct minimax.cn coding plan usage calculation"
+```
+
+---
+
 ## Review
 
 - **Status:** PASS (issues resolved)
