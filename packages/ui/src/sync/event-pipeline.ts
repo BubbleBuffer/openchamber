@@ -213,12 +213,8 @@ export function createEventPipeline(input: EventPipelineInput) {
   const flushDir = (directory: string) => {
     const d = directories.get(directory)
     if (!d) return
-    if (d.timer) {
-      clearTimeout(d.timer)
-      d.timer = undefined
-    }
+    if (d.timer) { clearTimeout(d.timer); d.timer = undefined }
     if (d.queue.length === 0) return
-
     const events = d.queue
     const staleDeltas = d.staleDeltas.size > 0 ? new Set(d.staleDeltas) : undefined
     d.queue = d.buffer
@@ -226,19 +222,23 @@ export function createEventPipeline(input: EventPipelineInput) {
     d.queue.length = 0
     d.coalesced.clear()
     d.staleDeltas.clear()
-
     d.last = Date.now()
     syncDebug.pipeline.flush(events.length)
+    let droppedCount = 0
     for (const payload of events) {
       if (staleDeltas && payload.type === "message.part.delta") {
         const props = payload.properties as { messageID: string; partID: string; field: string }
-        if (staleDeltas.has(deltaKey(props.messageID, props.partID, props.field))) {
-          continue
-        }
+        if (staleDeltas.has(deltaKey(props.messageID, props.partID, props.field))) continue
       }
-      onEvent(directory, payload)
+      try { onEvent(directory, payload) }
+      catch (error) {
+        droppedCount++
+        console.error("[event-pipeline] Event handler threw, dropping event:", error)
+      }
     }
-
+    if (droppedCount > 0) {
+      console.error(`[event-pipeline] Dropped ${droppedCount} event(s) for ${directory} due to handler errors`)
+    }
     d.buffer.length = 0
   }
 
@@ -527,12 +527,15 @@ export function createEventPipeline(input: EventPipelineInput) {
     return wsFallbackUntil > Date.now() ? "sse" : "ws"
   }
 
+  let consecutiveFailures = 0
+  const MAX_RECONNECT_DELAY_MS = 30_000
+
   void (async () => {
     while (!abort.signal.aborted) {
       attempt = new AbortController()
       lastEventAt = Date.now()
       attemptAbortReason = null
-      let retryDelayMs = reconnectDelayMs
+      let isTransportSwitch = false
       const currentTransport = resolveTransport()
       activeTransport = currentTransport
       const onAbort = () => {
@@ -547,10 +550,11 @@ export function createEventPipeline(input: EventPipelineInput) {
         } else {
           await runSseAttempt(attempt.signal)
         }
+        consecutiveFailures = 0
       } catch (error) {
         const code = typeof error === "object" && error !== null ? (error as { code?: unknown }).code : undefined
         if (currentTransport === "ws" && code === "WS_FALLBACK") {
-          retryDelayMs = 0
+          isTransportSwitch = true
           // Transport switch (WS → SSE fallback), not a real disconnection.
           // No events were lost — the next attempt will use SSE and carry
           // lastEventId for gapless replay. Notify consumer so it can set
@@ -578,6 +582,7 @@ export function createEventPipeline(input: EventPipelineInput) {
               ? `${currentTransport}_error:${message.slice(0, 80)}`
               : `${currentTransport}_error:unknown`
           notifyDisconnected(reason)
+          consecutiveFailures++
         }
       } finally {
         abort.signal.removeEventListener("abort", onAbort)
@@ -588,11 +593,14 @@ export function createEventPipeline(input: EventPipelineInput) {
       if (abort.signal.aborted) return
       if (attemptAbortReason && attemptAbortReason !== "pipeline_stopped") {
         notifyDisconnected(attemptAbortReason)
-        retryDelayMs = 0
+        consecutiveFailures++
         attemptAbortReason = null
       }
-      if (retryDelayMs > 0) {
-        await wait(retryDelayMs)
+      if (!isTransportSwitch) {
+        const delay = consecutiveFailures > 0
+          ? Math.min(reconnectDelayMs * Math.pow(2, Math.max(0, consecutiveFailures - 1)), MAX_RECONNECT_DELAY_MS)
+          : reconnectDelayMs
+        await wait(delay)
       }
     }
   })().finally(flushAll)
