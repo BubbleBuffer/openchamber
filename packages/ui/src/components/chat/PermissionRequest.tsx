@@ -1,8 +1,8 @@
 import React from 'react';
 import { RiCheckLine, RiCloseLine, RiTimeLine } from '@remixicon/react';
-import { cn } from '@/lib/utils';
 import type { PermissionRequest as PermissionRequestPayload, PermissionResponse } from '@/types/permission';
 import * as sessionActions from '@/sync/session-actions';
+import { PermissionActionButton } from './PermissionActionButton';
 
 interface PermissionRequestProps {
   permission: PermissionRequestPayload;
@@ -51,71 +51,35 @@ export const PermissionRequest: React.FC<PermissionRequestProps> = ({
       </div>
 
       <div className="flex items-center gap-1.5 flex-shrink-0 ml-4">
-        <button
+        <PermissionActionButton
+          tone="success"
+          variant="outline"
           onClick={() => handleResponse('once')}
           disabled={isResponding}
-          className={cn(
-            "flex items-center gap-1 px-2 py-1 typography-meta font-medium rounded border h-6",
-            "disabled:opacity-50 disabled:cursor-not-allowed"
-          )}
-          style={{
-            borderColor: 'var(--status-success)',
-            color: 'var(--status-success)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--status-success-background)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
         >
           <RiCheckLine className="h-3 w-3" />
           Once
-        </button>
+        </PermissionActionButton>
 
-        <button
+        <PermissionActionButton
+          tone="info"
+          variant="outline"
           onClick={() => handleResponse('always')}
           disabled={isResponding}
-          className={cn(
-            "flex items-center gap-1 px-2 py-1 typography-meta font-medium rounded border h-6",
-            "disabled:opacity-50 disabled:cursor-not-allowed"
-          )}
-          style={{
-            borderColor: 'var(--status-info)',
-            color: 'var(--status-info)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--status-info-background)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
         >
           <RiTimeLine className="h-3 w-3" />
           Always
-        </button>
+        </PermissionActionButton>
 
-        <button
+        <PermissionActionButton
+          tone="error"
+          variant="outline"
           onClick={() => handleResponse('reject')}
           disabled={isResponding}
-          className={cn(
-            "flex items-center gap-1 px-2 py-1 typography-meta font-medium rounded border h-6",
-            "disabled:opacity-50 disabled:cursor-not-allowed"
-          )}
-          style={{
-            borderColor: 'var(--status-error)',
-            color: 'var(--status-error)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--status-error-background)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
         >
           <RiCloseLine className="h-3 w-3" />
           Reject
-        </button>
+        </PermissionActionButton>
 
         {isResponding && (
           <div className="ml-2 flex items-center">

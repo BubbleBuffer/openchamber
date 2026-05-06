@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from '@/lib/utils';
+import { PermissionActionButton } from './PermissionActionButton';
 
 interface PermissionToastActionsProps {
   sessionTitle: string;
@@ -60,71 +60,32 @@ export const PermissionToastActions: React.FC<PermissionToastActionsProps> = ({
       </div>
 
       <div className="flex items-center gap-1.5">
-        <button
+        <PermissionActionButton
+          tone="success"
           onClick={() => handleAction(onOnce)}
           disabled={disabled || isBusy}
           aria-label={`Approve once${actionContext}`}
-          className={cn(
-            "px-2 py-1 typography-meta font-medium rounded transition-colors h-6",
-            "disabled:opacity-50 disabled:cursor-not-allowed"
-          )}
-          style={{
-            backgroundColor: 'rgb(var(--status-success) / 0.1)',
-            color: 'var(--status-success)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgb(var(--status-success) / 0.2)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgb(var(--status-success) / 0.1)';
-          }}
         >
           Once
-        </button>
+        </PermissionActionButton>
 
-        <button
+        <PermissionActionButton
+          tone="neutral"
           onClick={() => handleAction(onAlways)}
           disabled={disabled || isBusy}
           aria-label={`Approve always${actionContext}`}
-          className={cn(
-            "px-2 py-1 typography-meta font-medium rounded transition-colors h-6",
-            "disabled:opacity-50 disabled:cursor-not-allowed"
-          )}
-          style={{
-            backgroundColor: 'rgb(var(--muted) / 0.5)',
-            color: 'var(--muted-foreground)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgb(var(--muted) / 0.7)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgb(var(--muted) / 0.5)';
-          }}
         >
           Always
-        </button>
+        </PermissionActionButton>
 
-        <button
+        <PermissionActionButton
+          tone="error"
           onClick={() => handleAction(onDeny)}
           disabled={disabled || isBusy}
           aria-label={`Deny permission${actionContext}`}
-          className={cn(
-            "px-2 py-1 typography-meta font-medium rounded transition-colors h-6",
-            "disabled:opacity-50 disabled:cursor-not-allowed"
-          )}
-          style={{
-            backgroundColor: 'rgb(var(--status-error) / 0.1)',
-            color: 'var(--status-error)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgb(var(--status-error) / 0.2)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgb(var(--status-error) / 0.1)';
-          }}
         >
           Deny
-        </button>
+        </PermissionActionButton>
       </div>
     </div>
   );

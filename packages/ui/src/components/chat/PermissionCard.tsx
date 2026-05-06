@@ -1,6 +1,5 @@
 import React from 'react';
 import { RiCheckLine, RiCloseLine, RiFileEditLine, RiGlobalLine, RiPencilAiLine, RiQuestionLine, RiTerminalBoxLine, RiTimeLine, RiToolsLine } from '@remixicon/react';
-import { cn } from '@/lib/utils';
 import type { PermissionRequest, PermissionResponse } from '@/types/permission';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSessions } from '@/sync/sync-context';
@@ -10,6 +9,7 @@ import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { generateSyntaxTheme } from '@/lib/theme/syntaxThemeGenerator';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { DiffPreview, WritePreview } from './DiffPreview';
+import { PermissionActionButton } from './PermissionActionButton';
 
 interface PermissionCardProps {
   permission: PermissionRequest;
@@ -355,46 +355,22 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
 
           {}
           <div className="px-2 pb-2 sm:pb-1.5 pt-1.5 sm:pt-1 flex flex-col sm:flex-row sm:items-center sm:flex-wrap gap-1.5 border-t border-border/20">
-            <button
+            <PermissionActionButton
+              tone="success"
               onClick={() => handleResponse('once')}
               disabled={isResponding}
-              className={cn(
-                "flex items-center gap-1.5 sm:gap-1 px-3 sm:px-2 py-1.5 sm:py-1 typography-meta font-medium rounded transition-all min-h-[32px] sm:min-h-0 w-full sm:w-auto",
-                "disabled:opacity-50 disabled:cursor-not-allowed"
-              )}
-              style={{
-                backgroundColor: 'rgb(var(--status-success) / 0.1)',
-                color: 'var(--status-success)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgb(var(--status-success) / 0.2)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgb(var(--status-success) / 0.1)';
-              }}
+              className="gap-1.5 sm:gap-1 px-3 sm:px-2 py-1.5 sm:py-1 min-h-[32px] sm:min-h-0 h-auto sm:h-6 w-full sm:w-auto"
             >
               <RiCheckLine className="h-3.5 w-3.5 sm:h-3 sm:w-3 flex-shrink-0" />
               Allow Once
-            </button>
+            </PermissionActionButton>
 
             {permission.always.length > 0 ? (
-              <button
+              <PermissionActionButton
+                tone="neutral"
                 onClick={() => handleResponse('always')}
                 disabled={isResponding}
-                className={cn(
-                  "flex items-center gap-1.5 sm:gap-1 px-3 sm:px-2 py-1.5 sm:py-1 typography-meta font-medium rounded transition-all min-h-[32px] sm:min-h-0 w-full sm:w-auto",
-                  "disabled:opacity-50 disabled:cursor-not-allowed"
-                )}
-                style={{
-                  backgroundColor: 'rgb(var(--muted) / 0.5)',
-                  color: 'var(--muted-foreground)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgb(var(--muted) / 0.7)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgb(var(--muted) / 0.5)';
-                }}
+                className="gap-1.5 sm:gap-1 px-3 sm:px-2 py-1.5 sm:py-1 min-h-[32px] sm:min-h-0 h-auto sm:h-6 w-full sm:w-auto"
               >
                 <RiTimeLine className="h-3.5 w-3.5 sm:h-3 sm:w-3 flex-shrink-0" />
                 {(() => {
@@ -409,52 +385,28 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
                     </span>
                   );
                 })()}
-              </button>
+              </PermissionActionButton>
             ) : (
-              <button
+              <PermissionActionButton
+                tone="neutral"
                 onClick={() => handleResponse('always')}
                 disabled={isResponding}
-                className={cn(
-                  "flex items-center gap-1.5 sm:gap-1 px-3 sm:px-2 py-1.5 sm:py-1 typography-meta font-medium rounded transition-all min-h-[32px] sm:min-h-0 w-full sm:w-auto",
-                  "disabled:opacity-50 disabled:cursor-not-allowed"
-                )}
-                style={{
-                  backgroundColor: 'rgb(var(--muted) / 0.5)',
-                  color: 'var(--muted-foreground)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgb(var(--muted) / 0.7)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgb(var(--muted) / 0.5)';
-                }}
+                className="gap-1.5 sm:gap-1 px-3 sm:px-2 py-1.5 sm:py-1 min-h-[32px] sm:min-h-0 h-auto sm:h-6 w-full sm:w-auto"
               >
                 <RiTimeLine className="h-3.5 w-3.5 sm:h-3 sm:w-3 flex-shrink-0" />
                 Always Allow
-              </button>
+              </PermissionActionButton>
             )}
 
-            <button
+            <PermissionActionButton
+              tone="error"
               onClick={() => handleResponse('reject')}
               disabled={isResponding}
-              className={cn(
-                "flex items-center gap-1.5 sm:gap-1 px-3 sm:px-2 py-1.5 sm:py-1 typography-meta font-medium rounded transition-all min-h-[32px] sm:min-h-0 w-full sm:w-auto",
-                "disabled:opacity-50 disabled:cursor-not-allowed"
-              )}
-              style={{
-                backgroundColor: 'rgb(var(--status-error) / 0.1)',
-                color: 'var(--status-error)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgb(var(--status-error) / 0.2)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgb(var(--status-error) / 0.1)';
-              }}
+              className="gap-1.5 sm:gap-1 px-3 sm:px-2 py-1.5 sm:py-1 min-h-[32px] sm:min-h-0 h-auto sm:h-6 w-full sm:w-auto"
             >
               <RiCloseLine className="h-3.5 w-3.5 sm:h-3 sm:w-3 flex-shrink-0" />
               Deny
-            </button>
+            </PermissionActionButton>
 
             {isResponding && (
               <div className="flex justify-center w-full sm:w-auto sm:ml-auto py-1 sm:py-0 typography-meta text-muted-foreground">
