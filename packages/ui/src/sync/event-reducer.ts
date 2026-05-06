@@ -169,6 +169,26 @@ export function applyDirectoryEvent(
       }
 
       if (result.found) {
+        // Skip replacement when displayed fields are identical — preserves array
+        // reference and avoids re-rendering every session-list consumer for no-op
+        // updates. Mirrors the unchanged check in case "message.updated" above.
+        const existing = sessions[result.index]
+        const existingShare = (existing as Session & { share?: { url?: string | null } | null }).share?.url ?? null
+        const nextShare = (info as Session & { share?: { url?: string | null } | null }).share?.url ?? null
+        const existingWorktree = (existing as Session & { project?: { worktree?: string | null } | null }).project?.worktree ?? null
+        const nextWorktree = (info as Session & { project?: { worktree?: string | null } | null }).project?.worktree ?? null
+        const existingDirectory = (existing as Session & { directory?: string | null }).directory ?? null
+        const nextDirectory = (info as Session & { directory?: string | null }).directory ?? null
+        const unchanged = existing.title === info.title
+          && existing.time?.updated === info.time?.updated
+          && (existing.time?.archived ?? null) === (info.time?.archived ?? null)
+          && (existing.parentID ?? null) === (info.parentID ?? null)
+          && existingShare === nextShare
+          && existingWorktree === nextWorktree
+          && existingDirectory === nextDirectory
+        if (unchanged) {
+          return false
+        }
         sessions[result.index] = info
       } else {
         sessions.splice(result.index, 0, info)
@@ -272,6 +292,7 @@ export function applyDirectoryEvent(
         }
       }
       delete draft.part[props.messageID]
+      delete draft.partDeltaBuffer[props.messageID]
       return true
     }
 
@@ -285,11 +306,13 @@ export function applyDirectoryEvent(
       const parts = draft.part[messageID]
       if (!parts) {
         syncDebug.reducer.partUpdatedNoExistingParts(messageID, part.id, part.type)
-        draft.part[messageID] = [part]
+        const drained = applyOrphanDeltasToPart(draft, messageID, part)
+        draft.part[messageID] = [drained]
         return true
       }
       const next = [...parts]
       const result = Binary.search(next, part.id, (p) => p.id)
+      let insertedIndex: number
       if (result.found) {
         const previous = next[result.index]
         if (shouldPreserveExistingPart(previous, part)) {
@@ -299,6 +322,7 @@ export function applyDirectoryEvent(
         next[result.index] = dedupeFields.length > 0
           ? { ...part, __dedupeNextDeltaFields: dedupeFields } as unknown as Part
           : part
+        insertedIndex = result.index
       } else {
         // Replace optimistic part (no sessionID) with server part of same type.
         // Gate: only scan if the first part lacks sessionID (optimistic parts are
@@ -313,13 +337,22 @@ export function applyDirectoryEvent(
         }
         const insertResult = Binary.search(next, part.id, (p) => p.id)
         next.splice(insertResult.index, 0, part)
+        insertedIndex = insertResult.index
       }
+      // RC-1: Replay any deltas buffered while this part was missing.
+      const drained = applyOrphanDeltasToPart(draft, messageID, next[insertedIndex])
+      if (drained !== next[insertedIndex]) next[insertedIndex] = drained
       draft.part[messageID] = next
       return true
     }
 
     case "message.part.removed": {
       const props = event.properties as { messageID: string; partID: string }
+      const buffered = draft.partDeltaBuffer[props.messageID]
+      if (buffered && buffered[props.partID]) {
+        delete buffered[props.partID]
+        if (Object.keys(buffered).length === 0) delete draft.partDeltaBuffer[props.messageID]
+      }
       const parts = draft.part[props.messageID]
       if (!parts) return false
       const result = Binary.search(parts, props.partID, (p) => p.id)
@@ -344,13 +377,15 @@ export function applyDirectoryEvent(
         delta: string
       }
       const parts = draft.part[props.messageID]
-      if (!parts) {
-        syncDebug.reducer.partDeltaNoParts(props.messageID, props.partID)
-        return false
-      }
-      const result = Binary.search(parts, props.partID, (p) => p.id)
-      if (!result.found) {
-        syncDebug.reducer.partDeltaNotFound(props.messageID, props.partID)
+      const result = parts ? Binary.search(parts, props.partID, (p) => p.id) : null
+      if (!parts || !result || !result.found) {
+        // RC-1: Buffer the orphan delta instead of silently dropping it. The
+        // delta will be replayed when the matching part arrives via
+        // `message.part.updated` (typically the very next event in the
+        // stream, but can be delayed by network reordering).
+        if (!parts) syncDebug.reducer.partDeltaNoParts(props.messageID, props.partID)
+        else syncDebug.reducer.partDeltaNotFound(props.messageID, props.partID)
+        bufferOrphanDelta(draft, props.messageID, props.partID, props.field, props.delta)
         return false
       }
       const existing = parts[result.index] as Record<string, unknown>
@@ -442,18 +477,72 @@ export function applyDirectoryEvent(
 
 function trimSessions(draft: State) {
   if (draft.session.length <= draft.limit) return
-  // Keep sessions that have pending permissions (they need to stay visible)
-  const hasPermission = new Set(
-    Object.entries(draft.permission ?? {})
-      .filter(([, perms]) => perms && perms.length > 0)
-      .map(([sessionID]) => sessionID),
-  )
-  while (draft.session.length > draft.limit) {
-    // Remove from the beginning (oldest by sorted ID)
-    const candidate = draft.session[0]
-    if (hasPermission.has(candidate.id)) break
-    draft.session.shift()
+  // RC-6: Previously this silently shifted sessions off the front of the
+  // array when length > limit, causing data loss when SSE delivered sessions
+  // beyond the bootstrap-set limit. Now we auto-grow the limit instead —
+  // sessions can only ever grow legitimately via session.created/updated
+  // events, so dropping them is never the right behaviour.
+  draft.limit = draft.session.length
+}
+
+// ---------------------------------------------------------------------------
+// RC-1: Orphan delta buffering
+//
+// `message.part.delta` events can arrive before the matching part is inserted
+// (typical race: delta packet beats the `message.part.updated` packet by a
+// frame). Previously the reducer silently dropped these deltas, producing
+// truncated assistant output. Now we buffer them per (messageID, partID) and
+// drain on the next `message.part.updated` for that part.
+//
+// Buffers are bounded per part so a malformed stream can't OOM the client.
+// ---------------------------------------------------------------------------
+
+const ORPHAN_DELTA_MAX_PER_PART = 1024
+const ORPHAN_DELTA_MAX_TOTAL_CHARS = 1_000_000
+
+function bufferOrphanDelta(
+  draft: State,
+  messageID: string,
+  partID: string,
+  field: string,
+  delta: string,
+) {
+  if (!delta) return
+  const messageBucket = draft.partDeltaBuffer[messageID] ?? (draft.partDeltaBuffer[messageID] = {})
+  const partBucket = messageBucket[partID] ?? (messageBucket[partID] = [])
+  if (partBucket.length >= ORPHAN_DELTA_MAX_PER_PART) return
+  // Crude total-size guard
+  let total = 0
+  for (const entry of partBucket) total += entry.delta.length
+  if (total + delta.length > ORPHAN_DELTA_MAX_TOTAL_CHARS) return
+  partBucket.push({ field, delta })
+}
+
+function applyOrphanDeltasToPart(draft: State, messageID: string, part: Part): Part {
+  const messageBucket = draft.partDeltaBuffer[messageID]
+  if (!messageBucket) return part
+  const queued = messageBucket[part.id]
+  if (!queued || queued.length === 0) return part
+
+  const merged = { ...(part as Record<string, unknown>) } as Record<string, unknown>
+  const dedupeFields = ((part as DedupeMetadata).__dedupeNextDeltaFields ?? []).slice()
+
+  for (const { field, delta } of queued) {
+    const existing = typeof merged[field] === "string" ? (merged[field] as string) : ""
+    const shouldDedupe = dedupeFields.includes(field)
+    merged[field] = shouldDedupe ? appendNonOverlappingDelta(existing, delta) : existing + delta
+    // Each delta consumes its dedupe hint exactly once
+    const idx = dedupeFields.indexOf(field)
+    if (idx >= 0) dedupeFields.splice(idx, 1)
   }
+  ;(merged as DedupeMetadata).__dedupeNextDeltaFields = dedupeFields
+
+  delete messageBucket[part.id]
+  if (Object.keys(messageBucket).length === 0) {
+    delete draft.partDeltaBuffer[messageID]
+  }
+
+  return merged as unknown as Part
 }
 
 function cleanupSessionCaches(
