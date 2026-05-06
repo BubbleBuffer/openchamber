@@ -510,7 +510,7 @@ export const FileMentionAutocomplete = React.forwardRef<FileMentionHandle, FileM
                     isSelected && 'bg-interactive-selection',
                   )}
                   onClick={() => handleAgentPick(agent.name)}
-                  onMouseEnter={() => setSelectedIndex(index)}
+                  onPointerEnter={() => setSelectedIndex(index)}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="font-semibold truncate">@{agent.name}</div>
@@ -544,7 +544,7 @@ export const FileMentionAutocomplete = React.forwardRef<FileMentionHandle, FileM
                     isSelected && "bg-interactive-selection"
                   )}
                   onClick={() => handleFileSelect(dir)}
-                  onMouseEnter={() => setSelectedIndex(rowIndex)}
+                  onPointerEnter={() => setSelectedIndex(rowIndex)}
                 >
                   <RiFolder3Fill className="h-3.5 w-3.5 text-primary/60" />
                   <span className="flex-1 min-w-0 truncate" aria-label={relativePath}>
@@ -573,7 +573,7 @@ export const FileMentionAutocomplete = React.forwardRef<FileMentionHandle, FileM
                     isSelected && "bg-interactive-selection"
                   )}
                   onClick={() => handleFileSelect(file)}
-                  onMouseEnter={() => setSelectedIndex(rowIndex)}
+                  onPointerEnter={() => setSelectedIndex(rowIndex)}
                 >
                   {getFileIcon(file)}
                   <span
@@ -624,7 +624,7 @@ export const FileMentionAutocomplete = React.forwardRef<FileMentionHandle, FileM
                       isSelected && "bg-interactive-selection"
                     )}
                   onClick={() => handleFileSelect(file)}
-                  onMouseEnter={() => setSelectedIndex(rowIndex)}
+                  onPointerEnter={() => setSelectedIndex(rowIndex)}
                 >
                   {getFileIcon(file)}
                   <span

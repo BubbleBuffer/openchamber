@@ -182,7 +182,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                     isHighlighted ? "bg-interactive-selection" : "hover:bg-interactive-hover/50"
                 )}
                 onClick={() => handleProviderAndModelChange(provID, modID)}
-                onMouseEnter={() => setSelectedIndex(flatIndex)}
+                onPointerEnter={() => setSelectedIndex(flatIndex)}
             >
                 <div className="flex items-center gap-1.5 flex-1 min-w-0">
                     {showProviderLogo && (

@@ -1558,7 +1558,7 @@ export function NewWorktreeDialog({
                 </DialogTitle>
                 
                 {/* Mode Selection - using SortableTabsStrip */}
-                <div className="w-[280px] shrink-0">
+                <div className="w-full sm:w-[280px] shrink-0">
                   <SortableTabsStrip
                     items={[
                       { id: 'new-branch', label: 'New Branch', icon: <RiGitBranchLine className="h-3.5 w-3.5" /> },

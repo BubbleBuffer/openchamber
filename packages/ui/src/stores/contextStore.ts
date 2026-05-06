@@ -449,6 +449,7 @@ export const useContextStore = create<ContextStore>()(
             }),
             {
                 name: "context-store",
+                version: 1,
                 storage: createJSONStorage(() => getSafeStorage()),
                 partialize: (state) => ({
                     sessionModelSelections: Array.from(state.sessionModelSelections.entries()),
@@ -462,6 +463,13 @@ export const useContextStore = create<ContextStore>()(
                     sessionContextUsage: Array.from(state.sessionContextUsage.entries()),
                     sessionAgentEditModes: Array.from(state.sessionAgentEditModes.entries()).map(([sessionId, agentMap]) => [sessionId, Array.from(agentMap.entries())]),
                 }),
+                migrate: (persistedState, version) => {
+                    // No migrations yet; older versions get the legacy shape
+                    // and merge() rebuilds the Maps. Bump `version` and add a
+                    // case here when partialize fields drift.
+                    void version;
+                    return persistedState;
+                },
                 merge: (persistedState: any, currentState) => {
 
                     const agentModelSelections = new Map();

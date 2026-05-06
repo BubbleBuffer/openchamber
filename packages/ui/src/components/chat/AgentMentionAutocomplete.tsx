@@ -152,7 +152,7 @@ export const AgentMentionAutocomplete = React.forwardRef<AgentMentionAutocomplet
           index === selectedIndex && 'bg-interactive-selection'
           )}
         onClick={() => onAgentSelect(agent.name)}
-        onMouseEnter={() => setSelectedIndex(index)}
+        onPointerEnter={() => setSelectedIndex(index)}
       >
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">

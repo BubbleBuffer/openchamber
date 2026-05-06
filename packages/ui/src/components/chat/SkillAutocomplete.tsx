@@ -121,7 +121,7 @@ export const SkillAutocomplete = React.forwardRef<SkillAutocompleteHandle, Skill
           index === selectedIndex && 'bg-interactive-selection'
           )}
         onClick={() => onSkillSelect(skill.name)}
-        onMouseEnter={() => setSelectedIndex(index)}
+        onPointerEnter={() => setSelectedIndex(index)}
       >
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">

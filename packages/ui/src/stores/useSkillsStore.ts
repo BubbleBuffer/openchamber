@@ -17,16 +17,6 @@ const getCurrentDirectory = (): string | null => {
     return opencodeDirectory;
   }
 
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const store = (window as any).__zustand_directory_store__;
-    if (store) {
-      return store.getState().currentDirectory;
-    }
-  } catch {
-    // ignore
-  }
-
   return null;
 };
 

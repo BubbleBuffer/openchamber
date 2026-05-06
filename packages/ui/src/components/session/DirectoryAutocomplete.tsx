@@ -295,7 +295,7 @@ export const DirectoryAutocomplete = React.forwardRef<DirectoryAutocompleteHandl
                   isSelected && "bg-interactive-selection"
                 )}
                 onClick={() => { handleSelectSuggestion(entry); onClose(); }}
-                onMouseEnter={() => setSelectedIndex(index)}
+                onPointerEnter={() => setSelectedIndex(index)}
               >
                 <RiFolderLine className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <span className="truncate">{entry.name}</span>

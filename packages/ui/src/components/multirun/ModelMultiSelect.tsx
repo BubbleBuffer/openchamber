@@ -288,7 +288,7 @@ export const ModelMultiSelect: React.FC<ModelMultiSelectProps> = ({
           });
           // Don't close dropdown - allow selecting multiple
         }}
-        onMouseEnter={() => setSelectedIndex(flatIndex)}
+        onPointerEnter={() => setSelectedIndex(flatIndex)}
         className={cn(
           'w-full text-left px-2 py-1.5 rounded-md typography-meta transition-colors flex items-center gap-2',
           isHighlighted ? 'bg-interactive-selection' : 'hover:bg-interactive-hover/50'

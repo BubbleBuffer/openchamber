@@ -365,7 +365,7 @@ export const CommandAutocomplete = React.forwardRef<CommandAutocompleteHandle, C
                     }
                     onCommandSelect(command);
                   }}
-                  onMouseEnter={() => setSelectedIndex(index)}
+                  onPointerEnter={() => setSelectedIndex(index)}
                 >
                   <div className="mt-0.5">
                     {getCommandIcon(command)}

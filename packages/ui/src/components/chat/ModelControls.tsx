@@ -1998,7 +1998,7 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                      isHighlighted ? "bg-interactive-selection" : "hover:bg-interactive-hover/50"
                 )}
                 onClick={() => handleProviderAndModelChange(providerID, modelID)}
-                onMouseEnter={() => setModelSelectedIndex(flatIndex)}
+                onPointerEnter={() => setModelSelectedIndex(flatIndex)}
             >
                 <div className="flex items-center gap-1.5 flex-1 min-w-0">
                     {showProviderLogo && (

@@ -153,7 +153,7 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
         >
           <SelectValue placeholder={isLoading ? 'Loading branches…' : 'Select source branch...'} />
         </SelectTrigger>
-        <SelectContent className="max-h-[280px] max-w-[320px]">
+        <SelectContent className="max-h-[280px] max-w-[min(320px,calc(100vw-2rem))]">
           {isLoading ? (
             <div className="px-2 py-4 text-center typography-meta text-muted-foreground">
               Loading branches...

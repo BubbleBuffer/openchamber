@@ -1055,7 +1055,7 @@ export const DirectoryTree: React.FC<DirectoryTreeProps> = ({
           <RiArrowDownSLine className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-[350px]">
+      <DropdownMenuContent align="start" className="w-[min(350px,calc(100vw-2rem))]">
         <ScrollableOverlay outerClassName="h-full" className="w-full">
           {directoryContent}
         </ScrollableOverlay>
