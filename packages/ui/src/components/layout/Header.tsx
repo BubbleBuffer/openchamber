@@ -71,6 +71,10 @@ import type { Session } from '@/lib/opencode/client';
 const DESKTOP_HEADER_ICON_BUTTON_CLASS = 'app-region-no-drag inline-flex h-8 w-8 items-center justify-center gap-2 rounded-md typography-ui-label font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-50 hover:bg-interactive-hover transition-colors';
 const MOBILE_HEADER_ICON_BUTTON_CLASS = 'app-region-no-drag inline-flex h-9 w-9 items-center justify-center gap-2 p-2 rounded-md typography-ui-label font-medium text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-50 hover:text-foreground hover:bg-interactive-hover transition-colors';
 
+/** TTL (ms) for the cached resolved-session ref used to bridge the gap between
+ * a session id changing and the live store catching up. */
+const RESOLVED_SESSION_CACHE_TTL_MS = 2000;
+
 type HeaderIconActionButtonProps = {
   visible?: boolean;
   title: string;
@@ -969,7 +973,7 @@ export const Header: React.FC<HeaderProps> = ({
       lastResolvedSessionRef.current = {
         sessionId: currentSessionId,
         session: currentSessionLive,
-        expiresAt: Date.now() + 2000,
+        expiresAt: Date.now() + RESOLVED_SESSION_CACHE_TTL_MS,
       };
       return;
     }

@@ -207,6 +207,9 @@ type PendingRepair = {
 }
 
 const REPAIR_COOLDOWN_MS = 5_000
+/** Interval (ms) for periodically rechecking whether sessions whose streams
+ * stopped without a closing event should now be considered idle. */
+const STUCK_SESSION_RECHECK_INTERVAL_MS = 30_000
 const pendingRepairs = new Map<string, PendingRepair>() // key: directory:sessionID
 
 const repairKey = (directory: string, sessionID: string) => `${directory}:${sessionID}`
@@ -1369,7 +1372,7 @@ export function SyncProvider(props: {
                   : String(rawError)
                 const wrapped = new Error(`session.list failed${status ? ` (${status})` : ""}: ${message}`)
                 if (status !== undefined) {
-                  ; (wrapped as Error & { status?: number }).status = status
+                  ;(wrapped as Error & { status?: number }).status = status
                 }
                 throw wrapped
               }
@@ -1526,7 +1529,7 @@ export function SyncProvider(props: {
       store.setState((s) => ({ session_status: { ...s.session_status, [sessionID]: { type: "idle" as const } } }))
     }
     const unsubscribe = store.subscribe((state) => updateStreamingState(state, { onStuckSession: onStuck }))
-    const stuckCheckInterval = setInterval(() => updateStreamingState(store.getState(), { onStuckSession: onStuck }), 30_000)
+    const stuckCheckInterval = setInterval(() => updateStreamingState(store.getState(), { onStuckSession: onStuck }), STUCK_SESSION_RECHECK_INTERVAL_MS)
     return () => { unsubscribe(); clearInterval(stuckCheckInterval) }
   }, [props.directory, childStores])
 
@@ -1723,12 +1726,12 @@ export function useSidebarSessions(directory?: string): Session[] {
       const nextSession = stableUpdatedAt === rawUpdatedAt
         ? session
         : {
-          ...session,
-          time: {
-            ...session.time,
-            updated: stableUpdatedAt,
-          },
-        }
+            ...session,
+            time: {
+              ...session.time,
+              updated: stableUpdatedAt,
+            },
+          }
       sessionsById.set(session.id, nextSession)
       return nextSession
     })
