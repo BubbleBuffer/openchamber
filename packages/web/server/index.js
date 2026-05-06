@@ -379,6 +379,7 @@ const sessionRuntime = createSessionRuntime({
   getNotificationClients: () => uiNotificationClients,
   broadcastEvent: broadcastGlobalUiEvent,
 });
+sessionRuntime.resetAllSessionActivityToIdle();
 
 const projectConfigRuntime = createProjectConfigRuntime({
   fsPromises,
@@ -653,6 +654,10 @@ const setAutoAcceptSession = (...args) => notificationTriggerRuntime.setAutoAcce
 const globalMessageStreamHub = createGlobalMessageStreamHub({
   buildOpenCodeUrl,
   getOpenCodeAuthHeaders,
+});
+
+globalMessageStreamHub.subscribeStatus((status) => {
+  if (status.type === 'connect') sessionRuntime.resetAllSessionActivityToIdle();
 });
 
 const openCodeWatcherRuntime = createOpenCodeWatcherRuntime({

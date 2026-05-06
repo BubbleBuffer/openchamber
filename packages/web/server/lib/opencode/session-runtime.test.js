@@ -65,4 +65,13 @@ describe('session runtime', () => {
       },
     });
   });
+
+  it('resets all session activity to idle', () => {
+    const runtime = createSessionRuntime({ writeSseEvent() {}, getNotificationClients: () => new Set(), broadcastEvent: () => {} });
+    runtimes.push(runtime);
+    runtime.processOpenCodeSsePayload({ type: 'session.status', properties: { sessionID: 'session-1', info: { type: 'busy' } } });
+    expect(runtime.getSessionActivitySnapshot()).toEqual({ 'session-1': { type: 'busy' } });
+    runtime.resetAllSessionActivityToIdle();
+    expect(runtime.getSessionActivitySnapshot()).toEqual({ 'session-1': { type: 'idle' } });
+  });
 });
