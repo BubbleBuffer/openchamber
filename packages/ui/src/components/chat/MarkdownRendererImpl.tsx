@@ -11,6 +11,7 @@ import remend from 'remend';
 import { FadeInOnReveal } from './message/FadeInOnReveal';
 import type { Part } from '@/lib/opencode/client';
 import { cn } from '@/lib/utils';
+import { sanitizeSvg } from '@/lib/sanitizeHtml';
 import { RiFileCopyLine, RiCheckLine, RiDownloadLine } from '@remixicon/react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { toast } from '@/components/ui';
@@ -450,7 +451,7 @@ const MermaidBlock: React.FC<{ source: string; mode: 'svg' | 'ascii' }> = ({ sou
   return (
     <div data-markdown="mermaid-block" className="group">
       <div data-markdown="mermaid-scroll">
-        <div data-markdown="mermaid" dangerouslySetInnerHTML={{ __html: svg }} />
+        <div data-markdown="mermaid" dangerouslySetInnerHTML={{ __html: sanitizeSvg(svg) }} />
       </div>
       <div
         className={cn(

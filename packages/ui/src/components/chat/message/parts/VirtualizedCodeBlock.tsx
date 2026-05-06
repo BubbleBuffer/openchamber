@@ -12,6 +12,7 @@
 import React from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import Prism from 'prismjs';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 
 // Ensure common languages are loaded (react-syntax-highlighter lazy-loads them,
 // but we call Prism directly so we need them registered).
@@ -328,7 +329,7 @@ const Row: React.FC<RowProps> = React.memo(({ line, language, showLineNumbers, s
         ) : (
           <div
             className="whitespace-pre"
-            dangerouslySetInnerHTML={{ __html: html }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }}
           />
         )}
       </div>
