@@ -113,6 +113,18 @@ export const registerOpenCodeProxy = (app, deps) => {
     const closeUpstream = () => abortController.abort();
     let upstream = null;
     let reader = null;
+    let keepaliveInterval = null;
+    const startKeepalive = () => {
+      if (keepaliveInterval) return;
+      keepaliveInterval = setInterval(() => {
+        if (!res.writableEnded) {
+          try { res.write(': keepalive\n\n'); } catch {}
+        }
+      }, 15_000);
+    };
+    const stopKeepalive = () => {
+      if (keepaliveInterval) { clearInterval(keepaliveInterval); keepaliveInterval = null; }
+    };
 
     req.on('close', closeUpstream);
 
@@ -161,6 +173,7 @@ export const registerOpenCodeProxy = (app, deps) => {
         res.socket.setNoDelay(true);
       }
 
+      startKeepalive();
       reader = upstream.body.getReader();
       while (!abortController.signal.aborted) {
         const { done, value } = await reader.read();
@@ -187,6 +200,7 @@ export const registerOpenCodeProxy = (app, deps) => {
         res.end();
       }
     } finally {
+      stopKeepalive();
       req.off('close', closeUpstream);
       try {
         if (reader) {

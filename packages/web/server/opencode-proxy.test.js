@@ -137,4 +137,53 @@ describe('OpenCode proxy SSE forwarding', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true, source: 'external-host' });
   });
+
+  it('injects SSE keepalive comments every 15 seconds', async () => {
+    const upstream = express();
+    upstream.get('/global/event', (_req, res) => {
+      res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+      res.write('data: {"type":"server.connected","properties":{}}\n\n');
+      // Keep stream open so the proxy has time to inject keepalive
+      const done = new Promise((r) => setTimeout(r, 20_000));
+      res.on('close', () => done);
+    });
+    upstreamServer = await listen(upstream);
+    const upstreamPort = upstreamServer.address().port;
+
+    const app = express();
+    registerOpenCodeProxy(app, {
+      fs: {},
+      os: {},
+      path,
+      OPEN_CODE_READY_GRACE_MS: 0,
+      getRuntime: () => ({
+        openCodePort: upstreamPort,
+        isOpenCodeReady: true,
+        openCodeNotReadySince: 0,
+        isRestartingOpenCode: false,
+      }),
+      getOpenCodeAuthHeaders: () => ({}),
+      buildOpenCodeUrl: (requestPath) => `http://127.0.0.1:${upstreamPort}${requestPath}`,
+      ensureOpenCodeApiPrefix: () => {},
+    });
+    proxyServer = await listen(app);
+    const proxyPort = proxyServer.address().port;
+
+    const response = await fetch(`http://127.0.0.1:${proxyPort}/api/global/event`, {
+      headers: { Accept: 'text/event-stream' },
+    });
+    expect(response.ok).toBe(true);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let keepaliveSeen = false;
+    const start = Date.now();
+    while (Date.now() - start < 25_000) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      if (chunk.includes(': keepalive')) { keepaliveSeen = true; break; }
+    }
+    await reader.cancel();
+    expect(keepaliveSeen).toBe(true);
+  }, 30_000);
 });
