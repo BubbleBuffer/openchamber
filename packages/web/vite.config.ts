@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { VitePWA } from 'vite-plugin-pwa';
 import { themeStoragePlugin } from '../../vite-theme-plugin';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageJson = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8'));
@@ -59,6 +60,17 @@ export default defineConfig({
         type: 'module',
       },
     }),
+    sentryVitePlugin({
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      release: {
+        name: process.env.SENTRY_RELEASE ?? undefined,
+      },
+      sourcemaps: {
+        filesToDeleteAfterUpload: ['./dist/**/*.map'],
+      },
+    }),
   ],
   resolve: {
     alias: [
@@ -100,6 +112,7 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, 'dist'),
     emptyOutDir: true,
+    sourcemap: 'hidden',
     chunkSizeWarningLimit: 500,
     rollupOptions: {
       external: ['node:child_process', 'node:fs', 'node:path', 'node:url'],
