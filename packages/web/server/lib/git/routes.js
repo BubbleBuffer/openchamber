@@ -7,6 +7,16 @@ export function registerGitRoutes(app) {
     return gitLibraries;
   };
 
+  const extractGitErrorText = (error) => {
+    const message = typeof error?.message === 'string' ? error.message : '';
+    const stderr = typeof error?.stderr === 'string' ? error.stderr : '';
+    const stdout = typeof error?.stdout === 'string' ? error.stdout : '';
+    return [message, stderr, stdout]
+      .map((value) => String(value || '').trim())
+      .filter(Boolean)
+      .join('\n');
+  };
+
   app.get('/api/git/identities', async (req, res) => {
     const { getProfiles } = await getGitLibraries();
     try {
@@ -187,16 +197,6 @@ export function registerGitRoutes(app) {
 
   app.get('/api/git/status', async (req, res) => {
     const { getStatus, isGitRepository } = await getGitLibraries();
-
-    const extractGitErrorText = (error) => {
-      const message = typeof error?.message === 'string' ? error.message : '';
-      const stderr = typeof error?.stderr === 'string' ? error.stderr : '';
-      const stdout = typeof error?.stdout === 'string' ? error.stdout : '';
-      return [message, stderr, stdout]
-        .map((value) => String(value || '').trim())
-        .filter(Boolean)
-        .join('\n');
-    };
 
     try {
       const directory = req.query.directory;
@@ -558,16 +558,25 @@ export function registerGitRoutes(app) {
   });
 
   app.get('/api/git/branches', async (req, res) => {
-    const { getBranches } = await getGitLibraries();
+    const { getBranches, isGitRepository } = await getGitLibraries();
     try {
       const directory = req.query.directory;
       if (!directory) {
         return res.status(400).json({ error: 'directory parameter is required' });
       }
 
+      const isRepo = await isGitRepository(directory);
+      if (!isRepo) {
+        return res.json({ all: [], current: null, branches: {} });
+      }
+
       const branches = await getBranches(directory);
       res.json(branches);
     } catch (error) {
+      const errorText = extractGitErrorText(error);
+      if (/not a git repository/i.test(errorText)) {
+        return res.json({ all: [], current: null, branches: {} });
+      }
       console.error('Failed to get branches:', error);
       res.status(500).json({ error: error.message || 'Failed to get branches' });
     }
