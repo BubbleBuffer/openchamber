@@ -58,7 +58,7 @@ import { QuickOpenDialog } from '@/components/ui/QuickOpenDialog';
 import { McpOAuthCallbackPage } from '@/components/sections/mcp/McpOAuthCallbackPage';
 import { MCP_OAUTH_CALLBACK_PATH } from '@/components/sections/mcp/mcpOAuth';
 import { lazyWithChunkRecovery } from '@/lib/chunkLoadRecovery';
-import { logClientError, logClientInfo, flushClientLogs } from '@/lib/clientErrorLogger';
+import * as Sentry from '@sentry/react';
 
 // Lazy-loaded heavy views — loaded on demand to reduce initial bundle size.
 const OnboardingScreen = lazyWithChunkRecovery(() =>
@@ -215,42 +215,11 @@ function App({ apis }: AppProps) {
   const embeddedBackgroundWorkEnabled = !embeddedSessionChat || isEmbeddedVisible;
   const isMcpOAuthCallback = React.useMemo(() => isMcpOAuthCallbackPath(), []);
 
-  // Global error handlers — capture uncaught errors/rejections before they crash the page.
+  // App init breadcrumb — Sentry auto-catches uncaught errors/rejections.
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const onError = (event: ErrorEvent) => {
-      logClientError(event.error ?? new Error(event.message), {
-        source: 'window.onerror',
-        filename: event.filename ?? null,
-        lineno: event.lineno ?? null,
-        colno: event.colno ?? null,
-      });
-    };
-    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
-      logClientError(event.reason, { source: 'unhandledrejection' });
-    };
-
-    window.addEventListener('error', onError);
-    window.addEventListener('unhandledrejection', onUnhandledRejection);
-
-    logClientInfo('App init started', { userAgent: navigator.userAgent });
-
-    return () => {
-      window.removeEventListener('error', onError);
-      window.removeEventListener('unhandledrejection', onUnhandledRejection);
-    };
-  }, []);
-
-  // Flush logs on page unload.
-  React.useEffect(() => {
-    const onUnload = () => flushClientLogs();
-    window.addEventListener('beforeunload', onUnload);
-    window.addEventListener('pagehide', onUnload);
-    return () => {
-      window.removeEventListener('beforeunload', onUnload);
-      window.removeEventListener('pagehide', onUnload);
-    };
+    Sentry.addBreadcrumb({ category: 'app', message: 'App init started', level: 'info', data: { userAgent: navigator.userAgent } });
   }, []);
 
   React.useEffect(() => {
@@ -393,11 +362,11 @@ function App({ apis }: AppProps) {
       }
       initializationInFlightRef.current = true;
       try {
-        logClientInfo('App init: calling initializeApp');
+        Sentry.addBreadcrumb({ category: 'app', message: 'App init: calling initializeApp', level: 'info' });
         await initializeApp();
-        logClientInfo('App init: initializeApp succeeded');
+        Sentry.addBreadcrumb({ category: 'app', message: 'App init: initializeApp succeeded', level: 'info' });
       } catch (err) {
-        logClientError(err, { source: 'initializeApp' });
+        Sentry.captureException(err, { extra: { source: 'initializeApp' } });
         throw err;
       } finally {
         initializationInFlightRef.current = false;
