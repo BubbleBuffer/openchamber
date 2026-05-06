@@ -1569,7 +1569,7 @@ const TerminalViewport = React.forwardRef<TerminalController, TerminalViewportPr
               />
             </>,
             document.body
-            )
+          )
           : null}
         {viewportRef.current && !enableTouchScroll ? (
           <OverlayScrollbar

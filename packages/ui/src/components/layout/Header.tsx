@@ -356,7 +356,7 @@ const DesktopServicesMenu = React.memo(function DesktopServicesMenu({
           <DesktopHostSwitcherDialog
             embedded
             open={isDesktopServicesOpen && desktopServicesTab === 'instance'}
-            onOpenChange={() => {}}
+            onOpenChange={() => { }}
             onHostSwitched={() => setIsDesktopServicesOpen(false)}
           />
         ) : null}
@@ -427,8 +427,8 @@ const DesktopServicesMenu = React.memo(function DesktopServicesMenu({
                           const paceInfo = calculatePace(window.usedPercent, window.resetAt, window.windowSeconds, label);
                           const expectedMarker = paceInfo?.dailyAllocationPercent != null
                             ? (quotaDisplayMode === 'remaining'
-                                ? 100 - calculateExpectedUsagePercent(paceInfo.elapsedRatio)
-                                : calculateExpectedUsagePercent(paceInfo.elapsedRatio))
+                              ? 100 - calculateExpectedUsagePercent(paceInfo.elapsedRatio)
+                              : calculateExpectedUsagePercent(paceInfo.elapsedRatio))
                             : null;
                           return (
                             <div key={`${group.providerId}-${label}`} className="flex flex-col gap-1.5">
@@ -477,8 +477,8 @@ const DesktopServicesMenu = React.memo(function DesktopServicesMenu({
                                         const paceInfo = calculatePace(window.usedPercent, window.resetAt, window.windowSeconds);
                                         const expectedMarker = paceInfo?.dailyAllocationPercent != null
                                           ? (quotaDisplayMode === 'remaining'
-                                              ? 100 - calculateExpectedUsagePercent(paceInfo.elapsedRatio)
-                                              : calculateExpectedUsagePercent(paceInfo.elapsedRatio))
+                                            ? 100 - calculateExpectedUsagePercent(paceInfo.elapsedRatio)
+                                            : calculateExpectedUsagePercent(paceInfo.elapsedRatio))
                                           : null;
                                         return (
                                           <div key={`${group.providerId}-${modelName}`} className="flex flex-col gap-1.5">
@@ -1600,14 +1600,14 @@ export const Header: React.FC<HeaderProps> = ({
       <button
         type="button"
         onClick={() => setActiveMainTab(tab.id)}
-          className={cn(
-            'relative flex h-8 items-center gap-2 px-3 rounded-lg typography-ui-label font-medium transition-colors',
-            isActive
-              ? 'app-region-no-drag bg-interactive-selection text-interactive-selection-foreground shadow-none'
-              : 'app-region-no-drag text-muted-foreground hover:bg-interactive-hover/50 hover:text-foreground',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-            isChatTab && !isMobile && 'min-w-[100px] justify-center'
-          )}
+        className={cn(
+          'relative flex h-8 items-center gap-2 px-3 rounded-lg typography-ui-label font-medium transition-colors',
+          isActive
+            ? 'app-region-no-drag bg-interactive-selection text-interactive-selection-foreground shadow-none'
+            : 'app-region-no-drag text-muted-foreground hover:bg-interactive-hover/50 hover:text-foreground',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+          isChatTab && !isMobile && 'min-w-[100px] justify-center'
+        )}
         aria-label={tab.label}
         aria-selected={isActive}
         role="tab"
@@ -1967,7 +1967,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className="h-dvh w-[100vw] max-h-none rounded-none border-0 p-0 overflow-hidden"
               >
                 <div className="flex h-full flex-col bg-[var(--surface-elevated)]">
-          <div className="sticky top-0 z-20 bg-[var(--surface-elevated)] px-2 py-px">
+                  <div className="sticky top-0 z-20 bg-[var(--surface-elevated)] px-2 py-px">
                     <div className="flex items-center justify-between gap-2 px-3 py-0">
                       <div className="h-10 min-w-0 flex-1">
                         <SortableTabsStrip
@@ -2094,8 +2094,8 @@ export const Header: React.FC<HeaderProps> = ({
                                   const paceInfo = calculatePace(window.usedPercent, window.resetAt, window.windowSeconds, label);
                                   const expectedMarker = paceInfo?.dailyAllocationPercent != null
                                     ? (quotaDisplayMode === 'remaining'
-                                        ? 100 - calculateExpectedUsagePercent(paceInfo.elapsedRatio)
-                                        : calculateExpectedUsagePercent(paceInfo.elapsedRatio))
+                                      ? 100 - calculateExpectedUsagePercent(paceInfo.elapsedRatio)
+                                      : calculateExpectedUsagePercent(paceInfo.elapsedRatio))
                                     : null;
                                   return (
                                     <div key={`${group.providerId}-${label}`} className="flex flex-col gap-1.5">
@@ -2157,8 +2157,8 @@ export const Header: React.FC<HeaderProps> = ({
                                                 const paceInfo = calculatePace(window.usedPercent, window.resetAt, window.windowSeconds);
                                                 const expectedMarker = paceInfo?.dailyAllocationPercent != null
                                                   ? (quotaDisplayMode === 'remaining'
-                                                      ? 100 - calculateExpectedUsagePercent(paceInfo.elapsedRatio)
-                                                      : calculateExpectedUsagePercent(paceInfo.elapsedRatio))
+                                                    ? 100 - calculateExpectedUsagePercent(paceInfo.elapsedRatio)
+                                                    : calculateExpectedUsagePercent(paceInfo.elapsedRatio))
                                                   : null;
                                                 return (
                                                   <div key={`${group.providerId}-${modelName}`} className="flex flex-col gap-1.5">

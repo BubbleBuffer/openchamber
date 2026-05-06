@@ -1372,7 +1372,7 @@ export function SyncProvider(props: {
                   : String(rawError)
                 const wrapped = new Error(`session.list failed${status ? ` (${status})` : ""}: ${message}`)
                 if (status !== undefined) {
-                  ;(wrapped as Error & { status?: number }).status = status
+                  ; (wrapped as Error & { status?: number }).status = status
                 }
                 throw wrapped
               }
@@ -1726,12 +1726,12 @@ export function useSidebarSessions(directory?: string): Session[] {
       const nextSession = stableUpdatedAt === rawUpdatedAt
         ? session
         : {
-            ...session,
-            time: {
-              ...session.time,
-              updated: stableUpdatedAt,
-            },
-          }
+          ...session,
+          time: {
+            ...session.time,
+            updated: stableUpdatedAt,
+          },
+        }
       sessionsById.set(session.id, nextSession)
       return nextSession
     })

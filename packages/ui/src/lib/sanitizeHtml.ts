@@ -6,7 +6,7 @@ import DOMPurify from 'dompurify';
  * may inadvertently include attacker-controlled markup.
  */
 export function sanitizeHtml(html: string): string {
-  return DOMPurify.sanitize(html);
+    return DOMPurify.sanitize(html);
 }
 
 /**
@@ -15,5 +15,5 @@ export function sanitizeHtml(html: string): string {
  * survives, while stripping `<script>`, event handlers, and other vectors.
  */
 export function sanitizeSvg(svg: string): string {
-  return DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } });
+    return DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } });
 }

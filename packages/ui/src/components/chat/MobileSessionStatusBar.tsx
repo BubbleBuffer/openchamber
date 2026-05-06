@@ -390,7 +390,7 @@ function TokenUsageIndicator({ contextUsage }: { contextUsage: SessionContextUsa
   const percentage = Math.min(contextUsage.percentage, 999);
   const colorClass =
     percentage >= 90 ? 'text-[var(--status-error)]' :
-    percentage >= 75 ? 'text-[var(--status-warning)]' : 'text-[var(--status-success)]';
+      percentage >= 75 ? 'text-[var(--status-warning)]' : 'text-[var(--status-success)]';
 
   return (
     <span className={cn("text-[12px] tabular-nums font-medium", colorClass)}>
@@ -465,7 +465,7 @@ function SessionStatusHeader({
               style={projectColorVar ? { color: projectColorVar } : undefined}
             >
               {currentProjectLabel}
-              </span>
+            </span>
           </div>
           <div className="w-full h-px bg-[var(--interactive-border)] my-1" />
         </div>
@@ -536,10 +536,10 @@ function useLongPress(
 
   const move = React.useCallback((clientX: number, clientY: number) => {
     if (!startPosRef.current) return;
-    
+
     const dx = Math.abs(clientX - startPosRef.current.x);
     const dy = Math.abs(clientY - startPosRef.current.y);
-    
+
     if (dx > MOVE_THRESHOLD || dy > MOVE_THRESHOLD) {
       hasMovedRef.current = true;
       if (timerRef.current) {
@@ -623,7 +623,7 @@ function ProjectEditPanel({
     if (over && active.id !== over.id) {
       const oldIndex = localProjects.findIndex((p) => p.id === active.id);
       const newIndex = localProjects.findIndex((p) => p.id === over.id);
-      
+
       setLocalProjects((items) => arrayMove(items, oldIndex, newIndex));
       onReorder(oldIndex, newIndex);
     }
@@ -1155,13 +1155,13 @@ function ExpandedView({
   // Filter sessions by active project
   const filteredSessions = React.useMemo(() => {
     if (!activeProjectId) return sessions;
-    
+
     const activeProject = projects.find(p => p.id === activeProjectId);
     if (!activeProject) return sessions;
 
     const projectRoot = normalize(activeProject.path);
     const projectDirs = new Set<string>([projectRoot]);
-    
+
     // Add worktrees
     const worktrees = availableWorktreesByProject.get(projectRoot) ?? [];
     for (const meta of worktrees) {
@@ -1287,8 +1287,8 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
   const setCurrentSession = useSessionUIStore((state) => state.setCurrentSession);
   const openNewSessionDraft = useSessionUIStore((state) => state.openNewSessionDraft);
   const getContextUsage = useSessionUIStore((state) => state.getContextUsage);
-    const agents = useAgentConfigStore((state) => state.agents);
-    const getCurrentModel = useProviderConfigStore((state) => state.getCurrentModel);
+  const agents = useAgentConfigStore((state) => state.agents);
+  const getCurrentModel = useProviderConfigStore((state) => state.getCurrentModel);
   const isMobile = useUIStore((state) => state.isMobile);
   const showMobileSessionStatusBar = useUIStore((state) => state.showMobileSessionStatusBar);
   const isMobileSessionStatusBarCollapsed = useUIStore((state) => state.isMobileSessionStatusBarCollapsed);
