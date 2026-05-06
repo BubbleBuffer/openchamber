@@ -6,7 +6,7 @@ import ToolPart from './parts/ToolPart';
 import AssistantTextPart from './parts/AssistantTextPart';
 import ReasoningPart from './parts/ReasoningPart';
 import { MessageFilesDisplay } from '../FileAttachment';
-import { TurnChangedFilesDropdown } from '../TurnChangedFilesDropdown';
+import { TurnChangedFilesDropdown } from '../diff/TurnChangedFilesDropdown';
 import type { ToolPart as ToolPartType } from '@/lib/opencode/client';
 import type { StreamPhase, ToolPopupContent, AgentMentionInfo } from './types';
 import type { TurnGroupingContext } from '../lib/turns/types';

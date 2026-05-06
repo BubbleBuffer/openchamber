@@ -19,7 +19,7 @@ type TodoStatus = string;
 type TodoPriority = string;
 import { useUIStore } from "@/stores/useUIStore";
 import { useTodosPersistStore } from "@/stores/useTodosPersistStore";
-import { WorkingPlaceholder } from "./message/parts/WorkingPlaceholder";
+import { WorkingPlaceholder } from "../message/parts/WorkingPlaceholder";
 import { isVSCodeRuntime } from "@/lib/desktop/desktop";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 

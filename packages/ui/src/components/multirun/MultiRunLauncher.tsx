@@ -19,8 +19,8 @@ import type { CreateMultiRunParams, MultiRunModelSelection } from '@/types/multi
 import { ModelMultiSelect, generateInstanceId, type ModelSelectionWithId } from './ModelMultiSelect';
 import { BranchSelector, useBranchOptions } from './BranchSelector';
 import { AgentSelector } from './AgentSelector';
-import { CommandAutocomplete, type CommandAutocompleteHandle, type CommandInfo } from '@/components/chat/CommandAutocomplete';
-import { FileMentionAutocomplete, type FileMentionHandle } from '@/components/chat/FileMentionAutocomplete';
+import { CommandAutocomplete, type CommandAutocompleteHandle, type CommandInfo } from '@/components/chat/autocomplete/CommandAutocomplete';
+import { FileMentionAutocomplete, type FileMentionHandle } from '@/components/chat/autocomplete/FileMentionAutocomplete';
 import { isDesktopShell } from '@/lib/desktop/desktop';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { PROJECT_ICON_MAP, PROJECT_COLOR_MAP, getProjectIconImageUrl } from '@/lib/project/projectMeta';

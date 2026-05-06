@@ -17,7 +17,7 @@ import {
 import { ChangedFilesList } from './ChangedFilesList';
 import { changedFilesPopoverClassName, changedFilesPopoverStyle } from './changedFilesPopover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import type { TurnActivityRecord } from './lib/turns/types';
+import type { TurnActivityRecord } from '../lib/turns/types';
 
 interface TurnChangedFilesDropdownProps {
     activityParts: TurnActivityRecord[] | undefined;

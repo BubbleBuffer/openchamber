@@ -17,7 +17,7 @@ import { AgentSelector } from '@/components/sections/commands/AgentSelector';
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useAgentsStore } from '@/stores/agents/useAgentsStore';
-import { isPrimaryMode } from '@/components/chat/mobileControlsUtils';
+import { isPrimaryMode } from '@/components/chat/controls/mobileControlsUtils';
 import { cn } from '@/lib/utils';
 import { RiArrowDownSLine } from '@remixicon/react';
 

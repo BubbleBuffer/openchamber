@@ -8,7 +8,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { generateSyntaxTheme } from '@/lib/theme/syntaxThemeGenerator';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
-import { DiffPreview, WritePreview } from './DiffPreview';
+import { DiffPreview, WritePreview } from '../diff/DiffPreview';
 import { PermissionActionButton } from './PermissionActionButton';
 
 interface PermissionCardProps {

@@ -4,7 +4,7 @@ import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useContextStore } from '@/stores/contextStore';
-import { formatEffortLabel, getAgentDisplayName, getModelDisplayName } from './mobileControlsUtils';
+import { formatEffortLabel, getAgentDisplayName, getModelDisplayName } from '../controls/mobileControlsUtils';
 
 interface StatusChipProps {
     onClick: () => void;

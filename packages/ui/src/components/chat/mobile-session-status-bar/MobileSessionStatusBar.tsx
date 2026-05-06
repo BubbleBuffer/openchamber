@@ -49,7 +49,7 @@ import { useDrawerSwipe } from '@/hooks/useDrawerSwipe';
 import { MobileOverlayPanel } from '@/components/ui/MobileOverlayPanel';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { useNotificationStore } from '@/sync/notification-store';
-import { SortableProjectItem } from './mobile-session-status-bar/SortableProjectItem';
+import { SortableProjectItem } from './SortableProjectItem';
 
 interface MobileSessionStatusBarProps {
   onSessionSwitch?: (sessionId: string) => void;
