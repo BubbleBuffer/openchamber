@@ -1,6 +1,6 @@
 import * as React from "react";
 
-type AnyProps = Record<string, unknown>;
+type UnknownProps = Record<string, unknown>;
 
 function mergeRefs<T>(...refs: Array<React.Ref<T> | undefined>) {
   return (value: T) => {
@@ -12,10 +12,13 @@ function mergeRefs<T>(...refs: Array<React.Ref<T> | undefined>) {
   };
 }
 
-function mergeProps(childProps: AnyProps, slotProps: AnyProps): AnyProps {
-  const merged: AnyProps = { ...slotProps };
+function mergeProps<TChild extends UnknownProps, TSlot extends UnknownProps>(
+  childProps: TChild,
+  slotProps: TSlot,
+): TChild & TSlot {
+  const merged: UnknownProps = { ...slotProps };
   for (const key in childProps) {
-    const slotValue = slotProps[key];
+    const slotValue = slotProps[key as keyof TSlot];
     const childValue = childProps[key];
     if (/^on[A-Z]/.test(key) && typeof slotValue === "function" && typeof childValue === "function") {
       merged[key] = (...args: unknown[]) => {
@@ -30,7 +33,7 @@ function mergeProps(childProps: AnyProps, slotProps: AnyProps): AnyProps {
       merged[key] = childValue;
     }
   }
-  return merged;
+  return merged as TChild & TSlot;
 }
 
 export interface SlotProps extends React.HTMLAttributes<HTMLElement> {
@@ -42,9 +45,10 @@ export const Slot = React.forwardRef<HTMLElement, SlotProps>(function Slot(
   ref,
 ) {
   if (!React.isValidElement(children)) return null;
-  const child = children as React.ReactElement<AnyProps & { ref?: React.Ref<unknown> }>;
+  const child = children as React.ReactElement<UnknownProps & { ref?: React.Ref<unknown> }>;
+  const merged = mergeProps(child.props, slotProps as UnknownProps);
   return React.cloneElement(child, {
-    ...mergeProps(child.props as AnyProps, slotProps as AnyProps),
+    ...merged,
     ref: mergeRefs(ref as React.Ref<unknown>, (child as unknown as { ref?: React.Ref<unknown> }).ref),
-  } as AnyProps);
+  });
 });
