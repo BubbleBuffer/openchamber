@@ -1,4 +1,4 @@
-import { registerOpenCodeProxy } from './proxy.js';
+import { registerOpenCodeProxy } from './network/proxy.js';
 
 export const createServerUtilsRuntime = (dependencies) => {
   const {

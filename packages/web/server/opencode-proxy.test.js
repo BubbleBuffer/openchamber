@@ -3,7 +3,7 @@ import { EventEmitter } from 'node:events';
 import express from 'express';
 import path from 'path';
 
-import { registerOpenCodeProxy, writeSseChunkWithBackpressure } from './lib/opencode/proxy.js';
+import { registerOpenCodeProxy, writeSseChunkWithBackpressure } from './lib/opencode/network/proxy.js';
 
 const listen = (app, host = '127.0.0.1') => new Promise((resolve, reject) => {
   const server = app.listen(0, host, () => resolve(server));

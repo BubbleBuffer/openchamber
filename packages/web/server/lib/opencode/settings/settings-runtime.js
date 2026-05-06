@@ -1,4 +1,4 @@
-import { createProjectIdFromPath } from '../projects/project-id.js';
+import { createProjectIdFromPath } from '../../projects/project-id.js';
 
 const DEFAULT_NOTIFICATION_TEMPLATES = {
   completion: { title: '{agent_name} is ready', message: '{model_name} completed the task' },

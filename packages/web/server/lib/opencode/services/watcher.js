@@ -1,4 +1,4 @@
-import { createUpstreamSseReader } from '../event-stream/upstream-reader.js';
+import { createUpstreamSseReader } from '../../event-stream/upstream-reader.js';
 
 export const createOpenCodeWatcherRuntime = (deps) => {
   const {

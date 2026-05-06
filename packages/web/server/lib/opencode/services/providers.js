@@ -4,7 +4,7 @@ import {
   isPlainObject,
   getConfigForPath,
   writeConfig,
-} from './shared.js';
+} from '../shared.js';
 
 function getProviderSources(providerId, workingDirectory) {
   const layers = readConfigLayers(workingDirectory);

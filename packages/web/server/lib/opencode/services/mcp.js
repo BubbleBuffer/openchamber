@@ -8,7 +8,7 @@ import {
   getJsonEntrySource,
   getJsonWriteTarget,
   writeConfig,
-} from './shared.js';
+} from '../shared.js';
 
 // ============== MCP CONFIG HELPERS ==============
 

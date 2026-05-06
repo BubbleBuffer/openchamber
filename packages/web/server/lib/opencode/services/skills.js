@@ -19,7 +19,7 @@ import {
   deleteSkillSupportingFile,
   getAncestors,
   findWorktreeRoot,
-} from './shared.js';
+} from '../shared.js';
 
 function ensureProjectSkillDir(workingDirectory) {
   const projectSkillDir = path.join(workingDirectory, '.opencode', 'skills');

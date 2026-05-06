@@ -1,13 +1,13 @@
-import { registerFsRoutes } from '../fs/routes.js';
-import { registerQuotaRoutes } from '../quota/routes.js';
-import { registerGitHubRoutes } from '../github/routes.js';
-import { registerGitRoutes } from '../git/routes.js';
-import { registerMagicPromptRoutes } from '../magic-prompts/routes.js';
-import { registerSessionFoldersRoutes } from '../session-folders/routes.js';
+import { registerFsRoutes } from '../../fs/routes.js';
+import { registerQuotaRoutes } from '../../quota/routes.js';
+import { registerGitHubRoutes } from '../../github/routes.js';
+import { registerGitRoutes } from '../../git/routes.js';
+import { registerMagicPromptRoutes } from '../../magic-prompts/routes.js';
+import { registerSessionFoldersRoutes } from '../../session-folders/routes.js';
 import { registerConfigEntityRoutes } from './config-entity-routes.js';
 import { registerSettingsUtilityRoutes } from './core-routes.js';
 import { registerProjectIconRoutes } from './project-icon-routes.js';
-import { registerScheduledTaskRoutes } from '../scheduled-tasks/routes.js';
+import { registerScheduledTaskRoutes } from '../../scheduled-tasks/routes.js';
 import { registerSkillRoutes } from './skill-routes.js';
 import { registerOpenCodeRoutes } from './routes.js';
 
@@ -19,7 +19,7 @@ export const createFeatureRoutesRuntime = (dependencies) => {
   let quotaProviders = null;
   const getQuotaProviders = async () => {
     if (!quotaProviders) {
-      quotaProviders = await import('../quota/index.js');
+      quotaProviders = await import('../../quota/index.js');
     }
     return quotaProviders;
   };
@@ -60,7 +60,7 @@ export const createFeatureRoutesRuntime = (dependencies) => {
       writeSseEvent,
     } = routeDependencies;
 
-    const { getProviderSources, removeProviderConfig } = await import('./index.js');
+    const { getProviderSources, removeProviderConfig } = await import('../index.js');
 
     registerSettingsUtilityRoutes(app, {
       readCustomThemesFromDisk,
@@ -121,7 +121,7 @@ export const createFeatureRoutesRuntime = (dependencies) => {
       createMcpConfig,
       updateMcpConfig,
       deleteMcpConfig,
-    } = await import('./index.js');
+    } = await import('../index.js');
 
     registerConfigEntityRoutes(app, {
       resolveProjectDirectory,
@@ -155,7 +155,7 @@ export const createFeatureRoutesRuntime = (dependencies) => {
       deleteSkillSupportingFile,
       SKILL_SCOPE,
       SKILL_DIR,
-    } = await import('./index.js');
+    } = await import('../index.js');
 
     const {
       getCuratedSkillsSources,
@@ -168,8 +168,8 @@ export const createFeatureRoutesRuntime = (dependencies) => {
       scanClawdHubPage,
       installSkillsFromClawdHub,
       isClawdHubSource,
-    } = await import('../skills-catalog/index.js');
-    const { getProfiles, getProfile } = await import('../git/index.js');
+    } = await import('../../skills-catalog/index.js');
+    const { getProfiles, getProfile } = await import('../../git/index.js');
 
     registerSkillRoutes(app, {
       fs,

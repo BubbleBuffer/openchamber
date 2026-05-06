@@ -1,5 +1,5 @@
 // MiniMax Coding Plan Provider (minimaxi.com)
-import { readAuthFile } from '../../opencode/auth.js';
+import { readAuthFile } from '../../opencode/auth/auth.js';
 import {
   getAuthEntry,
   normalizeAuthEntry,

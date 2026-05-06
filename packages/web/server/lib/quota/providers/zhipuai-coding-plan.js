@@ -25,7 +25,7 @@
  * @property {number} [nextResetTime]
  * @property {Array<{modelCode: string, usage: number}>} [usageDetails]
  */
-import { readAuthFile } from '../../opencode/auth.js';
+import { readAuthFile } from '../../opencode/auth/auth.js';
 import {
   getAuthEntry,
   normalizeAuthEntry,

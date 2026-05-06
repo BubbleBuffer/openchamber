@@ -21,7 +21,7 @@ export {
   createAgent,
   updateAgent,
   deleteAgent,
-} from './agents.js';
+} from './services/agents.js';
 
 export {
   getCommandScope,
@@ -29,7 +29,7 @@ export {
   createCommand,
   updateCommand,
   deleteCommand,
-} from './commands.js';
+} from './services/commands.js';
 
 export {
   getSkillSources,
@@ -38,12 +38,12 @@ export {
   createSkill,
   updateSkill,
   deleteSkill,
-} from './skills.js';
+} from './services/skills.js';
 
 export {
   getProviderSources,
   removeProviderConfig,
-} from './providers.js';
+} from './services/providers.js';
 
 export {
   readAuthFile,
@@ -53,7 +53,7 @@ export {
   listProviderAuths,
   AUTH_FILE,
   OPENCODE_DATA_DIR,
-} from './auth.js';
+} from './auth/auth.js';
 
 export { createUiAuth } from '../ui-auth/ui-auth.js';
 
@@ -63,4 +63,4 @@ export {
   createMcpConfig,
   updateMcpConfig,
   deleteMcpConfig,
-} from './mcp.js';
+} from './services/mcp.js';

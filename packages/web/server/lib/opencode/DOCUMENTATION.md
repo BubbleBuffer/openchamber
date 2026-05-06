@@ -3,45 +3,66 @@
 ## Purpose
 This module provides OpenCode server integration utilities for the web server runtime, including configuration management and provider authentication.
 
+## Directory layout
+
+```
+packages/web/server/lib/opencode/
+  index.js                    # Public entrypoint
+  shared.js                   # Shared utilities (config/markdown/skills/git helpers)
+  server-utils-runtime.js     # Shared server runtime utilities
+  routes/                     # HTTP route registration
+  bootstrap/                  # Server lifecycle: bootstrap, startup, shutdown, CLI
+  settings/                   # Settings persistence + normalization
+  auth/                       # Provider auth, tunnel auth, auth state
+  env/                        # Environment + binary resolution
+  network/                    # Proxy, network runtime, tunnel wiring, HMR state
+  resolution/                 # OpenCode binary + project directory resolution
+  session/                    # Session status/activity SSE runtime
+  services/                   # Skills, commands, providers, agents, mcp, watcher, theme
+```
+
+When adding new files, place them inside the matching subfolder. Files that genuinely cross-cut (`index`, `shared`, `server-utils-runtime`) stay at the module root.
+
 ## Entrypoints and structure
-- `packages/web/server/lib/opencode/index.js`: public entrypoint (currently baseline placeholder).
-- `packages/web/server/lib/opencode/auth.js`: provider authentication file operations.
-- `packages/web/server/lib/opencode/auth-state-runtime.js`: managed OpenCode server auth password/header runtime.
-- `packages/web/server/lib/opencode/cli-options.js`: CLI/environment option parsing for server startup arguments.
-- `packages/web/server/lib/opencode/cli-entry-runtime.js`: CLI entrypoint runtime that detects direct execution, parses CLI options, and starts server bootstrap.
-- `packages/web/server/lib/opencode/routes.js`: OpenCode/provider settings and auth-related route registration.
-- `packages/web/server/lib/opencode/lifecycle.js`: OpenCode process lifecycle runtime (startup, restart, readiness, health monitoring).
-- `packages/web/server/lib/opencode/env-runtime.js`: OpenCode CLI/binary resolution and shell environment runtime.
-- `packages/web/server/lib/opencode/env-config.js`: OpenCode-related environment variable parsing and validation (host/port/hostname).
-- `packages/web/server/lib/opencode/hmr-state-runtime.js`: HMR-persistent runtime state initialization, auth-state bootstrap, and HMR sync helpers.
-- `packages/web/server/lib/opencode/bootstrap-runtime.js`: base app bootstrap runtime for status/auth/tts/notification/OpenChamber route wiring.
-- `packages/web/server/lib/opencode/network-runtime.js`: OpenCode URL construction, health-probe readiness checks, and API prefix runtime.
-- `packages/web/server/lib/opencode/project-directory-runtime.js`: request-scoped and settings-backed project directory resolution/validation runtime.
-- `packages/web/server/lib/opencode/config-entity-routes.js`: route registration for agent/command/MCP config orchestration and reload semantics.
-- `packages/web/server/lib/opencode/cli-options.js`: CLI/environment option parsing for server startup arguments.
-- `packages/web/server/lib/opencode/core-routes.js`: server status/system routes, auth/access guard routes, and settings utility route registration.
-- `packages/web/server/lib/opencode/shutdown-runtime.js`: graceful shutdown orchestration runtime for watcher/session/terminal/process/server teardown.
-- `packages/web/server/lib/opencode/server-startup-runtime.js`: server listen/startup tunnel flow and process/signal handler orchestration runtime.
-- `packages/web/server/lib/opencode/static-routes-runtime.js`: static asset/SPA fallback route registration and manifest route wiring.
-- `packages/web/server/lib/opencode/feature-routes-runtime.js`: feature route composition runtime for dynamic import-backed config/skill/provider route registration.
-- `packages/web/server/lib/opencode/opencode-resolution-runtime.js`: OpenCode binary resolution snapshot runtime for settings routes and diagnostics.
-- `packages/web/server/lib/opencode/tunnel-wiring-runtime.js`: tunnel service/routes composition runtime and active-port wiring for main server startup.
-- `packages/web/server/lib/opencode/startup-pipeline-runtime.js`: server startup tail orchestration runtime for terminal/proxy/static/start-listen flow.
-- `packages/web/server/lib/opencode/server-utils-runtime.js`: shared server runtime utilities for OpenCode proxy wiring, OpenCode port/readiness helpers, and snapshot fetchers.
-- `packages/web/server/lib/opencode/openchamber-routes.js`: OpenChamber update and models metadata route registration.
-- `packages/web/server/lib/opencode/pwa-manifest-routes.js`: PWA manifest route registration with recent-session shortcut resolution and short-lived caching.
-- `packages/web/server/lib/opencode/project-icon-routes.js`: project icon upload/read/discovery route registration and icon storage orchestration.
-- `packages/web/server/lib/opencode/skill-routes.js`: route registration for skill config CRUD, supporting files, and skills catalog scan/install flows.
-- `packages/web/server/lib/opencode/settings-runtime.js`: Settings persistence runtime (disk IO, migrations, normalization, project validation, and persisted update serialization).
-- `packages/web/server/lib/opencode/settings-helpers.js`: Settings payload sanitization/format helpers runtime for response shaping and persisted merge prep.
-- `packages/web/server/lib/opencode/settings-normalization-runtime.js`: path/settings/tunnel normalization and sanitization helpers runtime used by settings/routes/config wiring.
-- `packages/web/server/lib/opencode/theme-runtime.js`: custom theme JSON validation and theme directory loading runtime for settings utility routes.
-- `packages/web/server/lib/opencode/proxy.js`: OpenCode API/SSE forwarding and readiness-gate route registration.
-- `packages/web/server/lib/opencode/session-runtime.js`: session status/attention/activity runtime for OpenCode SSE events.
-- `packages/web/server/lib/opencode/watcher.js`: global SSE watcher runtime for push/session event fanout.
-- `packages/web/server/lib/opencode/shared.js`: shared utilities for config, markdown, skills, and git helpers.
-- `packages/web/server/lib/ui-auth/ui-auth.js`: UI session authentication runtime (outside OpenCode module).
-- `packages/web/server/lib/ui-auth/ui-passkeys.js`: UI passkey storage and WebAuthn registration/authentication helpers (outside OpenCode module).
+- `index.js`: public entrypoint (currently baseline placeholder).
+- `auth/auth.js`: provider authentication file operations.
+- `auth/auth-state-runtime.js`: managed OpenCode server auth password/header runtime.
+- `auth/tunnel-auth.js`: tunnel authentication helpers.
+- `bootstrap/cli-options.js`: CLI/environment option parsing for server startup arguments.
+- `bootstrap/cli-entry-runtime.js`: CLI entrypoint runtime that detects direct execution, parses CLI options, and starts server bootstrap.
+- `routes/routes.js`: OpenCode/provider settings and auth-related route registration.
+- `bootstrap/lifecycle.js`: OpenCode process lifecycle runtime (startup, restart, readiness, health monitoring).
+- `env/env-runtime.js`: OpenCode CLI/binary resolution and shell environment runtime.
+- `env/env-config.js`: OpenCode-related environment variable parsing and validation (host/port/hostname).
+- `network/hmr-state-runtime.js`: HMR-persistent runtime state initialization, auth-state bootstrap, and HMR sync helpers.
+- `bootstrap/bootstrap-runtime.js`: base app bootstrap runtime for status/auth/tts/notification/OpenChamber route wiring.
+- `network/network-runtime.js`: OpenCode URL construction, health-probe readiness checks, and API prefix runtime.
+- `resolution/project-directory-runtime.js`: request-scoped and settings-backed project directory resolution/validation runtime.
+- `routes/config-entity-routes.js`: route registration for agent/command/MCP config orchestration and reload semantics.
+- `routes/core-routes.js`: server status/system routes, auth/access guard routes, and settings utility route registration.
+- `bootstrap/shutdown-runtime.js`: graceful shutdown orchestration runtime for watcher/session/terminal/process/server teardown.
+- `bootstrap/server-startup-runtime.js`: server listen/startup tunnel flow and process/signal handler orchestration runtime.
+- `routes/static-routes-runtime.js`: static asset/SPA fallback route registration and manifest route wiring.
+- `routes/feature-routes-runtime.js`: feature route composition runtime for dynamic import-backed config/skill/provider route registration.
+- `resolution/opencode-resolution-runtime.js`: OpenCode binary resolution snapshot runtime for settings routes and diagnostics.
+- `network/tunnel-wiring-runtime.js`: tunnel service/routes composition runtime and active-port wiring for main server startup.
+- `bootstrap/startup-pipeline-runtime.js`: server startup tail orchestration runtime for terminal/proxy/static/start-listen flow.
+- `server-utils-runtime.js`: shared server runtime utilities for OpenCode proxy wiring, OpenCode port/readiness helpers, and snapshot fetchers.
+- `routes/openchamber-routes.js`: OpenChamber update and models metadata route registration.
+- `routes/pwa-manifest-routes.js`: PWA manifest route registration with recent-session shortcut resolution and short-lived caching.
+- `routes/project-icon-routes.js`: project icon upload/read/discovery route registration and icon storage orchestration.
+- `routes/skill-routes.js`: route registration for skill config CRUD, supporting files, and skills catalog scan/install flows.
+- `settings/settings-runtime.js`: Settings persistence runtime (disk IO, migrations, normalization, project validation, and persisted update serialization).
+- `settings/settings-helpers.js`: Settings payload sanitization/format helpers runtime for response shaping and persisted merge prep.
+- `settings/settings-normalization-runtime.js`: path/settings/tunnel normalization and sanitization helpers runtime used by settings/routes/config wiring.
+- `services/theme-runtime.js`: custom theme JSON validation and theme directory loading runtime for settings utility routes.
+- `network/proxy.js`: OpenCode API/SSE forwarding and readiness-gate route registration.
+- `session/session-runtime.js`: session status/attention/activity runtime for OpenCode SSE events.
+- `services/watcher.js`: global SSE watcher runtime for push/session event fanout.
+- `services/skills.js`, `services/commands.js`, `services/providers.js`, `services/agents.js`, `services/mcp.js`: per-domain config helpers.
+- `shared.js`: shared utilities for config, markdown, skills, and git helpers.
+- `../ui-auth/ui-auth.js`: UI session authentication runtime (outside OpenCode module).
+- `../ui-auth/ui-passkeys.js`: UI passkey storage and WebAuthn registration/authentication helpers (outside OpenCode module).
 
 ## Public exports (auth.js)
 - `readAuthFile()`: Reads and parses `~/.local/share/opencode/auth.json`.

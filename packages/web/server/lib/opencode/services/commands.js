@@ -15,7 +15,7 @@ import {
   isPromptFileReference,
   resolvePromptFilePath,
   writePromptFile,
-} from './shared.js';
+} from '../shared.js';
 
 // ============== COMMAND SCOPE HELPERS ==============
 

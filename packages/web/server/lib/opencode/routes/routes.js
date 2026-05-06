@@ -1,4 +1,4 @@
-import { createProjectIdFromPath } from '../projects/project-id.js';
+import { createProjectIdFromPath } from '../../projects/project-id.js';
 
 export const registerOpenCodeRoutes = (app, dependencies) => {
   const {
@@ -22,7 +22,7 @@ export const registerOpenCodeRoutes = (app, dependencies) => {
   const PENDING_MCP_AUTH_TTL_MS = 30 * 60 * 1000;
   const getAuthLibrary = async () => {
     if (!authLibrary) {
-      authLibrary = await import('./auth.js');
+      authLibrary = await import('../auth/auth.js');
     }
     return authLibrary;
   };

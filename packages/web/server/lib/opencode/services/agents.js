@@ -15,7 +15,7 @@ import {
   isPromptFileReference,
   resolvePromptFilePath,
   writePromptFile,
-} from './shared.js';
+} from '../shared.js';
 
 // ============== AGENT SCOPE HELPERS ==============
 

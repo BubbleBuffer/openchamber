@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createGlobalMessageStreamHub } from '../event-stream/global-hub.js';
+import { createGlobalMessageStreamHub } from '../../event-stream/global-hub.js';
 import { createOpenCodeWatcherRuntime } from './watcher.js';
 
 function createSseResponse({ blocks = [], signal, holdOpen = false }) {

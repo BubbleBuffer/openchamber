@@ -19,7 +19,7 @@ export const registerOpenChamberRoutes = (app, dependencies) => {
 
   app.get('/api/openchamber/update-check', async (req, res) => {
     try {
-      const { checkForUpdates } = await import('../package-manager.js');
+      const { checkForUpdates } = await import('../../package-manager.js');
       const parseString = (value) => (typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined);
       const parseReportUsage = (value) => {
         if (typeof value !== 'string') return true;
@@ -62,7 +62,7 @@ export const registerOpenChamberRoutes = (app, dependencies) => {
         checkForUpdates,
         getUpdateCommand,
         detectPackageManagerDetails,
-      } = await import('../package-manager.js');
+      } = await import('../../package-manager.js');
 
       const updateInfo = await checkForUpdates();
       if (!updateInfo.available) {
