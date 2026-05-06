@@ -167,7 +167,7 @@ export const ConflictDialog: React.FC<ConflictDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md w-[calc(100vw-2rem)]">
+      <DialogContent className="max-w-md w-[calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right)-2rem)]">
         <div className="flex flex-col gap-4 overflow-hidden">
           <DialogHeader>
             <div className="flex items-center gap-2">

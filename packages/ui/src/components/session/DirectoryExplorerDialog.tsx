@@ -342,7 +342,7 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          'flex w-full max-w-[min(560px,100vw)] max-h-[calc(100vh-32px)] flex-col gap-0 overflow-hidden p-0 sm:max-h-[80vh] sm:max-w-xl sm:p-6'
+          'flex w-full max-w-[min(560px,100vw)] max-h-[calc(100dvh-32px)] flex-col gap-0 overflow-hidden p-0 sm:max-h-[80vh] sm:max-w-xl sm:p-6'
         )}
         onOpenAutoFocus={(e) => {
           // Prevent auto-focus on input to avoid text selection
