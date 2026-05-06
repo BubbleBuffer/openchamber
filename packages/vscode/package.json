@@ -232,22 +232,22 @@
     "package": "vsce package --no-dependencies"
   },
   "devDependencies": {
-    "@types/adm-zip": "^0.5.7",
-    "@types/vscode": "^1.85.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "@vscode/vsce": "^3.2.1",
+    "@types/adm-zip": "^0.5.8",
+    "@types/vscode": "^1.118.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "@vscode/vsce": "^3.9.1",
     "concurrently": "^9.2.1",
-    "esbuild": "^0.24.2",
+    "esbuild": "^0.28.0",
     "typescript": "~5.8.3",
-    "vite": "^7.1.2"
+    "vite": "^7.3.2"
   },
   "dependencies": {
     "@openchamber/ui": "workspace:*",
-    "@opencode-ai/sdk": "^1.4.19",
-    "adm-zip": "^0.5.16",
+    "@opencode-ai/sdk": "^1.14.39",
+    "adm-zip": "^0.5.17",
     "jsonc-parser": "^3.3.1",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "yaml": "^2.8.1"
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "yaml": "^2.8.4"
   }
 }

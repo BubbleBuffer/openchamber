@@ -1164,17 +1164,20 @@ onCommand('createSessionWithPrompt', (payload) => {
 
   Promise.all([
     import('@/sync/session-ui-store'),
-    import('@/stores/useConfigStore'),
+    import('@/stores/useProviderConfigStore'),
+    import('@/stores/useAgentConfigStore'),
     import('@/sync/input-store'),
-  ]).then(([{ useSessionUIStore }, { useConfigStore }, { useInputStore }]) => {
+  ]).then(([{ useSessionUIStore }, { useProviderConfigStore }, { useAgentConfigStore }, { useInputStore }]) => {
     const sessionStore = useSessionUIStore.getState();
-    const configStore = useConfigStore.getState();
+    const providerConfigStore = useProviderConfigStore.getState();
+    const agentConfigStore = useAgentConfigStore.getState();
 
     // Open a new session draft first
     sessionStore.openNewSessionDraft();
 
     // Get current provider/model/agent configuration
-    const { currentProviderId, currentModelId, currentAgentName } = configStore;
+    const { currentProviderId, currentModelId } = providerConfigStore;
+    const { currentAgentName } = agentConfigStore;
 
     if (currentProviderId && currentModelId) {
       // Send the message - this will create the session from the draft and send

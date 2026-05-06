@@ -127,11 +127,11 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
       // Clean up old caches
-      const expectedCaches = Object.values(CACHE_NAMES);
+      const expectedCaches = new Set<string>(Object.values(CACHE_NAMES));
       const existingCaches = await caches.keys();
       await Promise.all(
         existingCaches
-          .filter((name) => !expectedCaches.includes(name))
+          .filter((name) => !expectedCaches.has(name))
           .map((name) => caches.delete(name))
       );
       await self.clients.claim();
