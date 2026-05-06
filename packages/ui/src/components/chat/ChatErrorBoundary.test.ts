@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test, vi } from "bun:test"
+import * as Sentry from "@sentry/react"
 import { ChatErrorBoundary } from "./ChatErrorBoundary"
 
 describe("ChatErrorBoundary", () => {
@@ -7,7 +8,11 @@ describe("ChatErrorBoundary", () => {
     const error = new Error("test chat error")
     const nextState = (ChatErrorBoundary as unknown as { getDerivedStateFromError: (e: Error) => unknown }).getDerivedStateFromError(error)
     expect(nextState).toEqual({ hasError: true, error })
-    // componentDidCatch logs the error; verify it doesn't throw
+    const captureSpy = vi.spyOn(Sentry, "captureException").mockImplementation(() => undefined)
     boundary.componentDidCatch(error, { componentStack: "\n    at ChatMessage\n    at div" } as React.ErrorInfo)
+    expect(captureSpy).toHaveBeenCalledWith(error, expect.objectContaining({
+      extra: expect.objectContaining({ source: 'ChatErrorBoundary', sessionId: 'test-session' }),
+    }))
+    captureSpy.mockRestore()
   })
 })
