@@ -1,6 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Ghostty, Terminal as GhosttyTerminal, FitAddon } from 'ghostty-web';
+import { RiKeyboardLine } from '@remixicon/react';
 
 import { isMobileDeviceViaCSS } from '@/lib/device';
 import type { TerminalTheme } from '@/lib/terminalTheme';
@@ -214,6 +215,12 @@ const TerminalViewport = React.forwardRef<TerminalController, TerminalViewportPr
 
     const useTextInput = useHiddenInputOverlay && isAndroid;
 
+    // When `enableTouchScroll` is on, focus and tap-to-type are disabled by
+    // default so kinetic scrolling works without the soft keyboard hijacking
+    // every gesture. The Show Keyboard button below toggles this on demand;
+    // a blur on the hidden input clears it again.
+    const [inputModeActive, setInputModeActive] = React.useState(false);
+
     const focusHiddenInput = React.useCallback((clientX?: number, clientY?: number) => {
       const input = (useTextInput ? textInputRef.current : hiddenInputRef.current) as HTMLElement | null;
       const container = containerRef.current;
@@ -322,7 +329,7 @@ const TerminalViewport = React.forwardRef<TerminalController, TerminalViewportPr
 
     React.useEffect(() => {
       const container = containerRef.current;
-      if (!useHiddenInputOverlay || !container || enableTouchScroll) {
+      if (!useHiddenInputOverlay || !container || (enableTouchScroll && !inputModeActive)) {
         return;
       }
 
@@ -347,7 +354,7 @@ const TerminalViewport = React.forwardRef<TerminalController, TerminalViewportPr
       return () => {
         container.removeEventListener('focusin', handleContainerFocusIn, true);
       };
-    }, [enableTouchScroll, useHiddenInputOverlay, focusHiddenInput]);
+    }, [enableTouchScroll, useHiddenInputOverlay, focusHiddenInput, inputModeActive]);
 
     const getTerminalSelectionText = React.useCallback((): string => {
       const terminal = terminalRef.current as unknown as {
@@ -1204,9 +1211,13 @@ const TerminalViewport = React.forwardRef<TerminalController, TerminalViewportPr
               focusHiddenInput();
             }, 0);
           }
+        } else if (enableTouchScroll) {
+          // Soft keyboard dismissed (no refocus target); exit input mode so
+          // the Show Keyboard affordance reappears for the next entry.
+          setInputModeActive(false);
         }
       },
-      [useHiddenInputOverlay, focusHiddenInput]
+      [useHiddenInputOverlay, focusHiddenInput, enableTouchScroll]
     );
 
     const handleHiddenBeforeInput = React.useCallback(
@@ -1466,7 +1477,7 @@ const TerminalViewport = React.forwardRef<TerminalController, TerminalViewportPr
         className={cn('relative h-full w-full terminal-viewport-container', className)}
         style={{ backgroundColor: theme.background }}
         onTouchStart={(event) => {
-          if (!useHiddenInputOverlay || enableTouchScroll) {
+          if (!useHiddenInputOverlay || (enableTouchScroll && !inputModeActive)) {
             return;
           }
           if (!hasCopyableSelectionInViewport()) {
@@ -1476,7 +1487,7 @@ const TerminalViewport = React.forwardRef<TerminalController, TerminalViewportPr
         }}
         onClick={(event) => {
           if (useHiddenInputOverlay) {
-            if (enableTouchScroll) {
+            if (enableTouchScroll && !inputModeActive) {
               return;
             }
             if (hasCopyableSelectionInViewport()) {
@@ -1566,6 +1577,20 @@ const TerminalViewport = React.forwardRef<TerminalController, TerminalViewportPr
             disableHorizontal
             className="overlay-scrollbar--flush overlay-scrollbar--dense overlay-scrollbar--zero"
           />
+        ) : null}
+        {useHiddenInputOverlay && enableTouchScroll && !inputModeActive ? (
+          <button
+            type="button"
+            aria-label="Show keyboard"
+            onClick={(event) => {
+              event.stopPropagation();
+              setInputModeActive(true);
+              focusHiddenInput();
+            }}
+            className="absolute bottom-3 right-3 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full border border-border/60 bg-background/90 text-foreground shadow-md backdrop-blur-sm transition-colors hover:bg-interactive-hover active:bg-interactive-selection"
+          >
+            <RiKeyboardLine className="size-5" />
+          </button>
         ) : null}
       </div>
     );
