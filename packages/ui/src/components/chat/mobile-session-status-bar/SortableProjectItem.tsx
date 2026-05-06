@@ -11,7 +11,7 @@ import {
 
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import type { ProjectEntry } from '@/lib/api/types';
-import { PROJECT_COLOR_MAP, PROJECT_ICON_MAP, getProjectIconImageUrl } from '@/lib/projectMeta';
+import { PROJECT_COLOR_MAP, PROJECT_ICON_MAP, getProjectIconImageUrl } from '@/lib/project/projectMeta';
 import { cn } from '@/lib/utils';
 
 export interface SortableProjectItemProps {

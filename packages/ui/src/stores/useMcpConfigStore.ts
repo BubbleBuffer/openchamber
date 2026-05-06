@@ -4,7 +4,7 @@ import { getSafeStorage } from './utils/safeStorage';
 import {
   startConfigUpdate,
   finishConfigUpdate,
-} from '@/lib/configUpdate';
+} from '@/lib/config/configUpdate';
 import { refreshAfterOpenCodeRestart } from '@/stores/useAgentsStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 import { opencodeClient } from '@/lib/opencode/client';

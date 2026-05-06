@@ -25,7 +25,7 @@ import { DirectoryAutocomplete, type DirectoryAutocompleteHandle } from './Direc
 import {
   setDirectoryShowHidden,
   useDirectoryShowHidden,
-} from '@/lib/directoryShowHidden';
+} from '@/lib/files/directoryShowHidden';
 
 interface DirectoryExplorerDialogProps {
   open: boolean;

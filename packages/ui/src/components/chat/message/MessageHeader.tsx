@@ -1,7 +1,7 @@
 import React from 'react';
 import { RiAiAgentLine, RiBrainAi3Line, RiUser3Line } from '@remixicon/react';
 import { cn } from '@/lib/utils';
-import { getAgentColor } from '@/lib/agentColors';
+import { getAgentColor } from '@/lib/theme/agentColors';
 import { useProviderLogo } from '@/hooks/useProviderLogo';
 
 interface MessageHeaderProps {

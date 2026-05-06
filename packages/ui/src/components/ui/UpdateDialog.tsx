@@ -8,7 +8,7 @@ import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { SimpleMarkdownRenderer } from '@/components/chat/MarkdownRenderer';
 import { RiCheckLine, RiClipboardLine, RiDownloadCloudLine, RiDownloadLine, RiExternalLinkLine, RiLoaderLine, RiRestartLine, RiTerminalLine } from '@remixicon/react';
 import { cn } from '@/lib/utils';
-import type { UpdateInfo, UpdateProgress } from '@/lib/desktop';
+import type { UpdateInfo, UpdateProgress } from '@/lib/desktop/desktop';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { openExternalUrl } from '@/lib/url';
 

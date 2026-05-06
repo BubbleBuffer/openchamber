@@ -31,8 +31,8 @@ import { useContextStore } from '@/stores/contextStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useGitHubAuthStore } from '@/stores/useGitHubAuthStore';
 import { opencodeClient } from '@/lib/opencode/client';
-import { renderMagicPrompt } from '@/lib/magicPrompts';
-import { createWorktreeSessionForNewBranch } from '@/lib/worktreeSessionCreator';
+import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
+import { createWorktreeSessionForNewBranch } from '@/lib/session/worktreeSessionCreator';
 import { generateBranchSlug } from '@/lib/git/branchNameGenerator';
 import type { GitHubIssue, GitHubIssueComment, GitHubIssuesListResult, GitHubIssueSummary } from '@/lib/api/types';
 

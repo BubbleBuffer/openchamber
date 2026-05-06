@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { IconBackgroundPicker } from '@/components/ui/IconBackgroundPicker';
 import { toast } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { PROJECT_ICONS, PROJECT_COLORS, PROJECT_COLOR_MAP, getProjectIconImageUrl } from '@/lib/projectMeta';
+import { PROJECT_ICONS, PROJECT_COLORS, PROJECT_COLOR_MAP, getProjectIconImageUrl } from '@/lib/project/projectMeta';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 

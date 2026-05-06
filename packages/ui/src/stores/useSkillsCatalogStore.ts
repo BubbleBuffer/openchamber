@@ -15,7 +15,7 @@ import type {
 
 import { refreshSkillsAfterOpenCodeRestart, useSkillsStore } from '@/stores/useSkillsStore';
 import { opencodeClient } from '@/lib/opencode/client';
-import { startConfigUpdate, finishConfigUpdate, updateConfigUpdateMessage } from '@/lib/configUpdate';
+import { startConfigUpdate, finishConfigUpdate, updateConfigUpdateMessage } from '@/lib/config/configUpdate';
 
 const FALLBACK_SOURCES: SkillsCatalogSource[] = [
   {

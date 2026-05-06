@@ -9,8 +9,8 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useChatSearchDirectory } from '@/hooks/useChatSearchDirectory';
 import type { ProjectFileSearchHit } from '@/lib/opencode/client';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
-import { useDirectoryShowHidden } from '@/lib/directoryShowHidden';
-import { useFilesViewShowGitignored } from '@/lib/filesViewShowGitignored';
+import { useDirectoryShowHidden } from '@/lib/files/directoryShowHidden';
+import { useFilesViewShowGitignored } from '@/lib/files/filesViewShowGitignored';
 
 type FileInfo = ProjectFileSearchHit;
 type AgentInfo = {

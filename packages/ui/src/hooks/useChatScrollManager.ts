@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageFreshnessDetector } from '@/lib/messageFreshness';
+import { MessageFreshnessDetector } from '@/lib/messages/messageFreshness';
 import { createScrollSpy } from '@/components/chat/lib/scroll/scrollSpy';
 import {
     isNearBottom,

@@ -27,7 +27,7 @@ import type {
   GitIdentitySummary,
   DiscoveredGitCredential,
   MergeConflictDetails,
-} from './api/types';
+} from '../api/types';
 
 declare global {
   interface Window {
@@ -425,7 +425,7 @@ export async function validateGitWorktree(directory: string, payload: CreateGitW
   return response.json();
 }
 
-export async function getGitWorktreeBootstrapStatus(directory: string): Promise<import('./api/types').GitWorktreeBootstrapStatus> {
+export async function getGitWorktreeBootstrapStatus(directory: string): Promise<import('../api/types').GitWorktreeBootstrapStatus> {
   const response = await fetch(buildUrl(`${API_BASE}/worktrees/bootstrap-status`, directory));
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: response.statusText }));

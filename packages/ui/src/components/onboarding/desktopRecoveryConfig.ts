@@ -1,4 +1,4 @@
-import { redactSensitiveUrl } from '@/lib/desktopHosts';
+import { redactSensitiveUrl } from '@/lib/desktop/desktopHosts';
 
 export type RecoveryVariant =
   | 'local-unavailable'

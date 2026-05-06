@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { isTauriShell } from "@/lib/desktop";
+import { isTauriShell } from "@/lib/desktop/desktop";
 import { matchesFuzzyQuery } from "@/lib/search/fuzzySearch";
 
 export function cn(...inputs: ClassValue[]) {

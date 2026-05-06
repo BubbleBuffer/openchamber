@@ -1,5 +1,5 @@
 import type { Part } from "@/lib/opencode/client";
-import { isFinalToolStatus } from "@/lib/toolStatus";
+import { isFinalToolStatus } from "@/lib/tools/toolStatus";
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
     return Boolean(value) && typeof value === 'object' && !Array.isArray(value);

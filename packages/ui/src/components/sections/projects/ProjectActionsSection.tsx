@@ -31,19 +31,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/components/ui';
 import { useDesktopSshStore } from '@/stores/useDesktopSshStore';
-import { isDesktopShell } from '@/lib/desktop';
+import { isDesktopShell } from '@/lib/desktop/desktop';
 import {
   getProjectActionsState,
   saveProjectActionsState,
   type OpenChamberProjectAction,
   type ProjectRef,
-} from '@/lib/openchamberConfig';
+} from '@/lib/config/openchamberConfig';
 import {
   buildProjectActionDesktopForwardOptions,
   PROJECT_ACTION_ICON_MAP,
   PROJECT_ACTION_ICONS,
   PROJECT_ACTIONS_UPDATED_EVENT,
-} from '@/lib/projectActions';
+} from '@/lib/project/projectActions';
 import { cn } from '@/lib/utils';
 
 type EditableProjectAction = OpenChamberProjectAction;

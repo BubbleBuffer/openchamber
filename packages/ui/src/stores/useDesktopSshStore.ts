@@ -11,7 +11,7 @@ import {
   type DesktopSshImportCandidate,
   type DesktopSshInstance,
   type DesktopSshInstanceStatus,
-} from '@/lib/desktopSsh';
+} from '@/lib/desktop/desktopSsh';
 
 type DesktopSshState = {
   instances: DesktopSshInstance[];

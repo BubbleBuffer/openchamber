@@ -1,4 +1,4 @@
-import * as gitHttp from '@/lib/gitApiHttp';
+import * as gitHttp from '@/lib/git/gitApiHttp';
 import type { RuntimeAPIs } from '@/lib/api/types';
 import type { GitWorktreeBootstrapStatus } from '@/lib/api/types';
 

@@ -8,10 +8,10 @@ import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSessions } from '@/sync/sync-context';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { useDeviceInfo } from '@/lib/device';
-import { checkIsGitRepository } from '@/lib/gitApi';
-import { getWorktreeSetupCommands, saveWorktreeSetupCommands } from '@/lib/openchamberConfig';
+import { checkIsGitRepository } from '@/lib/git/gitApi';
+import { getWorktreeSetupCommands, saveWorktreeSetupCommands } from '@/lib/config/openchamberConfig';
 import { listProjectWorktrees } from '@/lib/worktrees/worktreeManager';
-import { sessionEvents } from '@/lib/sessionEvents';
+import { sessionEvents } from '@/lib/session/sessionEvents';
 import type { WorktreeMetadata } from '@/types/worktree';
 import { formatPathForDisplay, cn } from '@/lib/utils';
 

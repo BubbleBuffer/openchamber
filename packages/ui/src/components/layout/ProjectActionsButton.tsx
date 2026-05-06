@@ -17,7 +17,7 @@ import { toast } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { useDeviceInfo } from '@/lib/device';
-import { isDesktopShell } from '@/lib/desktop';
+import { isDesktopShell } from '@/lib/desktop/desktop';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { useTerminalStore } from '@/stores/useTerminalStore';
@@ -27,14 +27,14 @@ import {
   getProjectActionsState,
   type OpenChamberProjectAction,
   type ProjectRef,
-} from '@/lib/openchamberConfig';
+} from '@/lib/config/openchamberConfig';
 import {
   normalizeProjectActionDirectory,
   PROJECT_ACTIONS_UPDATED_EVENT,
   PROJECT_ACTION_ICON_MAP,
   resolveProjectActionDesktopForwardUrl,
   toProjectActionRunKey,
-} from '@/lib/projectActions';
+} from '@/lib/project/projectActions';
 
 type RunningEntry = {
   key: string;

@@ -3,7 +3,7 @@ import { ModelSelector } from '@/components/sections/agents/ModelSelector';
 import { AgentSelector } from '@/components/sections/commands/AgentSelector';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { updateDesktopSettings } from '@/lib/persistence';
+import { updateDesktopSettings } from '@/lib/config/persistence';
 import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
 import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { useUIStore } from '@/stores/useUIStore';

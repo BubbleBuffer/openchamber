@@ -33,9 +33,9 @@ import {
   RiSunLine,
   RiTerminalBoxLine,
 } from '@remixicon/react';
-import { createWorktreeSession } from '@/lib/worktreeSessionCreator';
+import { createWorktreeSession } from '@/lib/session/worktreeSessionCreator';
 import { formatShortcutForDisplay, getEffectiveShortcutCombo } from '@/lib/shortcuts';
-import { isDesktopShell, isVSCodeRuntime, isWebRuntime } from '@/lib/desktop';
+import { isDesktopShell, isVSCodeRuntime, isWebRuntime } from '@/lib/desktop/desktop';
 import { SETTINGS_PAGE_METADATA, SETTINGS_GROUP_LABELS, type SettingsRuntimeContext } from '@/lib/settings/metadata';
 import { getSettingsNavIcon } from '@/components/views/SettingsView';
 

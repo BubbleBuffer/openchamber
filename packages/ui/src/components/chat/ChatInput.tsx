@@ -20,7 +20,7 @@ import * as sessionActions from '@/sync/session-actions';
 import { useUserMessageHistory } from '@/sync/sync-context';
 import { useInlineCommentDraftStore, type InlineCommentDraft } from '@/stores/useInlineCommentDraftStore';
 import { appendInlineComments } from '@/lib/messages/inlineComments';
-import { renderMagicPrompt } from '@/lib/magicPrompts';
+import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
 import { AttachedFilesList } from './FileAttachment';
 import { QueuedMessageChips } from './QueuedMessageChips';
 import { FileMentionAutocomplete, type FileMentionHandle } from './FileMentionAutocomplete';
@@ -38,7 +38,7 @@ import { MobileSessionStatusBar } from './MobileSessionStatusBar';
 import { useCurrentSessionActivity } from '@/hooks/useSessionActivity';
 import { toast } from '@/components/ui';
 // useMessageStore removed — messages now come from sync system
-import { isTauriShell, isVSCodeRuntime } from '@/lib/desktop';
+import { isTauriShell, isVSCodeRuntime } from '@/lib/desktop/desktop';
 import { isIMECompositionEvent } from '@/lib/ime';
 import type { MobileControlsPanel } from './mobileControlsUtils';
 import {
@@ -50,11 +50,11 @@ import { GitHubPrPickerDialog } from '@/components/session/GitHubPrPickerDialog'
 import { useChatSearchDirectory } from '@/hooks/useChatSearchDirectory';
 import { opencodeClient } from '@/lib/opencode/client';
 import { useProjectsStore } from '@/stores/useProjectsStore';
-import { PROJECT_ICON_MAP, getProjectIconImageUrl } from '@/lib/projectMeta';
+import { PROJECT_ICON_MAP, getProjectIconImageUrl } from '@/lib/project/projectMeta';
 import { useGitBranches, useGitStore, useIsGitRepo } from '@/stores/useGitStore';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
-import { createWorktreeDraft } from '@/lib/worktreeSessionCreator';
+import { createWorktreeDraft } from '@/lib/session/worktreeSessionCreator';
 import { buildSessionTargetOptions } from '@/sync/session-worktree-contract';
 import { usePermissionStore } from '@/stores/permissionStore';
 import { extractGitChangedFiles } from './changedFiles';

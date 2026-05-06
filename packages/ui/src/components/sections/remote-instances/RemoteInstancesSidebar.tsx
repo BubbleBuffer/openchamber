@@ -6,7 +6,7 @@ import { SettingsSidebarItem } from '@/components/sections/shared/SettingsSideba
 import { useDesktopSshStore } from '@/stores/useDesktopSshStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { toast } from '@/components/ui';
-import type { DesktopSshInstance } from '@/lib/desktopSsh';
+import type { DesktopSshInstance } from '@/lib/desktop/desktopSsh';
 
 type RemoteInstancesSidebarProps = {
   onItemSelect?: () => void;

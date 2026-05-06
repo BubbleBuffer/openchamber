@@ -2,13 +2,13 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { opencodeClient } from '@/lib/opencode/client';
 import type { ProjectEntry } from '@/lib/api/types';
-import type { DesktopSettings } from '@/lib/desktop';
-import { updateDesktopSettings } from '@/lib/persistence';
-import { createProjectIdFromPath } from '@/lib/projectId';
+import type { DesktopSettings } from '@/lib/desktop/desktop';
+import { updateDesktopSettings } from '@/lib/config/persistence';
+import { createProjectIdFromPath } from '@/lib/project/projectId';
 import { getSafeStorage } from './utils/safeStorage';
 import { useDirectoryStore } from './useDirectoryStore';
 import { streamDebugEnabled } from '@/stores/utils/streamDebug';
-import { PROJECT_COLORS } from '@/lib/projectMeta';
+import { PROJECT_COLORS } from '@/lib/project/projectMeta';
 
 /** Pick a color key that's least used among existing projects */
 const pickAutoColor = (projects: ProjectEntry[]): string => {

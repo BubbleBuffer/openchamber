@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
-import { isVSCodeRuntime } from '@/lib/desktop';
+import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 import { cn } from '@/lib/utils';
 
 interface SettingsSidebarLayoutProps {

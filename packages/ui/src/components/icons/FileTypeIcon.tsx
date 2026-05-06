@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { getFileTypeIconHref } from '@/lib/fileTypeIcons';
+import { getFileTypeIconHref } from '@/lib/files/fileTypeIcons';
 import { useOptionalThemeSystem } from '@/contexts/useThemeSystem';
 
 type FileTypeIconProps = {

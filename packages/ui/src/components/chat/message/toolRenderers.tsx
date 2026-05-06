@@ -1,8 +1,8 @@
 import { RiCheckLine } from '@remixicon/react';
 
 import { cn } from '@/lib/utils';
-import { typography } from '@/lib/typography';
-import { formatToolInput, detectToolOutputLanguage } from '@/lib/toolHelpers';
+import { typography } from '@/lib/theme/typography';
+import { formatToolInput, detectToolOutputLanguage } from '@/lib/tools/toolHelpers';
 import { SimpleMarkdownRenderer } from '../MarkdownRenderer';
 
 const cleanOutput = (output: string) => {

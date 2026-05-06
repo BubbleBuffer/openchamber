@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { isTauriShell, requestDirectoryAccess, startAccessingDirectory, stopAccessingDirectory } from '@/lib/desktop';
+import { isTauriShell, requestDirectoryAccess, startAccessingDirectory, stopAccessingDirectory } from '@/lib/desktop/desktop';
 
 export const useFileSystemAccess = () => {
   const [isDesktop, setIsDesktop] = useState(false);

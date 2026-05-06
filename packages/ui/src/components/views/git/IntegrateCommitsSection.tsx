@@ -18,8 +18,8 @@ import { toast } from '@/components/ui';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useInputStore } from '@/sync/input-store';
 import { useUIStore } from '@/stores/useUIStore';
-import { execCommand } from '@/lib/execCommands';
-import { renderMagicPrompt } from '@/lib/magicPrompts';
+import { execCommand } from '@/lib/tools/execCommands';
+import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
 import {
   abortIntegrate,
   computeIntegratePlan,

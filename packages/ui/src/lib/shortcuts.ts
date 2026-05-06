@@ -1,5 +1,5 @@
 import { isMacOS } from '@/lib/utils';
-import { isTauriShell } from '@/lib/desktop';
+import { isTauriShell } from '@/lib/desktop/desktop';
 
 export type ShortcutModifier = 'mod' | 'shift' | 'alt' | 'option' | 'ctrl';
 export type ShortcutKey = string;

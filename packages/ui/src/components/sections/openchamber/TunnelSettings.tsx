@@ -23,8 +23,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { requestFileAccess } from '@/lib/desktop';
-import { updateDesktopSettings } from '@/lib/persistence';
+import { requestFileAccess } from '@/lib/desktop/desktop';
+import { updateDesktopSettings } from '@/lib/config/persistence';
 import { cn } from '@/lib/utils';
 import { openExternalUrl } from '@/lib/url';
 

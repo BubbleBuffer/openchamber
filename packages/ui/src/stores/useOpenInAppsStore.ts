@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 
-import { fetchDesktopInstalledApps, isDesktopLocalOriginActive, isTauriShell, type DesktopSettings, type InstalledDesktopAppInfo } from '@/lib/desktop';
+import { fetchDesktopInstalledApps, isDesktopLocalOriginActive, isTauriShell, type DesktopSettings, type InstalledDesktopAppInfo } from '@/lib/desktop/desktop';
 import { OPEN_IN_APPS, DEFAULT_OPEN_IN_APP_ID, OPEN_IN_ALWAYS_AVAILABLE_APP_IDS, getOpenInAppById, type OpenInApp } from '@/lib/openInApps';
-import { updateDesktopSettings } from '@/lib/persistence';
+import { updateDesktopSettings } from '@/lib/config/persistence';
 
 export type OpenInAppOption = OpenInApp & {
   iconDataUrl?: string;

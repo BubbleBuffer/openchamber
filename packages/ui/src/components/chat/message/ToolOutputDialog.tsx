@@ -7,8 +7,8 @@ import { createPortal } from 'react-dom';
 
 import { cn } from '@/lib/utils';
 import { SimpleMarkdownRenderer } from '../MarkdownRenderer';
-import { toolDisplayStyles } from '@/lib/typography';
-import { getLanguageFromExtension } from '@/lib/toolHelpers';
+import { toolDisplayStyles } from '@/lib/theme/typography';
+import { getLanguageFromExtension } from '@/lib/tools/toolHelpers';
 import { useOptionalThemeSystem } from '@/contexts/useThemeSystem';
 import { ensurePierreThemeRegistered } from '@/lib/shiki/appThemeRegistry';
 import { getDefaultTheme } from '@/lib/theme/themes';

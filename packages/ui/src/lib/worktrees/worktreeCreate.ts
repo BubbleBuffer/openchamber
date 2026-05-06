@@ -1,4 +1,4 @@
-import { getGitBranches, getGitStatus } from '@/lib/gitApi';
+import { getGitBranches, getGitStatus } from '@/lib/git/gitApi';
 import type { CreateWorktreeArgs, ProjectRef } from '@/lib/worktrees/worktreeManager';
 import { createWorktree } from '@/lib/worktrees/worktreeManager';
 import { getRootBranch } from '@/lib/worktrees/worktreeStatus';

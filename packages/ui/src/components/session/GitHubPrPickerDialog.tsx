@@ -23,7 +23,7 @@ import { useProjectsStore } from '@/stores/useProjectsStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { useGitHubAuthStore } from '@/stores/useGitHubAuthStore';
-import { renderMagicPrompt } from '@/lib/magicPrompts';
+import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
 import type { GitHubPullRequestContextResult, GitHubPullRequestSummary, GitHubPullRequestsListResult } from '@/lib/api/types';
 
 const parsePrNumber = (value: string): number | null => {

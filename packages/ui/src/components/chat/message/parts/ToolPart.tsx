@@ -5,9 +5,9 @@ import { RiArrowDownSLine, RiArrowRightSLine, RiExternalLinkLine } from '@remixi
 import { PatchDiff } from '@pierre/diffs/react';
 import { cn } from '@/lib/utils';
 import { SimpleMarkdownRenderer } from '../../MarkdownRenderer';
-import { getToolMetadata } from '@/lib/toolHelpers';
+import { getToolMetadata } from '@/lib/tools/toolHelpers';
 import type { ToolPart as ToolPartType, ToolState as ToolStateUnion } from '@/lib/opencode/client';
-import { toolDisplayStyles } from '@/lib/typography';
+import { toolDisplayStyles } from '@/lib/theme/typography';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { useOptionalThemeSystem } from '@/contexts/useThemeSystem';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
@@ -17,7 +17,7 @@ import { getSyncChildStores } from '@/sync/sync-refs';
 import { useUIStore } from '@/stores/useUIStore';
 import { useSessionActivity } from '@/hooks/useSessionActivity';
 import { opencodeClient } from '@/lib/opencode/client';
-import { sessionEvents } from '@/lib/sessionEvents';
+import { sessionEvents } from '@/lib/session/sessionEvents';
 import { ScrollShadow } from '@/components/ui/ScrollShadow';
 import { Text } from '@/components/ui/text';
 import { FileTypeIcon } from '@/components/icons/FileTypeIcon';
@@ -25,7 +25,7 @@ import type { ContentChangeReason } from '@/hooks/useChatScrollManager';
 import type { ToolPopupContent } from '../types';
 import { ensurePierreThemeRegistered } from '@/lib/shiki/appThemeRegistry';
 import { getDefaultTheme } from '@/lib/theme/themes';
-import type { MessageRecord } from '@/lib/messageCompletion';
+import type { MessageRecord } from '@/lib/messages/messageCompletion';
 
 import {
     formatEditOutput,

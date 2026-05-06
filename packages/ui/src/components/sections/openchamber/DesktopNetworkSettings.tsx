@@ -2,7 +2,7 @@ import * as React from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { getDesktopLanAddress, isDesktopLocalOriginActive, isDesktopShell, restartDesktopApp } from '@/lib/desktop';
+import { getDesktopLanAddress, isDesktopLocalOriginActive, isDesktopShell, restartDesktopApp } from '@/lib/desktop/desktop';
 
 export const DesktopNetworkSettings: React.FC = () => {
   const isLocalDesktop = isDesktopShell() && isDesktopLocalOriginActive();

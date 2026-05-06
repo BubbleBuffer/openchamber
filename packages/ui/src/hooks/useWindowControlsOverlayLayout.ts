@@ -1,5 +1,5 @@
 import React from 'react';
-import { isWebRuntime } from '@/lib/desktop';
+import { isWebRuntime } from '@/lib/desktop/desktop';
 
 type WindowControlsOverlayArea = {
   x: number;

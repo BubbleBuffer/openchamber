@@ -1,11 +1,11 @@
 import React from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Radio } from '@/components/ui/radio';
-import { updateDesktopSettings } from '@/lib/persistence';
+import { updateDesktopSettings } from '@/lib/config/persistence';
 import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
-import { setFilesViewShowGitignored, useFilesViewShowGitignored } from '@/lib/filesViewShowGitignored';
+import { setFilesViewShowGitignored, useFilesViewShowGitignored } from '@/lib/files/filesViewShowGitignored';
 
 export const GitSettings: React.FC = () => {
   const settingsGitmojiEnabled = useAgentConfigStore((state) => state.settingsGitmojiEnabled);

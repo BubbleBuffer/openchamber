@@ -23,7 +23,7 @@ import { useWindowTitle } from '@/hooks/useWindowTitle';
 import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
 import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { hasModifier } from '@/lib/utils';
-import { isDesktopLocalOriginActive, isDesktopShell, isTauriShell, restartDesktopApp } from '@/lib/desktop';
+import { isDesktopLocalOriginActive, isDesktopShell, isTauriShell, restartDesktopApp } from '@/lib/desktop/desktop';
 import {
   getInjectedBootOutcome,
   getBootInjectionStatus,
@@ -32,7 +32,7 @@ import {
   shouldRestartDesktopBootFlow,
   type BootInjectionStatus,
   type DesktopBootView,
-} from '@/lib/desktopBoot';
+} from '@/lib/desktop/desktopBoot';
 import type { RecoveryVariant } from '@/components/onboarding/DesktopConnectionRecovery';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
@@ -57,7 +57,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { QuickOpenDialog } from '@/components/ui/QuickOpenDialog';
 import { McpOAuthCallbackPage } from '@/components/sections/mcp/McpOAuthCallbackPage';
 import { MCP_OAUTH_CALLBACK_PATH } from '@/components/sections/mcp/mcpOAuth';
-import { lazyWithChunkRecovery } from '@/lib/chunkLoadRecovery';
+import { lazyWithChunkRecovery } from '@/lib/errors/chunkLoadRecovery';
 import * as Sentry from '@sentry/react';
 
 // Lazy-loaded heavy views — loaded on demand to reduce initial bundle size.

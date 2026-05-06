@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { RiArrowDownSLine, RiFolderLine } from '@remixicon/react';
 import { useProjectsStore } from '@/stores/useProjectsStore';
-import { isVSCodeRuntime } from '@/lib/desktop';
+import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 import { cn } from '@/lib/utils';
 
 const formatProjectLabel = (label: string): string => {

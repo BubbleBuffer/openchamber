@@ -27,8 +27,8 @@ import { cn } from '@/lib/utils';
 import type { SkillsCatalogItem } from '@/lib/api/types';
 
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
-import { updateDesktopSettings } from '@/lib/persistence';
-import type { DesktopSettings, SkillCatalogConfig } from '@/lib/desktop';
+import { updateDesktopSettings } from '@/lib/config/persistence';
+import type { DesktopSettings, SkillCatalogConfig } from '@/lib/desktop/desktop';
 
 import { AddCatalogDialog } from './AddCatalogDialog';
 import { InstallSkillDialog } from './InstallSkillDialog';

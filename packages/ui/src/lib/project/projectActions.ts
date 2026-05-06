@@ -22,11 +22,11 @@ import type { ComponentType } from 'react';
 import type {
   OpenChamberProjectAction,
   OpenChamberProjectActionPlatform,
-} from '@/lib/openchamberConfig';
+} from '@/lib/config/openchamberConfig';
 import type {
   DesktopSshInstance,
   DesktopSshPortForward,
-} from '@/lib/desktopSsh';
+} from '@/lib/desktop/desktopSsh';
 
 export type ProjectActionIconKey =
   | 'play'

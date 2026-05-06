@@ -1,7 +1,7 @@
 import { useUIStore } from '@/stores/useUIStore';
-import { updateDesktopSettings } from '@/lib/persistence';
-import { asReporter } from '@/lib/reportError';
-import { isVSCodeRuntime } from '@/lib/desktop';
+import { updateDesktopSettings } from '@/lib/config/persistence';
+import { asReporter } from '@/lib/errors/reportError';
+import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 
 type ModelRef = { providerID: string; modelID: string };
 

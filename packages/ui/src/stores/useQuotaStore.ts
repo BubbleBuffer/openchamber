@@ -3,10 +3,10 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { ProviderResult, QuotaProviderId } from '@/types';
 import { QUOTA_PROVIDERS } from '@/lib/quota';
-import { isVSCodeRuntime } from '@/lib/desktop';
+import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 import { getDefaultModels } from '@/lib/quota/model-families';
-import { updateDesktopSettings } from '@/lib/persistence';
+import { updateDesktopSettings } from '@/lib/config/persistence';
 
 const DEFAULT_REFRESH_INTERVAL_MS = 60000;
 

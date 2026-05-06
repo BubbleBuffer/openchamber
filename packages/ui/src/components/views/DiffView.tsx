@@ -19,15 +19,15 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui';
 
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
-import { getLanguageFromExtension, isImageFile } from '@/lib/toolHelpers';
+import { getLanguageFromExtension, isImageFile } from '@/lib/tools/toolHelpers';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { DiffViewToggle } from '@/components/chat/message/DiffViewToggle';
 import type { DiffViewMode } from '@/components/chat/message/types';
 import { PierreDiffViewer } from './PierreDiffViewer';
 import { useDeviceInfo } from '@/lib/device';
 import { FileTypeIcon } from '@/components/icons/FileTypeIcon';
-import { getContextFileOpenFailureMessage, validateContextFileOpen } from '@/lib/contextFileOpenGuard';
-import { sessionEvents } from '@/lib/sessionEvents';
+import { getContextFileOpenFailureMessage, validateContextFileOpen } from '@/lib/files/contextFileOpenGuard';
+import { sessionEvents } from '@/lib/session/sessionEvents';
 
 // Minimum width for side-by-side diff view (px)
 const SIDE_BY_SIDE_MIN_WIDTH = 1100;

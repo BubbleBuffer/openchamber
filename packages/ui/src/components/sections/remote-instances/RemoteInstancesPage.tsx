@@ -47,7 +47,7 @@ import {
   type DesktopSshInstance,
   type DesktopSshPortForward,
   type DesktopSshPortForwardType,
-} from '@/lib/desktopSsh';
+} from '@/lib/desktop/desktopSsh';
 
 const randomPort = (): number => {
   return Math.floor(20000 + Math.random() * 30000);

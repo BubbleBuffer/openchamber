@@ -1,6 +1,6 @@
 import { useUIStore } from '@/stores/useUIStore';
-import { updateDesktopSettings } from '@/lib/persistence';
-import type { DesktopSettings } from '@/lib/desktop';
+import { updateDesktopSettings } from '@/lib/config/persistence';
+import type { DesktopSettings } from '@/lib/desktop/desktop';
 
 type AppearanceSlice = {
   showReasoningTraces: boolean;

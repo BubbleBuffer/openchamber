@@ -11,10 +11,10 @@ import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
 import { useContextStore } from '@/stores/contextStore';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
-import { checkIsGitRepository, previewGitWorktree } from '@/lib/gitApi';
+import { checkIsGitRepository, previewGitWorktree } from '@/lib/git/gitApi';
 import { generateBranchName } from '@/lib/git/branchNameGenerator';
 import { getRootBranch } from '@/lib/worktrees/worktreeStatus';
-import { getWorktreeSetupCommands } from '@/lib/openchamberConfig';
+import { getWorktreeSetupCommands } from '@/lib/config/openchamberConfig';
 import {
   removeProjectWorktree,
   type ProjectRef,

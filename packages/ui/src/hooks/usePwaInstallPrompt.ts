@@ -1,6 +1,6 @@
 import React from 'react';
 import { toast } from '@/components/ui';
-import { isWebRuntime } from '@/lib/desktop';
+import { isWebRuntime } from '@/lib/desktop/desktop';
 import { usePwaDetection } from '@/hooks/usePwaDetection';
 import { getSafeSessionStorage } from '@/stores/utils/safeStorage';
 

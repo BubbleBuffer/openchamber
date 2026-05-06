@@ -4,7 +4,7 @@ import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { useGitStore, useIsGitRepo } from '@/stores/useGitStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { RuntimeAPIContext } from '@/contexts/runtimeAPIContext';
-import { sessionEvents } from '@/lib/sessionEvents';
+import { sessionEvents } from '@/lib/session/sessionEvents';
 import { normalizePath } from '@/components/session/sidebar/utils';
 import {
     type ChangedFileEntry,

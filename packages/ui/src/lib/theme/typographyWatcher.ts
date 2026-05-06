@@ -1,4 +1,4 @@
-import { SEMANTIC_TYPOGRAPHY } from '@/lib/typography';
+import { SEMANTIC_TYPOGRAPHY } from '@/lib/theme/typography';
 
 let started = false;
 

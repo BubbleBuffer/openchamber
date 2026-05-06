@@ -8,9 +8,9 @@ import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
 import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { useAssistantStatus } from '@/hooks/useAssistantStatus';
-import { createWorktreeSession } from '@/lib/worktreeSessionCreator';
-import { isVSCodeRuntime } from '@/lib/desktop';
-import { showOpenCodeStatus } from '@/lib/openCodeStatus';
+import { createWorktreeSession } from '@/lib/session/worktreeSessionCreator';
+import { isVSCodeRuntime } from '@/lib/desktop/desktop';
+import { showOpenCodeStatus } from '@/lib/errors/openCodeStatus';
 import { eventMatchesShortcut, getEffectiveShortcutCombo } from '@/lib/shortcuts';
 
 export const useKeyboardShortcuts = () => {

@@ -1,11 +1,11 @@
-import type { DesktopSettings } from '@/lib/desktop';
-import { createProjectIdFromPath } from '@/lib/projectId';
+import type { DesktopSettings } from '@/lib/desktop/desktop';
+import { createProjectIdFromPath } from '@/lib/project/projectId';
 import { useUIStore } from '@/stores/useUIStore';
 import { useMessageQueueStore } from '@/stores/messageQueueStore';
 import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
-import { setDirectoryShowHidden } from '@/lib/directoryShowHidden';
-import { setFilesViewShowGitignored } from '@/lib/filesViewShowGitignored';
-import { loadAppearancePreferences, applyAppearancePreferences } from '@/lib/appearancePersistence';
+import { setDirectoryShowHidden } from '@/lib/files/directoryShowHidden';
+import { setFilesViewShowGitignored } from '@/lib/files/filesViewShowGitignored';
+import { loadAppearancePreferences, applyAppearancePreferences } from '@/lib/theme/appearancePersistence';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 
 const persistToLocalStorage = (settings: DesktopSettings) => {

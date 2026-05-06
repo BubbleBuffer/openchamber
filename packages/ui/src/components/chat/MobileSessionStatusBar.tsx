@@ -9,7 +9,7 @@ import { useProjectsStore } from '@/stores/useProjectsStore';
 import type { Session } from '@/lib/opencode/client';
 import type { ProjectEntry } from '@/lib/api/types';
 import { cn, formatDirectoryName } from '@/lib/utils';
-import { getAgentColor } from '@/lib/agentColors';
+import { getAgentColor } from '@/lib/theme/agentColors';
 import {
   RiLoader4Line,
   RiAddLine,
@@ -30,11 +30,11 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import type { SessionContextUsage } from '@/stores/types/sessionTypes';
-import { PROJECT_ICON_MAP, PROJECT_COLOR_MAP, getProjectIconImageUrl } from '@/lib/projectMeta';
+import { PROJECT_ICON_MAP, PROJECT_COLOR_MAP, getProjectIconImageUrl } from '@/lib/project/projectMeta';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { toast } from '@/components/ui';
-import { isTauriShell, isDesktopLocalOriginActive, requestDirectoryAccess } from '@/lib/desktop';
-import { sessionEvents } from '@/lib/sessionEvents';
+import { isTauriShell, isDesktopLocalOriginActive, requestDirectoryAccess } from '@/lib/desktop/desktop';
+import { sessionEvents } from '@/lib/session/sessionEvents';
 import {
   Dialog,
   DialogContent,

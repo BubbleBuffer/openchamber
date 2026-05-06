@@ -1,12 +1,12 @@
 import { create } from "zustand";
 import type { StoreApi, UseBoundStore } from "zustand";
 import { devtools, persist, createJSONStorage } from "zustand/middleware";
-import { emitConfigChange, scopeMatches, subscribeToConfigChanges } from "@/lib/configSync";
+import { emitConfigChange, scopeMatches, subscribeToConfigChanges } from "@/lib/config/configSync";
 import {
   startConfigUpdate,
   finishConfigUpdate,
   updateConfigUpdateMessage,
-} from "@/lib/configUpdate";
+} from "@/lib/config/configUpdate";
 import { getSafeStorage } from "./utils/safeStorage";
 
 import { opencodeClient } from '@/lib/opencode/client';

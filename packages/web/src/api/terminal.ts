@@ -6,7 +6,7 @@ import {
   closeTerminal,
   restartTerminalSession,
   forceKillTerminal,
-} from '@openchamber/ui/lib/terminalApi';
+} from '@openchamber/ui/lib/terminal/terminalApi';
 import type {
   TerminalAPI,
   TerminalHandlers,

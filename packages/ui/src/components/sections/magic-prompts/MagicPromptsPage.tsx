@@ -12,7 +12,7 @@ import {
   resetMagicPromptOverride,
   saveMagicPromptOverride,
   type MagicPromptId,
-} from '@/lib/magicPrompts';
+} from '@/lib/tools/magicPrompts';
 import { useMagicPromptsStore } from '@/stores/useMagicPromptsStore';
 
 type PromptBlock = {

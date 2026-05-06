@@ -24,9 +24,9 @@ import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useFileSystemAccess } from '@/hooks/useFileSystemAccess';
-import { isDesktopLocalOriginActive, isTauriShell } from '@/lib/desktop';
+import { isDesktopLocalOriginActive, isTauriShell } from '@/lib/desktop/desktop';
 import { useDeviceInfo } from '@/lib/device';
-import { sessionEvents } from '@/lib/sessionEvents';
+import { sessionEvents } from '@/lib/session/sessionEvents';
 
 const renderToastDescription = (text?: string) =>
     text ? <span className="text-foreground/80 dark:text-foreground/70">{text}</span> : undefined;

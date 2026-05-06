@@ -1,5 +1,5 @@
-import { getLanguageFromExtension } from '@/lib/toolHelpers';
-import { FILE_TYPE_ICON_IDS } from '@/lib/fileTypeIconIds';
+import { getLanguageFromExtension } from '@/lib/tools/toolHelpers';
+import { FILE_TYPE_ICON_IDS } from '@/lib/files/fileTypeIconIds';
 import spriteContent from '../assets/icons/file-types/sprite.svg?raw';
 
 type ThemeVariant = 'light' | 'dark';

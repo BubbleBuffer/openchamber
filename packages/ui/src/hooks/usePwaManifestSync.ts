@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSessions } from '@/sync/sync-context';
-import { isWebRuntime } from '@/lib/desktop';
+import { isWebRuntime } from '@/lib/desktop/desktop';
 import { PWA_RECENT_SESSIONS_STORAGE_KEY } from '@/lib/pwa';
 
 type RecentSessionShortcut = {

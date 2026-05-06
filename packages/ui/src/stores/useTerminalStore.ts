@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 
-import { closeTerminal } from '@/lib/terminalApi';
+import { closeTerminal } from '@/lib/terminal/terminalApi';
 import { getSafeSessionStorage } from '@/stores/utils/safeStorage';
 
 export interface TerminalChunk {

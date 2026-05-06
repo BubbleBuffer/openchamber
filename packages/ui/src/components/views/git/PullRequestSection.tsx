@@ -43,8 +43,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { generatePullRequestDescription } from '@/lib/gitApi';
-import { renderMagicPrompt } from '@/lib/magicPrompts';
+import { generatePullRequestDescription } from '@/lib/git/gitApi';
+import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
 import { openExternalUrl } from '@/lib/url';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { useDeviceInfo } from '@/lib/device';

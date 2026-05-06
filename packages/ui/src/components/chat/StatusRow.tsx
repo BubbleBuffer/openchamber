@@ -20,7 +20,7 @@ type TodoPriority = string;
 import { useUIStore } from "@/stores/useUIStore";
 import { useTodosPersistStore } from "@/stores/useTodosPersistStore";
 import { WorkingPlaceholder } from "./message/parts/WorkingPlaceholder";
-import { isVSCodeRuntime } from "@/lib/desktop";
+import { isVSCodeRuntime } from "@/lib/desktop/desktop";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const statusConfig: Record<TodoStatus, { textClassName: string }> = {

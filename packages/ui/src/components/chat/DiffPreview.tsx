@@ -1,7 +1,7 @@
 import React from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { cn } from '@/lib/utils';
-import { getLanguageFromExtension } from '@/lib/toolHelpers';
+import { getLanguageFromExtension } from '@/lib/tools/toolHelpers';
 import { parseDiffToUnified } from './message/toolRenderers';
 
 interface DiffPreviewProps {

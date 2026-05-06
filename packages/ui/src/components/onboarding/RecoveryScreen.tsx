@@ -1,9 +1,9 @@
 import React from 'react';
-import { isTauriShell, restartDesktopApp } from '@/lib/desktop';
+import { isTauriShell, restartDesktopApp } from '@/lib/desktop/desktop';
 import { DesktopConnectionRecovery, type RecoveryVariant } from './DesktopConnectionRecovery';
 import { RemoteConnectionForm } from './RemoteConnectionForm';
 import { resolveRecoveryNextStep } from './desktopRecoveryRouting';
-import { desktopHostsGet, desktopHostsSet } from '@/lib/desktopHosts';
+import { desktopHostsGet, desktopHostsSet } from '@/lib/desktop/desktopHosts';
 
 type RecoveryScreenProps = {
   /** Recovery variant */

@@ -1,4 +1,4 @@
-import { isTauriShell } from '@/lib/desktop';
+import { isTauriShell } from '@/lib/desktop/desktop';
 
 type TauriInvoke = (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
 

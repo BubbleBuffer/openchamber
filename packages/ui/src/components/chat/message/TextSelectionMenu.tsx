@@ -9,11 +9,11 @@ import { RiBookletLine, RiChatNewLine, RiAddLine, RiFileCopyLine, RiLoader4Line 
 import { cn } from '@/lib/utils';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { toast } from '@/components/ui';
-import { getProjectNotesAndTodos, saveProjectNotesAndTodos } from '@/lib/openchamberConfig';
-import { resolveProjectForSessionDirectory } from '@/lib/projectResolution';
+import { getProjectNotesAndTodos, saveProjectNotesAndTodos } from '@/lib/config/openchamberConfig';
+import { resolveProjectForSessionDirectory } from '@/lib/project/projectResolution';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { summarizeText } from '@/lib/voice/summarize';
-import { isVSCodeRuntime } from '@/lib/desktop';
+import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 
 interface TextSelectionMenuProps {
   containerRef: React.RefObject<HTMLElement | null>;

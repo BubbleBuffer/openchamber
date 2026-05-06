@@ -4,10 +4,10 @@
  * Migrates from legacy <project>/.openchamber/openchamber.json.
  */
 
-import type { FilesAPI, RuntimeAPIs } from './api/types';
-import { getDesktopHomeDirectory } from './desktop';
-import { isVSCodeRuntime } from './desktop';
-import { createProjectIdFromPath } from './projectId';
+import type { FilesAPI, RuntimeAPIs } from '../api/types';
+import { getDesktopHomeDirectory } from '../desktop/desktop';
+import { isVSCodeRuntime } from '../desktop/desktop';
+import { createProjectIdFromPath } from '../project/projectId';
 
 type ProjectRef = { id: string; path: string };
 

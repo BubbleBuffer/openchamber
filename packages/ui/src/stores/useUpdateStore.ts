@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { UpdateInfo, UpdateProgress } from '@/lib/desktop';
+import type { UpdateInfo, UpdateProgress } from '@/lib/desktop/desktop';
 import { getDeviceInfo } from '@/lib/device';
 import { useUIStore } from './useUIStore';
 import {
@@ -10,7 +10,7 @@ import {
   isTauriShell,
   isVSCodeRuntime,
   isWebRuntime,
-} from '@/lib/desktop';
+} from '@/lib/desktop/desktop';
 
 export type UpdateState = {
   checking: boolean;

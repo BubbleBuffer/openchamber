@@ -3,7 +3,7 @@
  * Uses Ubuntu-style adjective-noun word pairs for memorable, collision-resistant naming.
  */
 
-import { getGitBranches } from '@/lib/gitApi';
+import { getGitBranches } from '@/lib/git/gitApi';
 
 const ADJECTIVES = [
   'artful', 'bionic', 'cosmic', 'disco', 'focal', 'groovy', 'jammy', 'kinetic',

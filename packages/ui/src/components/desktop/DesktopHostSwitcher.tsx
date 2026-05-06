@@ -35,7 +35,7 @@ import {
 } from '@remixicon/react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui';
-import { isTauriShell, isDesktopShell } from '@/lib/desktop';
+import { isTauriShell, isDesktopShell } from '@/lib/desktop/desktop';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import {
@@ -48,14 +48,14 @@ import {
   redactSensitiveUrl,
   type DesktopHost,
   type HostProbeResult,
-} from '@/lib/desktopHosts';
+} from '@/lib/desktop/desktopHosts';
 import {
   desktopSshConnect,
   desktopSshDisconnect,
   desktopSshInstancesGet,
   desktopSshStatus,
   type DesktopSshInstanceStatus,
-} from '@/lib/desktopSsh';
+} from '@/lib/desktop/desktopSsh';
 
 const LOCAL_HOST_ID = 'local';
 const SSH_CONNECT_TIMEOUT_MS = 90_000;

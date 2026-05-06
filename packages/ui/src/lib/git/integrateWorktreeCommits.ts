@@ -1,5 +1,5 @@
 import type { CommandExecResult } from '@/lib/api/types';
-import { execCommand } from '@/lib/execCommands';
+import { execCommand } from '@/lib/tools/execCommands';
 
 export type IntegratePlan = {
   repoRoot: string;

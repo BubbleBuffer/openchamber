@@ -1,4 +1,4 @@
-import * as gitApiHttp from '@openchamber/ui/lib/gitApiHttp';
+import * as gitApiHttp from '@openchamber/ui/lib/git/gitApiHttp';
 import type {
   GitAPI,
   CreateGitCommitOptions,

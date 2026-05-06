@@ -3,12 +3,12 @@ import type { StoreApi, UseBoundStore } from "zustand";
 import { devtools, persist, createJSONStorage } from "zustand/middleware";
 import type { Agent, PermissionConfig } from "@/lib/opencode/client";
 import { opencodeClient } from "@/lib/opencode/client";
-import { emitConfigChange, scopeMatches, subscribeToConfigChanges, type ConfigChangeScope } from "@/lib/configSync";
+import { emitConfigChange, scopeMatches, subscribeToConfigChanges, type ConfigChangeScope } from "@/lib/config/configSync";
 import {
   startConfigUpdate,
   finishConfigUpdate,
   updateConfigUpdateMessage,
-} from "@/lib/configUpdate";
+} from "@/lib/config/configUpdate";
 import { getSafeStorage } from "./utils/safeStorage";
 import { useProviderConfigStore } from "@/stores/useProviderConfigStore"
 import { useAgentConfigStore } from "@/stores/useAgentConfigStore";

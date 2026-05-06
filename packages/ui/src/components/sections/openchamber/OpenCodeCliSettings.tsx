@@ -3,8 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { RiFolderLine, RiInformationLine } from '@remixicon/react';
-import { isDesktopShell, isTauriShell } from '@/lib/desktop';
-import { updateDesktopSettings } from '@/lib/persistence';
+import { isDesktopShell, isTauriShell } from '@/lib/desktop/desktop';
+import { updateDesktopSettings } from '@/lib/config/persistence';
 import { reloadOpenCodeConfiguration } from '@/stores/useAgentsStore';
 
 export const OpenCodeCliSettings: React.FC = () => {

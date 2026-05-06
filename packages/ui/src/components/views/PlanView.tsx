@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { buildCodeMirrorCommentWidgets, normalizeLineRange, useInlineCommentController } from '@/components/comments';
 
-import { getLanguageFromExtension } from '@/lib/toolHelpers';
+import { getLanguageFromExtension } from '@/lib/tools/toolHelpers';
 import { useDeviceInfo } from '@/lib/device';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { generateSyntaxTheme } from '@/lib/theme/syntaxThemeGenerator';
@@ -35,10 +35,10 @@ import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { EditorView } from '@codemirror/view';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { generateBranchName } from '@/lib/git/branchNameGenerator';
-import { parseProjectPlanMarkdown } from '@/lib/openchamberConfig';
-import { createWorktreeSessionForNewBranch } from '@/lib/worktreeSessionCreator';
+import { parseProjectPlanMarkdown } from '@/lib/config/openchamberConfig';
+import { createWorktreeSessionForNewBranch } from '@/lib/session/worktreeSessionCreator';
 import { TodoSendDialog, type TodoSendExecution } from '@/components/session/TodoSendDialog';
-import { renderMagicPrompt } from '@/lib/magicPrompts';
+import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
 
 type PlanViewProps = {
   targetPath?: string | null;

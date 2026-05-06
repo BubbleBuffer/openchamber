@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { GitRemote } from '@/lib/gitApi';
+import type { GitRemote } from '@/lib/git/gitApi';
 
 type SyncAction = 'fetch' | 'pull' | 'push' | null;
 

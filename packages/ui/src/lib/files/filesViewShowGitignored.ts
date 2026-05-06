@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { getSafeStorage } from '@/stores/utils/safeStorage';
-import { updateDesktopSettings } from '@/lib/persistence';
+import { updateDesktopSettings } from '@/lib/config/persistence';
 
 const SHOW_GITIGNORED_STORAGE_KEY = 'filesViewShowGitignored';
 const SHOW_GITIGNORED_EVENT = 'files-view-show-gitignored-change';

@@ -19,9 +19,9 @@ import {
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
-import { getContextFileOpenFailureMessage, validateContextFileOpen } from '@/lib/contextFileOpenGuard';
-import { useDirectoryShowHidden } from '@/lib/directoryShowHidden';
-import { useFilesViewShowGitignored } from '@/lib/filesViewShowGitignored';
+import { getContextFileOpenFailureMessage, validateContextFileOpen } from '@/lib/files/contextFileOpenGuard';
+import { useDirectoryShowHidden } from '@/lib/files/directoryShowHidden';
+import { useFilesViewShowGitignored } from '@/lib/files/filesViewShowGitignored';
 import { useFileSearchStore } from '@/stores/useFileSearchStore';
 import { useFilesViewTabsStore } from '@/stores/useFilesViewTabsStore';
 import { useUIStore } from '@/stores/useUIStore';

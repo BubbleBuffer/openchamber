@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Session } from '@/lib/opencode/client';
-import { updateDesktopSettings } from '@/lib/persistence';
-import { asReporter } from '@/lib/reportError';
+import { updateDesktopSettings } from '@/lib/config/persistence';
+import { asReporter } from '@/lib/errors/reportError';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 
 type SafeStorageLike = {

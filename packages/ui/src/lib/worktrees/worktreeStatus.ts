@@ -1,5 +1,5 @@
-import { getGitStatus } from '@/lib/gitApi';
-import { execCommand } from '@/lib/execCommands';
+import { getGitStatus } from '@/lib/git/gitApi';
+import { execCommand } from '@/lib/tools/execCommands';
 import type { WorktreeMetadata } from '@/types/worktree';
 
 const normalizePath = (value: string): string => {

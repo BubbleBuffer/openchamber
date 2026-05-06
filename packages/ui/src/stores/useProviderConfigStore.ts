@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { devtools, persist, createJSONStorage } from "zustand/middleware";
 import type { Provider } from "@/lib/opencode/client";
 import { opencodeClient } from "@/lib/opencode/client";
-import { scopeMatches, subscribeToConfigChanges } from "@/lib/configSync";
+import { scopeMatches, subscribeToConfigChanges } from "@/lib/config/configSync";
 import type { ModelMetadata } from "@/types";
 import { getSafeStorage } from "./utils/safeStorage";
 import { useDirectoryStore } from "@/stores/useDirectoryStore";

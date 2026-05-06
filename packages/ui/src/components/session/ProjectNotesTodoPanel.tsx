@@ -21,7 +21,7 @@ import {
   type OpenChamberProjectPlanFileLink,
   type OpenChamberProjectTodoItem,
   type ProjectRef,
-} from '@/lib/openchamberConfig';
+} from '@/lib/config/openchamberConfig';
 import { generateBranchName } from '@/lib/git/branchNameGenerator';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { useUIStore } from '@/stores/useUIStore';
@@ -29,9 +29,9 @@ import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
 import { useInputStore } from '@/sync/input-store';
-import { createWorktreeSessionForNewBranch } from '@/lib/worktreeSessionCreator';
+import { createWorktreeSessionForNewBranch } from '@/lib/session/worktreeSessionCreator';
 import { cn } from '@/lib/utils';
-import { renderMagicPrompt } from '@/lib/magicPrompts';
+import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
 import { TodoSendDialog, type TodoSendExecution } from './TodoSendDialog';
 
 interface ProjectNotesTodoPanelProps {

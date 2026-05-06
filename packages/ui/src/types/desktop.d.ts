@@ -1,4 +1,4 @@
-import type { DesktopBootOutcome } from '@/lib/desktopBoot';
+import type { DesktopBootOutcome } from '@/lib/desktop/desktopBoot';
 
 declare global {
   interface Window {

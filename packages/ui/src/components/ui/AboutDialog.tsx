@@ -5,7 +5,7 @@ import {
 } from '@/components/ui/dialog';
 import { OpenChamberLogo } from '@/components/ui/OpenChamberLogo';
 import { RiDiscordFill, RiGithubFill, RiTwitterXFill } from '@remixicon/react';
-import { debugUtils } from '@/lib/debug';
+import { debugUtils } from '@/lib/errors/debug';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui';
 

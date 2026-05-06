@@ -19,7 +19,7 @@ import {
   RiPencilAiLine,
 } from '@remixicon/react';
 import { cn } from '@/lib/utils';
-import { PROJECT_COLOR_MAP, PROJECT_ICON_MAP, getProjectIconImageUrl } from '@/lib/projectMeta';
+import { PROJECT_COLOR_MAP, PROJECT_ICON_MAP, getProjectIconImageUrl } from '@/lib/project/projectMeta';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 
 export interface SortableProjectItemProps {

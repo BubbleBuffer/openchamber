@@ -1,5 +1,5 @@
 import React from 'react';
-import { execCommand } from '@/lib/execCommands';
+import { execCommand } from '@/lib/tools/execCommands';
 import type { WorktreeMetadata } from '@/types/worktree';
 
 const normalizePath = (value: string): string => {

@@ -19,16 +19,16 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { isDesktopShell, isVSCodeRuntime, isWebRuntime } from '@/lib/desktop';
+import { isDesktopShell, isVSCodeRuntime, isWebRuntime } from '@/lib/desktop/desktop';
 import { useDeviceInfo } from '@/lib/device';
 import { usePwaDetection } from '@/hooks/usePwaDetection';
-import { updateDesktopSettings } from '@/lib/persistence';
+import { updateDesktopSettings } from '@/lib/config/persistence';
 import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import {
     setDirectoryShowHidden,
     useDirectoryShowHidden,
-} from '@/lib/directoryShowHidden';
+} from '@/lib/files/directoryShowHidden';
 
 interface Option<T extends string> {
     id: T;

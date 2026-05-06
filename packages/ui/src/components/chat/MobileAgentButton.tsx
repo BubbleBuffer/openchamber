@@ -4,7 +4,7 @@ import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
 import { getAgentDisplayName } from './mobileControlsUtils';
-import { getAgentColor } from '@/lib/agentColors';
+import { getAgentColor } from '@/lib/theme/agentColors';
 
 interface MobileAgentButtonProps {
     onCycleAgent: () => void;

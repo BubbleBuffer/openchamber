@@ -1,6 +1,6 @@
 import { useLayoutEffect } from 'react';
 import { useUIStore } from '@/stores/useUIStore';
-import { SEMANTIC_TYPOGRAPHY, getTypographyVariable, type SemanticTypographyKey } from '@/lib/typography';
+import { SEMANTIC_TYPOGRAPHY, getTypographyVariable, type SemanticTypographyKey } from '@/lib/theme/typography';
 
 /**
  * Applies theme, typography, padding, and proportional terminal height

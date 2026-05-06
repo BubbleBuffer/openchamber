@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui';
-import { isDesktopShell, isVSCodeRuntime } from '@/lib/desktop';
-import { syncDesktopSettings, initializeAppearancePreferences } from '@/lib/persistence';
-import { applyPersistedDirectoryPreferences } from '@/lib/directoryPersistence';
+import { isDesktopShell, isVSCodeRuntime } from '@/lib/desktop/desktop';
+import { syncDesktopSettings, initializeAppearancePreferences } from '@/lib/config/persistence';
+import { applyPersistedDirectoryPreferences } from '@/lib/files/directoryPersistence';
 import { DesktopHostSwitcherInline } from '@/components/desktop/DesktopHostSwitcher';
 import { OpenChamberLogo } from '@/components/ui/OpenChamberLogo';
 import {

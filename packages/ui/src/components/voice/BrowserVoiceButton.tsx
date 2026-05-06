@@ -14,7 +14,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useBrowserVoice } from '@/hooks/useBrowserVoice';
 import { useVoiceSettingsStore } from '@/stores/useVoiceSettingsStore';
 import { browserVoiceService } from '@/lib/voice/browserVoiceService';
-import { isVSCodeRuntime } from '@/lib/desktop';
+import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 import { Button } from '@/components/ui/button';
 import {
     Tooltip,

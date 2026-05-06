@@ -13,8 +13,8 @@ import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useInputStore } from '@/sync/input-store';
 import { useUIStore } from '@/stores/useUIStore';
 import { toast } from '@/components/ui';
-import { getConflictDetails, type MergeConflictDetails } from '@/lib/gitApi';
-import { renderMagicPrompt } from '@/lib/magicPrompts';
+import { getConflictDetails, type MergeConflictDetails } from '@/lib/git/gitApi';
+import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
 
 interface ConflictDialogProps {
   open: boolean;

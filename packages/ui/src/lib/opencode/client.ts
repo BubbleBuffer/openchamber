@@ -1,6 +1,6 @@
 import { createOpencodeClient, OpencodeClient } from "@opencode-ai/sdk/v2";
 import type { FilesAPI, RuntimeAPIs } from "../api/types";
-import { getDesktopHomeDirectory } from "../desktop";
+import { getDesktopHomeDirectory } from "../desktop/desktop";
 import type {
   Session,
   Message,

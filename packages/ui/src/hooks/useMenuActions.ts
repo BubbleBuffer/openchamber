@@ -6,11 +6,11 @@ import { useDialogStore } from '@/stores/useDialogStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
-import { sessionEvents } from '@/lib/sessionEvents';
-import { isTauriShell } from '@/lib/desktop';
+import { sessionEvents } from '@/lib/session/sessionEvents';
+import { isTauriShell } from '@/lib/desktop/desktop';
 import { useFileSystemAccess } from '@/hooks/useFileSystemAccess';
-import { createWorktreeSession } from '@/lib/worktreeSessionCreator';
-import { showOpenCodeStatus } from '@/lib/openCodeStatus';
+import { createWorktreeSession } from '@/lib/session/worktreeSessionCreator';
+import { showOpenCodeStatus } from '@/lib/errors/openCodeStatus';
 
 const getActiveElementSelectedText = (): string => {
   if (typeof document === 'undefined') {

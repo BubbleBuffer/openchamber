@@ -1,10 +1,10 @@
-import { substituteCommandVariables } from '@/lib/openchamberConfig';
+import { substituteCommandVariables } from '@/lib/config/openchamberConfig';
 import type { WorktreeMetadata } from '@/types/worktree';
-import { execCommand } from '@/lib/execCommands';
+import { execCommand } from '@/lib/tools/execCommands';
 import {
   deleteRemoteBranch,
   git,
-} from '@/lib/gitApi';
+} from '@/lib/git/gitApi';
 import {
   clearWorktreeBootstrapState,
   markWorktreeBootstrapPending,

@@ -9,8 +9,8 @@ import {
   deleteGitIdentity,
   discoverGitCredentials,
   getGlobalGitIdentity
-} from "@/lib/gitApi";
-import { updateDesktopSettings } from "@/lib/persistence";
+} from "@/lib/git/gitApi";
+import { updateDesktopSettings } from "@/lib/config/persistence";
 import { getRegisteredRuntimeAPIs } from "@/contexts/runtimeAPIRegistry";
 
 export type GitIdentityAuthType = 'ssh' | 'token';

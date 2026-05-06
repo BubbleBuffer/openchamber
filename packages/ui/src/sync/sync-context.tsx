@@ -24,7 +24,7 @@ import { stripMessageDiffSnapshots, stripSessionDiffSnapshots } from "./sanitize
 import { syncDebug } from "./debug"
 import { getReconnectCandidateSessionIds } from "./reconnect-recovery"
 import { opencodeClient } from "@/lib/opencode/client"
-import { reportError } from "@/lib/reportError"
+import { reportError } from "@/lib/errors/reportError"
 import { usePermissionStore } from "@/stores/permissionStore"
 import { useProviderConfigStore } from "@/stores/useProviderConfigStore"
 import { useAgentConfigStore } from "@/stores/useAgentConfigStore"

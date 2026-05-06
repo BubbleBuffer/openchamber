@@ -2,7 +2,7 @@ import React from "react";
 import {
   getConfigUpdateSnapshot,
   subscribeConfigUpdate,
-} from "@/lib/configUpdate";
+} from "@/lib/config/configUpdate";
 import { OpenChamberLogo } from "./OpenChamberLogo";
 
 export const ConfigUpdateOverlay: React.FC = () => {

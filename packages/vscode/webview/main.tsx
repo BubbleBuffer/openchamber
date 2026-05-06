@@ -1217,7 +1217,7 @@ onCommand('showSettings', () => {
 
 // Listen for settings sync command from extension (broadcast to all VS Code webviews)
 onCommand('settingsSynced', () => {
-  import('@openchamber/ui/lib/persistence').then(({ syncDesktopSettings }) => {
+  import('@openchamber/ui/lib/config/persistence').then(({ syncDesktopSettings }) => {
     void syncDesktopSettings();
   });
 });

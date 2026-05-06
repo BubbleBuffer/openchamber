@@ -4,8 +4,8 @@ import { Ghostty, Terminal as GhosttyTerminal, FitAddon } from 'ghostty-web';
 import { RiKeyboardLine } from '@remixicon/react';
 
 import { isMobileDeviceViaCSS } from '@/lib/device';
-import type { TerminalTheme } from '@/lib/terminalTheme';
-import { getGhosttyTerminalOptions } from '@/lib/terminalTheme';
+import type { TerminalTheme } from '@/lib/terminal/terminalTheme';
+import { getGhosttyTerminalOptions } from '@/lib/terminal/terminalTheme';
 import type { TerminalChunk } from '@/stores/useTerminalStore';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { cn } from '@/lib/utils';

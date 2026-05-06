@@ -1,14 +1,14 @@
 import React from 'react';
 import { RiFileCopyLine, RiCheckLine, RiExternalLinkLine } from '@remixicon/react';
-import { isDesktopShell, isTauriShell } from '@/lib/desktop';
+import { isDesktopShell, isTauriShell } from '@/lib/desktop/desktop';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { updateDesktopSettings } from '@/lib/persistence';
+import { updateDesktopSettings } from '@/lib/config/persistence';
 import { copyTextToClipboard } from '@/lib/clipboard';
-import { restartDesktopApp } from '@/lib/desktop';
+import { restartDesktopApp } from '@/lib/desktop/desktop';
 import { cn } from '@/lib/utils';
 import { RemoteConnectionForm } from './RemoteConnectionForm';
-import { desktopHostsGet, desktopHostsSet } from '@/lib/desktopHosts';
+import { desktopHostsGet, desktopHostsSet } from '@/lib/desktop/desktopHosts';
 
 const INSTALL_COMMAND = 'curl -fsSL https://opencode.ai/install | bash';
 const DOCS_URL = 'https://opencode.ai/docs';

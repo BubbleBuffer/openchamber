@@ -5,10 +5,10 @@ import {
   desktopHostProbe,
   normalizeHostUrl,
   type HostProbeResult,
-} from '@/lib/desktopHosts';
+} from '@/lib/desktop/desktopHosts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { isTauriShell } from '@/lib/desktop';
+import { isTauriShell } from '@/lib/desktop/desktop';
 
 type ConnectionState = 'idle' | 'testing' | 'success' | 'error';
 

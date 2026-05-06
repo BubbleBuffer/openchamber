@@ -6,11 +6,11 @@ import React, {
 } from 'react';
 import { flushSync } from 'react-dom';
 import type { Theme, ThemeMode } from '@/types/theme';
-import type { DesktopSettings } from '@/lib/desktop';
-import { isDesktopLocalOriginActive, isTauriShell, isVSCodeRuntime } from '@/lib/desktop';
-import { setDesktopWindowTheme } from '@/lib/desktopNative';
+import type { DesktopSettings } from '@/lib/desktop/desktop';
+import { isDesktopLocalOriginActive, isTauriShell, isVSCodeRuntime } from '@/lib/desktop/desktop';
+import { setDesktopWindowTheme } from '@/lib/desktop/desktopNative';
 import { CSSVariableGenerator } from '@/lib/theme/cssGenerator';
-import { updateDesktopSettings } from '@/lib/persistence';
+import { updateDesktopSettings } from '@/lib/config/persistence';
 import {
   themes,
   getThemeById,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { isDesktopShell } from '@/lib/desktop';
+import { isDesktopShell } from '@/lib/desktop/desktop';
 
 export type DeviceType = 'desktop' | 'mobile' | 'tablet';
 

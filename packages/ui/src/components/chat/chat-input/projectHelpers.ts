@@ -8,7 +8,7 @@
  */
 
 import { formatDirectoryName } from '@/lib/utils';
-import { PROJECT_COLOR_MAP } from '@/lib/projectMeta';
+import { PROJECT_COLOR_MAP } from '@/lib/project/projectMeta';
 
 export const normalizePath = (value?: string | null): string | null => {
     if (typeof value !== 'string') {

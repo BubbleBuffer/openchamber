@@ -6,8 +6,8 @@ import {
   startConfigUpdate,
   finishConfigUpdate,
   updateConfigUpdateMessage,
-} from "@/lib/configUpdate";
-import { emitConfigChange, scopeMatches, subscribeToConfigChanges } from "@/lib/configSync";
+} from "@/lib/config/configUpdate";
+import { emitConfigChange, scopeMatches, subscribeToConfigChanges } from "@/lib/config/configSync";
 import { getSafeStorage } from "./utils/safeStorage";
 import { useProjectsStore } from "@/stores/useProjectsStore";
 

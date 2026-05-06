@@ -2,7 +2,7 @@ import React from 'react';
 import { RiRefreshLine, RiServerLine, RiMacbookLine } from '@remixicon/react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { redactSensitiveUrl } from '@/lib/desktopHosts';
+import { redactSensitiveUrl } from '@/lib/desktop/desktopHosts';
 import {
   getDesktopRecoveryConfig,
   type RecoveryVariant,

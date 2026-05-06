@@ -20,13 +20,13 @@ import {
   RiSplitCellsHorizontal,
 } from '@remixicon/react';
 import { cn } from '@/lib/utils';
-import { deleteGitBranch, getGitBranches, git, renameBranch } from '@/lib/gitApi';
+import { deleteGitBranch, getGitBranches, git, renameBranch } from '@/lib/git/gitApi';
 import type { GitBranch, GitWorktreeInfo } from '@/lib/api/types';
 import type { WorktreeMetadata } from '@/types/worktree';
 import { createWorktreeWithDefaults } from '@/lib/worktrees/worktreeCreate';
 import { getRootBranch } from '@/lib/worktrees/worktreeStatus';
-import { getWorktreeSetupCommands } from '@/lib/openchamberConfig';
-import { sessionEvents } from '@/lib/sessionEvents';
+import { getWorktreeSetupCommands } from '@/lib/config/openchamberConfig';
+import { sessionEvents } from '@/lib/session/sessionEvents';
 import { useSessions } from '@/sync/sync-context';
 
 export interface BranchPickerProject {

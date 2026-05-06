@@ -1,4 +1,4 @@
-import { isDesktopShell } from '@/lib/desktop';
+import { isDesktopShell } from '@/lib/desktop/desktop';
 
 type InvokeArgs = Record<string, unknown>;
 

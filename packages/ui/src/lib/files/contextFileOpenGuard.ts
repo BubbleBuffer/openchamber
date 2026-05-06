@@ -1,5 +1,5 @@
 import type { FilesAPI } from '@/lib/api/types';
-import { MAX_OPEN_FILE_LINES, countLinesWithLimit } from '@/lib/fileOpenLimits';
+import { MAX_OPEN_FILE_LINES, countLinesWithLimit } from '@/lib/files/fileOpenLimits';
 
 export type ContextFileOpenFailureReason = 'too-large' | 'missing' | 'unreadable';
 

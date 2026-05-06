@@ -21,9 +21,9 @@ import {
 import { RiGitRepositoryLine } from '@remixicon/react';
 
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
-import { isVSCodeRuntime } from '@/lib/desktop';
-import { updateDesktopSettings } from '@/lib/persistence';
-import type { DesktopSettings, SkillCatalogConfig } from '@/lib/desktop';
+import { isVSCodeRuntime } from '@/lib/desktop/desktop';
+import { updateDesktopSettings } from '@/lib/config/persistence';
+import type { DesktopSettings, SkillCatalogConfig } from '@/lib/desktop/desktop';
 import { useSkillsCatalogStore } from '@/stores/useSkillsCatalogStore';
 import { useGitIdentitiesStore } from '@/stores/useGitIdentitiesStore';
 

@@ -23,8 +23,8 @@ import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useDeviceInfo } from '@/lib/device';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { cn } from '@/lib/utils';
-import { isDesktopShell } from '@/lib/desktop';
-import { lazyWithChunkRecovery } from '@/lib/chunkLoadRecovery';
+import { isDesktopShell } from '@/lib/desktop/desktop';
+import { lazyWithChunkRecovery } from '@/lib/errors/chunkLoadRecovery';
 import { OfflineIndicator } from '@/components/ui/OfflineIndicator';
 
 import { ChatView } from '@/components/views';

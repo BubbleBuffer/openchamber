@@ -1,6 +1,6 @@
 import type { Theme } from '@/types/theme';
-import { SEMANTIC_TYPOGRAPHY, VSCODE_TYPOGRAPHY } from '@/lib/typography';
-import { isVSCodeRuntime } from '@/lib/desktop';
+import { SEMANTIC_TYPOGRAPHY, VSCODE_TYPOGRAPHY } from '@/lib/theme/typography';
+import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 
 const hexToRgb = (value: string | undefined | null): string | null => {
   if (!value || typeof value !== 'string') {

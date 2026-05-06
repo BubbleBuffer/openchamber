@@ -1,5 +1,5 @@
 import React from 'react';
-import { isWebRuntime } from '@/lib/desktop';
+import { isWebRuntime } from '@/lib/desktop/desktop';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 
 const HEARTBEAT_MS = 20000;

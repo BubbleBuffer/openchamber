@@ -26,7 +26,7 @@ import { createSession as createSessionImpl, deleteSessions as deleteSessionsImp
 import { getSafeStorage } from "@/stores/utils/safeStorage"
 import { flattenAssistantTextParts } from "@/lib/messages/messageText"
 import { EXECUTION_FORK_META_TEXT } from "@/lib/messages/executionMeta"
-import { resolveProjectForSessionDirectory } from "@/lib/projectResolution"
+import { resolveProjectForSessionDirectory } from "@/lib/project/projectResolution"
 import {
   getSyncSessions,
   getAllSyncSessions,
