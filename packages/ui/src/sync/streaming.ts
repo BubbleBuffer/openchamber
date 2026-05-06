@@ -8,6 +8,7 @@
 
 import { create } from "zustand"
 import type { Message, SessionStatus } from "@/lib/opencode/client"
+import { STUCK_SESSION_TIMEOUT_MS } from "@/stores/types/sessionTypes"
 import type { State } from "./types"
 
 export type StreamPhase = "streaming" | "cooldown" | "completed"
@@ -38,7 +39,10 @@ export const useStreamingStore = create<StreamingStore>()(() => ({
 /** Only update lastUpdateAt every this many ms to avoid 60Hz store churn */
 const STREAMING_HEARTBEAT_MS = 1000
 
-export function updateStreamingState(state: State) {
+export function updateStreamingState(
+  state: State,
+  options?: { onStuckSession?: (sessionID: string) => void }
+) {
   const now = Date.now()
   const currentStore = useStreamingStore.getState()
   const currentStreamingIds = currentStore.streamingMessageIds
@@ -110,6 +114,19 @@ export function updateStreamingState(state: State) {
       })
       changed = true
     }
+  }
+
+  // Stuck session recovery: force completion if no updates for STUCK_SESSION_TIMEOUT_MS
+  for (const [msgId, streamState] of currentStreamStates) {
+    if (streamState.phase !== "streaming") continue
+    if (now - streamState.lastUpdateAt < STUCK_SESSION_TIMEOUT_MS) continue
+    let sessionID: string | undefined
+    for (const [sid, messages] of Object.entries(state.message)) {
+      if (messages.some((m) => m.id === msgId)) { sessionID = sid; break }
+    }
+    nextStreamStates.set(msgId, { ...streamState, phase: "completed", completedAt: now })
+    if (sessionID) { nextStreamingIds.set(sessionID, null); options?.onStuckSession?.(sessionID) }
+    changed = true
   }
 
   if (changed) {

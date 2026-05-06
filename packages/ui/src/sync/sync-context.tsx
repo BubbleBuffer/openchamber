@@ -1487,10 +1487,12 @@ export function SyncProvider(props: {
     if (!props.directory) return
     const store = childStores.getChild(props.directory)
     if (!store) return
-    const unsubscribe = store.subscribe((state) => {
-      updateStreamingState(state)
-    })
-    return unsubscribe
+    const onStuck = (sessionID: string) => {
+      store.setState((s) => ({ session_status: { ...s.session_status, [sessionID]: { type: "idle" as const } } }))
+    }
+    const unsubscribe = store.subscribe((state) => updateStreamingState(state, { onStuckSession: onStuck }))
+    const stuckCheckInterval = setInterval(() => updateStreamingState(store.getState(), { onStuckSession: onStuck }), 30_000)
+    return () => { unsubscribe(); clearInterval(stuckCheckInterval) }
   }, [props.directory, childStores])
 
   return <SyncContext.Provider value={system}>{props.children}</SyncContext.Provider>
