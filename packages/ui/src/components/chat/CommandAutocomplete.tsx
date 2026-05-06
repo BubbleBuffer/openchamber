@@ -112,9 +112,9 @@ export const CommandAutocomplete = React.forwardRef<CommandAutocompleteHandle, C
           ),
           ...(hasSession  // Show when session exists, not when hasMessages
             ? [
-                { id: 'openchamber:undo', name: 'undo', source: 'openchamber' as const, description: 'Undo the last message', isBuiltIn: true },
-                { id: 'openchamber:redo', name: 'redo', source: 'openchamber' as const, description: 'Redo previously undone messages', isBuiltIn: true },
-              ]
+              { id: 'openchamber:undo', name: 'undo', source: 'openchamber' as const, description: 'Undo the last message', isBuiltIn: true },
+              { id: 'openchamber:redo', name: 'redo', source: 'openchamber' as const, description: 'Redo previously undone messages', isBuiltIn: true },
+            ]
             : []
           ),
           { id: 'openchamber:compact', name: 'compact', source: 'openchamber' as const, description: 'Compress session history using AI to reduce context size', isBuiltIn: true },
@@ -132,9 +132,9 @@ export const CommandAutocomplete = React.forwardRef<CommandAutocompleteHandle, C
         const allowInitCommand = !hasMessagesInCurrentSession;
         const filtered = (searchQuery
           ? allCommands.filter(cmd =>
-              fuzzyMatch(cmd.name, searchQuery) ||
-              (cmd.description && fuzzyMatch(cmd.description, searchQuery))
-            )
+            fuzzyMatch(cmd.name, searchQuery) ||
+            (cmd.description && fuzzyMatch(cmd.description, searchQuery))
+          )
           : allCommands).filter(cmd => allowInitCommand || cmd.name !== 'init');
 
         filtered.sort((a, b) => {
@@ -156,9 +156,9 @@ export const CommandAutocomplete = React.forwardRef<CommandAutocompleteHandle, C
           ),
           ...(hasSession  // Show when session exists, not when hasMessages
             ? [
-                { id: 'openchamber:undo', name: 'undo', source: 'openchamber' as const, description: 'Undo the last message', isBuiltIn: true },
-                { id: 'openchamber:redo', name: 'redo', source: 'openchamber' as const, description: 'Redo previously undone messages', isBuiltIn: true },
-              ]
+              { id: 'openchamber:undo', name: 'undo', source: 'openchamber' as const, description: 'Undo the last message', isBuiltIn: true },
+              { id: 'openchamber:redo', name: 'redo', source: 'openchamber' as const, description: 'Redo previously undone messages', isBuiltIn: true },
+            ]
             : []
           ),
           { id: 'openchamber:compact', name: 'compact', source: 'openchamber' as const, description: 'Compress session history using AI to reduce context size', isBuiltIn: true },
@@ -174,9 +174,9 @@ export const CommandAutocomplete = React.forwardRef<CommandAutocompleteHandle, C
 
         const filtered = (searchQuery
           ? builtInCommands.filter(cmd =>
-              fuzzyMatch(cmd.name, searchQuery) ||
-              (cmd.description && fuzzyMatch(cmd.description, searchQuery))
-            )
+            fuzzyMatch(cmd.name, searchQuery) ||
+            (cmd.description && fuzzyMatch(cmd.description, searchQuery))
+          )
           : builtInCommands).filter(cmd => allowInitCommand || cmd.name !== 'init');
 
         setCommands(filtered);
@@ -235,22 +235,22 @@ export const CommandAutocomplete = React.forwardRef<CommandAutocompleteHandle, C
 
     switch (command.name) {
       case 'init':
-        return <RiFileLine className="h-3.5 w-3.5 text-green-500" />;
+        return <RiFileLine className="h-3.5 w-3.5 text-status-success" />;
       case 'undo':
-        return <RiArrowGoBackLine className="h-3.5 w-3.5 text-orange-500" />;
+        return <RiArrowGoBackLine className="h-3.5 w-3.5 text-status-warning" />;
       case 'redo':
-        return <RiArrowGoForwardLine className="h-3.5 w-3.5 text-orange-500" />;
+        return <RiArrowGoForwardLine className="h-3.5 w-3.5 text-status-warning" />;
       case 'compact':
-        return <RiScissorsLine className="h-3.5 w-3.5 text-purple-500" />;
+        return <RiScissorsLine className="h-3.5 w-3.5 text-primary" />;
       case 'review':
-        return <RiSearchEyeLine className="h-3.5 w-3.5 text-blue-500" />;
+        return <RiSearchEyeLine className="h-3.5 w-3.5 text-status-info" />;
       case 'test':
       case 'build':
       case 'run':
-        return <RiTerminalBoxLine className="h-3.5 w-3.5 text-cyan-500" />;
+        return <RiTerminalBoxLine className="h-3.5 w-3.5 text-status-info" />;
       default:
         if (command.isBuiltIn) {
-          return <RiFlashlightLine className="h-3.5 w-3.5 text-yellow-500" />;
+          return <RiFlashlightLine className="h-3.5 w-3.5 text-status-warning" />;
         }
         return <RiCommandLine className="h-3.5 w-3.5 text-muted-foreground" />;
     }
@@ -313,7 +313,7 @@ export const CommandAutocomplete = React.forwardRef<CommandAutocompleteHandle, C
               const isSystem = command.isBuiltIn;
               const isOpenChamberBadge = command.isOpenChamber;
               const isProject = command.scope === 'project';
-              
+
               return (
                 <div
                   key={command.id}
@@ -396,7 +396,7 @@ export const CommandAutocomplete = React.forwardRef<CommandAutocompleteHandle, C
                       ) : command.scope ? (
                         <span className={cn(
                           "text-[10px] leading-none uppercase font-bold tracking-tight px-1.5 py-1 rounded border flex-shrink-0",
-                          isProject 
+                          isProject
                             ? "bg-[var(--status-info-background)] text-[var(--status-info)] border-[var(--status-info-border)]"
                             : "bg-[var(--status-success-background)] text-[var(--status-success)] border-[var(--status-success-border)]"
                         )}>

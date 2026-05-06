@@ -71,7 +71,7 @@ const normalizeVoiceErrorMessage = (error: string): string => {
  */
 export function BrowserVoiceButton() {
     const voiceModeEnabled = useVoiceSettingsStore((s) => s.voiceModeEnabled);
-    
+
     const {
         status,
         isSupported,
@@ -83,21 +83,21 @@ export function BrowserVoiceButton() {
         toggleConversationMode,
         isMobile,
     } = useBrowserVoice();
-    
+
     const [isPressing, setIsPressing] = useState(false);
     const isVSCode = isVSCodeRuntime();
     const buttonSizeClass = isMobile ? 'h-8 w-8 min-h-[32px] min-w-[32px]' : (isVSCode ? 'h-5 w-5' : 'h-6 w-6');
     const iconSizeClass = isMobile ? 'h-[18px] w-[18px]' : (isVSCode ? 'h-4 w-4' : 'h-[18px] w-[18px]');
     const continuousIconSizeClass = 'size-[18px]';
     const clearHoverBackgroundClass = 'bg-transparent hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent';
-    
+
     // Refs for touch handling
     const touchHandledRef = useRef(false);
     const isIOSSafariRef = useRef(false);
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
     const longPressTriggeredRef = useRef(false);
     const lastToastedErrorRef = useRef<string | null>(null);
-    
+
     // Initialize iOS detection on mount
     useEffect(() => {
         isIOSSafariRef.current = isIOSSafari();
@@ -122,7 +122,7 @@ export function BrowserVoiceButton() {
             }
             lastToastedErrorRef.current = error;
             const displayError = normalizeVoiceErrorMessage(error);
-            
+
             toast.error(displayError, {
                 duration: 5000,
             });
@@ -137,8 +137,8 @@ export function BrowserVoiceButton() {
     const statusText = isError
         ? error || 'Voice Error'
         : conversationMode && status === 'idle'
-          ? 'Start Voice (Continuous mode on)'
-          : statusLabels[status] || 'Start Voice';
+            ? 'Start Voice (Continuous mode on)'
+            : statusLabels[status] || 'Start Voice';
 
     // Tooltip content based on state
     const getTooltipContent = () => {
@@ -341,7 +341,7 @@ export function BrowserVoiceButton() {
                             {isActive ? (
                                 isSpeaking ? (
                                     // Green speaker icon when AI is speaking
-                                    <RiVolumeUpLine className={`${iconSizeClass} text-green-400 animate-pulse`} />
+                                    <RiVolumeUpLine className={`${iconSizeClass} text-status-success animate-pulse`} />
                                 ) : (
                                     // Red stop icon for listening/processing (both mobile and desktop)
                                     <RiStopCircleLine className={`${iconSizeClass} text-[var(--status-error)]`} />

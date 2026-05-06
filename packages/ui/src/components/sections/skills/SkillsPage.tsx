@@ -34,18 +34,18 @@ export interface SkillsPageProps {
 }
 
 const SkillsCatalogStandalone: React.FC = () => (
-  <SkillsCatalogPage mode="external" onModeChange={() => {}} showModeTabs={false} />
+  <SkillsCatalogPage mode="external" onModeChange={() => { }} showModeTabs={false} />
 );
 
 const SkillsInstalledPage: React.FC = () => {
-  const { 
-    selectedSkillName, 
-    getSkillByName, 
+  const {
+    selectedSkillName,
+    getSkillByName,
     getSkillDetail,
-    createSkill, 
-    updateSkill, 
-    skills, 
-    skillDraft, 
+    createSkill,
+    updateSkill,
+    skills,
+    skillDraft,
     setSkillDraft,
     setSelectedSkill,
   } = useSkillsStore();
@@ -71,10 +71,10 @@ const SkillsInstalledPage: React.FC = () => {
   const [pendingFiles, setPendingFiles] = React.useState<PendingFile[]>([]);
   const [isSaving, setIsSaving] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
-  
+
   const [originalDescription, setOriginalDescription] = React.useState('');
   const [originalInstructions, setOriginalInstructions] = React.useState('');
-  
+
   const [isFileDialogOpen, setIsFileDialogOpen] = React.useState(false);
   const [newFileName, setNewFileName] = React.useState('');
   const [newFileContent, setNewFileContent] = React.useState('');
@@ -83,12 +83,12 @@ const SkillsInstalledPage: React.FC = () => {
   const [originalFileContent, setOriginalFileContent] = React.useState('');
   const [deleteFilePath, setDeleteFilePath] = React.useState<string | null>(null);
   const [isDeletingFile, setIsDeletingFile] = React.useState(false);
-  
-  const hasSkillChanges = isNewSkill 
+
+  const hasSkillChanges = isNewSkill
     ? (draftName.trim() !== '' || description.trim() !== '' || instructions.trim() !== '' || pendingFiles.length > 0)
     : (description !== originalDescription || instructions !== originalInstructions);
-  
-  const hasFileChanges = editingFilePath 
+
+  const hasFileChanges = editingFilePath
     ? newFileContent !== originalFileContent
     : newFileName.trim() !== '';
 
@@ -202,7 +202,7 @@ const SkillsInstalledPage: React.FC = () => {
   const handleEditFile = async (filePath: string) => {
     setEditingFilePath(filePath);
     setNewFileName(filePath);
-    
+
     if (isNewSkill) {
       const pendingFile = pendingFiles.find(f => f.path === filePath);
       const content = pendingFile?.content || '';
@@ -211,12 +211,12 @@ const SkillsInstalledPage: React.FC = () => {
       setIsFileDialogOpen(true);
       return;
     }
-    
+
     if (!selectedSkillName) return;
-    
+
     setIsLoadingFile(true);
     setIsFileDialogOpen(true);
-    
+
     try {
       const { readSupportingFile } = useSkillsStore.getState();
       const content = await readSupportingFile(selectedSkillName, filePath);
@@ -242,7 +242,7 @@ const SkillsInstalledPage: React.FC = () => {
 
     if (isNewSkill) {
       if (isEditing) {
-        setPendingFiles(prev => prev.map(f => 
+        setPendingFiles(prev => prev.map(f =>
           f.path === editingFilePath ? { path: filePath, content: newFileContent } : f
         ));
         toast.success(`File "${filePath}" updated`);
@@ -266,7 +266,7 @@ const SkillsInstalledPage: React.FC = () => {
 
     const { writeSupportingFile } = useSkillsStore.getState();
     const success = await writeSupportingFile(selectedSkillName, filePath, newFileContent);
-    
+
     if (success) {
       toast.success(isEditing ? `File "${filePath}" updated` : `File "${filePath}" created`);
       setIsFileDialogOpen(false);
@@ -492,7 +492,7 @@ const SkillsInstalledPage: React.FC = () => {
                       )}
                       <Button size="sm"
                         variant="ghost"
-                        className="h-5 w-5 px-0 flex-shrink-0 text-muted-foreground hover:text-[var(--status-error)] opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="h-5 w-5 px-0 flex-shrink-0 text-muted-foreground hover:text-[var(--status-error)] opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteFile(file.path);

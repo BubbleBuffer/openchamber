@@ -90,7 +90,7 @@ export const McpOAuthCallbackPage: React.FC = () => {
   }, [completeAuth]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-6 py-12 text-foreground">
+    <div className="flex min-h-dvh items-center justify-center bg-background px-6 py-12 text-foreground">
       <div className="w-full max-w-xl rounded-xl border border-[var(--interactive-border)] bg-[var(--surface-elevated)] p-8 shadow-sm">
         <div className="space-y-3 text-center">
           <div

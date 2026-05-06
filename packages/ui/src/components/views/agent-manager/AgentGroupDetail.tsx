@@ -42,8 +42,8 @@ const SessionStatusDot: React.FC<{ sessionId: string }> = ({ sessionId }) => {
   if (!status || status.type === 'idle') return null;
   return (
     <span className="relative flex h-2 w-2 flex-shrink-0" title={status.type}>
-      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-      <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-status-warning opacity-75" />
+      <span className="relative inline-flex rounded-full h-2 w-2 bg-status-warning" />
     </span>
   );
 };
@@ -77,12 +77,12 @@ export const AgentGroupDetail: React.FC<AgentGroupDetailProps> = ({
         ? group.sessions.find((s) => s.id === selectedSessionId) ?? group.sessions[0]
         : group.sessions[0];
 
-        if (session) {
-          if (session.id !== currentSessionId) {
-            setCurrentSession(session.id, session.path);
-          }
-          if (!selectedSessionId) {
-            selectSession(session.id);
+      if (session) {
+        if (session.id !== currentSessionId) {
+          setCurrentSession(session.id, session.path);
+        }
+        if (!selectedSessionId) {
+          selectSession(session.id);
         }
       }
     }
@@ -157,7 +157,7 @@ export const AgentGroupDetail: React.FC<AgentGroupDetailProps> = ({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <h1 className="typography-heading-lg text-foreground truncate">{group.name}</h1>
-              {groupBusy && <RiLoader4Line className="h-4 w-4 animate-spin text-amber-500 flex-shrink-0" />}
+              {groupBusy && <RiLoader4Line className="h-4 w-4 animate-spin text-status-warning flex-shrink-0" />}
             </div>
             <div className="flex items-center gap-2 mt-1 typography-meta text-muted-foreground">
               <span>{group.sessionCount} model{group.sessionCount !== 1 ? 's' : ''}</span>
@@ -174,71 +174,71 @@ export const AgentGroupDetail: React.FC<AgentGroupDetailProps> = ({
         {group.sessions.length > 0 && (
           <div className="mt-3 flex items-center gap-2">
             <div className="flex-1 min-w-0">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-between h-10 px-3"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    {selectedSession && (
-                      <>
-                        <ProviderLogo
-                          providerId={selectedSession.providerId}
-                          className="h-5 w-5 flex-shrink-0"
-                        />
-                        <span className="truncate typography-body">
-                          {selectedSession.modelId}
-                        </span>
-                        {selectedSession.instanceNumber > 1 && (
-                          <span className="typography-meta text-muted-foreground">
-                            #{selectedSession.instanceNumber}
-                          </span>
-                        )}
-                        <SessionStatusDot sessionId={selectedSession.id} />
-                      </>
-                    )}
-                  </div>
-                  <RiArrowDownSLine className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-[var(--anchor-width)]">
-                {group.sessions.map((session) => (
-                  <DropdownMenuItem
-                    key={session.id}
-                    onClick={() => handleSessionSelect(session)}
-                    className="flex items-center gap-2 py-2"
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between h-10 px-3"
                   >
-                    <ProviderLogo
-                      providerId={session.providerId}
-                      className="h-5 w-5 flex-shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="truncate typography-body">
-                          {session.modelId}
-                        </span>
-                        {session.instanceNumber > 1 && (
-                          <span className="typography-meta text-muted-foreground">
-                            #{session.instanceNumber}
+                    <div className="flex items-center gap-2 min-w-0">
+                      {selectedSession && (
+                        <>
+                          <ProviderLogo
+                            providerId={selectedSession.providerId}
+                            className="h-5 w-5 flex-shrink-0"
+                          />
+                          <span className="truncate typography-body">
+                            {selectedSession.modelId}
                           </span>
-                        )}
-                        <SessionStatusDot sessionId={session.id} />
-                      </div>
-                      {session.branch && (
-                        <div className="flex items-center gap-1 typography-micro text-muted-foreground/60">
-                          <RiGitBranchLine className="h-3 w-3" />
-                          <span className="truncate">{session.worktreeMetadata?.label || session.branch}</span>
-                        </div>
+                          {selectedSession.instanceNumber > 1 && (
+                            <span className="typography-meta text-muted-foreground">
+                              #{selectedSession.instanceNumber}
+                            </span>
+                          )}
+                          <SessionStatusDot sessionId={selectedSession.id} />
+                        </>
                       )}
                     </div>
-                    {selectedSession?.id === session.id && (
-                      <RiCheckLine className="h-4 w-4 text-primary flex-shrink-0" />
-                    )}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                    <RiArrowDownSLine className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[var(--anchor-width)]">
+                  {group.sessions.map((session) => (
+                    <DropdownMenuItem
+                      key={session.id}
+                      onClick={() => handleSessionSelect(session)}
+                      className="flex items-center gap-2 py-2"
+                    >
+                      <ProviderLogo
+                        providerId={session.providerId}
+                        className="h-5 w-5 flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate typography-body">
+                            {session.modelId}
+                          </span>
+                          {session.instanceNumber > 1 && (
+                            <span className="typography-meta text-muted-foreground">
+                              #{session.instanceNumber}
+                            </span>
+                          )}
+                          <SessionStatusDot sessionId={session.id} />
+                        </div>
+                        {session.branch && (
+                          <div className="flex items-center gap-1 typography-micro text-muted-foreground/60">
+                            <RiGitBranchLine className="h-3 w-3" />
+                            <span className="truncate">{session.worktreeMetadata?.label || session.branch}</span>
+                          </div>
+                        )}
+                      </div>
+                      {selectedSession?.id === session.id && (
+                        <RiCheckLine className="h-4 w-4 text-primary flex-shrink-0" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             <DropdownMenu>
@@ -262,15 +262,15 @@ export const AgentGroupDetail: React.FC<AgentGroupDetailProps> = ({
                   Leave this one, remove others
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCopyWorktreePath();
-                }}
-                disabled={!selectedSession?.path}
-              >
-                <RiFileCopyLine className="h-4 w-4 mr-px" />
-                Copy Worktree Path
-              </DropdownMenuItem>
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopyWorktreePath();
+                  }}
+                  disabled={!selectedSession?.path}
+                >
+                  <RiFileCopyLine className="h-4 w-4 mr-px" />
+                  Copy Worktree Path
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

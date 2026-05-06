@@ -435,9 +435,9 @@ const UserMessageBody: React.FC<{
                 )}
             >
                 {onRevert && (
-                <Tooltip delayDuration={1000}>
-                    <TooltipTrigger asChild>
-                        <Button
+                    <Tooltip delayDuration={1000}>
+                        <TooltipTrigger asChild>
+                            <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
@@ -949,12 +949,12 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
         (event: React.MouseEvent<HTMLButtonElement>) => {
             event.stopPropagation();
             event.preventDefault();
-            
+
             if (isTTSPlaying) {
                 stopTTS();
                 return;
             }
-            
+
             if (assistantPlanText.trim()) {
                 void playTTS(assistantPlanText);
             }
@@ -1411,174 +1411,174 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
     const footerTimestampClassName = 'text-sm text-muted-foreground/60 tabular-nums flex items-center gap-1';
 
     const footerButtons = (
-         <>
-              {onCopyMessage && (
-                  <Tooltip delayDuration={1000}>
-                      <TooltipTrigger asChild>
-                          <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              data-visible={copyHintVisible || isMessageCopied ? 'true' : undefined}
-                              className={cn(
-                                  'h-8 w-8 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50',
-                                  !hasCopyableText && 'opacity-50'
-                              )}
-                              disabled={!hasCopyableText}
-                              aria-label="Copy message text"
-                              aria-hidden={!hasCopyableText}
-                              onPointerDown={(event) => event.stopPropagation()}
-                              onClick={handleCopyButtonClick}
-                              onFocus={() => {
-                                  if (hasCopyableText) {
-                                      setCopyHintVisible(true);
-                                  }
-                              }}
-                              onBlur={() => {
-                                  if (!isMessageCopied) {
-                                      setCopyHintVisible(false);
-                                  }
-                              }}
-                          >
-                              {isMessageCopied ? (
-                                  <RiCheckLine className="h-3.5 w-3.5 text-[color:var(--status-success)]" />
-                              ) : (
-                                  <RiFileCopyLine className="h-3.5 w-3.5" />
-                              )}
-                          </Button>
-                       </TooltipTrigger>
-                       <TooltipContent sideOffset={6}>Copy answer</TooltipContent>
-                   </Tooltip>
-               )}
-               <Tooltip delayDuration={1000}>
-                   <TooltipTrigger asChild>
-                       <Button
-                           type="button"
-                           size="icon"
-                           variant="ghost"
-                           disabled={isSharing || !hasCopyableText}
-                           className={cn(
-                               'h-8 w-8 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50',
-                               (!hasCopyableText || isSharing) && 'opacity-50'
-                           )}
-                           onPointerDown={(event) => event.stopPropagation()}
-                           onClick={handleShareImage}
-                       >
-                            {isSharing ? (
-                                <RiLoader4Line className="h-4 w-4 animate-spin" />
-                            ) : (
-                                <RiImageDownloadLine className="h-4 w-4" />
-                            )}
-                        </Button>
-                     </TooltipTrigger>
-                     <TooltipContent sideOffset={6}>{isSharing ? 'Saving image...' : 'Save as image'}</TooltipContent>
-                 </Tooltip>
-                {!isVSCodeRuntime() ? (
-                    <Tooltip delayDuration={1000}>
-                        <TooltipTrigger asChild>
-                            <Button
-                                type="button"
-                                size="icon"
-                                variant="ghost"
-                                disabled={!hasCopyableText || !currentProjectRef}
-                                className={cn(
-                                    'h-8 w-8 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50',
-                                    (!hasCopyableText || !currentProjectRef) && 'opacity-50'
-                                )}
-                                onPointerDown={(event) => event.stopPropagation()}
-                                onClick={handleSaveAsPlanClick}
-                            >
-                                <RiBookletLine className="h-4 w-4" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent sideOffset={6}>Save as plan</TooltipContent>
-                    </Tooltip>
-                ) : null}
+        <>
+            {onCopyMessage && (
                 <Tooltip delayDuration={1000}>
                     <TooltipTrigger asChild>
                         <Button
-                           type="button"
-                           size="icon"
-                           variant="ghost"
-                           className="h-8 w-8 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50"
-                           onPointerDown={(event) => event.stopPropagation()}
-                           onClick={handleForkClick}
-                       >
-                           <RiChatNewLine className="h-4 w-4" />
-                       </Button>
-                   </TooltipTrigger>
-                   <TooltipContent sideOffset={6}>Start new session from this answer</TooltipContent>
-               </Tooltip>
-              <Tooltip delayDuration={1000}>
-                  <TooltipTrigger asChild>
-                      <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50"
-                          onPointerDown={(event) => event.stopPropagation()}
-                          onClick={handleForkMultiRunClick}
-                      >
-                          <ArrowsMerge className="h-4 w-4" />
-                      </Button>
-                  </TooltipTrigger>
-                  <TooltipContent sideOffset={6}>Start new multi-run from this answer</TooltipContent>
-              </Tooltip>
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            data-visible={copyHintVisible || isMessageCopied ? 'true' : undefined}
+                            className={cn(
+                                'h-8 w-8 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50',
+                                !hasCopyableText && 'opacity-50'
+                            )}
+                            disabled={!hasCopyableText}
+                            aria-label="Copy message text"
+                            aria-hidden={!hasCopyableText}
+                            onPointerDown={(event) => event.stopPropagation()}
+                            onClick={handleCopyButtonClick}
+                            onFocus={() => {
+                                if (hasCopyableText) {
+                                    setCopyHintVisible(true);
+                                }
+                            }}
+                            onBlur={() => {
+                                if (!isMessageCopied) {
+                                    setCopyHintVisible(false);
+                                }
+                            }}
+                        >
+                            {isMessageCopied ? (
+                                <RiCheckLine className="h-3.5 w-3.5 text-[color:var(--status-success)]" />
+                            ) : (
+                                <RiFileCopyLine className="h-3.5 w-3.5" />
+                            )}
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent sideOffset={6}>Copy answer</TooltipContent>
+                </Tooltip>
+            )}
+            <Tooltip delayDuration={1000}>
+                <TooltipTrigger asChild>
+                    <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        disabled={isSharing || !hasCopyableText}
+                        className={cn(
+                            'h-8 w-8 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50',
+                            (!hasCopyableText || isSharing) && 'opacity-50'
+                        )}
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={handleShareImage}
+                    >
+                        {isSharing ? (
+                            <RiLoader4Line className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <RiImageDownloadLine className="h-4 w-4" />
+                        )}
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent sideOffset={6}>{isSharing ? 'Saving image...' : 'Save as image'}</TooltipContent>
+            </Tooltip>
+            {!isVSCodeRuntime() ? (
+                <Tooltip delayDuration={1000}>
+                    <TooltipTrigger asChild>
+                        <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            disabled={!hasCopyableText || !currentProjectRef}
+                            className={cn(
+                                'h-8 w-8 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50',
+                                (!hasCopyableText || !currentProjectRef) && 'opacity-50'
+                            )}
+                            onPointerDown={(event) => event.stopPropagation()}
+                            onClick={handleSaveAsPlanClick}
+                        >
+                            <RiBookletLine className="h-4 w-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent sideOffset={6}>Save as plan</TooltipContent>
+                </Tooltip>
+            ) : null}
+            <Tooltip delayDuration={1000}>
+                <TooltipTrigger asChild>
+                    <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50"
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={handleForkClick}
+                    >
+                        <RiChatNewLine className="h-4 w-4" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent sideOffset={6}>Start new session from this answer</TooltipContent>
+            </Tooltip>
+            <Tooltip delayDuration={1000}>
+                <TooltipTrigger asChild>
+                    <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50"
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={handleForkMultiRunClick}
+                    >
+                        <ArrowsMerge className="h-4 w-4" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent sideOffset={6}>Start new multi-run from this answer</TooltipContent>
+            </Tooltip>
 
-              {showMessageTTSButtons && hasCopyableText && (
-                  <Tooltip delayDuration={1000}>
-                      <TooltipTrigger asChild>
-                         <Button
-                             type="button"
-                             variant="ghost"
-                             size="icon"
-                             className={cn(
-                                 'h-8 w-8 bg-transparent hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50',
-                                 isTTSPlaying ? 'text-green-500' : 'text-muted-foreground hover:text-foreground'
-                             )}
-                             aria-label={isTTSPlaying ? 'Stop speaking' : 'Read aloud'}
-                             onPointerDown={(event) => event.stopPropagation()}
-                             onClick={handleTTSClick}
-                         >
-                             {isTTSPlaying ? (
-                                 <RiStopLine className="h-3.5 w-3.5" />
-                             ) : (
-                                 <RiVolumeUpLine className="h-3.5 w-3.5" />
-                             )}
-                         </Button>
-                     </TooltipTrigger>
-                       <TooltipContent sideOffset={6}>{readAloudTooltip}</TooltipContent>
-                   </Tooltip>
-               )}
-          </>
-      );
- 
-      return (
+            {showMessageTTSButtons && hasCopyableText && (
+                <Tooltip delayDuration={1000}>
+                    <TooltipTrigger asChild>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                                'h-8 w-8 bg-transparent hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50',
+                                isTTSPlaying ? 'text-status-success' : 'text-muted-foreground hover:text-foreground'
+                            )}
+                            aria-label={isTTSPlaying ? 'Stop speaking' : 'Read aloud'}
+                            onPointerDown={(event) => event.stopPropagation()}
+                            onClick={handleTTSClick}
+                        >
+                            {isTTSPlaying ? (
+                                <RiStopLine className="h-3.5 w-3.5" />
+                            ) : (
+                                <RiVolumeUpLine className="h-3.5 w-3.5" />
+                            )}
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent sideOffset={6}>{readAloudTooltip}</TooltipContent>
+                </Tooltip>
+            )}
+        </>
+    );
 
-         <div
-             ref={messageContentRef}
-             className={cn(
-                 'relative w-full group/message'
-             )}
-             style={{
-                 contain: 'layout',
-                 transform: 'translateZ(0)',
-             }}
-             onTouchStart={isTouchContext && canCopyMessage && hasCopyableText ? revealCopyHint : undefined}
-         >
-             <TextSelectionMenu containerRef={messageContentRef} />
-             <SaveProjectPlanDialog
-                 open={isPlanDialogOpen}
-                 onOpenChange={setIsPlanDialogOpen}
-                 initialTitle={suggestedPlanTitle}
-                 sourceText={assistantPlanText}
-                 saving={isSavingPlan}
-                 onSave={handleConfirmSaveAsPlan}
-             />
-              <div>
-                 <div
-                     className="message-content-text leading-relaxed overflow-hidden text-foreground/90 [&_p:last-child]:mb-0 [&_ul:last-child]:mb-0 [&_ol:last-child]:mb-0"
-                 >
+    return (
+
+        <div
+            ref={messageContentRef}
+            className={cn(
+                'relative w-full group/message'
+            )}
+            style={{
+                contain: 'layout',
+                transform: 'translateZ(0)',
+            }}
+            onTouchStart={isTouchContext && canCopyMessage && hasCopyableText ? revealCopyHint : undefined}
+        >
+            <TextSelectionMenu containerRef={messageContentRef} />
+            <SaveProjectPlanDialog
+                open={isPlanDialogOpen}
+                onOpenChange={setIsPlanDialogOpen}
+                initialTitle={suggestedPlanTitle}
+                sourceText={assistantPlanText}
+                saving={isSavingPlan}
+                onSave={handleConfirmSaveAsPlan}
+            />
+            <div>
+                <div
+                    className="message-content-text leading-relaxed overflow-hidden text-foreground/90 [&_p:last-child]:mb-0 [&_ul:last-child]:mb-0 [&_ol:last-child]:mb-0"
+                >
                     {renderedParts}
                     {showErrorMessage && (
                         <FadeInOnReveal key="assistant-error">

@@ -181,7 +181,7 @@ const ImagePreview = memo(({ file, onRemove }: ImagePreviewProps) => {
       />
       <button
         onClick={onRemove}
-        className="absolute top-0.5 right-0.5 h-4 w-4 rounded-full bg-background/80 text-foreground hover:text-destructive flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className="absolute top-0.5 right-0.5 h-4 w-4 rounded-full bg-background/80 text-foreground hover:text-destructive flex items-center justify-center opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         title="Remove image"
         aria-label={`Remove ${displayName}`}
       >
@@ -280,7 +280,7 @@ export const AttachedFilesList = memo(() => {
           ))}
         </div>
       )}
-      
+
       {/* Other files row - inline text-only */}
       {otherFiles.length > 0 && (
         <div className="flex items-center gap-x-3 gap-y-1 flex-wrap">
@@ -527,8 +527,8 @@ export const MessageFilesDisplay = memo(({ files, onShowPopup, compact = false }
                 className="h-full w-full object-cover"
                 loading="lazy"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="absolute bottom-0 left-0 right-0 p-2 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity" />
+              <div className="absolute bottom-0 left-0 right-0 p-2 text-white opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">
                 <p className="text-xs font-medium truncate">{fileName}</p>
                 {sizeText && <p className="text-xs opacity-80">{sizeText}</p>}
               </div>

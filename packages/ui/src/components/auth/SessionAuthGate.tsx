@@ -60,7 +60,7 @@ const submitPassword = async (password: string, trustDevice: boolean): Promise<R
 
 const AuthShell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div
-    className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background text-foreground"
+    className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-background text-foreground"
     style={{ fontFamily: '"Inter", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif' }}
   >
     <div
@@ -83,7 +83,7 @@ const AuthShell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 const LoadingScreen: React.FC = () => (
-  <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
+  <div className="flex min-h-dvh items-center justify-center bg-background text-foreground">
     <OpenChamberLogo width={120} height={120} />
   </div>
 );
@@ -210,32 +210,32 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
       ]);
       const responseText = await response.text();
       console.log('[Frontend Auth] Raw response:', response.status, responseText);
-      
-        if (response.ok) {
-          console.log('[Frontend Auth] Session is authenticated');
-          setState('authenticated');
-          setIsTunnelLocked(false);
-          setErrorMessage('');
-          setRetryAfter(undefined);
-          return;
+
+      if (response.ok) {
+        console.log('[Frontend Auth] Session is authenticated');
+        setState('authenticated');
+        setIsTunnelLocked(false);
+        setErrorMessage('');
+        setRetryAfter(undefined);
+        return;
+      }
+      if (response.status === 401) {
+        let data: { tunnelLocked?: boolean; debug?: { hasRefreshToken: boolean; message: string } } = {};
+        try {
+          data = JSON.parse(responseText);
+        } catch {
+          data = {};
         }
-        if (response.status === 401) {
-          let data: { tunnelLocked?: boolean; debug?: { hasRefreshToken: boolean; message: string } } = {};
-          try {
-            data = JSON.parse(responseText);
-          } catch {
-            data = {};
-          }
         console.warn('[Frontend Auth] Session is locked (401)', data);
-          if (data.debug) {
-            console.warn('[Frontend Auth] Debug info:', data.debug);
-          }
-          setIsTunnelLocked(data.tunnelLocked === true);
-          setPasskeyStatus(latestPasskeyStatus);
-          setState('locked');
-          setRetryAfter(undefined);
-          return;
+        if (data.debug) {
+          console.warn('[Frontend Auth] Debug info:', data.debug);
         }
+        setIsTunnelLocked(data.tunnelLocked === true);
+        setPasskeyStatus(latestPasskeyStatus);
+        setState('locked');
+        setRetryAfter(undefined);
+        return;
+      }
       if (response.status === 429) {
         let data: { retryAfter?: number } = {};
         try {

@@ -241,9 +241,9 @@ export const DirectoryTree: React.FC<DirectoryTreeProps> = ({
       }
     };
 
-        const loadPinnedDirectories = async () => {
-          try {
-            let pinned: string[] = [];
+    const loadPinnedDirectories = async () => {
+      try {
+        let pinned: string[] = [];
 
         const response = await fetch('/api/config/settings', {
           method: 'GET',
@@ -676,7 +676,7 @@ export const DirectoryTree: React.FC<DirectoryTreeProps> = ({
           className={cn(
             "hover:bg-interactive-hover rounded transition-opacity",
             isMobile ? "p-1.5" : "p-1",
-            alwaysShowActions ? "opacity-60" : "opacity-0 group-hover:opacity-100"
+            alwaysShowActions ? "opacity-60" : "opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
           )}
           title="Create new directory"
         >
@@ -691,7 +691,7 @@ export const DirectoryTree: React.FC<DirectoryTreeProps> = ({
           className={cn(
             "hover:bg-interactive-hover rounded transition-opacity",
             isMobile ? "p-1.5" : "p-1",
-            alwaysShowActions ? "opacity-60" : "opacity-0 group-hover:opacity-100"
+            alwaysShowActions ? "opacity-60" : "opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
           )}
           title={isPinned ? "Unpin directory" : "Pin directory"}
         >
@@ -711,8 +711,8 @@ export const DirectoryTree: React.FC<DirectoryTreeProps> = ({
             className={cn(
               'group flex items-center gap-1 rounded-lg mx-1 text-left transition-colors',
               isMobile ? 'px-1.5 py-1' : 'px-2 py-1.5',
-              isSelected 
-                ? 'bg-primary/10 text-primary' 
+              isSelected
+                ? 'bg-primary/10 text-primary'
                 : 'hover:bg-interactive-hover/50 text-foreground'
             )}
             style={{ paddingLeft: `${level * (isMobile ? 12 : 14) + (isMobile ? 4 : 6)}px` }}
@@ -756,7 +756,7 @@ export const DirectoryTree: React.FC<DirectoryTreeProps> = ({
                     className="p-1 hover:bg-interactive-hover rounded"
                     title="Create directory"
                   >
-                    <RiCheckLine className="h-3 w-3 text-green-600" />
+                    <RiCheckLine className="h-3 w-3 text-status-success" />
                   </button>
                   <button
                     onClick={(e) => {
@@ -845,7 +845,7 @@ export const DirectoryTree: React.FC<DirectoryTreeProps> = ({
                   className="p-1 hover:bg-interactive-hover rounded"
                   title="Create directory"
                 >
-                  <RiCheckLine className="h-3 w-3 text-green-600" />
+                  <RiCheckLine className="h-3 w-3 text-status-success" />
                 </button>
                 <button
                   onClick={(e) => {
@@ -876,8 +876,8 @@ export const DirectoryTree: React.FC<DirectoryTreeProps> = ({
           className={cn(
             'group flex items-center gap-2 mx-1 rounded-lg transition-colors',
             isMobile ? 'px-1.5 py-1' : 'px-2 py-1.5',
-            isSelected 
-              ? 'bg-primary/10' 
+            isSelected
+              ? 'bg-primary/10'
               : 'hover:bg-interactive-hover/50'
           )}
         >
@@ -955,7 +955,7 @@ export const DirectoryTree: React.FC<DirectoryTreeProps> = ({
             e.preventDefault();
             togglePin(path);
           }}
-          className="p-1 opacity-0 group-hover:opacity-100 hover:bg-interactive-hover rounded transition-opacity"
+          className="p-1 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:bg-interactive-hover rounded transition-opacity"
           title="Unpin directory"
         >
           <RiPushpin2Line className="h-3 w-3 text-primary" />

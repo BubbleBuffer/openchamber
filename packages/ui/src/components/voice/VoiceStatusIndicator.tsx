@@ -83,7 +83,7 @@ const statusConfig: Record<
     },
     speaking: {
         icon: RiVolumeUpLine,
-        color: 'text-green-500',
+        color: 'text-status-success',
         label: 'Speaking...',
     },
     error: {
@@ -122,7 +122,7 @@ export function VoiceStatusIndicator({
                 {/* Conversation mode indicator dot - only when idle and conversation mode is on */}
                 {conversationMode && status === 'idle' && (
                     <span
-                        className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full"
+                        className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-status-success rounded-full"
                         aria-label="Conversation mode active"
                     />
                 )}

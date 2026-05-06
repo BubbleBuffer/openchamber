@@ -44,7 +44,7 @@ export const PermissionRequest: React.FC<PermissionRequestProps> = ({
           <span className="typography-ui-label font-medium text-muted-foreground">
             Permission required:
           </span>
-          <code className="ml-2 typography-meta bg-amber-100/50 dark:bg-amber-800/30 px-1.5 py-0.5 rounded font-mono text-amber-800 dark:text-amber-200">
+          <code className="ml-2 typography-meta bg-status-warning-background px-1.5 py-0.5 rounded font-mono text-status-warning-foreground">
             {command}
           </code>
         </div>

@@ -88,7 +88,7 @@ const AgentGroupItem: React.FC<AgentGroupItemProps> = ({ group, isSelected, isBu
               <span className="truncate typography-ui-label font-normal text-foreground">
                 {group.name}
               </span>
-              {isBusy && <RiLoader4Line className="h-3 w-3 animate-spin text-amber-500 flex-shrink-0" />}
+              {isBusy && <RiLoader4Line className="h-3 w-3 animate-spin text-status-warning flex-shrink-0" />}
             </div>
             <div className="flex items-center gap-2">
               <span className="typography-micro text-muted-foreground/60 flex items-center gap-1">
@@ -108,7 +108,7 @@ const AgentGroupItem: React.FC<AgentGroupItemProps> = ({ group, isSelected, isBu
                   type="button"
                   className={cn(
                     'inline-flex h-3.5 w-[18px] items-center justify-center rounded-md text-muted-foreground transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                    'opacity-0 group-hover:opacity-100',
+                    'opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100',
                     menuOpen && 'opacity-100',
                   )}
                   aria-label="Group menu"

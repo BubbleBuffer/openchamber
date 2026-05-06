@@ -41,6 +41,7 @@ import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { useFileSearchStore } from '@/stores/useFileSearchStore';
 import { useFilesViewTabsStore } from '@/stores/useFilesViewTabsStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useDeviceInfo } from '@/lib/device';
 import { useGitStatus } from '@/stores/useGitStore';
 import { useDirectoryShowHidden } from '@/lib/directoryShowHidden';
 import { useFilesViewShowGitignored } from '@/lib/filesViewShowGitignored';
@@ -173,6 +174,7 @@ const FileRow: React.FC<FileRowProps> = ({
 }) => {
   const isDir = node.type === 'directory';
   const { canRename, canCreateFile, canCreateFolder, canDelete, canReveal } = permissions;
+  const { isMobile } = useDeviceInfo();
 
   const handleContextMenu = React.useCallback((event?: React.MouseEvent) => {
     if (!canRename && !canCreateFile && !canCreateFolder && !canDelete && !canReveal) return;
@@ -203,12 +205,12 @@ const FileRow: React.FC<FileRowProps> = ({
   return (
     <div
       className="group relative flex items-center"
-      onContextMenu={handleContextMenu}
+      onContextMenu={!isMobile ? handleContextMenu : undefined}
     >
       <button
         type="button"
         onClick={handleInteraction}
-        onContextMenu={handleContextMenu}
+        onContextMenu={!isMobile ? handleContextMenu : undefined}
         draggable
         onDragStart={handleDragStart}
         className={cn(

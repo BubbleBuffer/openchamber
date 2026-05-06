@@ -95,13 +95,13 @@ const useExternalLinkInteractions = ({
 const extractTableData = (tableEl: HTMLTableElement): { headers: string[]; rows: string[][] } => {
   const headers: string[] = [];
   const rows: string[][] = [];
-  
+
   const thead = tableEl.querySelector('thead');
   if (thead) {
     const headerCells = thead.querySelectorAll('th');
     headerCells.forEach(cell => headers.push(cell.innerText.trim()));
   }
-  
+
   const tbody = tableEl.querySelector('tbody');
   if (tbody) {
     const rowEls = tbody.querySelectorAll('tr');
@@ -112,7 +112,7 @@ const extractTableData = (tableEl: HTMLTableElement): { headers: string[]; rows:
       rows.push(rowData);
     });
   }
-  
+
   return { headers, rows };
 };
 
@@ -123,7 +123,7 @@ const tableToCSV = ({ headers, rows }: { headers: string[]; rows: string[][] }):
     }
     return cell;
   };
-  
+
   const lines: string[] = [];
   if (headers.length > 0) {
     lines.push(headers.map(escapeCell).join(','));
@@ -136,7 +136,7 @@ const tableToTSV = ({ headers, rows }: { headers: string[]; rows: string[][] }):
   const escapeCell = (cell: string): string => {
     return cell.replace(/\t/g, '\\t').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
   };
-  
+
   const lines: string[] = [];
   if (headers.length > 0) {
     lines.push(headers.map(escapeCell).join('\t'));
@@ -147,11 +147,11 @@ const tableToTSV = ({ headers, rows }: { headers: string[]; rows: string[][] }):
 
 const tableToMarkdown = ({ headers, rows }: { headers: string[]; rows: string[][] }): string => {
   if (headers.length === 0) return '';
-  
+
   const escapeCell = (cell: string): string => {
     return cell.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
   };
-  
+
   const lines: string[] = [];
   lines.push(`| ${headers.map(escapeCell).join(' | ')} |`);
   lines.push(`| ${headers.map(() => '---').join(' | ')} |`);
@@ -193,7 +193,7 @@ const TableCopyButton: React.FC<{ tableRef: React.RefObject<HTMLDivElement | nul
   const handleCopy = async (format: 'csv' | 'tsv') => {
     const tableEl = tableRef.current?.querySelector('table');
     if (!tableEl) return;
-    
+
     const data = extractTableData(tableEl);
     const content = format === 'csv' ? tableToCSV(data) : tableToTSV(data);
 
@@ -263,18 +263,18 @@ const TableDownloadButton: React.FC<{ tableRef: React.RefObject<HTMLDivElement |
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-   const handleDownload = (format: 'csv' | 'markdown') => {
-      const tableEl = tableRef.current?.querySelector('table');
-      if (!tableEl) return;
+  const handleDownload = (format: 'csv' | 'markdown') => {
+    const tableEl = tableRef.current?.querySelector('table');
+    if (!tableEl) return;
 
-      const data = extractTableData(tableEl);
-      const content = format === 'csv' ? tableToCSV(data) : tableToMarkdown(data);
-      const filename = format === 'csv' ? 'table.csv' : 'table.md';
-      const mimeType = format === 'csv' ? 'text/csv' : 'text/markdown';
-      downloadFile(filename, content, mimeType);
-      setShowMenu(false);
-      toast.success(`Table downloaded as ${format.toUpperCase()}`);
-    };
+    const data = extractTableData(tableEl);
+    const content = format === 'csv' ? tableToCSV(data) : tableToMarkdown(data);
+    const filename = format === 'csv' ? 'table.csv' : 'table.md';
+    const mimeType = format === 'csv' ? 'text/csv' : 'text/markdown';
+    downloadFile(filename, content, mimeType);
+    setShowMenu(false);
+    toast.success(`Table downloaded as ${format.toUpperCase()}`);
+  };
 
   return (
     <div className="relative" ref={menuRef}>
@@ -311,7 +311,7 @@ const TableWrapper: React.FC<{ children?: React.ReactNode; className?: string }>
 
   return (
     <div className="group my-4 flex flex-col space-y-2" data-markdown="table-wrapper" ref={tableRef}>
-      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">
         <TableCopyButton tableRef={tableRef} />
         <TableDownloadButton tableRef={tableRef} />
       </div>
@@ -1495,48 +1495,48 @@ const SimpleMarkdownRendererImpl: React.FC<{
   onShowPopup,
   allowMermaidWheelZoom = false,
 }) => {
-  const { editor, runtime } = useRuntimeAPIs();
-  const renderedContent = React.useMemo(
-    () => (stripFrontmatter ? stripLeadingFrontmatter(content) : content),
-    [content, stripFrontmatter],
-  );
-  const currentTheme = useCurrentMermaidTheme();
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const effectiveDirectory = useEffectiveDirectory() ?? '';
-  const mermaidBlocks = React.useMemo(() => extractMermaidBlocks(renderedContent), [renderedContent]);
-  useMermaidInlineInteractions({
-    containerRef,
-    mermaidBlocks,
-    onShowPopup,
-    allowWheelZoom: allowMermaidWheelZoom,
-  });
-  useFileReferenceInteractions({
-    containerRef,
-    effectiveDirectory,
-    editor,
-    preferRuntimeEditor: runtime.isVSCode,
-  });
-  useExternalLinkInteractions({ containerRef, enabled: !disableLinkSafety });
-  const syntaxTheme = React.useMemo(() => generateSyntaxTheme(currentTheme), [currentTheme]);
-  const markdownComponents = React.useMemo(() => buildMarkdownComponents({ syntaxTheme }), [syntaxTheme]);
-  const markdownBlocks = useStableMarkdownBlocks(renderedContent, false, `simple:${variant}`);
+    const { editor, runtime } = useRuntimeAPIs();
+    const renderedContent = React.useMemo(
+      () => (stripFrontmatter ? stripLeadingFrontmatter(content) : content),
+      [content, stripFrontmatter],
+    );
+    const currentTheme = useCurrentMermaidTheme();
+    const containerRef = React.useRef<HTMLDivElement>(null);
+    const effectiveDirectory = useEffectiveDirectory() ?? '';
+    const mermaidBlocks = React.useMemo(() => extractMermaidBlocks(renderedContent), [renderedContent]);
+    useMermaidInlineInteractions({
+      containerRef,
+      mermaidBlocks,
+      onShowPopup,
+      allowWheelZoom: allowMermaidWheelZoom,
+    });
+    useFileReferenceInteractions({
+      containerRef,
+      effectiveDirectory,
+      editor,
+      preferRuntimeEditor: runtime.isVSCode,
+    });
+    useExternalLinkInteractions({ containerRef, enabled: !disableLinkSafety });
+    const syntaxTheme = React.useMemo(() => generateSyntaxTheme(currentTheme), [currentTheme]);
+    const markdownComponents = React.useMemo(() => buildMarkdownComponents({ syntaxTheme }), [syntaxTheme]);
+    const markdownBlocks = useStableMarkdownBlocks(renderedContent, false, `simple:${variant}`);
 
-  const markdownClassName = variant === 'tool'
-    ? 'markdown-content markdown-tool'
-    : variant === 'reasoning'
-      ? 'markdown-content markdown-reasoning'
-      : 'markdown-content leading-relaxed';
+    const markdownClassName = variant === 'tool'
+      ? 'markdown-content markdown-tool'
+      : variant === 'reasoning'
+        ? 'markdown-content markdown-reasoning'
+        : 'markdown-content leading-relaxed';
 
-  return (
-    <div className={cn('break-words w-full min-w-0', className)} ref={containerRef}>
-      <div className={markdownClassName}>
-        {markdownBlocks.map((block) => (
-          <MarkdownBlockView key={block.key} block={block} components={markdownComponents} />
-        ))}
+    return (
+      <div className={cn('break-words w-full min-w-0', className)} ref={containerRef}>
+        <div className={markdownClassName}>
+          {markdownBlocks.map((block) => (
+            <MarkdownBlockView key={block.key} block={block} components={markdownComponents} />
+          ))}
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
 export const SimpleMarkdownRenderer = React.memo(SimpleMarkdownRendererImpl, (prev, next) => {
   return prev.content === next.content

@@ -401,9 +401,9 @@ const FileRow: React.FC<FileRowProps> = ({
             onOpenChange={(open) => setContextMenuPath(open ? node.path : null)}
           >
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="h-6 w-6"
                 onClick={handleMenuButtonClick}
               >
@@ -1268,7 +1268,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
               lastLoadedFileStatRef.current = stat;
             }
           })
-          .catch(() => {});
+          .catch(() => { });
       })
       .catch((error) => {
         toast.error(error instanceof Error ? error.message : 'Save failed');
@@ -1406,7 +1406,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
               lastLoadedFileStatRef.current = stat;
             }
           })
-          .catch(() => {});
+          .catch(() => { });
       })
       .catch((error) => {
         if (isDirectoryReadError(error)) {
@@ -1569,7 +1569,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
           // Reset loadedFilePath so the effect above triggers a single reload.
           setLoadedFilePath(null);
         })
-        .catch(() => {});
+        .catch(() => { });
     }, 2000);
 
     return () => {
@@ -1718,7 +1718,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
   const getFileStatus = React.useCallback((path: string): FileStatus | null => {
     // Check open status
     if (openPaths.includes(path)) return 'open';
-    
+
     // Check git status
     if (gitStatus?.files) {
       const relative = path.startsWith(root + '/') ? path.slice(root.length + 1) : path;
@@ -1736,7 +1736,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
     if (!gitStatus?.files) return null;
     const relativeDir = dirPath.startsWith(root + '/') ? dirPath.slice(root.length + 1) : dirPath;
     const prefix = relativeDir ? `${relativeDir}/` : '';
-    
+
     let modified = 0, added = 0;
     for (const f of gitStatus.files) {
       if (f.path.startsWith(prefix)) {
@@ -1813,12 +1813,12 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
   );
   const shouldMaskEditorForPendingNavigation = Boolean(
     pendingFileNavigation
-      && pendingNavigationTargetPath
-      && selectedFilePath
-      && selectedFilePath === pendingNavigationTargetPath
-      && !fileLoading
-      && !fileError
-      && !isSelectedImage,
+    && pendingNavigationTargetPath
+    && selectedFilePath
+    && selectedFilePath === pendingNavigationTargetPath
+    && !fileLoading
+    && !fileError
+    && !isSelectedImage,
   );
 
   const displaySelectedPath = React.useMemo(() => {
@@ -2353,9 +2353,9 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
                 }
               }}
               autoFocus
-              />
-            </div>
-          )}
+            />
+          </div>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => setActiveDialog(null)} disabled={isDialogSubmitting}>
@@ -2367,13 +2367,13 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
             disabled={isDialogSubmitting || (activeDialog !== 'delete' && !dialogInputValue.trim())}
           >
             {isDialogSubmitting ? <RiLoader4Line className="animate-spin" /> : (
-                activeDialog === 'delete' ? 'Delete' : 'Confirm'
+              activeDialog === 'delete' ? 'Delete' : 'Confirm'
             )}
           </Button>
         </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    );
+      </DialogContent>
+    </Dialog>
+  );
 
   const blockWidgets = React.useMemo(() => {
     return buildCodeMirrorCommentWidgets({
@@ -2707,145 +2707,145 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
       <div className={cn('flex flex-col flex-shrink-0', showEditorTabsRow && 'border-b border-border/40')}>
         {/* Row 1: Tabs */}
         {showEditorTabsRow ? (
-        <div className="flex min-w-0 items-center px-3 py-1.5">
-          {isMobile && showMobilePageContent && (
-            <button
-              type="button"
-              onClick={() => setShowMobilePageContent(false)}
-              aria-label="Back"
-              className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center mr-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            >
-              <RiArrowLeftSLine className="h-5 w-5" />
-            </button>
-          )}
+          <div className="flex min-w-0 items-center px-3 py-1.5">
+            {isMobile && showMobilePageContent && (
+              <button
+                type="button"
+                onClick={() => setShowMobilePageContent(false)}
+                aria-label="Back"
+                className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center mr-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <RiArrowLeftSLine className="h-5 w-5" />
+              </button>
+            )}
 
-          {isMobile ? (
-            selectedFile ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="inline-flex min-w-0 max-w-full items-center gap-1 text-left typography-ui-label font-medium"
-                    aria-label="Open files"
-                  >
-                    <FileTypeIcon filePath={selectedFile.path} extension={selectedFile.extension} className="h-3.5 w-3.5 flex-shrink-0" />
-                    <span className="min-w-0 flex-1 truncate">{selectedFile.name}</span>
-                    <RiArrowDownSLine className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="min-w-[16rem]">
-                  {openFiles.map((file) => {
-                    const isActive = selectedFile?.path === file.path;
-                    return (
-                      <DropdownMenuItem
-                        key={file.path}
-                        onSelect={(event) => {
-                          const target = event.target as HTMLElement;
-                          if (target.closest('[data-close-open-file]')) {
-                            event.preventDefault();
-                            return;
-                          }
-                          if (!isActive) {
-                            void handleSelectFile(file);
-                          }
-                        }}
-                        className={cn(
-                          'flex items-center justify-between gap-2',
-                          isActive && 'bg-[var(--interactive-selection)] text-[var(--interactive-selection-foreground)]'
-                        )}
-                      >
-                        <span className="flex min-w-0 flex-1 items-center gap-2 truncate">
-                          <FileTypeIcon filePath={file.path} extension={file.extension} className="h-3.5 w-3.5 flex-shrink-0" />
-                          <span className="min-w-0 flex-1 truncate">{file.name}</span>
-                        </span>
-                        <button
-                          type="button"
-                          data-close-open-file
-                          onPointerDown={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                          }}
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            handleCloseFile(file.path);
-                          }}
-                          className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--surface-muted-foreground)] hover:text-[var(--surface-foreground)]"
-                          aria-label={`Close ${file.name}`}
-                        >
-                          <RiCloseLine className="h-3.5 w-3.5" />
-                        </button>
-                      </DropdownMenuItem>
-                    );
-                  })}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="typography-ui-label font-medium truncate">Select a file</div>
-            )
-          ) : (
-            openFiles.length > 0 ? (
-              <div className="relative min-w-0 flex-1">
-                {editorTabsOverflow.left && (
-                  <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-6 z-10 bg-gradient-to-r from-background to-transparent" />
-                )}
-                {editorTabsOverflow.right && (
-                  <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 z-10 bg-gradient-to-l from-background to-transparent" />
-                )}
-                <div
-                  ref={editorTabsScrollRef}
-                  className="flex min-w-0 items-center gap-1 overflow-x-auto scrollbar-none"
-                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                >
-                  {openFiles.map((file) => {
-                    const isActive = selectedFile?.path === file.path;
-                    return (
-                      <div
-                        key={file.path}
-                        title={getDisplayPath(root, file.path)}
-                        className={cn(
-                          'group inline-flex items-center gap-1 rounded-md border px-2 py-1 typography-ui-label transition-colors whitespace-nowrap',
-                          isActive
-                            ? 'bg-[var(--interactive-selection)] border-[var(--primary-muted)] text-[var(--interactive-selection-foreground)]'
-                            : 'bg-transparent border-[var(--interactive-border)] text-[var(--surface-muted-foreground)] hover:bg-[var(--interactive-hover)] hover:text-[var(--surface-foreground)]'
-                        )}
-                      >
-                        <FileTypeIcon filePath={file.path} extension={file.extension} className="h-3.5 w-3.5 flex-shrink-0" />
-                        <button
-                          type="button"
-                          onClick={() => {
+            {isMobile ? (
+              selectedFile ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex min-w-0 max-w-full items-center gap-1 text-left typography-ui-label font-medium"
+                      aria-label="Open files"
+                    >
+                      <FileTypeIcon filePath={selectedFile.path} extension={selectedFile.extension} className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="min-w-0 flex-1 truncate">{selectedFile.name}</span>
+                      <RiArrowDownSLine className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="min-w-[16rem]">
+                    {openFiles.map((file) => {
+                      const isActive = selectedFile?.path === file.path;
+                      return (
+                        <DropdownMenuItem
+                          key={file.path}
+                          onSelect={(event) => {
+                            const target = event.target as HTMLElement;
+                            if (target.closest('[data-close-open-file]')) {
+                              event.preventDefault();
+                              return;
+                            }
                             if (!isActive) {
                               void handleSelectFile(file);
                             }
                           }}
-                          className="max-w-[12rem] truncate text-left"
-                        >
-                          {file.name}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleCloseFile(file.path);
-                          }}
                           className={cn(
-                            'rounded-sm p-0.5 text-[var(--surface-muted-foreground)] hover:text-[var(--surface-foreground)]',
-                            !isActive && 'opacity-0 group-hover:opacity-100'
+                            'flex items-center justify-between gap-2',
+                            isActive && 'bg-[var(--interactive-selection)] text-[var(--interactive-selection-foreground)]'
                           )}
-                          aria-label={`Close ${file.name}`}
                         >
-                          <RiCloseLine size={14} />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+                          <span className="flex min-w-0 flex-1 items-center gap-2 truncate">
+                            <FileTypeIcon filePath={file.path} extension={file.extension} className="h-3.5 w-3.5 flex-shrink-0" />
+                            <span className="min-w-0 flex-1 truncate">{file.name}</span>
+                          </span>
+                          <button
+                            type="button"
+                            data-close-open-file
+                            onPointerDown={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                            }}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              handleCloseFile(file.path);
+                            }}
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--surface-muted-foreground)] hover:text-[var(--surface-foreground)]"
+                            aria-label={`Close ${file.name}`}
+                          >
+                            <RiCloseLine className="h-3.5 w-3.5" />
+                          </button>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <div className="typography-ui-label font-medium truncate">Select a file</div>
+              )
             ) : (
-              <div className="typography-ui-label font-medium truncate">Select a file</div>
-            )
-          )}
-        </div>
+              openFiles.length > 0 ? (
+                <div className="relative min-w-0 flex-1">
+                  {editorTabsOverflow.left && (
+                    <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-6 z-10 bg-gradient-to-r from-background to-transparent" />
+                  )}
+                  {editorTabsOverflow.right && (
+                    <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 z-10 bg-gradient-to-l from-background to-transparent" />
+                  )}
+                  <div
+                    ref={editorTabsScrollRef}
+                    className="flex min-w-0 items-center gap-1 overflow-x-auto scrollbar-none"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                  >
+                    {openFiles.map((file) => {
+                      const isActive = selectedFile?.path === file.path;
+                      return (
+                        <div
+                          key={file.path}
+                          title={getDisplayPath(root, file.path)}
+                          className={cn(
+                            'group inline-flex items-center gap-1 rounded-md border px-2 py-1 typography-ui-label transition-colors whitespace-nowrap',
+                            isActive
+                              ? 'bg-[var(--interactive-selection)] border-[var(--primary-muted)] text-[var(--interactive-selection-foreground)]'
+                              : 'bg-transparent border-[var(--interactive-border)] text-[var(--surface-muted-foreground)] hover:bg-[var(--interactive-hover)] hover:text-[var(--surface-foreground)]'
+                          )}
+                        >
+                          <FileTypeIcon filePath={file.path} extension={file.extension} className="h-3.5 w-3.5 flex-shrink-0" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!isActive) {
+                                void handleSelectFile(file);
+                              }
+                            }}
+                            className="max-w-[12rem] truncate text-left"
+                          >
+                            {file.name}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleCloseFile(file.path);
+                            }}
+                            className={cn(
+                              'rounded-sm p-0.5 text-[var(--surface-muted-foreground)] hover:text-[var(--surface-foreground)]',
+                              !isActive && 'opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100'
+                            )}
+                            aria-label={`Close ${file.name}`}
+                          >
+                            <RiCloseLine size={14} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="typography-ui-label font-medium truncate">Select a file</div>
+              )
+            )}
+          </div>
         ) : null}
 
       </div>
@@ -3007,21 +3007,21 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
                         const lineNumber = view.state.doc.lineAt(line.from).number;
 
                         // Mobile: tap-to-extend selection
-                          if (isMobile && lineSelection && !event.shiftKey) {
-                            const start = Math.min(lineSelection.start, lineSelection.end, lineNumber);
-                            const end = Math.max(lineSelection.start, lineSelection.end, lineNumber);
-                            setLineSelection({ start, end });
-                            isSelectingRef.current = false;
-                            selectionStartRef.current = null;
-                            setIsDragging(false);
-                            return true;
-                          }
+                        if (isMobile && lineSelection && !event.shiftKey) {
+                          const start = Math.min(lineSelection.start, lineSelection.end, lineNumber);
+                          const end = Math.max(lineSelection.start, lineSelection.end, lineNumber);
+                          setLineSelection({ start, end });
+                          isSelectingRef.current = false;
+                          selectionStartRef.current = null;
+                          setIsDragging(false);
+                          return true;
+                        }
 
-                          isSelectingRef.current = true;
-                          selectionStartRef.current = lineNumber;
-                          setIsDragging(true);
+                        isSelectingRef.current = true;
+                        selectionStartRef.current = lineNumber;
+                        setIsDragging(true);
 
-                          if (lineSelection && event.shiftKey) {
+                        if (lineSelection && event.shiftKey) {
                           const start = Math.min(lineSelection.start, lineNumber);
                           const end = Math.max(lineSelection.end, lineNumber);
                           setLineSelection({ start, end });
@@ -3043,19 +3043,19 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
                         }
 
                         const lineNumber = view.state.doc.lineAt(line.from).number;
-                          const start = Math.min(selectionStartRef.current, lineNumber);
-                          const end = Math.max(selectionStartRef.current, lineNumber);
-                          setLineSelection({ start, end });
-                          setIsDragging(true);
-                          return false;
-                        },
-                        mouseup: () => {
-                          isSelectingRef.current = false;
-                          selectionStartRef.current = null;
-                          setIsDragging(false);
-                          return false;
-                        },
+                        const start = Math.min(selectionStartRef.current, lineNumber);
+                        const end = Math.max(selectionStartRef.current, lineNumber);
+                        setLineSelection({ start, end });
+                        setIsDragging(true);
+                        return false;
                       },
+                      mouseup: () => {
+                        isSelectingRef.current = false;
+                        selectionStartRef.current = null;
+                        setIsDragging(false);
+                        return false;
+                      },
+                    },
                   }}
                 />
               </div>
@@ -3229,23 +3229,23 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
           ) : (
             <div className={cn('relative h-full', shouldMaskEditorForPendingNavigation && 'overflow-hidden')}>
               <div className={cn('h-full', shouldMaskEditorForPendingNavigation && 'invisible')}>
-              <CodeMirrorEditor
-                value={draftContent}
-                onChange={setDraftContent}
-                extensions={editorExtensions}
-                className="h-full"
-                onViewReady={(view) => {
-                  editorViewRef.current = view;
-                  window.requestAnimationFrame(() => {
-                    nudgeEditorSelectionAboveKeyboard(view);
-                  });
-                }}
-                onViewDestroy={() => {
-                  if (editorViewRef.current) {
-                    editorViewRef.current = null;
-                  }
-                }}
-              />
+                <CodeMirrorEditor
+                  value={draftContent}
+                  onChange={setDraftContent}
+                  extensions={editorExtensions}
+                  className="h-full"
+                  onViewReady={(view) => {
+                    editorViewRef.current = view;
+                    window.requestAnimationFrame(() => {
+                      nudgeEditorSelectionAboveKeyboard(view);
+                    });
+                  }}
+                  onViewDestroy={() => {
+                    if (editorViewRef.current) {
+                      editorViewRef.current = null;
+                    }
+                  }}
+                />
               </div>
               {shouldMaskEditorForPendingNavigation && (
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background">
@@ -3272,24 +3272,24 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
         ) : (
           treePanel
         )
-       ) : mode === 'editor-only' ? (
-         <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
-            <div className="flex-1 min-h-0 min-w-0 overflow-hidden bg-background">
-             {fileViewer}
-            </div>
+      ) : mode === 'editor-only' ? (
+        <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
+          <div className="flex-1 min-h-0 min-w-0 overflow-hidden bg-background">
+            {fileViewer}
           </div>
-       ) : (
-         <div className="flex flex-1 min-h-0 min-w-0 gap-3 px-3 pb-3 pt-2">
-            {screenWidth >= 700 && (
-              <div className="w-72 flex-shrink-0 min-h-0 overflow-hidden">
-               {treePanel}
-             </div>
-           )}
-           <div className="flex-1 min-h-0 min-w-0 overflow-hidden rounded-xl border border-border/60 bg-background">
-             {fileViewer}
-           </div>
-         </div>
-       )}
+        </div>
+      ) : (
+        <div className="flex flex-1 min-h-0 min-w-0 gap-3 px-3 pb-3 pt-2">
+          {screenWidth >= 700 && (
+            <div className="w-72 flex-shrink-0 min-h-0 overflow-hidden">
+              {treePanel}
+            </div>
+          )}
+          <div className="flex-1 min-h-0 min-w-0 overflow-hidden rounded-xl border border-border/60 bg-background">
+            {fileViewer}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
