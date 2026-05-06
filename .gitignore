@@ -18,6 +18,9 @@ release
 local-dev*
 # Editor directories and files
 .vscode/*
+
+# Plans
+.superpawers/
 !.vscode/extensions.json
 .idea
 .DS_Store
