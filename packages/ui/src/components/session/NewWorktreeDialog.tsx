@@ -209,7 +209,7 @@ export function NewWorktreeDialog({
   const githubAuthStatus = useGitHubAuthStore((state) => state.status);
   const githubAuthChecked = useGitHubAuthStore((state) => state.hasChecked);
   const activeProject = useProjectsStore((state) => state.getActiveProject());
-  
+
   const projectDirectory = activeProject?.path ?? null;
   const projectRef: ProjectRef | null = React.useMemo(() => {
     if (projectDirectory && activeProject) {
@@ -220,7 +220,7 @@ export function NewWorktreeDialog({
 
   // Mode state
   const [mode, setMode] = React.useState<Mode>('new-branch');
-  
+
   // Separate state for each mode (persisted when switching tabs)
   const [newBranchState, setNewBranchState] = React.useState<NewBranchState>({
     branchName: '',
@@ -231,12 +231,12 @@ export function NewWorktreeDialog({
     linkedPr: null,
     includePrDiff: false,
   });
-  
+
   const [existingBranchState, setExistingBranchState] = React.useState<ExistingBranchState>({
     selectedBranch: '',
     worktreeName: '',
   });
-  
+
   // Use cached branches from Git store (instant if already fetched)
   const branches = useGitBranches(projectDirectory);
   const isLoadingBranches = useGitLoadingBranches(projectDirectory);
@@ -249,7 +249,7 @@ export function NewWorktreeDialog({
       .filter((branchName: string) => !branchName.startsWith('remotes/'))
       .sort();
   }, [branches]);
-  
+
   const remoteBranches = React.useMemo(() => {
     if (!branches?.all) return [];
     return branches.all
@@ -257,7 +257,7 @@ export function NewWorktreeDialog({
       .map((branchName: string) => branchName.replace(/^remotes\//, ''))
       .sort();
   }, [branches]);
-  
+
   // Get existing worktrees for the current project to avoid conflicts
   const availableWorktreesByProject = useSessionUIStore((state) => state.availableWorktreesByProject);
   const existingWorktreeNames = React.useMemo(() => {
@@ -265,7 +265,7 @@ export function NewWorktreeDialog({
     const worktrees = availableWorktreesByProject.get(projectDirectory) ?? [];
     return new Set(worktrees.map(wt => wt.name));
   }, [availableWorktreesByProject, projectDirectory]);
-  
+
   // Generate a unique slug that doesn't conflict with existing worktrees
   const generateUniqueSlug = React.useCallback((maxAttempts = 10): string => {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -277,9 +277,9 @@ export function NewWorktreeDialog({
     // Fallback: add timestamp if all attempts failed
     return `${generateBranchSlug()}-${Date.now().toString(36).slice(-4)}`;
   }, [existingWorktreeNames]);
-  
+
   const [githubDialogOpen, setGithubDialogOpen] = React.useState(false);
-  
+
   // Desktop branch picker states
   const [existingBranchDropdownOpen, setExistingBranchDropdownOpen] = React.useState(false);
   const [sourceBranchDropdownOpen, setSourceBranchDropdownOpen] = React.useState(false);
@@ -403,7 +403,7 @@ export function NewWorktreeDialog({
     worktreeError: null,
     touched: false,
   });
-  
+
   // Creation state
   const [isCreating, setIsCreating] = React.useState(false);
   const [validationAbortController, setValidationAbortController] = React.useState<AbortController | null>(null);
@@ -629,7 +629,7 @@ export function NewWorktreeDialog({
   React.useEffect(() => {
     if (!branches?.all || !projectDirectory) return;
     if (newBranchState.sourceBranch) return; // Already set
-    
+
     const loadDefaultSourceBranch = async () => {
       try {
         const rootBranch = await getRootBranch(projectDirectory).catch(() => null);
@@ -643,7 +643,7 @@ export function NewWorktreeDialog({
               : branches.all?.includes('master')
                 ? 'master'
                 : branches.all?.[0] || '';
-        
+
         if (defaultSourceBranch) {
           setNewBranchState(prev => ({
             ...prev,
@@ -654,7 +654,7 @@ export function NewWorktreeDialog({
         // ignore
       }
     };
-    
+
     void loadDefaultSourceBranch();
   }, [branches, projectDirectory, newBranchState.sourceBranch]);
 
@@ -689,7 +689,7 @@ export function NewWorktreeDialog({
       });
       return;
     }
-    
+
     // Generate unique slug when dialog opens
     const uniqueSlug = generateUniqueSlug();
     setNewBranchState(prev => ({
@@ -703,7 +703,7 @@ export function NewWorktreeDialog({
   // Sync worktree name with branch name for new-branch mode
   React.useEffect(() => {
     if (mode !== 'new-branch' || !newBranchState.isSyncingWorktreeName) return;
-    
+
     const normalizedBranch = normalizeBranchName(newBranchState.branchName);
     const newWorktreeName = slugifyWorktreeName(normalizedBranch);
     setNewBranchState(prev => ({ ...prev, worktreeName: newWorktreeName }));
@@ -712,34 +712,34 @@ export function NewWorktreeDialog({
   // Validation - only runs after fields are touched
   const validateInputs = React.useCallback(async () => {
     if (!projectRef || !validation.touched || isCreating) return;
-    
+
     // Cancel previous validation
     if (validationAbortController) {
       validationAbortController.abort();
     }
-    
+
     const abortController = new AbortController();
     setValidationAbortController(abortController);
-    
+
     setValidation(prev => ({ ...prev, isValidating: true }));
-    
+
     try {
       const branchName = mode === 'new-branch' ? newBranchState.branchName : existingBranchState.selectedBranch;
       const worktreeName = currentState.worktreeName;
       const normalizedBranch = normalizeBranchName(branchName);
       const normalizedWorktree = slugifyWorktreeName(worktreeName);
-      
+
       let branchError: string | null = null;
       let worktreeError: string | null = null;
-      
+
       if (!normalizedBranch) {
         branchError = 'Branch name is required';
       }
-      
+
       if (!normalizedWorktree) {
         worktreeError = 'Worktree directory is required';
       }
-      
+
       // Only run server validation if we have values
       if (normalizedBranch && normalizedWorktree) {
         const result = await validateWorktreeCreate(projectRef, {
@@ -748,9 +748,9 @@ export function NewWorktreeDialog({
           worktreeName: normalizedWorktree,
           existingBranch: mode === 'existing-branch' ? normalizedBranch : undefined,
         });
-        
+
         if (abortController.signal.aborted) return;
-        
+
         if (!result.ok) {
           result.errors.forEach((error) => {
             if (error.code === 'worktree_exists') {
@@ -764,7 +764,7 @@ export function NewWorktreeDialog({
           });
         }
       }
-      
+
       if (!abortController.signal.aborted) {
         setValidation(prev => ({
           ...prev,
@@ -798,11 +798,11 @@ export function NewWorktreeDialog({
   // Trigger validation on input changes (only after touched)
   React.useEffect(() => {
     if (!open || !projectRef || !validation.touched || isCreating) return;
-    
+
     const timer = setTimeout(() => {
       void validateInputs();
     }, 300);
-    
+
     return () => clearTimeout(timer);
   }, [currentState.worktreeName, currentBranchName, open, projectRef, validateInputs, validation.touched, isCreating]);
 
@@ -812,20 +812,20 @@ export function NewWorktreeDialog({
       toast.error('No active project');
       return;
     }
-    
+
     // Mark as touched and validate immediately
     setValidation(prev => ({ ...prev, touched: true }));
-    
+
     const branchName = mode === 'new-branch' ? newBranchState.branchName : existingBranchState.selectedBranch;
     const worktreeName = currentState.worktreeName;
     const normalizedBranch = normalizeBranchName(branchName);
     const normalizedWorktree = slugifyWorktreeName(worktreeName);
-    
+
     if (!normalizedBranch) {
       toast.error('Branch name is required');
       return;
     }
-    
+
     if (!normalizedWorktree) {
       toast.error('Worktree directory is required');
       return;
@@ -842,9 +842,9 @@ export function NewWorktreeDialog({
       branchError: null,
       worktreeError: null,
     }));
-    
+
     setIsCreating(true);
-    
+
     try {
       const setupCommands = await getWorktreeSetupCommands(projectRef);
       const linkedPr = mode === 'new-branch' ? newBranchState.linkedPr : null;
@@ -881,7 +881,7 @@ export function NewWorktreeDialog({
           ...(sourceBranch && mode === 'new-branch' ? { startRef: sourceBranch } : {}),
         };
       })();
-      
+
       const resolvedArgs = await withWorktreeUpstreamDefaults(projectDirectory, args);
       const metadata = await createWorktree(projectRef, resolvedArgs);
 
@@ -912,12 +912,12 @@ export function NewWorktreeDialog({
           // ignore
         }
       }
-      
+
       // Save source branch preference (only if not from PR)
       if (newBranchState.sourceBranch && mode === 'new-branch' && !newBranchState.linkedPr) {
         localStorage.setItem(LAST_SOURCE_BRANCH_KEY, newBranchState.sourceBranch);
       }
-      
+
       toast.success('Worktree created', {
         description: `${metadata.branch || metadata.name}${sourceLabel ? ` from ${sourceLabel}` : ''} - bootstrapping in background`,
       });
@@ -1020,7 +1020,7 @@ export function NewWorktreeDialog({
   const footerContent = (
     <div className={cn('flex gap-2', isMobile ? 'flex-col w-full' : 'flex-row items-center')}>
       {/* Validation error */}
-      <div className={cn('flex items-center gap-1.5 text-destructive', isMobile ? 'w-full justify-center order-first' : 'mr-auto')}> 
+      <div className={cn('flex items-center gap-1.5 text-destructive', isMobile ? 'w-full justify-center order-first' : 'mr-auto')}>
         {validation.touched && (validation.branchError || validation.worktreeError) && (
           <>
             <RiErrorWarningLine className="h-3.5 w-3.5" />
@@ -1030,7 +1030,7 @@ export function NewWorktreeDialog({
           </>
         )}
       </div>
-      
+
       {/* Buttons */}
       <div className={cn('flex gap-2', isMobile && 'w-full')}>
         <Button
@@ -1109,7 +1109,7 @@ export function NewWorktreeDialog({
                     {isLoadingBranches ? <RiLoader4Line className="size-4 animate-spin" /> : <RiRefreshLine className="size-4" />}
                   </Button>
                 </div>
-                
+
                 {/* Mobile Branch Picker Overlay */}
                 <MobileOverlayPanel
                   open={existingBranchPickerOpen}
@@ -1253,7 +1253,7 @@ export function NewWorktreeDialog({
                       className="gap-1.5 h-7"
                     >
                       <RiGithubLine className="size-4 text-status-success" />
-                        {newBranchState.linkedIssue || newBranchState.linkedPr ? 'Change' : 'Start from GitHub Issue/PR'}
+                      {newBranchState.linkedIssue || newBranchState.linkedPr ? 'Change' : 'Start from GitHub Issue/PR'}
                     </Button>
                   )}
                 </div>
@@ -1373,7 +1373,7 @@ export function NewWorktreeDialog({
                     New branch will be created from {newBranchState.sourceBranch}
                   </div>
                 )}
-                
+
                 {/* Mobile Source Branch Picker Overlay */}
                 <MobileOverlayPanel
                   open={sourceBranchPickerOpen}
@@ -1496,7 +1496,7 @@ export function NewWorktreeDialog({
                 {/* Row 1: Type, number, title, actions */}
                 <div className="flex items-center gap-2">
                   <RiGithubLine className="h-3.5 w-3.5 text-status-success shrink-0" />
-                  
+
                   {newBranchState.linkedIssue && (
                     <span className="typography-micro text-muted-foreground shrink-0">
                       Issue #{newBranchState.linkedIssue.number}
@@ -1507,11 +1507,11 @@ export function NewWorktreeDialog({
                       PR #{newBranchState.linkedPr.number}
                     </span>
                   )}
-                  
+
                   <span className="typography-micro text-foreground truncate flex-1">
                     {newBranchState.linkedIssue?.title || newBranchState.linkedPr?.title}
                   </span>
-                  
+
                   <a
                     href={newBranchState.linkedIssue?.url || newBranchState.linkedPr?.url}
                     target="_blank"
@@ -1521,7 +1521,7 @@ export function NewWorktreeDialog({
                   >
                     <RiExternalLinkLine className="h-3 w-3" />
                   </a>
-                  
+
                   <button
                     onClick={handleClearLinkedItem}
                     className="text-muted-foreground hover:text-foreground shrink-0 p-0.5 rounded hover:bg-muted transition-colors"
@@ -1529,7 +1529,7 @@ export function NewWorktreeDialog({
                     <RiCloseLine className="h-3.5 w-3.5" />
                   </button>
                 </div>
-                
+
                 {/* Row 2: PR branch info + diff indicator */}
                 {newBranchState.linkedPr && (
                   <div className="flex items-center gap-2 mt-0.5 pl-5">
@@ -1556,7 +1556,7 @@ export function NewWorktreeDialog({
                   <RiGitBranchLine className="h-5 w-5" />
                   New Worktree
                 </DialogTitle>
-                
+
                 {/* Mode Selection - using SortableTabsStrip */}
                 <div className="w-full sm:w-[280px] shrink-0">
                   <SortableTabsStrip
@@ -1593,102 +1593,102 @@ export function NewWorktreeDialog({
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start" sideOffset={6} className="w-[320px] p-0 max-h-[min(var(--available-height),24rem)] flex flex-col overflow-hidden" ref={existingBranchDropdownContentRef}>
                         <Command shouldFilter={false}>
-                        <CommandInput
-                          placeholder="Search branches..."
-                          value={existingBranchQuery}
-                          onValueChange={setExistingBranchQuery}
-                        />
-                        <CommandList disableHorizontal>
-                          {isLoadingBranches ? (
-                            <div className="px-2 py-4 text-center typography-small text-muted-foreground">
-                              Loading branches...
-                            </div>
-                          ) : localBranches.length === 0 && remoteBranches.length === 0 ? (
-                            <CommandEmpty>No branches found</CommandEmpty>
-                          ) : (
-                            <>
-                              {hasExistingBranchQuery && hasExistingBranchMatches && (
-                                <CommandGroup heading="Matching branches">
-                                  {existingBranchRankedGroups.matching.map((branch) => (
-                                    <CommandItem
-                                      key={`${branch.source}-${branch.value}`}
-                                      value={branch.value}
-                                      onSelect={() => {
-                                        setExistingBranchState((prev) => ({
-                                          ...prev,
-                                          selectedBranch: branch.value,
-                                          worktreeName: slugifyWorktreeName(branch.label),
-                                        }));
-                                        setValidation((prev) => ({ ...prev, touched: true }));
-                                        setExistingBranchDropdownOpen(false);
-                                      }}
-                                    >
-                                      <span className="typography-small break-all">{branch.label}</span>
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              )}
-
-                              {hasExistingBranchQuery && !hasExistingBranchMatches && (
-                                <div className="px-2 py-1 text-center typography-small text-muted-foreground">
-                                  No matching branches
-                                </div>
-                              )}
-
-                              {existingBranchRankedGroups.otherLocal.length > 0 && (
-                                <>
-                                  {hasExistingBranchQuery && <CommandSeparator />}
-                                  <CommandGroup heading={hasExistingBranchQuery ? 'Other local branches' : 'Local branches'}>
-                                    {existingBranchRankedGroups.otherLocal.map((branch) => (
+                          <CommandInput
+                            placeholder="Search branches..."
+                            value={existingBranchQuery}
+                            onValueChange={setExistingBranchQuery}
+                          />
+                          <CommandList disableHorizontal>
+                            {isLoadingBranches ? (
+                              <div className="px-2 py-4 text-center typography-small text-muted-foreground">
+                                Loading branches...
+                              </div>
+                            ) : localBranches.length === 0 && remoteBranches.length === 0 ? (
+                              <CommandEmpty>No branches found</CommandEmpty>
+                            ) : (
+                              <>
+                                {hasExistingBranchQuery && hasExistingBranchMatches && (
+                                  <CommandGroup heading="Matching branches">
+                                    {existingBranchRankedGroups.matching.map((branch) => (
                                       <CommandItem
-                                        key={`local-${branch}`}
-                                        value={branch}
+                                        key={`${branch.source}-${branch.value}`}
+                                        value={branch.value}
                                         onSelect={() => {
                                           setExistingBranchState((prev) => ({
                                             ...prev,
-                                            selectedBranch: branch,
-                                            worktreeName: slugifyWorktreeName(branch),
+                                            selectedBranch: branch.value,
+                                            worktreeName: slugifyWorktreeName(branch.label),
                                           }));
                                           setValidation((prev) => ({ ...prev, touched: true }));
                                           setExistingBranchDropdownOpen(false);
                                         }}
                                       >
-                                        <span className="typography-small break-all">{branch}</span>
+                                        <span className="typography-small break-all">{branch.label}</span>
                                       </CommandItem>
                                     ))}
                                   </CommandGroup>
-                                </>
-                              )}
+                                )}
 
-                              {existingBranchRankedGroups.otherRemote.length > 0 && (
-                                <>
-                                  {(existingBranchRankedGroups.otherLocal.length > 0 || hasExistingBranchQuery) && (
-                                    <CommandSeparator />
-                                  )}
-                                  <CommandGroup heading={hasExistingBranchQuery ? 'Other remote branches' : 'Remote branches'}>
-                                    {existingBranchRankedGroups.otherRemote.map((branch) => (
-                                      <CommandItem
-                                        key={`remote-${branch}`}
-                                        value={`remotes/${branch}`}
-                                        onSelect={() => {
-                                          setExistingBranchState((prev) => ({
-                                            ...prev,
-                                            selectedBranch: `remotes/${branch}`,
-                                            worktreeName: slugifyWorktreeName(branch),
-                                          }));
-                                          setValidation((prev) => ({ ...prev, touched: true }));
-                                          setExistingBranchDropdownOpen(false);
-                                        }}
-                                      >
-                                        <span className="typography-small break-all">{branch}</span>
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </>
-                              )}
-                            </>
-                          )}
-                        </CommandList>
+                                {hasExistingBranchQuery && !hasExistingBranchMatches && (
+                                  <div className="px-2 py-1 text-center typography-small text-muted-foreground">
+                                    No matching branches
+                                  </div>
+                                )}
+
+                                {existingBranchRankedGroups.otherLocal.length > 0 && (
+                                  <>
+                                    {hasExistingBranchQuery && <CommandSeparator />}
+                                    <CommandGroup heading={hasExistingBranchQuery ? 'Other local branches' : 'Local branches'}>
+                                      {existingBranchRankedGroups.otherLocal.map((branch) => (
+                                        <CommandItem
+                                          key={`local-${branch}`}
+                                          value={branch}
+                                          onSelect={() => {
+                                            setExistingBranchState((prev) => ({
+                                              ...prev,
+                                              selectedBranch: branch,
+                                              worktreeName: slugifyWorktreeName(branch),
+                                            }));
+                                            setValidation((prev) => ({ ...prev, touched: true }));
+                                            setExistingBranchDropdownOpen(false);
+                                          }}
+                                        >
+                                          <span className="typography-small break-all">{branch}</span>
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </>
+                                )}
+
+                                {existingBranchRankedGroups.otherRemote.length > 0 && (
+                                  <>
+                                    {(existingBranchRankedGroups.otherLocal.length > 0 || hasExistingBranchQuery) && (
+                                      <CommandSeparator />
+                                    )}
+                                    <CommandGroup heading={hasExistingBranchQuery ? 'Other remote branches' : 'Remote branches'}>
+                                      {existingBranchRankedGroups.otherRemote.map((branch) => (
+                                        <CommandItem
+                                          key={`remote-${branch}`}
+                                          value={`remotes/${branch}`}
+                                          onSelect={() => {
+                                            setExistingBranchState((prev) => ({
+                                              ...prev,
+                                              selectedBranch: `remotes/${branch}`,
+                                              worktreeName: slugifyWorktreeName(branch),
+                                            }));
+                                            setValidation((prev) => ({ ...prev, touched: true }));
+                                            setExistingBranchDropdownOpen(false);
+                                          }}
+                                        >
+                                          <span className="typography-small break-all">{branch}</span>
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </>
+                                )}
+                              </>
+                            )}
+                          </CommandList>
                         </Command>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -1704,8 +1704,8 @@ export function NewWorktreeDialog({
                     </Button>
                   </div>
                 </div>
-            ) : (
-              <div className="space-y-1.5">
+              ) : (
+                <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="typography-ui-label text-foreground block font-semibold">
                       Branch Name
@@ -1718,7 +1718,7 @@ export function NewWorktreeDialog({
                         className="gap-1.5 h-7"
                       >
                         <RiGithubLine className="size-4 text-status-success" />
-                      {newBranchState.linkedIssue || newBranchState.linkedPr ? 'Change' : 'Start from GitHub Issue/PR'}
+                        {newBranchState.linkedIssue || newBranchState.linkedPr ? 'Change' : 'Start from GitHub Issue/PR'}
                       </Button>
                     )}
                   </div>
@@ -1931,7 +1931,7 @@ export function NewWorktreeDialog({
                   {/* Row 1: Type, number, title, actions */}
                   <div className="flex items-center gap-2">
                     <RiGithubLine className="h-3.5 w-3.5 text-status-success shrink-0" />
-                    
+
                     {newBranchState.linkedIssue && (
                       <span className="typography-micro text-muted-foreground shrink-0">
                         Issue #{newBranchState.linkedIssue.number}
@@ -1942,11 +1942,11 @@ export function NewWorktreeDialog({
                         PR #{newBranchState.linkedPr.number}
                       </span>
                     )}
-                    
+
                     <span className="typography-micro text-foreground truncate flex-1">
                       {newBranchState.linkedIssue?.title || newBranchState.linkedPr?.title}
                     </span>
-                    
+
                     <a
                       href={newBranchState.linkedIssue?.url || newBranchState.linkedPr?.url}
                       target="_blank"
@@ -1956,7 +1956,7 @@ export function NewWorktreeDialog({
                     >
                       <RiExternalLinkLine className="h-3 w-3" />
                     </a>
-                    
+
                     <button
                       onClick={handleClearLinkedItem}
                       className="text-muted-foreground hover:text-foreground shrink-0 p-0.5 rounded hover:bg-muted transition-colors"
@@ -1964,7 +1964,7 @@ export function NewWorktreeDialog({
                       <RiCloseLine className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  
+
                   {/* Row 2: PR branch info + diff indicator */}
                   {newBranchState.linkedPr && (
                     <div className="flex items-center gap-2 mt-0.5 pl-5">
@@ -1995,7 +1995,7 @@ export function NewWorktreeDialog({
                   </>
                 )}
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"

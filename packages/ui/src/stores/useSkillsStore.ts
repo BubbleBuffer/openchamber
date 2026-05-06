@@ -130,7 +130,7 @@ interface SkillsStore {
   updateSkill: (name: string, config: Partial<SkillConfig>) => Promise<boolean>;
   deleteSkill: (name: string) => Promise<boolean>;
   getSkillByName: (name: string) => DiscoveredSkill | undefined;
-  
+
   // Supporting files
   readSupportingFile: (skillName: string, filePath: string) => Promise<string | null>;
   writeSupportingFile: (skillName: string, filePath: string, content: string) => Promise<boolean>;
@@ -245,12 +245,12 @@ export const useSkillsStore = create<SkillsStore>()(
           try {
             const currentDirectory = getCurrentDirectory();
             const queryParams = currentDirectory ? `?directory=${encodeURIComponent(currentDirectory)}` : '';
-            
+
             const response = await fetch(`/api/config/skills/${encodeURIComponent(name)}${queryParams}`);
             if (!response.ok) {
               return null;
             }
-            
+
             return await response.json() as SkillDetail;
           } catch {
             return null;
@@ -414,14 +414,14 @@ export const useSkillsStore = create<SkillsStore>()(
           try {
             const currentDirectory = getCurrentDirectory();
             const queryParams = currentDirectory ? `&directory=${encodeURIComponent(currentDirectory)}` : '';
-            
+
             const response = await fetch(
               `/api/config/skills/${encodeURIComponent(skillName)}/files/${encodeURIComponent(filePath)}?${queryParams.slice(1)}`
             );
             if (!response.ok) {
               return null;
             }
-            
+
             const data = await response.json();
             return data.content ?? null;
           } catch {
@@ -433,7 +433,7 @@ export const useSkillsStore = create<SkillsStore>()(
           try {
             const currentDirectory = getCurrentDirectory();
             const queryParams = currentDirectory ? `?directory=${encodeURIComponent(currentDirectory)}` : '';
-            
+
             const response = await fetch(
               `/api/config/skills/${encodeURIComponent(skillName)}/files/${encodeURIComponent(filePath)}${queryParams}`,
               {
@@ -442,7 +442,7 @@ export const useSkillsStore = create<SkillsStore>()(
                 body: JSON.stringify({ content })
               }
             );
-            
+
             return response.ok;
           } catch {
             return false;
@@ -453,12 +453,12 @@ export const useSkillsStore = create<SkillsStore>()(
           try {
             const currentDirectory = getCurrentDirectory();
             const queryParams = currentDirectory ? `?directory=${encodeURIComponent(currentDirectory)}` : '';
-            
+
             const response = await fetch(
               `/api/config/skills/${encodeURIComponent(skillName)}/files/${encodeURIComponent(filePath)}${queryParams}`,
               { method: 'DELETE' }
             );
-            
+
             return response.ok;
           } catch {
             return false;
@@ -518,10 +518,10 @@ async function waitForOpenCodeConnection(delayMs?: number) {
       attempt <= FAST_HEALTH_POLL_ATTEMPTS && elapsed < 1200
         ? FAST_HEALTH_POLL_INTERVAL_MS
         : Math.min(
-            SLOW_HEALTH_POLL_BASE_MS +
-              Math.max(0, attempt - FAST_HEALTH_POLL_ATTEMPTS) * SLOW_HEALTH_POLL_INCREMENT_MS,
-            SLOW_HEALTH_POLL_MAX_MS,
-          );
+          SLOW_HEALTH_POLL_BASE_MS +
+          Math.max(0, attempt - FAST_HEALTH_POLL_ATTEMPTS) * SLOW_HEALTH_POLL_INCREMENT_MS,
+          SLOW_HEALTH_POLL_MAX_MS,
+        );
 
     await sleep(waitMs);
   }

@@ -133,7 +133,7 @@ class BrowserVoiceService {
       isSpeaking: this.isSpeaking,
       currentLang: this.currentLang
     });
-    
+
     if (this.conversationMode && this.onResultCallback && !this.isSpeaking) {
       // Use sync version for resume (should already have permission)
       try {
@@ -236,11 +236,11 @@ class BrowserVoiceService {
       this.isListening = true;
       this.restartOnEnd = true;
     };
-    
+
     this.recognition.onaudiostart = () => {
       voiceLog('[BrowserVoiceService] Audio recording started');
     };
-    
+
     this.recognition.onsoundstart = () => {
       voiceLog('[BrowserVoiceService] Sound detected');
     };
@@ -293,7 +293,7 @@ class BrowserVoiceService {
 
     this.recognition.onend = () => {
       this.isListening = false;
-      
+
       // Auto-restart if still supposed to be listening and not speaking
       if (this.restartOnEnd && this.recognition && !this.isSpeaking) {
         try {
@@ -337,7 +337,7 @@ class BrowserVoiceService {
    */
   stopListening(): void {
     this.restartOnEnd = false;
-    
+
     if (this.recognition) {
       try {
         this.recognition.stop();
@@ -346,7 +346,7 @@ class BrowserVoiceService {
       }
       this.recognition = null;
     }
-    
+
     this.isListening = false;
   }
 
@@ -461,7 +461,7 @@ class BrowserVoiceService {
 
     // Try to find voice by name first (user-selected), then fallback to language match
     let selectedVoice: SpeechSynthesisVoice | null = null;
-    
+
     if (options?.voiceName) {
       selectedVoice = voices.find(v => v.name === options.voiceName) || null;
       if (selectedVoice) {
@@ -470,7 +470,7 @@ class BrowserVoiceService {
         voiceWarn(`[BrowserVoiceService] Selected voice "${options.voiceName}" not found, falling back to language match`);
       }
     }
-    
+
     if (!selectedVoice) {
       selectedVoice = this.findBestVoice(voices, lang);
       if (selectedVoice) {
@@ -570,9 +570,9 @@ class BrowserVoiceService {
         resolve(window.speechSynthesis.getVoices());
         window.speechSynthesis.onvoiceschanged = null;
       };
-      
+
       window.speechSynthesis.onvoiceschanged = handleVoicesChanged;
-      
+
       // Timeout fallback
       setTimeout(() => {
         resolve(window.speechSynthesis.getVoices());
@@ -587,18 +587,18 @@ class BrowserVoiceService {
   private findBestVoice(voices: SpeechSynthesisVoice[], lang: string): SpeechSynthesisVoice | null {
     // First try exact match
     let voice = voices.find(v => v.lang === lang);
-    
+
     if (!voice) {
       // Try language code match (e.g., 'en' for 'en-US')
       const langCode = lang.split('-')[0];
       voice = voices.find(v => v.lang.startsWith(langCode));
     }
-    
+
     if (!voice) {
       // Prefer local voices
       voice = voices.find(v => v.lang.startsWith(lang.split('-')[0]) && v.localService);
     }
-    
+
     return voice || null;
   }
 
@@ -629,22 +629,22 @@ class BrowserVoiceService {
   private getErrorMessage(error: string): string {
     const isMobileDevice = this.isMobileDevice();
     const isIOS = this.isIOSSafari();
-    
+
     const errorMessages: Record<string, string> = {
       'no-speech': 'No speech detected',
       'aborted': 'Speech recognition aborted',
       'audio-capture': 'No microphone found',
       'network': 'Network error - check connection',
-      'not-allowed': isMobileDevice 
-        ? 'Microphone permission denied. Check Settings > Safari > Microphone' 
+      'not-allowed': isMobileDevice
+        ? 'Microphone permission denied. Check Settings > Safari > Microphone'
         : 'Microphone permission denied',
-      'service-not-allowed': isIOS 
-        ? 'Speech recognition requires a user gesture. Please tap the microphone button again.' 
+      'service-not-allowed': isIOS
+        ? 'Speech recognition requires a user gesture. Please tap the microphone button again.'
         : 'Speech recognition service not allowed',
       'bad-grammar': 'Grammar error',
       'language-not-supported': 'Language not supported',
     };
-    
+
     return errorMessages[error] || `Speech recognition error: ${error}`;
   }
 }

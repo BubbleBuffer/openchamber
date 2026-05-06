@@ -447,52 +447,52 @@ export const FileMentionAutocomplete = React.forwardRef<FileMentionHandle, FileM
   };
 
   return (
-      <div
-        ref={containerRef}
-        className="absolute z-[100] min-w-0 w-full max-w-[640px] max-h-64 bg-background border-2 border-border/60 rounded-xl shadow-none bottom-full mb-2 left-0 flex flex-col"
-        style={style}
-      >
-        {showTabs ? (
-          <div className="px-2 pt-2 pb-1 border-b border-border/60">
-            <div className="flex items-center gap-1 rounded-lg bg-[var(--surface-elevated)] p-1">
-              {([
-                { id: 'commands' as const, label: 'Commands' },
-                { id: 'agents' as const, label: 'Agents' },
-                { id: 'files' as const, label: 'Files' },
-              ]).map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  className={cn(
-                    'flex-1 px-2.5 py-1 rounded-md typography-meta font-semibold transition-none',
-                    activeTab === tab.id
-                      ? 'bg-interactive-selection text-interactive-selection-foreground shadow-none'
-                      : 'text-muted-foreground hover:bg-interactive-hover/50'
-                  )}
-                  onPointerDown={(event) => {
-                    if (event.pointerType !== 'touch') {
-                      return;
-                    }
-                    event.preventDefault();
-                    event.stopPropagation();
-                    ignoreTabClickRef.current = true;
-                    onTabSelect?.(tab.id);
-                  }}
-                  onClick={() => {
-                    if (ignoreTabClickRef.current) {
-                      ignoreTabClickRef.current = false;
-                      return;
-                    }
-                    onTabSelect?.(tab.id);
-                  }}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+    <div
+      ref={containerRef}
+      className="absolute z-[100] min-w-0 w-full max-w-[640px] max-h-64 bg-background border-2 border-border/60 rounded-xl shadow-none bottom-full mb-2 left-0 flex flex-col"
+      style={style}
+    >
+      {showTabs ? (
+        <div className="px-2 pt-2 pb-1 border-b border-border/60">
+          <div className="flex items-center gap-1 rounded-lg bg-[var(--surface-elevated)] p-1">
+            {([
+              { id: 'commands' as const, label: 'Commands' },
+              { id: 'agents' as const, label: 'Agents' },
+              { id: 'files' as const, label: 'Files' },
+            ]).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                className={cn(
+                  'flex-1 px-2.5 py-1 rounded-md typography-meta font-semibold transition-none',
+                  activeTab === tab.id
+                    ? 'bg-interactive-selection text-interactive-selection-foreground shadow-none'
+                    : 'text-muted-foreground hover:bg-interactive-hover/50'
+                )}
+                onPointerDown={(event) => {
+                  if (event.pointerType !== 'touch') {
+                    return;
+                  }
+                  event.preventDefault();
+                  event.stopPropagation();
+                  ignoreTabClickRef.current = true;
+                  onTabSelect?.(tab.id);
+                }}
+                onClick={() => {
+                  if (ignoreTabClickRef.current) {
+                    ignoreTabClickRef.current = false;
+                    return;
+                  }
+                  onTabSelect?.(tab.id);
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
-        ) : null}
-        <ScrollableOverlay outerClassName="flex-1 min-h-0" className="px-0">
+        </div>
+      ) : null}
+      <ScrollableOverlay outerClassName="flex-1 min-h-0" className="px-0">
         {(!scopeResultsToActiveTab || activeTab === 'files') && loading ? (
           <div className="flex items-center justify-center py-4">
             <RiRefreshLine className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -619,10 +619,10 @@ export const FileMentionAutocomplete = React.forwardRef<FileMentionHandle, FileM
               const item = (
                 <div
                   ref={(el) => { itemRefs.current[rowIndex] = el; }}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-1.5 cursor-pointer typography-ui-label rounded-lg",
-                      isSelected && "bg-interactive-selection"
-                    )}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 cursor-pointer typography-ui-label rounded-lg",
+                    isSelected && "bg-interactive-selection"
+                  )}
                   onClick={() => handleFileSelect(file)}
                   onPointerEnter={() => setSelectedIndex(rowIndex)}
                 >
@@ -669,8 +669,8 @@ export const FileMentionAutocomplete = React.forwardRef<FileMentionHandle, FileM
             )}
           </div>
         )}
-        </ScrollableOverlay>
-        <div className="px-3 pt-1 pb-1.5 border-t typography-meta text-muted-foreground">
+      </ScrollableOverlay>
+      <div className="px-3 pt-1 pb-1.5 border-t typography-meta text-muted-foreground">
         ↑↓ navigate • Enter select • Esc close
       </div>
     </div>

@@ -232,99 +232,56 @@ export const useAgentConfigStore = create<AgentConfigStore>()(
                     if (existing) return existing;
 
                     const promise = (async (): Promise<boolean> => {
-                    let lastError: unknown = null;
+                        let lastError: unknown = null;
 
-                    for (let attempt = 0; attempt < 3; attempt++) {
-                        try {
-                            // Fetch agents and OpenChamber settings in parallel
-                            const [agents, openChamberDefaults] = await Promise.all([
-                                opencodeClient.withDirectory(fromDirectoryKey(directoryKey), () => opencodeClient.listAgents()),
-                                fetchOpenChamberDefaults(),
-                            ]);
+                        for (let attempt = 0; attempt < 3; attempt++) {
+                            try {
+                                // Fetch agents and OpenChamber settings in parallel
+                                const [agents, openChamberDefaults] = await Promise.all([
+                                    opencodeClient.withDirectory(fromDirectoryKey(directoryKey), () => opencodeClient.listAgents()),
+                                    fetchOpenChamberDefaults(),
+                                ]);
 
-                            const safeAgents = Array.isArray(agents) ? agents : [];
+                                const safeAgents = Array.isArray(agents) ? agents : [];
 
-                            // Read providers again (may have changed since loop start)
-                            const providerStateForAgents = useProviderConfigStore.getState();
-                            const currentProviders = providerStateForAgents.activeDirectoryKey === directoryKey
-                                ? providerStateForAgents.providers
-                                : (providerStateForAgents.directoryScoped[directoryKey]?.providers ?? []);
+                                // Read providers again (may have changed since loop start)
+                                const providerStateForAgents = useProviderConfigStore.getState();
+                                const currentProviders = providerStateForAgents.activeDirectoryKey === directoryKey
+                                    ? providerStateForAgents.providers
+                                    : (providerStateForAgents.directoryScoped[directoryKey]?.providers ?? []);
 
-                            const existingZenModel = normalizeOptionalString(get().settingsZenModel);
+                                const existingZenModel = normalizeOptionalString(get().settingsZenModel);
 
-                            const defaultZenModel = normalizeOptionalString(openChamberDefaults.zenModel);
+                                const defaultZenModel = normalizeOptionalString(openChamberDefaults.zenModel);
 
-                            const resolvedExistingGitSelection = resolveGitGenerationModelSelection({
-                                providers: currentProviders,
-                                settingsZenModel: existingZenModel,
-                            });
-
-                            const resolvedDefaultGitSelection = resolveGitGenerationModelSelection({
-                                providers: currentProviders,
-                                settingsZenModel: defaultZenModel,
-                            });
-
-                            const resolvedGitSelection = resolvedExistingGitSelection || resolvedDefaultGitSelection;
-                            const resolvedGitModelId = resolvedGitSelection?.modelId;
-                            const resolvedZenModel = resolvedGitModelId || defaultZenModel || existingZenModel;
-
-                            // Update agent store state
-                            set((state) => ({
-                                agents: safeAgents,
-                                settingsDefaultModel: openChamberDefaults.defaultModel,
-                                settingsDefaultVariant: openChamberDefaults.defaultVariant,
-                                settingsDefaultAgent: openChamberDefaults.defaultAgent,
-                                settingsAutoCreateWorktree: openChamberDefaults.autoCreateWorktree ?? false,
-                                settingsGitmojiEnabled: openChamberDefaults.gitmojiEnabled ?? false,
-                                settingsDefaultFileViewerPreview: openChamberDefaults.defaultFileViewerPreview ?? false,
-                                settingsZenModel: resolvedZenModel,
-                                settingsMessageStreamTransport: openChamberDefaults.messageStreamTransport ?? state.settingsMessageStreamTransport ?? 'auto',
-                            }));
-
-                            // Update provider store's directoryScoped (agent fields are stored separately)
-                            useProviderConfigStore.setState((ps) => {
-                                const baseSnapshot: DirectoryScopedConfig = ps.directoryScoped[directoryKey] ?? {
+                                const resolvedExistingGitSelection = resolveGitGenerationModelSelection({
                                     providers: currentProviders,
-                                    currentProviderId: "",
-                                    currentModelId: "",
-                                    currentVariant: undefined,
-                                    selectedProviderId: "",
-                                    agentModelSelections: {},
-                                    defaultProviders: {},
-                                };
-
-                                const nextSnapshot: DirectoryScopedConfig = {
-                                    ...baseSnapshot,
-                                    providers: currentProviders,
-                                };
-
-                                const nextState: Partial<typeof ps> = {
-                                    directoryScoped: {
-                                        ...ps.directoryScoped,
-                                        [directoryKey]: nextSnapshot,
-                                    },
-                                };
-
-                                return nextState;
-                            });
-
-                            const shouldPersistResolvedZenModel =
-                                !!resolvedZenModel &&
-                                resolvedZenModel !== defaultZenModel;
-
-                            if (shouldPersistResolvedZenModel && resolvedZenModel) {
-                                updateDesktopSettings({
-                                    zenModel: resolvedZenModel,
-                                    gitProviderId: '',
-                                    gitModelId: '',
-                                }).catch(() => {
-                                    // Ignore errors - best effort cleanup
+                                    settingsZenModel: existingZenModel,
                                 });
-                            }
 
-                            if (safeAgents.length === 0) {
-                                set({ currentAgentName: undefined });
+                                const resolvedDefaultGitSelection = resolveGitGenerationModelSelection({
+                                    providers: currentProviders,
+                                    settingsZenModel: defaultZenModel,
+                                });
 
+                                const resolvedGitSelection = resolvedExistingGitSelection || resolvedDefaultGitSelection;
+                                const resolvedGitModelId = resolvedGitSelection?.modelId;
+                                const resolvedZenModel = resolvedGitModelId || defaultZenModel || existingZenModel;
+
+                                // Update agent store state
+                                set((state) => ({
+                                    agents: safeAgents,
+                                    settingsDefaultModel: openChamberDefaults.defaultModel,
+                                    settingsDefaultVariant: openChamberDefaults.defaultVariant,
+                                    settingsDefaultAgent: openChamberDefaults.defaultAgent,
+                                    settingsAutoCreateWorktree: openChamberDefaults.autoCreateWorktree ?? false,
+                                    settingsGitmojiEnabled: openChamberDefaults.gitmojiEnabled ?? false,
+                                    settingsDefaultFileViewerPreview: openChamberDefaults.defaultFileViewerPreview ?? false,
+                                    settingsZenModel: resolvedZenModel,
+                                    settingsMessageStreamTransport: openChamberDefaults.messageStreamTransport ?? state.settingsMessageStreamTransport ?? 'auto',
+                                }));
+
+                                // Update provider store's directoryScoped (agent fields are stored separately)
                                 useProviderConfigStore.setState((ps) => {
                                     const baseSnapshot: DirectoryScopedConfig = ps.directoryScoped[directoryKey] ?? {
                                         providers: currentProviders,
@@ -351,150 +308,193 @@ export const useAgentConfigStore = create<AgentConfigStore>()(
                                     return nextState;
                                 });
 
-                                return true;
-                            }
+                                const shouldPersistResolvedZenModel =
+                                    !!resolvedZenModel &&
+                                    resolvedZenModel !== defaultZenModel;
 
-                            // Helper to validate model exists in providers
-                            const validateModel = (providerId: string, modelId: string): boolean => {
-                                const provider = currentProviders.find((p) => p.id === providerId);
-                                if (!provider) return false;
-                                return provider.models.some((m) => m.id === modelId);
-                            };
-
-                            // --- Agent Selection ---
-                            // Priority: settings.defaultAgent → build → first primary → first agent
-                            const primaryAgents = safeAgents.filter((agent) => isPrimaryMode(agent.mode));
-                            const buildAgent = primaryAgents.find((agent) => agent.name === "build");
-                            const fallbackAgent = buildAgent || primaryAgents[0] || safeAgents[0];
-
-                            let resolvedAgent: Agent = fallbackAgent;
-
-                            // Track invalid settings to clear
-                             const invalidSettings: { defaultModel?: string; defaultVariant?: string; defaultAgent?: string } = {};
-
-                            // 1. Check OpenChamber settings for default agent
-                            if (openChamberDefaults.defaultAgent) {
-                                const settingsAgent = safeAgents.find((agent) => agent.name === openChamberDefaults.defaultAgent);
-                                if (settingsAgent) {
-                                    resolvedAgent = settingsAgent;
-                                } else {
-                                    // Agent no longer exists - mark for clearing
-                                    invalidSettings.defaultAgent = '';
+                                if (shouldPersistResolvedZenModel && resolvedZenModel) {
+                                    updateDesktopSettings({
+                                        zenModel: resolvedZenModel,
+                                        gitProviderId: '',
+                                        gitModelId: '',
+                                    }).catch(() => {
+                                        // Ignore errors - best effort cleanup
+                                    });
                                 }
-                            }
 
-                             // --- Model Selection ---
-                             // Priority: settings.defaultModel → agent's preferred model → first provider/first model
-                             let resolvedProviderId: string | undefined;
-                             let resolvedModelId: string | undefined;
-                             let resolvedVariant: string | undefined;
+                                if (safeAgents.length === 0) {
+                                    set({ currentAgentName: undefined });
 
-                             // 1. Check OpenChamber settings for default model
-                             if (openChamberDefaults.defaultModel) {
-                                 const parsed = parseModelString(openChamberDefaults.defaultModel);
-                                 if (parsed && validateModel(parsed.providerId, parsed.modelId)) {
-                                     resolvedProviderId = parsed.providerId;
-                                     resolvedModelId = parsed.modelId;
+                                    useProviderConfigStore.setState((ps) => {
+                                        const baseSnapshot: DirectoryScopedConfig = ps.directoryScoped[directoryKey] ?? {
+                                            providers: currentProviders,
+                                            currentProviderId: "",
+                                            currentModelId: "",
+                                            currentVariant: undefined,
+                                            selectedProviderId: "",
+                                            agentModelSelections: {},
+                                            defaultProviders: {},
+                                        };
 
-                                     if (openChamberDefaults.defaultVariant) {
-                                         const provider = currentProviders.find((p) => p.id === parsed.providerId);
-                                         const model = provider?.models.find((m) => m.id === parsed.modelId) as { variants?: Record<string, unknown> } | undefined;
-                                         const variants = model?.variants;
-                                         if (variants && Object.prototype.hasOwnProperty.call(variants, openChamberDefaults.defaultVariant)) {
-                                             resolvedVariant = openChamberDefaults.defaultVariant;
-                                         } else {
-                                             invalidSettings.defaultVariant = '';
-                                         }
-                                     }
-                                 } else {
-                                     // Model no longer exists - mark for clearing
-                                     invalidSettings.defaultModel = '';
-                                 }
-                             }
+                                        const nextSnapshot: DirectoryScopedConfig = {
+                                            ...baseSnapshot,
+                                            providers: currentProviders,
+                                        };
 
-                            // 2. Fall back to agent's preferred model
-                            if (!resolvedProviderId && resolvedAgent?.model?.providerID && resolvedAgent?.model?.modelID) {
-                                const { providerID, modelID } = resolvedAgent.model;
-                                if (validateModel(providerID, modelID)) {
-                                    resolvedProviderId = providerID;
-                                    resolvedModelId = modelID;
+                                        const nextState: Partial<typeof ps> = {
+                                            directoryScoped: {
+                                                ...ps.directoryScoped,
+                                                [directoryKey]: nextSnapshot,
+                                            },
+                                        };
+
+                                        return nextState;
+                                    });
+
+                                    return true;
                                 }
-                            }
 
-                            // 3. Last resort: first provider's first model
-                            if (!resolvedProviderId) {
-                                const firstProvider = currentProviders[0];
-                                const firstModel = firstProvider?.models[0];
-                                if (firstProvider && firstModel) {
-                                    resolvedProviderId = firstProvider.id;
-                                    resolvedModelId = firstModel.id;
-                                }
-                            }
-
-                            // Update agent store with resolved currentAgentName
-                            set({ currentAgentName: resolvedAgent.name });
-
-                            // Update provider store with resolved provider/model/variant
-                            useProviderConfigStore.setState((ps) => {
-                                const baseSnapshot: DirectoryScopedConfig = ps.directoryScoped[directoryKey] ?? {
-                                    providers: currentProviders,
-                                    currentProviderId: "",
-                                    currentModelId: "",
-                                    currentVariant: undefined,
-                                    selectedProviderId: "",
-                                    agentModelSelections: {},
-                                    defaultProviders: {},
+                                // Helper to validate model exists in providers
+                                const validateModel = (providerId: string, modelId: string): boolean => {
+                                    const provider = currentProviders.find((p) => p.id === providerId);
+                                    if (!provider) return false;
+                                    return provider.models.some((m) => m.id === modelId);
                                 };
 
-                                const nextSnapshot: DirectoryScopedConfig = {
-                                    ...baseSnapshot,
-                                    providers: currentProviders,
-                                    currentProviderId: resolvedProviderId ?? baseSnapshot.currentProviderId,
-                                    currentModelId: resolvedModelId ?? baseSnapshot.currentModelId,
-                                    currentVariant: resolvedVariant,
-                                };
+                                // --- Agent Selection ---
+                                // Priority: settings.defaultAgent → build → first primary → first agent
+                                const primaryAgents = safeAgents.filter((agent) => isPrimaryMode(agent.mode));
+                                const buildAgent = primaryAgents.find((agent) => agent.name === "build");
+                                const fallbackAgent = buildAgent || primaryAgents[0] || safeAgents[0];
 
-                                const nextState: Partial<typeof ps> = {
-                                    directoryScoped: {
-                                        ...ps.directoryScoped,
-                                        [directoryKey]: nextSnapshot,
-                                    },
-                                };
+                                let resolvedAgent: Agent = fallbackAgent;
 
-                                if (ps.activeDirectoryKey === directoryKey) {
-                                    if (resolvedProviderId && resolvedModelId) {
-                                        nextState.currentProviderId = resolvedProviderId;
-                                        nextState.currentModelId = resolvedModelId;
-                                        nextState.currentVariant = resolvedVariant;
+                                // Track invalid settings to clear
+                                const invalidSettings: { defaultModel?: string; defaultVariant?: string; defaultAgent?: string } = {};
+
+                                // 1. Check OpenChamber settings for default agent
+                                if (openChamberDefaults.defaultAgent) {
+                                    const settingsAgent = safeAgents.find((agent) => agent.name === openChamberDefaults.defaultAgent);
+                                    if (settingsAgent) {
+                                        resolvedAgent = settingsAgent;
+                                    } else {
+                                        // Agent no longer exists - mark for clearing
+                                        invalidSettings.defaultAgent = '';
                                     }
                                 }
 
-                                return nextState;
-                            });
+                                // --- Model Selection ---
+                                // Priority: settings.defaultModel → agent's preferred model → first provider/first model
+                                let resolvedProviderId: string | undefined;
+                                let resolvedModelId: string | undefined;
+                                let resolvedVariant: string | undefined;
 
-                            // Clear invalid settings from storage (best-effort cleanup)
-                            if (Object.keys(invalidSettings).length > 0) {
-                                set({
-                                    settingsDefaultModel: invalidSettings.defaultModel !== undefined ? undefined : get().settingsDefaultModel,
-                                    settingsDefaultVariant: invalidSettings.defaultVariant !== undefined ? undefined : get().settingsDefaultVariant,
-                                    settingsDefaultAgent: invalidSettings.defaultAgent !== undefined ? undefined : get().settingsDefaultAgent,
+                                // 1. Check OpenChamber settings for default model
+                                if (openChamberDefaults.defaultModel) {
+                                    const parsed = parseModelString(openChamberDefaults.defaultModel);
+                                    if (parsed && validateModel(parsed.providerId, parsed.modelId)) {
+                                        resolvedProviderId = parsed.providerId;
+                                        resolvedModelId = parsed.modelId;
+
+                                        if (openChamberDefaults.defaultVariant) {
+                                            const provider = currentProviders.find((p) => p.id === parsed.providerId);
+                                            const model = provider?.models.find((m) => m.id === parsed.modelId) as { variants?: Record<string, unknown> } | undefined;
+                                            const variants = model?.variants;
+                                            if (variants && Object.prototype.hasOwnProperty.call(variants, openChamberDefaults.defaultVariant)) {
+                                                resolvedVariant = openChamberDefaults.defaultVariant;
+                                            } else {
+                                                invalidSettings.defaultVariant = '';
+                                            }
+                                        }
+                                    } else {
+                                        // Model no longer exists - mark for clearing
+                                        invalidSettings.defaultModel = '';
+                                    }
+                                }
+
+                                // 2. Fall back to agent's preferred model
+                                if (!resolvedProviderId && resolvedAgent?.model?.providerID && resolvedAgent?.model?.modelID) {
+                                    const { providerID, modelID } = resolvedAgent.model;
+                                    if (validateModel(providerID, modelID)) {
+                                        resolvedProviderId = providerID;
+                                        resolvedModelId = modelID;
+                                    }
+                                }
+
+                                // 3. Last resort: first provider's first model
+                                if (!resolvedProviderId) {
+                                    const firstProvider = currentProviders[0];
+                                    const firstModel = firstProvider?.models[0];
+                                    if (firstProvider && firstModel) {
+                                        resolvedProviderId = firstProvider.id;
+                                        resolvedModelId = firstModel.id;
+                                    }
+                                }
+
+                                // Update agent store with resolved currentAgentName
+                                set({ currentAgentName: resolvedAgent.name });
+
+                                // Update provider store with resolved provider/model/variant
+                                useProviderConfigStore.setState((ps) => {
+                                    const baseSnapshot: DirectoryScopedConfig = ps.directoryScoped[directoryKey] ?? {
+                                        providers: currentProviders,
+                                        currentProviderId: "",
+                                        currentModelId: "",
+                                        currentVariant: undefined,
+                                        selectedProviderId: "",
+                                        agentModelSelections: {},
+                                        defaultProviders: {},
+                                    };
+
+                                    const nextSnapshot: DirectoryScopedConfig = {
+                                        ...baseSnapshot,
+                                        providers: currentProviders,
+                                        currentProviderId: resolvedProviderId ?? baseSnapshot.currentProviderId,
+                                        currentModelId: resolvedModelId ?? baseSnapshot.currentModelId,
+                                        currentVariant: resolvedVariant,
+                                    };
+
+                                    const nextState: Partial<typeof ps> = {
+                                        directoryScoped: {
+                                            ...ps.directoryScoped,
+                                            [directoryKey]: nextSnapshot,
+                                        },
+                                    };
+
+                                    if (ps.activeDirectoryKey === directoryKey) {
+                                        if (resolvedProviderId && resolvedModelId) {
+                                            nextState.currentProviderId = resolvedProviderId;
+                                            nextState.currentModelId = resolvedModelId;
+                                            nextState.currentVariant = resolvedVariant;
+                                        }
+                                    }
+
+                                    return nextState;
                                 });
-                                updateDesktopSettings(invalidSettings).catch(() => {
-                                    // Ignore errors - best effort cleanup
-                                });
+
+                                // Clear invalid settings from storage (best-effort cleanup)
+                                if (Object.keys(invalidSettings).length > 0) {
+                                    set({
+                                        settingsDefaultModel: invalidSettings.defaultModel !== undefined ? undefined : get().settingsDefaultModel,
+                                        settingsDefaultVariant: invalidSettings.defaultVariant !== undefined ? undefined : get().settingsDefaultVariant,
+                                        settingsDefaultAgent: invalidSettings.defaultAgent !== undefined ? undefined : get().settingsDefaultAgent,
+                                    });
+                                    updateDesktopSettings(invalidSettings).catch(() => {
+                                        // Ignore errors - best effort cleanup
+                                    });
+                                }
+
+                                return true;
+                            } catch (error) {
+                                lastError = error;
+                                const waitMs = 200 * (attempt + 1);
+                                await new Promise((resolve) => setTimeout(resolve, waitMs));
                             }
-
-                            return true;
-                        } catch (error) {
-                            lastError = error;
-                            const waitMs = 200 * (attempt + 1);
-                            await new Promise((resolve) => setTimeout(resolve, waitMs));
                         }
-                    }
 
-                    console.error("Failed to load agents:", lastError);
+                        console.error("Failed to load agents:", lastError);
 
-                    return false;
+                        return false;
                     })().finally(() => _inFlightAgents.delete(directoryKey));
 
                     _inFlightAgents.set(directoryKey, promise);
@@ -707,11 +707,11 @@ export const useAgentConfigStore = create<AgentConfigStore>()(
                     settingsZenModel: state.settingsZenModel,
                     settingsMessageStreamTransport: state.settingsMessageStreamTransport,
                 }),
-             },
-         ),
-         {
-             name: "agent-config-store-devtools",
-         }
+            },
+        ),
+        {
+            name: "agent-config-store-devtools",
+        }
     ),
 );
 

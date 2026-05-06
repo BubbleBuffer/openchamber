@@ -26,7 +26,7 @@ interface ContextState {
 
     // sessionId → agentName → "providerId/modelId" → variant
     sessionAgentModelVariantSelections: Map<string, Map<string, Map<string, string>>>;
- 
+
     currentAgentContext: Map<string, string>;
 
     sessionContextUsage: Map<string, ContextUsage>;
@@ -198,7 +198,7 @@ export const useContextStore = create<ContextStore>()(
                     if (!modelMap) return undefined;
                     return modelMap.get(`${providerId}/${modelId}`);
                 },
- 
+
                 getContextUsage: (sessionId: string, contextLimit: number, outputLimit: number, messages: Map<string, { info: any; parts: any[] }[]>) => {
                     if (!sessionId) return null;
 
@@ -223,18 +223,18 @@ export const useContextStore = create<ContextStore>()(
                         const runUpdate = () => {
                             set((state) => {
                                 const existing = state.sessionContextUsage.get(sessionId) as ContextUsage | undefined;
-                        if (
-                            existing &&
-                            existing.totalTokens === usage.totalTokens &&
-                            existing.percentage === usage.percentage &&
-                            existing.contextLimit === usage.contextLimit &&
-                            (existing.outputLimit ?? 0) === (usage.outputLimit ?? 0) &&
-                            (existing.normalizedOutput ?? 0) === (usage.normalizedOutput ?? 0) &&
-                            existing.thresholdLimit === usage.thresholdLimit &&
-                            existing.lastMessageId === usage.lastMessageId
-                        ) {
-                            return state;
-                        }
+                                if (
+                                    existing &&
+                                    existing.totalTokens === usage.totalTokens &&
+                                    existing.percentage === usage.percentage &&
+                                    existing.contextLimit === usage.contextLimit &&
+                                    (existing.outputLimit ?? 0) === (usage.outputLimit ?? 0) &&
+                                    (existing.normalizedOutput ?? 0) === (usage.normalizedOutput ?? 0) &&
+                                    existing.thresholdLimit === usage.thresholdLimit &&
+                                    existing.lastMessageId === usage.lastMessageId
+                                ) {
+                                    return state;
+                                }
 
                                 const newContextUsage = new Map(state.sessionContextUsage);
                                 newContextUsage.set(sessionId, usage);
@@ -489,7 +489,7 @@ export const useContextStore = create<ContextStore>()(
                             agentModelVariantSelections.set(sessionId, agentMap);
                         });
                     }
- 
+
                     const agentEditModes = new Map();
                     if (persistedState?.sessionAgentEditModes) {
                         persistedState.sessionAgentEditModes.forEach(([sessionId, agentArray]: [string, any[]]) => {

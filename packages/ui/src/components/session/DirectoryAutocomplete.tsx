@@ -137,7 +137,7 @@ export const DirectoryAutocomplete = React.forwardRef<DirectoryAutocompleteHandl
     opencodeClient.listLocalDirectory(parentDir)
       .then((entries) => {
         if (cancelled) return;
-        
+
         // Filter to directories only, respect hidden setting
         const directories = entries.filter((entry) => {
           if (!entry.isDirectory) return false;
@@ -148,13 +148,13 @@ export const DirectoryAutocomplete = React.forwardRef<DirectoryAutocompleteHandl
         // Apply fuzzy matching and sort by score
         const scored = partialName
           ? directories
-              .map((entry) => {
-                const score = fuzzyScore(partialName, entry.name);
-                return score !== null ? { entry, score } : null;
-              })
-              .filter((item): item is { entry: FilesystemEntry; score: number } => item !== null)
-              .sort((a, b) => b.score - a.score || a.entry.name.localeCompare(b.entry.name))
-              .map((item) => item.entry)
+            .map((entry) => {
+              const score = fuzzyScore(partialName, entry.name);
+              return score !== null ? { entry, score } : null;
+            })
+            .filter((item): item is { entry: FilesystemEntry; score: number } => item !== null)
+            .sort((a, b) => b.score - a.score || a.entry.name.localeCompare(b.entry.name))
+            .map((item) => item.entry)
           : directories.sort((a, b) => a.name.localeCompare(b.name));
 
         setSuggestions(scored.slice(0, 10)); // Limit suggestions

@@ -247,7 +247,7 @@ export const ProjectsPage: React.FC = () => {
   return (
     <ScrollableOverlay outerClassName="h-full" className="w-full bg-background">
       <div className="mx-auto w-full max-w-4xl p-3 sm:p-6 sm:pt-8">
-        
+
         {/* Top Header & Actions */}
         <div className="mb-4 flex items-center justify-between gap-4">
           <div className="min-w-0">
@@ -263,18 +263,18 @@ export const ProjectsPage: React.FC = () => {
         {/* Identity Controls */}
         <div className="mb-8">
           <section className="px-2 pb-2 pt-0 space-y-0.5">
-            
+
             {/* Name */}
             <div className="py-1.5">
               <div className="flex min-w-0 flex-col">
                 <span className="typography-ui-label text-foreground">Project Name</span>
               </div>
               <div className="mt-1.5 flex min-w-0 items-center gap-2">
-                <Input 
-                  value={name} 
-                  onChange={(e) => setName(e.target.value)} 
-                  placeholder="Project name" 
-                  className="h-7 min-w-0 w-full sm:max-w-[19rem]" 
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Project name"
+                  className="h-7 min-w-0 w-full sm:max-w-[19rem]"
                 />
               </div>
             </div>
@@ -443,7 +443,7 @@ export const ProjectsPage: React.FC = () => {
             </div>
 
           </section>
-          
+
           <div className="mt-0.5 px-2 py-1">
             <Button
               onClick={handleSave}

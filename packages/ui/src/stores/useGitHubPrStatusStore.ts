@@ -333,8 +333,8 @@ export const useGitHubPrStatusStore = create<GitHubPrStatusStore>()(
           const nextInterval = isPendingChecks(entry.status)
             ? PR_OPEN_BUSY_INTERVAL_MS
             : (entry.status?.checks && entry.status.checks.state !== 'pending'
-                ? PR_OPEN_STABLE_INTERVAL_MS
-                : PR_OPEN_DEFAULT_INTERVAL_MS);
+              ? PR_OPEN_STABLE_INTERVAL_MS
+              : PR_OPEN_DEFAULT_INTERVAL_MS);
           if (elapsed < nextInterval) {
             return;
           }

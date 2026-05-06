@@ -959,13 +959,13 @@ export function ScheduledTaskEditorDialog(props: {
         timezone: draft.schedule.timezone.trim(),
         ...(draft.schedule.kind === 'once'
           ? {
-              date: draft.schedule.onceDate,
-              time: draft.schedule.onceTime,
-            }
+            date: draft.schedule.onceDate,
+            time: draft.schedule.onceTime,
+          }
           : {
-              times: normalizedTimes,
-              ...(draft.schedule.kind === 'weekly' ? { weekdays: draft.schedule.weekdays } : {}),
-            }),
+            times: normalizedTimes,
+            ...(draft.schedule.kind === 'weekly' ? { weekdays: draft.schedule.weekdays } : {}),
+          }),
       },
       execution: {
         prompt: draft.execution.prompt,
@@ -1003,377 +1003,377 @@ export function ScheduledTaskEditorDialog(props: {
 
   const formBody = (
     <div className="flex flex-col gap-5">
-                <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
-                  <div className="flex flex-col gap-1">
-                    <FieldLabel htmlFor="sched-name" required>Task name</FieldLabel>
-                    <Input
-                      id="sched-name"
-                      value={draft.name}
-                      onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))}
-                      placeholder="Daily sync"
-                      maxLength={80}
-                      className="w-full sm:max-w-[220px]"
-                    />
-                  </div>
+      <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-1">
+          <FieldLabel htmlFor="sched-name" required>Task name</FieldLabel>
+          <Input
+            id="sched-name"
+            value={draft.name}
+            onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))}
+            placeholder="Daily sync"
+            maxLength={80}
+            className="w-full sm:max-w-[220px]"
+          />
+        </div>
 
-                  <div className="flex flex-col gap-1">
-                    <FieldLabel>Schedule type</FieldLabel>
-                    <Select
-                      value={draft.schedule.kind}
-                      onValueChange={(value: 'daily' | 'weekly' | 'once') => {
-                        setDraft((prev) => ({
-                          ...prev,
-                          schedule: { ...prev.schedule, kind: value },
-                        }));
-                      }}
+        <div className="flex flex-col gap-1">
+          <FieldLabel>Schedule type</FieldLabel>
+          <Select
+            value={draft.schedule.kind}
+            onValueChange={(value: 'daily' | 'weekly' | 'once') => {
+              setDraft((prev) => ({
+                ...prev,
+                schedule: { ...prev.schedule, kind: value },
+              }));
+            }}
+          >
+            <SelectTrigger className="w-fit max-w-full"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="daily">Daily</SelectItem>
+              <SelectItem value="weekly">Weekly</SelectItem>
+              <SelectItem value="once">One-time</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+      </div>
+
+      {draft.schedule.kind === 'once' ? (
+        <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+          <div className="flex flex-col gap-1" ref={datePickerRef}>
+            <FieldLabel>Date</FieldLabel>
+            <div className="relative">
+              <button
+                type="button"
+                className="inline-flex h-9 w-fit max-w-full items-center justify-between gap-2 rounded-md border border-border bg-background px-3 text-left hover:bg-interactive-hover"
+                onClick={() => setIsDatePickerOpen((prev) => !prev)}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <RiCalendarLine className="h-4 w-4 text-muted-foreground" />
+                  <span className="typography-ui-label text-foreground">{formatDateLabel(draft.schedule.onceDate)}</span>
+                </span>
+                <RiArrowDownSLine className="h-4 w-4 text-muted-foreground" />
+              </button>
+
+              {isDatePickerOpen ? (
+                <div className="absolute left-0 top-[calc(100%+6px)] z-50 w-[288px] rounded-xl border border-border bg-background p-3 shadow-sm">
+                  <div className="mb-2 flex items-center justify-between">
+                    <button
+                      type="button"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-interactive-hover disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={() => setCalendarMonth((prev) => shiftMonth(prev, -1))}
+                      aria-label="Previous month"
+                      disabled={isAtCurrentMonth}
                     >
-                      <SelectTrigger className="w-fit max-w-full"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="daily">Daily</SelectItem>
-                        <SelectItem value="weekly">Weekly</SelectItem>
-                        <SelectItem value="once">One-time</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <RiArrowLeftSLine className="h-4 w-4" />
+                    </button>
+                    <div className="typography-ui-label text-foreground">
+                      {new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(calendarMonth)}
+                    </div>
+                    <button
+                      type="button"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-interactive-hover"
+                      onClick={() => setCalendarMonth((prev) => shiftMonth(prev, 1))}
+                      aria-label="Next month"
+                    >
+                      <RiArrowRightSLine className="h-4 w-4" />
+                    </button>
                   </div>
 
-                </div>
-
-          {draft.schedule.kind === 'once' ? (
-            <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
-              <div className="flex flex-col gap-1" ref={datePickerRef}>
-                <FieldLabel>Date</FieldLabel>
-                <div className="relative">
-                  <button
-                    type="button"
-                    className="inline-flex h-9 w-fit max-w-full items-center justify-between gap-2 rounded-md border border-border bg-background px-3 text-left hover:bg-interactive-hover"
-                    onClick={() => setIsDatePickerOpen((prev) => !prev)}
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      <RiCalendarLine className="h-4 w-4 text-muted-foreground" />
-                      <span className="typography-ui-label text-foreground">{formatDateLabel(draft.schedule.onceDate)}</span>
-                    </span>
-                    <RiArrowDownSLine className="h-4 w-4 text-muted-foreground" />
-                  </button>
-
-                  {isDatePickerOpen ? (
-                    <div className="absolute left-0 top-[calc(100%+6px)] z-50 w-[288px] rounded-xl border border-border bg-background p-3 shadow-sm">
-                      <div className="mb-2 flex items-center justify-between">
-                        <button
-                          type="button"
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-interactive-hover disabled:cursor-not-allowed disabled:opacity-40"
-                          onClick={() => setCalendarMonth((prev) => shiftMonth(prev, -1))}
-                          aria-label="Previous month"
-                          disabled={isAtCurrentMonth}
-                        >
-                          <RiArrowLeftSLine className="h-4 w-4" />
-                        </button>
-                        <div className="typography-ui-label text-foreground">
-                          {new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(calendarMonth)}
-                        </div>
-                        <button
-                          type="button"
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-interactive-hover"
-                          onClick={() => setCalendarMonth((prev) => shiftMonth(prev, 1))}
-                          aria-label="Next month"
-                        >
-                          <RiArrowRightSLine className="h-4 w-4" />
-                        </button>
+                  <div className="mb-1 grid grid-cols-7 gap-1 px-1">
+                    {calendarWeekdayLabels.map((weekday, index) => (
+                      <div key={`${weekday}-${index}`} className="py-1 text-center typography-micro text-muted-foreground">
+                        {weekday}
                       </div>
+                    ))}
+                  </div>
 
-                      <div className="mb-1 grid grid-cols-7 gap-1 px-1">
-                        {calendarWeekdayLabels.map((weekday, index) => (
-                          <div key={`${weekday}-${index}`} className="py-1 text-center typography-micro text-muted-foreground">
-                            {weekday}
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="grid grid-cols-7 gap-1">
-                        {getCalendarCells(calendarMonth, weekStartsOn).map(({ date, inCurrentMonth }) => {
-                          const isoDate = formatLocalDateISO(date);
-                          const isSelected = isoDate === draft.schedule.onceDate;
-                          const isToday = isSameCalendarDay(date, todayDate);
-                          const isPast = date.getTime() < todayDate.getTime();
-                          const dayClass = isSelected
-                            ? 'bg-interactive-selection text-interactive-selection-foreground'
-                            : (isPast
-                              ? 'text-muted-foreground/40'
-                              : (inCurrentMonth
-                                ? 'text-foreground hover:bg-interactive-hover'
-                                : 'text-muted-foreground/60 hover:bg-interactive-hover'));
-                          return (
-                            <button
-                              key={isoDate}
-                              type="button"
-                              onClick={() => {
-                                if (isPast) {
-                                  return;
-                                }
-                                setOneTimeDate(isoDate);
-                                setIsDatePickerOpen(false);
-                              }}
-                              disabled={isPast}
-                              className={[
-                                'h-8 rounded-md typography-ui-label',
-                                dayClass,
-                                isToday && !isSelected
-                                  ? 'ring-1 ring-inset ring-interactive-focusRing bg-interactive-hover/50'
-                                  : '',
-                                isPast ? 'cursor-not-allowed opacity-45' : '',
-                              ].join(' ')}
-                            >
-                              {date.getDate()}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
-                        <div className="typography-micro text-muted-foreground">{selectedDateLabel || ''}</div>
-                        <Button
-                          type="button"
-                          size="xs"
-                          variant="ghost"
-                          onClick={() => {
-                            setOneTimeDate(formatLocalDateISO(todayDate));
-                            setCalendarMonth(new Date(todayDate.getFullYear(), todayDate.getMonth(), 1));
-                          }}
-                        >
-                          Jump to today
-                        </Button>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="flex min-w-0 flex-col gap-1">
-                <FieldLabel>Time</FieldLabel>
-                <TimePill
-                  value={draft.schedule.onceTime}
-                  use24Hour={use24Hour}
-                  onChange={(next) => setDraft((prev) => ({
-                    ...prev,
-                    schedule: { ...prev.schedule, onceTime: next },
-                  }))}
-                />
-
-                <div className="mt-2 flex flex-col gap-1">
-                  <FieldLabel>Timezone</FieldLabel>
-                  <Select
-                    value={draft.schedule.timezone}
-                    onValueChange={(timezone) => {
-                      setDraft((prev) => ({
-                        ...prev,
-                        schedule: { ...prev.schedule, timezone },
-                      }));
-                    }}
-                  >
-                    <SelectTrigger className="w-fit max-w-full"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {TIMEZONE_OPTIONS.map((timezone) => (
-                        <SelectItem key={timezone} value={timezone}>{timezone}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
-              {draft.schedule.kind === 'weekly' ? (
-                <div className="flex flex-col gap-1 sm:col-span-2">
-                  <FieldLabel>Weekdays</FieldLabel>
-                  <div className="flex flex-wrap gap-x-3 gap-y-2">
-                    {orderedWeekdays.map((weekday) => {
-                      const checked = draft.schedule.weekdays.includes(weekday.value);
+                  <div className="grid grid-cols-7 gap-1">
+                    {getCalendarCells(calendarMonth, weekStartsOn).map(({ date, inCurrentMonth }) => {
+                      const isoDate = formatLocalDateISO(date);
+                      const isSelected = isoDate === draft.schedule.onceDate;
+                      const isToday = isSameCalendarDay(date, todayDate);
+                      const isPast = date.getTime() < todayDate.getTime();
+                      const dayClass = isSelected
+                        ? 'bg-interactive-selection text-interactive-selection-foreground'
+                        : (isPast
+                          ? 'text-muted-foreground/40'
+                          : (inCurrentMonth
+                            ? 'text-foreground hover:bg-interactive-hover'
+                            : 'text-muted-foreground/60 hover:bg-interactive-hover'));
                       return (
                         <button
-                          key={weekday.value}
+                          key={isoDate}
                           type="button"
-                          onClick={() => toggleWeekday(weekday.value, !checked)}
+                          onClick={() => {
+                            if (isPast) {
+                              return;
+                            }
+                            setOneTimeDate(isoDate);
+                            setIsDatePickerOpen(false);
+                          }}
+                          disabled={isPast}
                           className={[
-                            'inline-flex items-center gap-1.5 px-0.5 py-0.5 typography-meta',
-                            checked ? 'text-foreground' : 'text-muted-foreground',
-                            'hover:text-foreground',
+                            'h-8 rounded-md typography-ui-label',
+                            dayClass,
+                            isToday && !isSelected
+                              ? 'ring-1 ring-inset ring-interactive-focusRing bg-interactive-hover/50'
+                              : '',
+                            isPast ? 'cursor-not-allowed opacity-45' : '',
                           ].join(' ')}
                         >
-                          <Checkbox checked={checked} onChange={(next) => toggleWeekday(weekday.value, next)} ariaLabel={weekday.label} />
-                          <span>{weekday.label}</span>
+                          {date.getDate()}
                         </button>
                       );
                     })}
                   </div>
+
+                  <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
+                    <div className="typography-micro text-muted-foreground">{selectedDateLabel || ''}</div>
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant="ghost"
+                      onClick={() => {
+                        setOneTimeDate(formatLocalDateISO(todayDate));
+                        setCalendarMonth(new Date(todayDate.getFullYear(), todayDate.getMonth(), 1));
+                      }}
+                    >
+                      Jump to today
+                    </Button>
+                  </div>
                 </div>
               ) : null}
-
-              <div className="flex flex-col gap-2">
-                <FieldLabel>Times</FieldLabel>
-                <div className="flex flex-col gap-2">
-                  {draft.schedule.times.map((time, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <TimePill
-                        value={time}
-                        use24Hour={use24Hour}
-                        onChange={(next) => updateTimeAt(index, next)}
-                      />
-                      {draft.schedule.times.length > 1 ? (
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => removeTimeAt(index)}
-                          aria-label="Remove time"
-                        >
-                          <RiCloseLine className="h-4 w-4" />
-                        </Button>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-                <div>
-                  <Button type="button" size="sm" variant="outline" onClick={addTime}>
-                    <RiAddLine className="mr-1 h-4 w-4" /> Add time
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <FieldLabel>Timezone</FieldLabel>
-                <Select
-                  value={draft.schedule.timezone}
-                  onValueChange={(timezone) => {
-                    setDraft((prev) => ({
-                      ...prev,
-                      schedule: { ...prev.schedule, timezone },
-                    }));
-                  }}
-                >
-                  <SelectTrigger className="w-fit max-w-full"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {TIMEZONE_OPTIONS.map((timezone) => (
-                      <SelectItem key={timezone} value={timezone}>{timezone}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
-          )}
+          </div>
 
-          <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
-            <div className="flex min-w-0 flex-col gap-1">
-              <FieldLabel required>Model</FieldLabel>
-              <ModelSelector
-                providerId={draft.execution.providerID}
-                modelId={draft.execution.modelID}
-                onChange={(providerID, modelID) => {
-                  setDraft((prev) => ({
-                    ...prev,
-                    execution: {
-                      ...prev.execution,
-                      providerID,
-                      modelID,
-                      variant: '',
-                    },
-                  }));
-                }}
-              />
-            </div>
+          <div className="flex min-w-0 flex-col gap-1">
+            <FieldLabel>Time</FieldLabel>
+            <TimePill
+              value={draft.schedule.onceTime}
+              use24Hour={use24Hour}
+              onChange={(next) => setDraft((prev) => ({
+                ...prev,
+                schedule: { ...prev.schedule, onceTime: next },
+              }))}
+            />
 
-            <div className="flex min-w-0 flex-col gap-1">
-              <FieldLabel>Thinking level</FieldLabel>
+            <div className="mt-2 flex flex-col gap-1">
+              <FieldLabel>Timezone</FieldLabel>
               <Select
-                value={selectedVariantValue}
-                disabled={!hasVariantOptions}
-                onValueChange={(value) => {
+                value={draft.schedule.timezone}
+                onValueChange={(timezone) => {
                   setDraft((prev) => ({
                     ...prev,
-                    execution: {
-                      ...prev.execution,
-                      variant: value === '__default' ? '' : value,
-                    },
+                    schedule: { ...prev.schedule, timezone },
                   }));
                 }}
               >
                 <SelectTrigger className="w-fit max-w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__default">Default</SelectItem>
-                  {variantOptions.map((variant) => (
-                    <SelectItem key={variant} value={variant}>{variant}</SelectItem>
+                  {TIMEZONE_OPTIONS.map((timezone) => (
+                    <SelectItem key={timezone} value={timezone}>{timezone}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+          {draft.schedule.kind === 'weekly' ? (
+            <div className="flex flex-col gap-1 sm:col-span-2">
+              <FieldLabel>Weekdays</FieldLabel>
+              <div className="flex flex-wrap gap-x-3 gap-y-2">
+                {orderedWeekdays.map((weekday) => {
+                  const checked = draft.schedule.weekdays.includes(weekday.value);
+                  return (
+                    <button
+                      key={weekday.value}
+                      type="button"
+                      onClick={() => toggleWeekday(weekday.value, !checked)}
+                      className={[
+                        'inline-flex items-center gap-1.5 px-0.5 py-0.5 typography-meta',
+                        checked ? 'text-foreground' : 'text-muted-foreground',
+                        'hover:text-foreground',
+                      ].join(' ')}
+                    >
+                      <Checkbox checked={checked} onChange={(next) => toggleWeekday(weekday.value, next)} ariaLabel={weekday.label} />
+                      <span>{weekday.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
 
-          <div className="flex min-w-0 flex-col gap-1">
-            <FieldLabel>Agent</FieldLabel>
-            <AgentSelector
-              agentName={draft.execution.agent}
-              filter={(agent) => isPrimaryMode(agent.mode)}
-              onChange={(agent) => setDraft((prev) => ({
-                ...prev,
-                execution: {
-                  ...prev.execution,
-                  agent,
-                },
-              }))}
-            />
+          <div className="flex flex-col gap-2">
+            <FieldLabel>Times</FieldLabel>
+            <div className="flex flex-col gap-2">
+              {draft.schedule.times.map((time, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <TimePill
+                    value={time}
+                    use24Hour={use24Hour}
+                    onChange={(next) => updateTimeAt(index, next)}
+                  />
+                  {draft.schedule.times.length > 1 ? (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => removeTimeAt(index)}
+                      aria-label="Remove time"
+                    >
+                      <RiCloseLine className="h-4 w-4" />
+                    </Button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+            <div>
+              <Button type="button" size="sm" variant="outline" onClick={addTime}>
+                <RiAddLine className="mr-1 h-4 w-4" /> Add time
+              </Button>
+            </div>
           </div>
 
           <div className="flex flex-col gap-1">
-            <FieldLabel htmlFor="sched-prompt" required>Prompt</FieldLabel>
-            <div className="relative">
-              <Textarea
-                id="sched-prompt"
-                ref={promptTextareaRef}
-                value={draft.execution.prompt}
-                onChange={(event) => {
-                  const nextPrompt = event.target.value;
-                  setPromptValue(nextPrompt);
-                  const cursorPosition = event.target.selectionStart ?? nextPrompt.length;
-                  updateAutocompleteState(nextPrompt, cursorPosition);
-                }}
-                onKeyDown={handlePromptKeyDown}
-                rows={8}
-                placeholder="Summarize open tasks and propose next actions"
-                className="typography-meta min-h-[120px] max-h-[300px] resize-none overflow-y-auto"
-              />
-
-              {showCommandAutocomplete ? (
-                <CommandAutocomplete
-                  ref={commandRef}
-                  searchQuery={commandQuery}
-                  onCommandSelect={handleCommandSelect}
-                  onClose={() => setShowCommandAutocomplete(false)}
-                  style={{
-                    left: 0,
-                    top: 'auto',
-                    bottom: 'calc(100% + 6px)',
-                    marginBottom: 0,
-                    maxWidth: '100%',
-                  }}
-                />
-              ) : null}
-
-              {showFileMention ? (
-                <FileMentionAutocomplete
-                  ref={mentionRef}
-                  searchQuery={mentionQuery}
-                  onFileSelect={handleFileSelect}
-                  onAgentSelect={handleAgentSelect}
-                  onClose={() => setShowFileMention(false)}
-                  style={{
-                    left: 0,
-                    top: 'auto',
-                    bottom: 'calc(100% + 6px)',
-                    marginBottom: 0,
-                    maxWidth: '100%',
-                  }}
-                />
-              ) : null}
-            </div>
+            <FieldLabel>Timezone</FieldLabel>
+            <Select
+              value={draft.schedule.timezone}
+              onValueChange={(timezone) => {
+                setDraft((prev) => ({
+                  ...prev,
+                  schedule: { ...prev.schedule, timezone },
+                }));
+              }}
+            >
+              <SelectTrigger className="w-fit max-w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {TIMEZONE_OPTIONS.map((timezone) => (
+                  <SelectItem key={timezone} value={timezone}>{timezone}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+        <div className="flex min-w-0 flex-col gap-1">
+          <FieldLabel required>Model</FieldLabel>
+          <ModelSelector
+            providerId={draft.execution.providerID}
+            modelId={draft.execution.modelID}
+            onChange={(providerID, modelID) => {
+              setDraft((prev) => ({
+                ...prev,
+                execution: {
+                  ...prev.execution,
+                  providerID,
+                  modelID,
+                  variant: '',
+                },
+              }));
+            }}
+          />
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-1">
+          <FieldLabel>Thinking level</FieldLabel>
+          <Select
+            value={selectedVariantValue}
+            disabled={!hasVariantOptions}
+            onValueChange={(value) => {
+              setDraft((prev) => ({
+                ...prev,
+                execution: {
+                  ...prev.execution,
+                  variant: value === '__default' ? '' : value,
+                },
+              }));
+            }}
+          >
+            <SelectTrigger className="w-fit max-w-full"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__default">Default</SelectItem>
+              {variantOptions.map((variant) => (
+                <SelectItem key={variant} value={variant}>{variant}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex min-w-0 flex-col gap-1">
+        <FieldLabel>Agent</FieldLabel>
+        <AgentSelector
+          agentName={draft.execution.agent}
+          filter={(agent) => isPrimaryMode(agent.mode)}
+          onChange={(agent) => setDraft((prev) => ({
+            ...prev,
+            execution: {
+              ...prev.execution,
+              agent,
+            },
+          }))}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <FieldLabel htmlFor="sched-prompt" required>Prompt</FieldLabel>
+        <div className="relative">
+          <Textarea
+            id="sched-prompt"
+            ref={promptTextareaRef}
+            value={draft.execution.prompt}
+            onChange={(event) => {
+              const nextPrompt = event.target.value;
+              setPromptValue(nextPrompt);
+              const cursorPosition = event.target.selectionStart ?? nextPrompt.length;
+              updateAutocompleteState(nextPrompt, cursorPosition);
+            }}
+            onKeyDown={handlePromptKeyDown}
+            rows={8}
+            placeholder="Summarize open tasks and propose next actions"
+            className="typography-meta min-h-[120px] max-h-[300px] resize-none overflow-y-auto"
+          />
+
+          {showCommandAutocomplete ? (
+            <CommandAutocomplete
+              ref={commandRef}
+              searchQuery={commandQuery}
+              onCommandSelect={handleCommandSelect}
+              onClose={() => setShowCommandAutocomplete(false)}
+              style={{
+                left: 0,
+                top: 'auto',
+                bottom: 'calc(100% + 6px)',
+                marginBottom: 0,
+                maxWidth: '100%',
+              }}
+            />
+          ) : null}
+
+          {showFileMention ? (
+            <FileMentionAutocomplete
+              ref={mentionRef}
+              searchQuery={mentionQuery}
+              onFileSelect={handleFileSelect}
+              onAgentSelect={handleAgentSelect}
+              onClose={() => setShowFileMention(false)}
+              style={{
+                left: 0,
+                top: 'auto',
+                bottom: 'calc(100% + 6px)',
+                marginBottom: 0,
+                maxWidth: '100%',
+              }}
+            />
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 

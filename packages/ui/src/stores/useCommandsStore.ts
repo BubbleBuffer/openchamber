@@ -62,7 +62,7 @@ const getRequestDirectory = (): string | null => {
   try {
     const projectsStore = useProjectsStore.getState();
     const activeProject = projectsStore.getActiveProject?.();
-    
+
     // 1. Primary: Active project path from store
     if (activeProject?.path?.trim()) {
       return activeProject.path.trim();
@@ -468,10 +468,10 @@ async function waitForOpenCodeConnection(delayMs?: number) {
       attempt <= FAST_HEALTH_POLL_ATTEMPTS && elapsed < 1200
         ? FAST_HEALTH_POLL_INTERVAL_MS
         : Math.min(
-            SLOW_HEALTH_POLL_BASE_MS +
-              Math.max(0, attempt - FAST_HEALTH_POLL_ATTEMPTS) * SLOW_HEALTH_POLL_INCREMENT_MS,
-            SLOW_HEALTH_POLL_MAX_MS,
-          );
+          SLOW_HEALTH_POLL_BASE_MS +
+          Math.max(0, attempt - FAST_HEALTH_POLL_ATTEMPTS) * SLOW_HEALTH_POLL_INCREMENT_MS,
+          SLOW_HEALTH_POLL_MAX_MS,
+        );
 
     await sleep(waitMs);
   }

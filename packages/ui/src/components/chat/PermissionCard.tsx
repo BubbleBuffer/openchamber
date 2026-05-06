@@ -115,7 +115,7 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
       const description = getMeta('description');
       const workingDir = getMeta('cwd') || getMeta('working_directory') || getMeta('directory') || getMeta('path');
       const timeout = getMetaNum('timeout');
- 
+
       return (
         <>
           {description && (
@@ -131,7 +131,7 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
               <span className="font-semibold">Timeout:</span> {timeout}ms
             </div>
           )}
-          {}
+          { }
           {command && (
             <div>
               <SyntaxHighlighter
@@ -299,7 +299,7 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
             </ScrollableOverlay>
           </div>
         )}
-        {}
+        { }
         {Object.keys(permission.metadata).length > 0 && !genericContent && !description && (
           <div>
             <div className="typography-meta text-muted-foreground mb-1">Details:</div>
@@ -318,7 +318,7 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
     <div className="group w-full pt-0 pb-2">
       <div className="chat-column">
         <div className="-mt-1 border border-border/30 rounded-xl bg-muted/10">
-          {}
+          { }
           <div className="px-2 py-1.5 border-b border-border/20 bg-muted/5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -339,7 +339,7 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
             </div>
           </div>
 
-          {}
+          { }
           <div className="px-2 py-2">
             {permission.patterns.length > 0 && (
               <div className="mb-2">
@@ -353,7 +353,7 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
             {renderToolContent()}
           </div>
 
-          {}
+          { }
           <div className="px-2 pb-2 sm:pb-1.5 pt-1.5 sm:pt-1 flex flex-col sm:flex-row sm:items-center sm:flex-wrap gap-1.5 border-t border-border/20">
             <PermissionActionButton
               tone="success"

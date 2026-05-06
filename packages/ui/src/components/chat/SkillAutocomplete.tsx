@@ -116,10 +116,10 @@ export const SkillAutocomplete = React.forwardRef<SkillAutocompleteHandle, Skill
         ref={(el) => {
           itemRefs.current[index] = el;
         }}
-          className={cn(
-            'flex items-start gap-2 px-3 py-1.5 cursor-pointer rounded-lg typography-ui-label',
+        className={cn(
+          'flex items-start gap-2 px-3 py-1.5 cursor-pointer rounded-lg typography-ui-label',
           index === selectedIndex && 'bg-interactive-selection'
-          )}
+        )}
         onClick={() => onSkillSelect(skill.name)}
         onPointerEnter={() => setSelectedIndex(index)}
       >
@@ -128,7 +128,7 @@ export const SkillAutocomplete = React.forwardRef<SkillAutocompleteHandle, Skill
             <span className="font-semibold truncate">{skill.name}</span>
             <span className={cn(
               "text-[10px] leading-none uppercase font-bold tracking-tight px-1.5 py-1 rounded border flex-shrink-0 transition-colors",
-              isProject 
+              isProject
                 ? "bg-[var(--status-info-background)] text-[var(--status-info)] border-[var(--status-info-border)]"
                 : "bg-[var(--status-success-background)] text-[var(--status-success)] border-[var(--status-success-border)]"
             )}>

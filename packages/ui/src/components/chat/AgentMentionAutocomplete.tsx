@@ -33,7 +33,7 @@ interface AgentMentionAutocompleteProps {
   onTabSelect?: (tab: AutocompleteTab) => void;
 }
 
-export const AgentMentionAutocomplete = React.forwardRef<AgentMentionAutocompleteHandle, AgentMentionAutocompleteProps>(({ 
+export const AgentMentionAutocomplete = React.forwardRef<AgentMentionAutocompleteHandle, AgentMentionAutocompleteProps>(({
   searchQuery,
   onAgentSelect,
   onClose,
@@ -140,17 +140,17 @@ export const AgentMentionAutocomplete = React.forwardRef<AgentMentionAutocomplet
   const renderAgent = (agent: AgentInfo, index: number) => {
     const isSystem = agent.isBuiltIn;
     const isProject = agent.scope === 'project';
-    
+
     return (
       <div
         key={agent.name}
         ref={(el) => {
           itemRefs.current[index] = el;
         }}
-          className={cn(
-            'flex items-start gap-2 px-3 py-1.5 cursor-pointer rounded-lg typography-ui-label',
+        className={cn(
+          'flex items-start gap-2 px-3 py-1.5 cursor-pointer rounded-lg typography-ui-label',
           index === selectedIndex && 'bg-interactive-selection'
-          )}
+        )}
         onClick={() => onAgentSelect(agent.name)}
         onPointerEnter={() => setSelectedIndex(index)}
       >
@@ -164,7 +164,7 @@ export const AgentMentionAutocomplete = React.forwardRef<AgentMentionAutocomplet
             ) : agent.scope ? (
               <span className={cn(
                 "text-[10px] leading-none uppercase font-bold tracking-tight px-1.5 py-1 rounded border flex-shrink-0",
-                isProject 
+                isProject
                   ? "bg-[var(--status-info-background)] text-[var(--status-info)] border-[var(--status-info-border)]"
                   : "bg-[var(--status-success-background)] text-[var(--status-success)] border-[var(--status-success-border)]"
               )}>

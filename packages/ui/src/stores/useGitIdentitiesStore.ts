@@ -260,7 +260,7 @@ export const useGitIdentitiesStore = create<GitIdentitiesStore>()(
           const { profiles, discoveredCredentials } = get();
           // Filter out credentials that have already been imported as token-based profiles
           return discoveredCredentials.filter(cred => {
-            return !profiles.some(p => 
+            return !profiles.some(p =>
               p.authType === 'token' && p.host === cred.host
             );
           });

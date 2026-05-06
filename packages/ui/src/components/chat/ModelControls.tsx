@@ -1171,13 +1171,13 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                 title={currentMetadata?.name || getCurrentModelDisplayName()}
             >
                 <div className="flex flex-col gap-1.5">
-                    {}
+                    { }
                     <div className="rounded-xl border border-border/40 bg-sidebar/30 px-2 py-1.5">
                         <div className="typography-micro text-muted-foreground mb-0.5">Provider</div>
                         <div className="typography-meta text-foreground font-medium">{getProviderDisplayName()}</div>
                     </div>
 
-                    {}
+                    { }
                     {currentCapabilityIcons.length > 0 && (
                         <div className="rounded-xl border border-border/40 bg-sidebar/30 px-2 py-1.5">
                             <div className="typography-micro text-muted-foreground mb-1">Capabilities</div>
@@ -1192,7 +1192,7 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                         </div>
                     )}
 
-                    {}
+                    { }
                     {(inputModalityIcons.length > 0 || outputModalityIcons.length > 0) && (
                         <div className="rounded-xl border border-border/40 bg-sidebar/30 px-2 py-1.5">
                             <div className="typography-micro text-muted-foreground mb-1">Modalities</div>
@@ -1217,7 +1217,7 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                         </div>
                     )}
 
-                    {}
+                    { }
                     <div className="rounded-xl border border-border/40 bg-sidebar/30 px-2 py-1.5">
                         <div className="typography-micro text-muted-foreground mb-1">Limits</div>
                         <div className="flex flex-col gap-0.5">
@@ -1232,7 +1232,7 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                         </div>
                     </div>
 
-                    {}
+                    { }
                     <div className="rounded-xl border border-border/40 bg-sidebar/30 px-2 py-1.5">
                         <div className="typography-micro text-muted-foreground mb-1">Metadata</div>
                         <div className="flex flex-col gap-0.5">
@@ -1283,14 +1283,14 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                 title={capitalizeAgentName(currentAgent.name)}
             >
                 <div className="flex flex-col gap-1.5">
-                    {}
+                    { }
                     {currentAgent.description && (
                         <div className="rounded-xl border border-border/40 bg-sidebar/30 px-2 py-1.5">
                             <div className="typography-meta text-foreground">{currentAgent.description}</div>
                         </div>
                     )}
 
-                    {}
+                    { }
                     <div className="rounded-xl border border-border/40 bg-sidebar/30 px-2 py-1.5">
                         <div className="typography-micro text-muted-foreground mb-0.5">Mode</div>
                         <div className="typography-meta text-foreground font-medium">
@@ -1298,7 +1298,7 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                         </div>
                     </div>
 
-                    {}
+                    { }
                     {(hasModelConfig || hasTemperatureOrTopP) && (
                         <div className="rounded-xl border border-border/40 bg-sidebar/30 px-2 py-1.5">
                             <div className="typography-micro text-muted-foreground mb-1">Model</div>
@@ -1327,7 +1327,7 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                     )}
 
 
-                    {}
+                    { }
                     <div className="rounded-xl border border-border/40 bg-sidebar/30 px-2 py-1.5">
                         <div className="typography-micro text-muted-foreground mb-1">Permissions</div>
                         <div className="flex flex-col gap-1">
@@ -1361,7 +1361,7 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                         </div>
                     </div>
 
-                    {}
+                    { }
                     {hasCustomPrompt && (
                         <div className="rounded-xl border border-border/40 bg-sidebar/30 px-2 py-1.5">
                             <div className="flex items-center justify-between">
@@ -1503,7 +1503,7 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                                                 'flex w-full items-start gap-2 border-b border-border/30 px-2 py-1.5 text-left last:border-b-0',
                                                 'focus:outline-none focus-visible:ring-1 focus-visible:ring-primary',
                                                 'first:rounded-t-xl last:rounded-b-xl transition-colors',
-                                                 isSelected ? 'bg-interactive-selection/15 text-interactive-selection-foreground' : 'hover:bg-interactive-hover'
+                                                isSelected ? 'bg-interactive-selection/15 text-interactive-selection-foreground' : 'hover:bg-interactive-hover'
                                             )}
                                         >
                                             <div className="flex items-center gap-2 min-w-0">
@@ -1549,7 +1549,7 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                                                 'flex w-full items-start gap-2 border-b border-border/30 px-2 py-1.5 text-left last:border-b-0',
                                                 'focus:outline-none focus-visible:ring-1 focus-visible:ring-primary',
                                                 'first:rounded-t-xl last:rounded-b-xl transition-colors',
-                                                 isSelected ? 'bg-interactive-selection/15 text-interactive-selection-foreground' : 'hover:bg-interactive-hover'
+                                                isSelected ? 'bg-interactive-selection/15 text-interactive-selection-foreground' : 'hover:bg-interactive-hover'
                                             )}
                                         >
                                             <div className="flex items-center gap-2 min-w-0">
@@ -1582,8 +1582,8 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                         const isActiveProvider = provider.id === currentProviderId;
                         const isExpanded = expandedMobileProviders.has(provider.id) || normalizedQuery.length > 0;
 
-                         return (
-                             <div key={provider.id} className="rounded-xl border border-border/40 bg-[var(--surface-elevated)] overflow-hidden">
+                        return (
+                            <div key={provider.id} className="rounded-xl border border-border/40 bg-[var(--surface-elevated)] overflow-hidden">
                                 <button
                                     type="button"
                                     onClick={() => toggleMobileProviderExpansion(provider.id)}
@@ -1768,7 +1768,7 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
 
     const renderMobileAgentPanel = () => {
         if (!isCompact) return null;
- 
+
         return (
             <MobileOverlayPanel
                 open={activeMobilePanel === 'agent'}
@@ -1789,8 +1789,8 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                                     'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                                     'touch-manipulation cursor-pointer transition-colors',
                                     'active:bg-interactive-hover',
-                                    isSelected 
-                                        ? 'border-primary/50 bg-interactive-selection/20' 
+                                    isSelected
+                                        ? 'border-primary/50 bg-interactive-selection/20'
                                         : 'border-border/40 hover:bg-interactive-hover/50'
                                 )}
                                 onClick={() => handleAgentChange(agent.name)}
@@ -1850,8 +1850,8 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                                 <div className="flex items-center gap-1.5">
                                     {inputModalityIcons.length > 0
                                         ? inputModalityIcons.map(({ key, icon, label }) =>
-                                              renderIconBadge(icon, `${label} input`, `input-${key}`)
-                                          )
+                                            renderIconBadge(icon, `${label} input`, `input-${key}`)
+                                        )
                                         : <span className="typography-meta text-muted-foreground">—</span>}
                                 </div>
                             </div>
@@ -1860,8 +1860,8 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                                 <div className="flex items-center gap-1.5">
                                     {outputModalityIcons.length > 0
                                         ? outputModalityIcons.map(({ key, icon, label }) =>
-                                              renderIconBadge(icon, `${label} output`, `output-${key}`)
-                                          )
+                                            renderIconBadge(icon, `${label} output`, `output-${key}`)
+                                        )
                                         : <span className="typography-meta text-muted-foreground">—</span>}
                                 </div>
                             </div>
@@ -1995,7 +1995,7 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                 ref={(el) => { modelItemRefs.current[flatIndex] = el; }}
                 className={cn(
                     "typography-meta group flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer",
-                     isHighlighted ? "bg-interactive-selection" : "hover:bg-interactive-hover/50"
+                    isHighlighted ? "bg-interactive-selection" : "hover:bg-interactive-hover/50"
                 )}
                 onClick={() => handleProviderAndModelChange(providerID, modelID)}
                 onPointerEnter={() => setModelSelectedIndex(flatIndex)}
@@ -2250,20 +2250,20 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                                     ) : (
                                         <RiPencilAiLine className={cn(controlIconSize, 'text-muted-foreground')} />
                                     )}
-                                        <span
-                                            ref={modelLabelRef}
-                                            key={`${currentProviderId}-${currentModelId}`}
-                                            className={cn(
-                                                'model-controls__model-label overflow-hidden',
-                                                controlTextSize,
-                                                'font-medium whitespace-nowrap text-foreground min-w-0',
-                                                'max-w-[260px]'
-                                            )}
-                                        >
-                                            <span className={cn('marquee-text', isModelLabelTruncated && 'marquee-text--active')}>
-                                                {currentModelDisplayName}
-                                            </span>
+                                    <span
+                                        ref={modelLabelRef}
+                                        key={`${currentProviderId}-${currentModelId}`}
+                                        className={cn(
+                                            'model-controls__model-label overflow-hidden',
+                                            controlTextSize,
+                                            'font-medium whitespace-nowrap text-foreground min-w-0',
+                                            'max-w-[260px]'
+                                        )}
+                                    >
+                                        <span className={cn('marquee-text', isModelLabelTruncated && 'marquee-text--active')}>
+                                            {currentModelDisplayName}
                                         </span>
+                                    </span>
                                 </div>
                             </DropdownMenuTrigger>
                         </TooltipTrigger>
@@ -2717,10 +2717,10 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                                             className={cn(
                                                 controlIconSize,
                                                 'flex-shrink-0',
-                                        uiAgentName ? '' : 'text-muted-foreground'
-                                    )}
-                                    style={uiAgentName ? { color: `var(${getAgentColor(uiAgentName).var})` } : undefined}
-                                />
+                                                uiAgentName ? '' : 'text-muted-foreground'
+                                            )}
+                                            style={uiAgentName ? { color: `var(${getAgentColor(uiAgentName).var})` } : undefined}
+                                        />
                                         <span
                                             className={cn(
                                                 'model-controls__agent-label',
@@ -2819,14 +2819,14 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                     'cursor-pointer hover:bg-transparent hover:opacity-70',
                 )}
             >
-                                        <RiAiAgentLine
-                                            className={cn(
-                                                controlIconSize,
-                                                'flex-shrink-0',
-                                                uiAgentName ? '' : 'text-muted-foreground'
-                                            )}
-                                            style={uiAgentName ? { color: `var(${getAgentColor(uiAgentName).var})` } : undefined}
-                                        />
+                <RiAiAgentLine
+                    className={cn(
+                        controlIconSize,
+                        'flex-shrink-0',
+                        uiAgentName ? '' : 'text-muted-foreground'
+                    )}
+                    style={uiAgentName ? { color: `var(${getAgentColor(uiAgentName).var})` } : undefined}
+                />
                 <span
                     className={cn(
                         'model-controls__agent-label',
@@ -2834,10 +2834,10 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                         'font-medium truncate min-w-0',
                         isMobile && 'max-w-[60px]'
                     )}
-                                            style={uiAgentName ? { color: `var(${getAgentColor(uiAgentName).var})` } : undefined}
-                                        >
-                                            {getAgentDisplayName()}
-                                        </span>
+                    style={uiAgentName ? { color: `var(${getAgentColor(uiAgentName).var})` } : undefined}
+                >
+                    {getAgentDisplayName()}
+                </span>
             </button>
         );
     };

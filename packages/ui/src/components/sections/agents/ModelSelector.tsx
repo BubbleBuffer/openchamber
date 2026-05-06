@@ -304,7 +304,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                                                     <span className="font-medium truncate">{getModelDisplayName(model)}</span>
                                                 </div>
                                             </button>
-                                            
+
                                             <button
                                                 onClick={(e) => {
                                                     e.preventDefault();
@@ -358,7 +358,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                                                     <span className="font-medium truncate">{getModelDisplayName(model)}</span>
                                                 </div>
                                             </button>
-                                            
+
                                             <button
                                                 onClick={(e) => {
                                                     e.preventDefault();
@@ -434,7 +434,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                                                     >
                                                         <span className="font-medium truncate">{getModelDisplayName(modelItem)}</span>
                                                     </button>
-                                                    
+
                                                     <div className="flex items-center gap-2 flex-shrink-0">
                                                         <button
                                                             onClick={(e) => {
@@ -456,7 +456,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                                                                 <RiStarLine className="h-4 w-4" />
                                                             )}
                                                         </button>
-                                                        
+
                                                         {isSelectedModel && (
                                                             <div className="h-2 w-2 rounded-full bg-primary" />
                                                         )}
@@ -540,7 +540,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                             // Build flat list for keyboard navigation
                             type FlatModelItem = { model: ProviderModel; providerID: string; modelID: string; section: string };
                             const flatModelList: FlatModelItem[] = [];
-                            
+
                             filteredFavorites.forEach(({ model, providerID, modelID }) => {
                                 flatModelList.push({ model, providerID, modelID, section: 'fav' });
                             });

@@ -67,13 +67,13 @@ export const useMessageQueueStore = create<MessageQueueStore>()(
                     set((state) => {
                         const currentQueue = state.queuedMessages[sessionId] ?? [];
                         const newQueue = currentQueue.filter((m) => m.id !== messageId);
-                        
+
                         if (newQueue.length === 0) {
                             const { [sessionId]: _removed, ...rest } = state.queuedMessages;
                             void _removed;
                             return { queuedMessages: rest };
                         }
-                        
+
                         return {
                             queuedMessages: {
                                 ...state.queuedMessages,
@@ -87,7 +87,7 @@ export const useMessageQueueStore = create<MessageQueueStore>()(
                     const state = get();
                     const currentQueue = state.queuedMessages[sessionId] ?? [];
                     const message = currentQueue.find((m) => m.id === messageId);
-                    
+
                     if (!message) {
                         return null;
                     }
@@ -96,13 +96,13 @@ export const useMessageQueueStore = create<MessageQueueStore>()(
                     set((prevState) => {
                         const queue = prevState.queuedMessages[sessionId] ?? [];
                         const newQueue = queue.filter((m) => m.id !== messageId);
-                        
+
                         if (newQueue.length === 0) {
                             const { [sessionId]: _removed, ...rest } = prevState.queuedMessages;
                             void _removed;
                             return { queuedMessages: rest };
                         }
-                        
+
                         return {
                             queuedMessages: {
                                 ...prevState.queuedMessages,
