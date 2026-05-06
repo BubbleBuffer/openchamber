@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { type OpenCodeManager } from './opencode';
+import { type OpenCodeManager } from '../opencode/opencode';
 import { handleStandardGitBridgeMessage } from './bridge-git-runtime';
 import { handleSpecialGitBridgeMessage } from './bridge-git-special-runtime';
 import { handleFsBridgeMessage } from './bridge-fs-runtime';

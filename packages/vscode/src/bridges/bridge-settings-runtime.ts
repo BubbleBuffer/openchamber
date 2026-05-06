@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { type DiscoveredSkill, type SkillScope, type SkillSource } from './opencodeConfig';
+import { type DiscoveredSkill, type SkillScope, type SkillSource } from '../opencode/opencodeConfig';
 import type { BridgeContext } from './bridge';
 
 const SETTINGS_KEY = 'openchamber.settings';

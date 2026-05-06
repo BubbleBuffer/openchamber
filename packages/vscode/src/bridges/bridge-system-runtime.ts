@@ -3,10 +3,10 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { randomUUID } from 'crypto';
-import { removeProviderConfig, getProviderSources } from './opencodeConfig';
-import { getProviderAuth, removeProviderAuth } from './opencodeAuth';
-import { fetchQuotaForProvider, listConfiguredQuotaProviders } from './quotaProviders';
-import { getSessionActivitySnapshot } from './sessionActivityWatcher';
+import { removeProviderConfig, getProviderSources } from '../opencode/opencodeConfig';
+import { getProviderAuth, removeProviderAuth } from '../opencode/opencodeAuth';
+import { fetchQuotaForProvider, listConfiguredQuotaProviders } from '../quotaProviders';
+import { getSessionActivitySnapshot } from '../sessionActivityWatcher';
 import type { BridgeContext, BridgeResponse } from './bridge';
 
 type BridgeMessageInput = {

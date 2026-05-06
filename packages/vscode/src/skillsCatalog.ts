@@ -6,7 +6,7 @@ import { promisify } from 'util';
 import yaml from 'yaml';
 import AdmZip from 'adm-zip';
 
-import { discoverSkills } from './opencodeConfig';
+import { discoverSkills } from './opencode/opencodeConfig';
 
 const execFileAsync = promisify(execFile);
 

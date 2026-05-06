@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { getThemeKindName } from './theme';
-import type { ConnectionStatus } from './opencode';
+import { getThemeKindName } from '../theme';
+import type { ConnectionStatus } from '../opencode/opencode';
 
 export type PanelType = 'chat' | 'agentManager';
 

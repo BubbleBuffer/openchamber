@@ -1,5 +1,5 @@
 import type { BridgeContext, BridgeResponse } from './bridge';
-import { waitForApiUrl } from './opencode-ready';
+import { waitForApiUrl } from '../opencode/opencode-ready';
 
 type BridgeMessageInput = {
   id: string;

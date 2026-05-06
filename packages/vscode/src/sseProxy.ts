@@ -1,6 +1,6 @@
 import { createOpencodeClient } from '@opencode-ai/sdk/v2';
-import type { OpenCodeManager } from './opencode';
-import { waitForApiUrl } from './opencode-ready';
+import type { OpenCodeManager } from './opencode/opencode';
+import { waitForApiUrl } from './opencode/opencode-ready';
 
 type StreamEvent<TData = unknown> = {
   data: TData;

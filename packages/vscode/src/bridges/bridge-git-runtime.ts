@@ -1,4 +1,4 @@
-import * as gitService from './gitService';
+import * as gitService from '../gitService';
 import type { BridgeResponse } from './bridge';
 
 type BridgeMessageInput = {

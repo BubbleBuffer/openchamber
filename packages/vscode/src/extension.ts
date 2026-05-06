@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { ChatViewProvider } from './ChatViewProvider';
-import { AgentManagerPanelProvider } from './AgentManagerPanelProvider';
-import { SessionEditorPanelProvider } from './SessionEditorPanelProvider';
-import { createOpenCodeManager, type OpenCodeManager } from './opencode';
+import { ChatViewProvider } from './providers/ChatViewProvider';
+import { AgentManagerPanelProvider } from './providers/AgentManagerPanelProvider';
+import { SessionEditorPanelProvider } from './providers/SessionEditorPanelProvider';
+import { createOpenCodeManager, type OpenCodeManager } from './opencode/opencode';
 import { startGlobalEventWatcher, stopGlobalEventWatcher, setChatViewProvider } from './sessionActivityWatcher';
 
 let chatViewProvider: ChatViewProvider | undefined;

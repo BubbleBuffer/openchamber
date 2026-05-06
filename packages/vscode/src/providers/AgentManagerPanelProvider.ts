@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import { handleBridgeMessage, type BridgeRequest, type BridgeResponse } from './bridge';
-import { getThemeKindName } from './theme';
-import type { OpenCodeManager, ConnectionStatus } from './opencode';
-import { getWebviewShikiThemes } from './shikiThemes';
-import { getWebviewHtml } from './webviewHtml';
-import { openSseProxy } from './sseProxy';
-import { resolveWebviewDevServerUrl } from './webviewDevServer';
+import { handleBridgeMessage, type BridgeRequest, type BridgeResponse } from '../bridges/bridge';
+import { getThemeKindName } from '../theme';
+import type { OpenCodeManager, ConnectionStatus } from '../opencode/opencode';
+import { getWebviewShikiThemes } from '../shikiThemes';
+import { getWebviewHtml } from '../webview-host/webviewHtml';
+import { openSseProxy } from '../sseProxy';
+import { resolveWebviewDevServerUrl } from '../webview-host/webviewDevServer';
 
 export class AgentManagerPanelProvider {
   public static readonly viewType = 'openchamber.agentManager';

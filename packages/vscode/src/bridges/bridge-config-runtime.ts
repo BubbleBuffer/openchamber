@@ -29,13 +29,13 @@ import {
   createMcpConfig,
   updateMcpConfig,
   deleteMcpConfig,
-} from './opencodeConfig';
+} from '../opencode/opencodeConfig';
 import {
   getSkillsCatalog,
   scanSkillsRepository as scanSkillsRepositoryFromGit,
   installSkillsFromRepository as installSkillsFromGit,
   type SkillsCatalogSourceConfig,
-} from './skillsCatalog';
+} from '../skillsCatalog';
 import type { BridgeContext, BridgeResponse } from './bridge';
 
 type BridgeMessageInput = {
