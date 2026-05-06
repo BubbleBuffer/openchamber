@@ -1,4 +1,6 @@
+import './instrument.mjs';
 import 'reflect-metadata';
+import * as Sentry from '@sentry/node';
 import express from 'express';
 import compression from 'compression';
 import path from 'path';
@@ -1205,6 +1207,8 @@ async function main(options = {}) {
   });
   terminalRuntime = startupPipelineResult.terminalRuntime;
   messageStreamRuntime = startupPipelineResult.messageStreamRuntime;
+
+  Sentry.setupExpressErrorHandler(app);
 
   try {
     await scheduledTasksRuntime.start();
