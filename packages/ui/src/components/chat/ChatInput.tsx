@@ -1,19 +1,10 @@
 import React from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import {
-    RiAddCircleLine,
-    RiAiAgentLine,
     RiAttachment2,
     RiCloseLine,
-    RiCommandLine,
     RiExternalLinkLine,
     RiFolderLine,
-    RiFullscreenLine,
-    RiGitPullRequestLine,
-    RiShieldCheckLine,
-    RiShieldUserLine,
-    RiGithubLine,
-    RiSendPlane2Line,
 } from '@remixicon/react';
 import { BrowserVoiceButton } from '@/components/voice';
 // sessionStore removed — currentSessionId comes from useSessionUIStore
@@ -35,7 +26,7 @@ import { QueuedMessageChips } from './QueuedMessageChips';
 import { FileMentionAutocomplete, type FileMentionHandle } from './FileMentionAutocomplete';
 import { CommandAutocomplete, type CommandAutocompleteHandle, type CommandInfo } from './CommandAutocomplete';
 import { SkillAutocomplete, type SkillAutocompleteHandle } from './SkillAutocomplete';
-import { cn, formatDirectoryName, isMacOS } from '@/lib/utils';
+import { cn, formatDirectoryName } from '@/lib/utils';
 import { ModelControls } from './ModelControls';
 import { UnifiedControlsDrawer } from './UnifiedControlsDrawer';
 import { parseAgentMentions } from '@/lib/messages/agentMentions';
@@ -49,23 +40,17 @@ import { toast } from '@/components/ui';
 // useMessageStore removed — messages now come from sync system
 import { isTauriShell, isVSCodeRuntime } from '@/lib/desktop';
 import { isIMECompositionEvent } from '@/lib/ime';
-import { StopIcon } from '@/components/icons/StopIcon';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { MobileControlsPanel } from './mobileControlsUtils';
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
+    Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { GitHubIssuePickerDialog } from '@/components/session/GitHubIssuePickerDialog';
 import { GitHubPrPickerDialog } from '@/components/session/GitHubPrPickerDialog';
 import { useChatSearchDirectory } from '@/hooks/useChatSearchDirectory';
 import { opencodeClient } from '@/lib/opencode/client';
 import { useProjectsStore } from '@/stores/useProjectsStore';
-import { PROJECT_COLOR_MAP, PROJECT_ICON_MAP, getProjectIconImageUrl } from '@/lib/projectMeta';
+import { PROJECT_ICON_MAP, getProjectIconImageUrl } from '@/lib/projectMeta';
 import { useGitBranches, useGitStore, useIsGitRepo } from '@/stores/useGitStore';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
@@ -73,6 +58,12 @@ import { createWorktreeDraft } from '@/lib/worktreeSessionCreator';
 import { buildSessionTargetOptions } from '@/sync/session-worktree-contract';
 import { usePermissionStore } from '@/stores/permissionStore';
 import { extractGitChangedFiles } from './changedFiles';
+import { ComposerAttachmentControls } from './chat-input/ComposerAttachmentControls';
+import { PermissionAutoAcceptButton } from './chat-input/PermissionAutoAcceptButton';
+import { FocusModeButton } from './chat-input/FocusModeButton';
+import { ComposerActionButtons } from './chat-input/ComposerActionButtons';
+import { appendInlineText, appendWithLineBreaks } from './chat-input/textUtils';
+import { getProjectDisplayLabel, getProjectIconColor, normalizePath } from './chat-input/projectHelpers';
 
 const MAX_VISIBLE_TEXTAREA_LINES = 8;
 const EMPTY_QUEUE: QueuedMessage[] = [];
@@ -198,429 +189,12 @@ const parseDroppedFileReferences = (rawPayload: string): string[] => {
     return Array.from(extracted);
 };
 
-const normalizePath = (value?: string | null): string | null => {
-    if (typeof value !== 'string') {
-        return null;
-    }
-    const trimmed = value.trim();
-    if (!trimmed) {
-        return null;
-    }
-    const normalized = trimmed.replace(/\\/g, '/');
-    if (normalized === '/') {
-        return '/';
-    }
-    return normalized.length > 1 ? normalized.replace(/\/+$/, '') : normalized;
-};
-
-const getProjectDisplayLabel = (project: { label?: string; path: string }): string => {
-    const label = project.label?.trim();
-    if (label) {
-        return label;
-    }
-    return formatDirectoryName(project.path);
-};
-
-const getProjectIconColor = (projectColor?: string | null): string | undefined => {
-    if (!projectColor) {
-        return undefined;
-    }
-    return PROJECT_COLOR_MAP[projectColor] ?? undefined;
-};
-
 const MemoModelControls = React.memo(ModelControls);
 const MemoUnifiedControlsDrawer = React.memo(UnifiedControlsDrawer);
 const MemoBrowserVoiceButton = React.memo(BrowserVoiceButton);
 const MemoMobileAgentButton = React.memo(MobileAgentButton);
 const MemoMobileModelButton = React.memo(MobileModelButton);
 const MemoStatusRow = React.memo(StatusRow);
-
-type ComposerAttachmentControlsProps = {
-    isMobile: boolean;
-    isVSCode: boolean;
-    footerIconButtonClass: string;
-    iconSizeClass: string;
-    fileInputRef: React.RefObject<HTMLInputElement | null>;
-    handleLocalFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void | Promise<void>;
-    handlePickLocalFiles: () => void;
-    handleOpenCommandMenu: () => void;
-    openIssuePicker: () => void;
-    openPrPicker: () => void;
-    onOpenSettings?: () => void;
-};
-
-const ComposerAttachmentControls = React.memo(function ComposerAttachmentControls(props: ComposerAttachmentControlsProps) {
-    const {
-        isMobile,
-        isVSCode,
-        footerIconButtonClass,
-        iconSizeClass,
-        fileInputRef,
-        handleLocalFileSelect,
-        handlePickLocalFiles,
-        handleOpenCommandMenu,
-        openIssuePicker,
-        openPrPicker,
-        onOpenSettings,
-    } = props;
-
-    return (
-        <div className="flex items-center gap-x-1.5">
-            {isMobile ? (
-                <button
-                    type="button"
-                    className={cn(
-                        footerIconButtonClass,
-                        'rounded-md',
-                        'hover:bg-interactive-hover/40'
-                    )}
-                    onPointerDownCapture={(event) => {
-                        if (event.pointerType === 'touch') {
-                            event.preventDefault();
-                            event.stopPropagation();
-                        }
-                    }}
-                    onClick={handleOpenCommandMenu}
-                    title="Commands"
-                    aria-label="Commands"
-                >
-                    <RiCommandLine className={cn(iconSizeClass)} />
-                </button>
-            ) : null}
-            <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                className="hidden"
-                onChange={handleLocalFileSelect}
-                accept="*/*"
-            />
-
-            <div className="relative inline-flex">
-                {isVSCode ? (
-                    <button
-                        type="button"
-                        className={footerIconButtonClass}
-                        onClick={handlePickLocalFiles}
-                        title="Attach files"
-                        aria-label="Attach files"
-                    >
-                        <RiAttachment2 className={cn(iconSizeClass, 'text-current')} />
-                    </button>
-                ) : (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button
-                                type="button"
-                                className={footerIconButtonClass}
-                                title="Add attachment"
-                                aria-label="Add attachment"
-                            >
-                                <RiAddCircleLine className={cn(iconSizeClass, 'text-current')} />
-                            </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                            <DropdownMenuItem
-                                onSelect={() => {
-                                    requestAnimationFrame(handlePickLocalFiles);
-                                }}
-                            >
-                                <RiAttachment2 />
-                                Attach files
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onSelect={() => {
-                                    requestAnimationFrame(openIssuePicker);
-                                }}
-                            >
-                                <RiGithubLine />
-                                Link GitHub Issue
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onSelect={() => {
-                                    requestAnimationFrame(openPrPicker);
-                                }}
-                            >
-                                <RiGitPullRequestLine />
-                                Link GitHub PR
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                )}
-            </div>
-
-            {onOpenSettings ? (
-                <button
-                    type="button"
-                    onClick={onOpenSettings}
-                    className={footerIconButtonClass}
-                    title="Model and agent settings"
-                    aria-label="Model and agent settings"
-                >
-                    <RiAiAgentLine className={cn(iconSizeClass, 'text-current')} />
-                </button>
-            ) : null}
-        </div>
-    );
-}, (prev, next) => (
-    prev.isMobile === next.isMobile
-    && prev.isVSCode === next.isVSCode
-    && prev.footerIconButtonClass === next.footerIconButtonClass
-    && prev.iconSizeClass === next.iconSizeClass
-    && prev.onOpenSettings === next.onOpenSettings
-));
-
-type PermissionAutoAcceptButtonProps = {
-    footerIconButtonClass: string;
-    iconSizeClass: string;
-    permissionScopeSessionId: string | null;
-    permissionAutoAcceptEnabled: boolean;
-    handlePermissionAutoAcceptToggle: () => void;
-    withTooltip?: boolean;
-};
-
-const PermissionAutoAcceptButton = React.memo(function PermissionAutoAcceptButton(props: PermissionAutoAcceptButtonProps) {
-    const {
-        footerIconButtonClass,
-        iconSizeClass,
-        permissionScopeSessionId,
-        permissionAutoAcceptEnabled,
-        handlePermissionAutoAcceptToggle,
-        withTooltip = false,
-    } = props;
-
-    const ariaLabel = permissionAutoAcceptEnabled
-        ? 'Disable permission auto-accept'
-        : 'Enable permission auto-accept';
-    const tooltipLabel = permissionAutoAcceptEnabled
-        ? 'Permission auto-accept: on'
-        : 'Permission auto-accept: off';
-
-    const button = (
-        <button
-            type="button"
-            onClick={handlePermissionAutoAcceptToggle}
-            className={cn(
-                footerIconButtonClass,
-                'rounded-md hover:bg-transparent',
-                !permissionScopeSessionId && 'opacity-30',
-            )}
-            onMouseDown={(event) => {
-                event.preventDefault();
-            }}
-            onPointerDownCapture={(event) => {
-                if (event.pointerType === 'touch') {
-                    event.preventDefault();
-                    event.stopPropagation();
-                }
-            }}
-            aria-pressed={permissionAutoAcceptEnabled}
-            aria-label={ariaLabel}
-            title={ariaLabel}
-        >
-            {permissionAutoAcceptEnabled ? (
-                <RiShieldCheckLine className={cn(iconSizeClass)} style={{ color: 'var(--status-info)' }} />
-            ) : (
-                <RiShieldUserLine className={cn(iconSizeClass)} />
-            )}
-        </button>
-    );
-
-    if (!withTooltip) {
-        return button;
-    }
-
-    return (
-        <Tooltip delayDuration={600}>
-            <TooltipTrigger asChild>
-                {button}
-            </TooltipTrigger>
-            <TooltipContent side="top" sideOffset={8}>
-                {tooltipLabel}
-            </TooltipContent>
-        </Tooltip>
-    );
-});
-
-type FocusModeButtonProps = {
-    footerIconButtonClass: string;
-    iconSizeClass: string;
-    isExpandedInput: boolean;
-    onToggle: () => void;
-};
-
-const FocusModeButton = React.memo(function FocusModeButton(props: FocusModeButtonProps) {
-    const { footerIconButtonClass, iconSizeClass, isExpandedInput, onToggle } = props;
-
-    return (
-        <Tooltip delayDuration={600}>
-            <TooltipTrigger asChild>
-                <button
-                    type="button"
-                    className={cn(
-                        footerIconButtonClass,
-                        'rounded-md',
-                        isExpandedInput
-                            ? 'text-primary'
-                            : 'text-foreground hover:bg-[var(--interactive-hover)]/40'
-                    )}
-                    onMouseDown={(event) => {
-                        event.preventDefault();
-                    }}
-                    onClick={onToggle}
-                    aria-label="Toggle focus mode"
-                    aria-pressed={isExpandedInput}
-                >
-                    <RiFullscreenLine className={cn(iconSizeClass)} />
-                </button>
-            </TooltipTrigger>
-            <TooltipContent side="top" sideOffset={8}>
-                <div className="flex flex-col gap-0.5 text-center">
-                    <span>Focus mode</span>
-                    <span className="font-mono opacity-60">
-                        {isMacOS() ? '⌘⇧E' : 'Ctrl+Shift+E'}
-                    </span>
-                </div>
-            </TooltipContent>
-        </Tooltip>
-    );
-});
-
-type ComposerActionButtonsProps = {
-    isMobile: boolean;
-    footerIconButtonClass: string;
-    sendIconSizeClass: string;
-    stopIconSizeClass: string;
-    canSend: boolean;
-    canAbort: boolean;
-    hasContent: boolean;
-    currentSessionId: string | null;
-    newSessionDraftOpen: boolean;
-    onPrimaryAction: () => void;
-    onQueueMessage: () => void;
-    onAbort: () => void;
-};
-
-const ComposerActionButtons = React.memo(function ComposerActionButtons(props: ComposerActionButtonsProps) {
-    const {
-        isMobile,
-        footerIconButtonClass,
-        sendIconSizeClass,
-        stopIconSizeClass,
-        canSend,
-        canAbort,
-        hasContent,
-        currentSessionId,
-        newSessionDraftOpen,
-        onPrimaryAction,
-        onQueueMessage,
-        onAbort,
-    } = props;
-
-    const sendButton = (
-        <button
-            type={isMobile ? 'button' : 'submit'}
-            disabled={!canSend || (!currentSessionId && !newSessionDraftOpen)}
-            onClick={(event) => {
-                if (!isMobile) {
-                    return;
-                }
-
-                event.preventDefault();
-                onPrimaryAction();
-            }}
-            className={cn(
-                footerIconButtonClass,
-                canSend && (currentSessionId || newSessionDraftOpen)
-                    ? 'text-primary hover:text-primary'
-                    : 'opacity-30'
-            )}
-            aria-label="Send message"
-        >
-            <RiSendPlane2Line className={cn(sendIconSizeClass)} />
-        </button>
-    );
-
-    if (!canAbort) {
-        return sendButton;
-    }
-
-    return (
-        <div className="relative">
-            {hasContent ? (
-                <button
-                    type="button"
-                    disabled={!currentSessionId}
-                    onClick={(event) => {
-                        if (isMobile) {
-                            event.preventDefault();
-                        }
-                        onQueueMessage();
-                    }}
-                    className={cn(
-                        footerIconButtonClass,
-                        'absolute z-20 bottom-full left-1/2 -translate-x-1/2 mb-1',
-                        currentSessionId ? 'text-primary hover:text-primary' : 'opacity-30'
-                    )}
-                    aria-label="Queue message"
-                >
-                    <RiSendPlane2Line className={cn(sendIconSizeClass, '-rotate-90')} />
-                </button>
-            ) : null}
-            <button
-                type="button"
-                onClick={onAbort}
-                className={cn(
-                    footerIconButtonClass,
-                    'text-[var(--status-error)] hover:text-[var(--status-error)]'
-                )}
-                aria-label="Stop generating"
-            >
-                <StopIcon className={cn(stopIconSizeClass)} />
-            </button>
-        </div>
-    );
-}, (prev, next) => (
-    prev.isMobile === next.isMobile
-    && prev.footerIconButtonClass === next.footerIconButtonClass
-    && prev.sendIconSizeClass === next.sendIconSizeClass
-    && prev.stopIconSizeClass === next.stopIconSizeClass
-    && prev.canSend === next.canSend
-    && prev.canAbort === next.canAbort
-    && prev.hasContent === next.hasContent
-    && prev.currentSessionId === next.currentSessionId
-    && prev.newSessionDraftOpen === next.newSessionDraftOpen
-));
-
-const appendWithLineBreaks = (base: string, next: string): string => {
-    const separator = !base
-        ? ''
-        : base.endsWith('\n\n')
-            ? ''
-            : base.endsWith('\n')
-                ? '\n'
-                : '\n\n';
-
-    const nextWithTrailingBreaks = next.endsWith('\n\n')
-        ? next
-        : next.endsWith('\n')
-            ? `${next}\n`
-            : `${next}\n\n`;
-
-    return `${base}${separator}${nextWithTrailingBreaks}`;
-};
-
-const appendInlineText = (base: string, next: string): string => {
-    const nextTrimmed = next.trim();
-    if (!nextTrimmed) {
-        return base;
-    }
-    if (!base) {
-        return `${nextTrimmed} `;
-    }
-    const separator = /[\s\n]$/.test(base) ? '' : ' ';
-    return `${base}${separator}${nextTrimmed} `;
-};
 
 interface ChatInputProps {
     onOpenSettings?: () => void;
@@ -972,10 +546,10 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
     // Issue linking state
     const [issuePickerOpen, setIssuePickerOpen] = React.useState(false);
     const [prPickerOpen, setPrPickerOpen] = React.useState(false);
-    const [linkedIssue, setLinkedIssue] = React.useState<{ 
-        number: number; 
-        title: string; 
-        url: string; 
+    const [linkedIssue, setLinkedIssue] = React.useState<{
+        number: number;
+        title: string;
+        url: string;
         contextText: string;
         author?: { login: string; avatarUrl?: string };
     } | null>(null);
@@ -1248,7 +822,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
     type SubmitOptions = {
         queuedOnly?: boolean;
     };
-    const handleSubmitRef = React.useRef<(options?: SubmitOptions) => Promise<void>>(async () => {});
+    const handleSubmitRef = React.useRef<(options?: SubmitOptions) => Promise<void>>(async () => { });
 
     // Add message to queue instead of sending
     const handleQueueMessage = React.useCallback(() => {
@@ -3290,430 +2864,496 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
 
     return (
         <>
-        <form
-            onSubmit={(e) => { e.preventDefault(); handlePrimaryAction(); }}
-            className={cn(
-                "relative pt-0 pb-4",
-                isDesktopExpanded && 'flex h-full min-h-0 flex-col pt-4',
-                isMobile && (isKeyboardOpen ? 'ios-keyboard-safe-area' : 'bottom-safe-area')
-            )}
-            data-keyboard-avoid="none"
-            style={isMobile && inputBarOffset > 0 && !isKeyboardOpen ? { marginBottom: `${inputBarOffset}px` } : undefined}
-        >
-            <div className={cn('chat-column relative overflow-visible', isDesktopExpanded && 'flex flex-1 min-h-0 flex-col')}>
-                <AttachedFilesList />
-                <QueuedMessageChips
-                    onEditMessage={handleQueuedMessageEdit}
-                />
-                {hasDrafts && (
-                    <div className="pb-2">
-                        <div
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border"
-                            style={{
-                                backgroundColor: currentTheme?.colors?.surface?.elevated,
-                                borderColor: currentTheme?.colors?.interactive?.border,
-                            }}
-                        >
-                            <span className="text-xs font-medium text-muted-foreground">Review comments:</span>
-                            <span className="text-xs font-semibold" style={{ color: currentTheme?.colors?.status?.info }}>
-                                {draftCount}
-                            </span>
-                        </div>
-                    </div>
+            <form
+                onSubmit={(e) => { e.preventDefault(); handlePrimaryAction(); }}
+                className={cn(
+                    "relative pt-0 pb-4",
+                    isDesktopExpanded && 'flex h-full min-h-0 flex-col pt-4',
+                    isMobile && (isKeyboardOpen ? 'ios-keyboard-safe-area' : 'bottom-safe-area')
                 )}
-
-                {/* Linked Issue row */}
-                {linkedIssue && !isVSCode && (
-                    <div className="pb-2 w-full px-1">
-                        <button
-                            type="button"
-                            onClick={() => setIssuePickerOpen(true)}
-                            className="flex w-full items-center gap-1.5 text-sm hover:opacity-80 transition-opacity text-left h-5 px-1"
-                        >
-                            {linkedIssue.author?.avatarUrl && (
-                                <img
-                                    src={linkedIssue.author.avatarUrl}
-                                    alt={linkedIssue.author.login}
-                                    className="h-5 w-5 rounded-full flex-shrink-0"
-                                />
-                            )}
-                            <span className="text-muted-foreground flex-shrink-0">
-                                #{linkedIssue.number}
-                                {linkedIssue.author && (
-                                    <span className="ml-1">by {linkedIssue.author.login}</span>
-                                )}
-                            </span>
-                            <span className="text-foreground truncate">
-                                {linkedIssue.title}
-                            </span>
-                            <span className="flex items-center gap-0.5 flex-shrink-0">
-                                <a
-                                    href={linkedIssue.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="flex items-center justify-center h-6 w-6 hover:bg-[var(--interactive-hover)] rounded-full transition-colors"
-                                    aria-label="Open issue in browser"
-                                >
-                                    <RiExternalLinkLine className="h-4 w-4 text-muted-foreground" />
-                                </a>
-                                <span
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setLinkedIssue(null);
-                                    }}
-                                    className="flex items-center justify-center h-6 w-6 hover:bg-[var(--interactive-hover)] rounded-full transition-colors cursor-pointer"
-                                    aria-label="Remove linked issue"
-                                >
-                                    <RiCloseLine className="h-4 w-4 text-muted-foreground" />
-                                </span>
-                            </span>
-                        </button>
-                    </div>
-                )}
-                {linkedPr && !isVSCode && (
-                    <div className="pb-2 w-full px-1">
-                        <button
-                            type="button"
-                            onClick={() => setPrPickerOpen(true)}
-                            className="flex w-full items-center gap-1.5 text-sm hover:opacity-80 transition-opacity text-left h-5 px-1"
-                        >
-                            {linkedPr.author?.avatarUrl && (
-                                <img
-                                    src={linkedPr.author.avatarUrl}
-                                    alt={linkedPr.author.login}
-                                    className="h-5 w-5 rounded-full flex-shrink-0"
-                                />
-                            )}
-                            <span className="text-muted-foreground flex-shrink-0">
-                                PR #{linkedPr.number}
-                                {linkedPr.author && (
-                                    <span className="ml-1">by {linkedPr.author.login}</span>
-                                )}
-                            </span>
-                            <span className="text-foreground truncate">
-                                {linkedPr.title}
-                            </span>
-                            <span className="text-muted-foreground flex-shrink-0 typography-meta">
-                                {linkedPr.head} → {linkedPr.base}
-                            </span>
-                            <span className="flex items-center gap-0.5 flex-shrink-0">
-                                <a
-                                    href={linkedPr.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="flex items-center justify-center h-6 w-6 hover:bg-[var(--interactive-hover)] rounded-full transition-colors"
-                                    aria-label="Open pull request in browser"
-                                >
-                                    <RiExternalLinkLine className="h-4 w-4 text-muted-foreground" />
-                                </a>
-                                <span
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setLinkedPr(null);
-                                    }}
-                                    className="flex items-center justify-center h-6 w-6 hover:bg-[var(--interactive-hover)] rounded-full transition-colors cursor-pointer"
-                                    aria-label="Remove linked pull request"
-                                >
-                                    <RiCloseLine className="h-4 w-4 text-muted-foreground" />
-                                </span>
-                            </span>
-                        </button>
-                    </div>
-                )}
-                <MemoStatusRow
-                    showAbortStatus={showAbortStatus}
-                    showAssistantStatus={false}
-                    showTodos
-                    leftAccessory={newSessionDraftOpen || !hasPendingChanges ? null : <PendingChangesBar />}
-                />
-                {showDraftTargetSelectors && selectedDraftProject ? (
-                    <div className="mb-1.5 flex min-w-0 items-center gap-1.5 px-0.5">
-                        <Select
-                            value={selectedDraftProject.id}
-                            onValueChange={handleDraftProjectChange}
-                        >
-                            <SelectTrigger
-                                size="sm"
-                                className="h-7 min-w-0 w-fit max-w-[42vw] sm:max-w-[18rem] border-transparent bg-transparent px-1.5 hover:bg-transparent data-[popup-open]:bg-transparent"
+                data-keyboard-avoid="none"
+                style={isMobile && inputBarOffset > 0 && !isKeyboardOpen ? { marginBottom: `${inputBarOffset}px` } : undefined}
+            >
+                <div className={cn('chat-column relative overflow-visible', isDesktopExpanded && 'flex flex-1 min-h-0 flex-col')}>
+                    <AttachedFilesList />
+                    <QueuedMessageChips
+                        onEditMessage={handleQueuedMessageEdit}
+                    />
+                    {hasDrafts && (
+                        <div className="pb-2">
+                            <div
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border"
+                                style={{
+                                    backgroundColor: currentTheme?.colors?.surface?.elevated,
+                                    borderColor: currentTheme?.colors?.interactive?.border,
+                                }}
                             >
-                                <SelectValue>
-                                    {renderProjectLabelWithIcon(selectedDraftProject)}
-                                </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent fitContent>
-                                {projects.map((project) => (
-                                    <SelectItem key={project.id} value={project.id} className="max-w-[24rem] truncate">
-                                        {renderProjectLabelWithIcon(project)}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-
-                        {shouldShowDraftBranchSelector ? (
-                            <Select
-                                value={selectedDraftDirectory ?? draftBranchItems[0]?.value ?? normalizePath(selectedDraftProject.path) ?? ''}
-                                onValueChange={handleDraftDirectoryChange}
-                            >
-                                <SelectTrigger
-                                    size="sm"
-                                    className="h-7 min-w-0 w-fit max-w-[48vw] sm:max-w-[20rem] border-transparent bg-transparent px-1.5 hover:bg-transparent data-[popup-open]:bg-transparent"
-                                >
-                                    <SelectValue>
-                                        {selectedDraftBranchLabel ?? 'Branch'}
-                                    </SelectValue>
-                                </SelectTrigger>
-                                <SelectContent fitContent>
-                                    {projectRootBranchOption ? (
-                                        <SelectGroup>
-                                            <SelectLabel>Project root</SelectLabel>
-                                            <SelectItem key={projectRootBranchOption.value} value={projectRootBranchOption.value} className="max-w-[24rem] truncate">
-                                                {projectRootBranchOption.label}
-                                            </SelectItem>
-                                        </SelectGroup>
-                                    ) : null}
-                                    {projectRootBranchOption ? <SelectSeparator /> : null}
-                                    <SelectGroup>
-                                        <div className="flex items-center justify-between px-2 py-1.5">
-                                            <span className="text-muted-foreground typography-meta">Worktrees</span>
-                                            <button
-                                                type="button"
-                                                className="text-muted-foreground typography-meta hover:text-foreground cursor-pointer"
-                                                onPointerDown={(e) => { e.stopPropagation(); }}
-                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); void createWorktreeDraft(); }}
-                                            >
-                                                + New
-                                            </button>
-                                        </div>
-                                        {worktreeBranchOptions.map((option) => (
-                                            <SelectItem key={option.value} value={option.value} className="max-w-[24rem] truncate">
-                                                {option.pending ? '⏳ ' : ''}{option.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectGroup>
-                                    {selectedDraftDirectory && !selectedDraftBranchIsKnown ? (
-                                        <SelectItem value={selectedDraftDirectory} className="max-w-[24rem] truncate">
-                                            {selectedDraftBranchLabel}
-                                        </SelectItem>
-                                    ) : null}
-                                </SelectContent>
-                            </Select>
-                        ) : null}
-                    </div>
-                ) : null}
-                <div
-                    className={cn(
-                        "flex flex-col relative overflow-visible",
-                        isDesktopExpanded && 'flex-1 min-h-0',
-                        "border border-border/80",
-                        "focus-within:ring-1",
-                        inputMode === 'shell'
-                            ? 'focus-within:ring-[var(--status-info)]'
-                            : 'focus-within:ring-primary/50',
-                        isDragging && "ring-2 ring-primary ring-offset-2"
-                    )}
-                    style={{
-                        borderRadius: chatInputRadius,
-                        backgroundColor: currentTheme?.colors?.surface?.subtle,
-                    }}
-                    ref={dropZoneRef}
-                    onDropCapture={handleDropCapture}
-                    onDragEnter={handleDragEnter}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    onDragEnd={handleDragEnd}
-                >
-                    {isDragging && (
-                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/90 rounded-xl">
-                            <div className="text-center">
-                                <div className="inline-flex justify-center">
-                                    <button
-                                        type="button"
-                                        className={iconButtonBaseClass}
-                                        onClick={() => handlePickLocalFiles()}
-                                        title="Attach files"
-                                        aria-label="Attach files"
-                                    >
-                                        <RiAttachment2 className={cn(iconSizeClass, 'text-current')} />
-                                    </button>
-                                </div>
-                                <p className="mt-2 typography-ui-label text-muted-foreground">{isInternalDrag ? 'Drop to insert as mention' : 'Drop files here to attach'}</p>
+                                <span className="text-xs font-medium text-muted-foreground">Review comments:</span>
+                                <span className="text-xs font-semibold" style={{ color: currentTheme?.colors?.status?.info }}>
+                                    {draftCount}
+                                </span>
                             </div>
                         </div>
                     )}
 
-                    {showCommandAutocomplete && (
-                        <CommandAutocomplete
-                            ref={commandRef}
-                            searchQuery={commandQuery}
-                            onCommandSelect={handleCommandSelect}
-                            showTabs={isMobile}
-                            activeTab={autocompleteTab}
-                            onTabSelect={handleAutocompleteTabSelect}
-                            onClose={() => setShowCommandAutocomplete(false)}
-                            style={isDesktopExpanded && autocompleteOverlayPosition
-                                ? {
-                                    left: `${autocompleteOverlayPosition.left}px`,
-                                    top: `${autocompleteOverlayPosition.top}px`,
-                                    bottom: 'auto',
-                                    width: `min(450px, calc(100% - ${autocompleteOverlayPosition.left + 8}px))`,
-                                    maxHeight: `${autocompleteOverlayPosition.maxHeight}px`,
-                                    transform: autocompleteOverlayPosition.place === 'above' ? 'translateY(-100%)' : undefined,
-                                }
-                                : undefined}
-                        />
+                    {/* Linked Issue row */}
+                    {linkedIssue && !isVSCode && (
+                        <div className="pb-2 w-full px-1">
+                            <button
+                                type="button"
+                                onClick={() => setIssuePickerOpen(true)}
+                                className="flex w-full items-center gap-1.5 text-sm hover:opacity-80 transition-opacity text-left h-5 px-1"
+                            >
+                                {linkedIssue.author?.avatarUrl && (
+                                    <img
+                                        src={linkedIssue.author.avatarUrl}
+                                        alt={linkedIssue.author.login}
+                                        className="h-5 w-5 rounded-full flex-shrink-0"
+                                    />
+                                )}
+                                <span className="text-muted-foreground flex-shrink-0">
+                                    #{linkedIssue.number}
+                                    {linkedIssue.author && (
+                                        <span className="ml-1">by {linkedIssue.author.login}</span>
+                                    )}
+                                </span>
+                                <span className="text-foreground truncate">
+                                    {linkedIssue.title}
+                                </span>
+                                <span className="flex items-center gap-0.5 flex-shrink-0">
+                                    <a
+                                        href={linkedIssue.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="flex items-center justify-center h-6 w-6 hover:bg-[var(--interactive-hover)] rounded-full transition-colors"
+                                        aria-label="Open issue in browser"
+                                    >
+                                        <RiExternalLinkLine className="h-4 w-4 text-muted-foreground" />
+                                    </a>
+                                    <span
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setLinkedIssue(null);
+                                        }}
+                                        className="flex items-center justify-center h-6 w-6 hover:bg-[var(--interactive-hover)] rounded-full transition-colors cursor-pointer"
+                                        aria-label="Remove linked issue"
+                                    >
+                                        <RiCloseLine className="h-4 w-4 text-muted-foreground" />
+                                    </span>
+                                </span>
+                            </button>
+                        </div>
                     )}
-                    { }
-                    {showSkillAutocomplete && (
-                        <SkillAutocomplete
-                            ref={skillRef}
-                            searchQuery={skillQuery}
-                            onSkillSelect={handleSkillSelect}
-                            onClose={() => setShowSkillAutocomplete(false)}
-                            style={isDesktopExpanded && autocompleteOverlayPosition
-                                ? {
-                                    left: `${autocompleteOverlayPosition.left}px`,
-                                    top: `${autocompleteOverlayPosition.top}px`,
-                                    bottom: 'auto',
-                                    width: `min(360px, calc(100% - ${autocompleteOverlayPosition.left + 8}px))`,
-                                    maxHeight: `${autocompleteOverlayPosition.maxHeight}px`,
-                                    transform: autocompleteOverlayPosition.place === 'above' ? 'translateY(-100%)' : undefined,
-                                }
-                                : undefined}
-                        />
+                    {linkedPr && !isVSCode && (
+                        <div className="pb-2 w-full px-1">
+                            <button
+                                type="button"
+                                onClick={() => setPrPickerOpen(true)}
+                                className="flex w-full items-center gap-1.5 text-sm hover:opacity-80 transition-opacity text-left h-5 px-1"
+                            >
+                                {linkedPr.author?.avatarUrl && (
+                                    <img
+                                        src={linkedPr.author.avatarUrl}
+                                        alt={linkedPr.author.login}
+                                        className="h-5 w-5 rounded-full flex-shrink-0"
+                                    />
+                                )}
+                                <span className="text-muted-foreground flex-shrink-0">
+                                    PR #{linkedPr.number}
+                                    {linkedPr.author && (
+                                        <span className="ml-1">by {linkedPr.author.login}</span>
+                                    )}
+                                </span>
+                                <span className="text-foreground truncate">
+                                    {linkedPr.title}
+                                </span>
+                                <span className="text-muted-foreground flex-shrink-0 typography-meta">
+                                    {linkedPr.head} → {linkedPr.base}
+                                </span>
+                                <span className="flex items-center gap-0.5 flex-shrink-0">
+                                    <a
+                                        href={linkedPr.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="flex items-center justify-center h-6 w-6 hover:bg-[var(--interactive-hover)] rounded-full transition-colors"
+                                        aria-label="Open pull request in browser"
+                                    >
+                                        <RiExternalLinkLine className="h-4 w-4 text-muted-foreground" />
+                                    </a>
+                                    <span
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setLinkedPr(null);
+                                        }}
+                                        className="flex items-center justify-center h-6 w-6 hover:bg-[var(--interactive-hover)] rounded-full transition-colors cursor-pointer"
+                                        aria-label="Remove linked pull request"
+                                    >
+                                        <RiCloseLine className="h-4 w-4 text-muted-foreground" />
+                                    </span>
+                                </span>
+                            </button>
+                        </div>
                     )}
+                    <MemoStatusRow
+                        showAbortStatus={showAbortStatus}
+                        showAssistantStatus={false}
+                        showTodos
+                        leftAccessory={newSessionDraftOpen || !hasPendingChanges ? null : <PendingChangesBar />}
+                    />
+                    {showDraftTargetSelectors && selectedDraftProject ? (
+                        <div className="mb-1.5 flex min-w-0 items-center gap-1.5 px-0.5">
+                            <Select
+                                value={selectedDraftProject.id}
+                                onValueChange={handleDraftProjectChange}
+                            >
+                                <SelectTrigger
+                                    size="sm"
+                                    className="h-7 min-w-0 w-fit max-w-[42vw] sm:max-w-[18rem] border-transparent bg-transparent px-1.5 hover:bg-transparent data-[popup-open]:bg-transparent"
+                                >
+                                    <SelectValue>
+                                        {renderProjectLabelWithIcon(selectedDraftProject)}
+                                    </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent fitContent>
+                                    {projects.map((project) => (
+                                        <SelectItem key={project.id} value={project.id} className="max-w-[24rem] truncate">
+                                            {renderProjectLabelWithIcon(project)}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
 
-                    {showFileMention && (
+                            {shouldShowDraftBranchSelector ? (
+                                <Select
+                                    value={selectedDraftDirectory ?? draftBranchItems[0]?.value ?? normalizePath(selectedDraftProject.path) ?? ''}
+                                    onValueChange={handleDraftDirectoryChange}
+                                >
+                                    <SelectTrigger
+                                        size="sm"
+                                        className="h-7 min-w-0 w-fit max-w-[48vw] sm:max-w-[20rem] border-transparent bg-transparent px-1.5 hover:bg-transparent data-[popup-open]:bg-transparent"
+                                    >
+                                        <SelectValue>
+                                            {selectedDraftBranchLabel ?? 'Branch'}
+                                        </SelectValue>
+                                    </SelectTrigger>
+                                    <SelectContent fitContent>
+                                        {projectRootBranchOption ? (
+                                            <SelectGroup>
+                                                <SelectLabel>Project root</SelectLabel>
+                                                <SelectItem key={projectRootBranchOption.value} value={projectRootBranchOption.value} className="max-w-[24rem] truncate">
+                                                    {projectRootBranchOption.label}
+                                                </SelectItem>
+                                            </SelectGroup>
+                                        ) : null}
+                                        {projectRootBranchOption ? <SelectSeparator /> : null}
+                                        <SelectGroup>
+                                            <div className="flex items-center justify-between px-2 py-1.5">
+                                                <span className="text-muted-foreground typography-meta">Worktrees</span>
+                                                <button
+                                                    type="button"
+                                                    className="text-muted-foreground typography-meta hover:text-foreground cursor-pointer"
+                                                    onPointerDown={(e) => { e.stopPropagation(); }}
+                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); void createWorktreeDraft(); }}
+                                                >
+                                                    + New
+                                                </button>
+                                            </div>
+                                            {worktreeBranchOptions.map((option) => (
+                                                <SelectItem key={option.value} value={option.value} className="max-w-[24rem] truncate">
+                                                    {option.pending ? '⏳ ' : ''}{option.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectGroup>
+                                        {selectedDraftDirectory && !selectedDraftBranchIsKnown ? (
+                                            <SelectItem value={selectedDraftDirectory} className="max-w-[24rem] truncate">
+                                                {selectedDraftBranchLabel}
+                                            </SelectItem>
+                                        ) : null}
+                                    </SelectContent>
+                                </Select>
+                            ) : null}
+                        </div>
+                    ) : null}
+                    <div
+                        className={cn(
+                            "flex flex-col relative overflow-visible",
+                            isDesktopExpanded && 'flex-1 min-h-0',
+                            "border border-border/80",
+                            "focus-within:ring-1",
+                            inputMode === 'shell'
+                                ? 'focus-within:ring-[var(--status-info)]'
+                                : 'focus-within:ring-primary/50',
+                            isDragging && "ring-2 ring-primary ring-offset-2"
+                        )}
+                        style={{
+                            borderRadius: chatInputRadius,
+                            backgroundColor: currentTheme?.colors?.surface?.subtle,
+                        }}
+                        ref={dropZoneRef}
+                        onDropCapture={handleDropCapture}
+                        onDragEnter={handleDragEnter}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        onDragEnd={handleDragEnd}
+                    >
+                        {isDragging && (
+                            <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/90 rounded-xl">
+                                <div className="text-center">
+                                    <div className="inline-flex justify-center">
+                                        <button
+                                            type="button"
+                                            className={iconButtonBaseClass}
+                                            onClick={() => handlePickLocalFiles()}
+                                            title="Attach files"
+                                            aria-label="Attach files"
+                                        >
+                                            <RiAttachment2 className={cn(iconSizeClass, 'text-current')} />
+                                        </button>
+                                    </div>
+                                    <p className="mt-2 typography-ui-label text-muted-foreground">{isInternalDrag ? 'Drop to insert as mention' : 'Drop files here to attach'}</p>
+                                </div>
+                            </div>
+                        )}
 
-                        <FileMentionAutocomplete
-                            ref={mentionRef}
-                            searchQuery={mentionQuery}
-                            onFileSelect={handleFileSelect}
-                            onAgentSelect={handleAgentSelect}
-                            showTabs={isMobile}
-                            activeTab={autocompleteTab}
-                            onTabSelect={handleAutocompleteTabSelect}
-                            onClose={() => setShowFileMention(false)}
-                            style={isDesktopExpanded && autocompleteOverlayPosition
-                                ? {
-                                    left: `${autocompleteOverlayPosition.left}px`,
-                                    top: `${autocompleteOverlayPosition.top}px`,
-                                    bottom: 'auto',
-                                    width: `min(520px, calc(100% - ${autocompleteOverlayPosition.left + 8}px))`,
-                                    maxHeight: `${autocompleteOverlayPosition.maxHeight}px`,
-                                    transform: autocompleteOverlayPosition.place === 'above' ? 'translateY(-100%)' : undefined,
-                                }
-                                : undefined}
-                        />
-                    )}
-                    <div className={cn("relative overflow-hidden", isDesktopExpanded && 'flex flex-1 min-h-0 flex-col')}>
-                        {highlightedComposerContent && (
-                            <div
-                                aria-hidden
+                        {showCommandAutocomplete && (
+                            <CommandAutocomplete
+                                ref={commandRef}
+                                searchQuery={commandQuery}
+                                onCommandSelect={handleCommandSelect}
+                                showTabs={isMobile}
+                                activeTab={autocompleteTab}
+                                onTabSelect={handleAutocompleteTabSelect}
+                                onClose={() => setShowCommandAutocomplete(false)}
+                                style={isDesktopExpanded && autocompleteOverlayPosition
+                                    ? {
+                                        left: `${autocompleteOverlayPosition.left}px`,
+                                        top: `${autocompleteOverlayPosition.top}px`,
+                                        bottom: 'auto',
+                                        width: `min(450px, calc(100% - ${autocompleteOverlayPosition.left + 8}px))`,
+                                        maxHeight: `${autocompleteOverlayPosition.maxHeight}px`,
+                                        transform: autocompleteOverlayPosition.place === 'above' ? 'translateY(-100%)' : undefined,
+                                    }
+                                    : undefined}
+                            />
+                        )}
+                        { }
+                        {showSkillAutocomplete && (
+                            <SkillAutocomplete
+                                ref={skillRef}
+                                searchQuery={skillQuery}
+                                onSkillSelect={handleSkillSelect}
+                                onClose={() => setShowSkillAutocomplete(false)}
+                                style={isDesktopExpanded && autocompleteOverlayPosition
+                                    ? {
+                                        left: `${autocompleteOverlayPosition.left}px`,
+                                        top: `${autocompleteOverlayPosition.top}px`,
+                                        bottom: 'auto',
+                                        width: `min(360px, calc(100% - ${autocompleteOverlayPosition.left + 8}px))`,
+                                        maxHeight: `${autocompleteOverlayPosition.maxHeight}px`,
+                                        transform: autocompleteOverlayPosition.place === 'above' ? 'translateY(-100%)' : undefined,
+                                    }
+                                    : undefined}
+                            />
+                        )}
+
+                        {showFileMention && (
+
+                            <FileMentionAutocomplete
+                                ref={mentionRef}
+                                searchQuery={mentionQuery}
+                                onFileSelect={handleFileSelect}
+                                onAgentSelect={handleAgentSelect}
+                                showTabs={isMobile}
+                                activeTab={autocompleteTab}
+                                onTabSelect={handleAutocompleteTabSelect}
+                                onClose={() => setShowFileMention(false)}
+                                style={isDesktopExpanded && autocompleteOverlayPosition
+                                    ? {
+                                        left: `${autocompleteOverlayPosition.left}px`,
+                                        top: `${autocompleteOverlayPosition.top}px`,
+                                        bottom: 'auto',
+                                        width: `min(520px, calc(100% - ${autocompleteOverlayPosition.left + 8}px))`,
+                                        maxHeight: `${autocompleteOverlayPosition.maxHeight}px`,
+                                        transform: autocompleteOverlayPosition.place === 'above' ? 'translateY(-100%)' : undefined,
+                                    }
+                                    : undefined}
+                            />
+                        )}
+                        <div className={cn("relative overflow-hidden", isDesktopExpanded && 'flex flex-1 min-h-0 flex-col')}>
+                            {highlightedComposerContent && (
+                                <div
+                                    aria-hidden
+                                    className={cn(
+                                        'pointer-events-none absolute inset-0 z-0 whitespace-pre-wrap break-words px-3 rounded-b-none',
+                                        isDesktopExpanded
+                                            ? 'h-full min-h-0 py-4'
+                                            : isMobile
+                                                ? 'py-2.5'
+                                                : 'pt-4 pb-2',
+                                        inputMode === 'shell' ? 'font-mono' : 'typography-markdown md:typography-ui-label',
+                                    )}
+                                    ref={composerHighlightRef}
+                                >
+                                    {highlightedComposerContent.map((part, index) => (
+                                        <span
+                                            key={`${index}-${part.text.length}`}
+                                            className={
+                                                part.mentionKind === 'file'
+                                                    ? 'text-[var(--status-info)]'
+                                                    : part.mentionKind === 'agent'
+                                                        ? 'text-[var(--status-success)]'
+                                                        : 'text-foreground'
+                                            }
+                                        >
+                                            {part.text}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                            <Textarea
+                                simple
+                                ref={textareaRef}
+                                data-chat-input="true"
+                                value={message}
+                                onChange={handleTextChange}
+                                onBeforeInput={handleBeforeInput}
+                                onKeyDown={handleKeyDown}
+                                onPaste={handlePaste}
+                                onDragEnter={handleDragEnter}
+                                onDragOver={handleDragOver}
+                                onDropCapture={handleDropCapture}
+                                onDrop={handleDrop}
+                                onDragEnd={handleDragEnd}
+                                onKeyUp={updateAutocompleteOverlayPosition}
+                                onClick={updateAutocompleteOverlayPosition}
+                                onScroll={(event) => {
+                                    updateAutocompleteOverlayPosition();
+                                    const scrollTop = event.currentTarget.scrollTop;
+                                    if (composerHighlightRef.current) {
+                                        composerHighlightRef.current.style.transform = `translateY(-${scrollTop}px)`;
+                                    }
+                                }}
+                                onSelect={(e) => {
+                                    const ta = e.currentTarget;
+                                    cursorPosRef.current = ta.selectionStart ?? 0;
+                                    updateAutocompleteOverlayPosition();
+                                }}
+                                placeholder={currentSessionId || newSessionDraftOpen
+                                    ? inputMode === 'shell'
+                                        ? "Enter shell command..."
+                                        : "@ for files/agents; / for commands; ! for shell"
+                                    : "Select or create a session to start chatting"}
+                                disabled={!currentSessionId && !newSessionDraftOpen}
+                                autoCorrect={isMobile ? "on" : "off"}
+                                autoCapitalize={isMobile ? "sentences" : "off"}
+                                spellCheck={isMobile || inputSpellcheckEnabled}
+                                fillContainer={isDesktopExpanded}
+                                outerClassName={cn('ring-0 bg-transparent shadow-none hover:bg-transparent focus-within:ring-0', isDesktopExpanded && 'flex-1 min-h-0')}
                                 className={cn(
-                                    'pointer-events-none absolute inset-0 z-0 whitespace-pre-wrap break-words px-3 rounded-b-none',
+                                    'min-h-[52px] resize-none border-0 px-3 rounded-b-none appearance-none hover:border-transparent bg-transparent relative z-10',
                                     isDesktopExpanded
                                         ? 'h-full min-h-0 py-4'
                                         : isMobile
                                             ? 'py-2.5'
                                             : 'pt-4 pb-2',
-                                    inputMode === 'shell' ? 'font-mono' : 'typography-markdown md:typography-ui-label',
+                                    inputMode === 'shell' && 'font-mono',
+                                    highlightedComposerContent && 'text-transparent caret-[var(--surface-foreground)]',
                                 )}
-                                ref={composerHighlightRef}
-                            >
-                                {highlightedComposerContent.map((part, index) => (
-                                    <span
-                                        key={`${index}-${part.text.length}`}
-                                        className={
-                                            part.mentionKind === 'file'
-                                                ? 'text-[var(--status-info)]'
-                                                : part.mentionKind === 'agent'
-                                                    ? 'text-[var(--status-success)]'
-                                                    : 'text-foreground'
-                                        }
-                                    >
-                                        {part.text}
-                                    </span>
-                                ))}
-                            </div>
-                        )}
-                        <Textarea
-                            simple
-                            ref={textareaRef}
-                            data-chat-input="true"
-                            value={message}
-                            onChange={handleTextChange}
-                            onBeforeInput={handleBeforeInput}
-                            onKeyDown={handleKeyDown}
-                            onPaste={handlePaste}
-                            onDragEnter={handleDragEnter}
-                            onDragOver={handleDragOver}
-                            onDropCapture={handleDropCapture}
-                            onDrop={handleDrop}
-                            onDragEnd={handleDragEnd}
-                            onKeyUp={updateAutocompleteOverlayPosition}
-                            onClick={updateAutocompleteOverlayPosition}
-                            onScroll={(event) => {
-                                updateAutocompleteOverlayPosition();
-                                const scrollTop = event.currentTarget.scrollTop;
-                                if (composerHighlightRef.current) {
-                                    composerHighlightRef.current.style.transform = `translateY(-${scrollTop}px)`;
-                                }
-                            }}
-                            onSelect={(e) => {
-                                const ta = e.currentTarget;
-                                cursorPosRef.current = ta.selectionStart ?? 0;
-                                updateAutocompleteOverlayPosition();
-                            }}
-                            placeholder={currentSessionId || newSessionDraftOpen
-                                ? inputMode === 'shell'
-                                    ? "Enter shell command..."
-                                    : "@ for files/agents; / for commands; ! for shell"
-                                : "Select or create a session to start chatting"}
-                            disabled={!currentSessionId && !newSessionDraftOpen}
-                            autoCorrect={isMobile ? "on" : "off"}
-                            autoCapitalize={isMobile ? "sentences" : "off"}
-                            spellCheck={isMobile || inputSpellcheckEnabled}
-                            fillContainer={isDesktopExpanded}
-                            outerClassName={cn('ring-0 bg-transparent shadow-none hover:bg-transparent focus-within:ring-0', isDesktopExpanded && 'flex-1 min-h-0')}
+                                style={{
+                                    flex: isDesktopExpanded ? '1 1 auto' : 'none',
+                                    height: !isDesktopExpanded && textareaSize ? `${textareaSize.height}px` : undefined,
+                                    maxHeight: !isDesktopExpanded && textareaSize ? `${textareaSize.maxHeight}px` : undefined,
+                                    borderTopLeftRadius: chatInputRadius,
+                                    borderTopRightRadius: chatInputRadius,
+                                }}
+                                rows={1}
+                            />
+                        </div>
+                        <div
                             className={cn(
-                                'min-h-[52px] resize-none border-0 px-3 rounded-b-none appearance-none hover:border-transparent bg-transparent relative z-10',
-                                isDesktopExpanded
-                                    ? 'h-full min-h-0 py-4'
-                                    : isMobile
-                                        ? 'py-2.5'
-                                        : 'pt-4 pb-2',
-                                inputMode === 'shell' && 'font-mono',
-                                highlightedComposerContent && 'text-transparent caret-[var(--surface-foreground)]',
+                                'bg-transparent flex-shrink-0',
+                                footerPaddingClass,
+                                isMobile ? 'flex items-center gap-x-1.5' : cn('flex items-center justify-between', footerGapClass)
                             )}
                             style={{
-                                flex: isDesktopExpanded ? '1 1 auto' : 'none',
-                                height: !isDesktopExpanded && textareaSize ? `${textareaSize.height}px` : undefined,
-                                maxHeight: !isDesktopExpanded && textareaSize ? `${textareaSize.maxHeight}px` : undefined,
-                                borderTopLeftRadius: chatInputRadius,
-                                borderTopRightRadius: chatInputRadius,
+                                borderBottomLeftRadius: chatInputRadius,
+                                borderBottomRightRadius: chatInputRadius,
                             }}
-                            rows={1}
-                        />
-                    </div>
-                    <div
-                        className={cn(
-                            'bg-transparent flex-shrink-0',
-                            footerPaddingClass,
-                            isMobile ? 'flex items-center gap-x-1.5' : cn('flex items-center justify-between', footerGapClass)
-                        )}
-                        style={{
-                            borderBottomLeftRadius: chatInputRadius,
-                            borderBottomRightRadius: chatInputRadius,
-                        }}
-                        data-chat-input-footer="true"
-                    >
-                        {isMobile ? (
-                            <>
-                                <div className="flex w-full items-center justify-between gap-x-1.5">
-                                    <div className="flex items-center gap-x-1.5">
+                            data-chat-input-footer="true"
+                        >
+                            {isMobile ? (
+                                <>
+                                    <div className="flex w-full items-center justify-between gap-x-1.5">
+                                        <div className="flex items-center gap-x-1.5">
+                                            <ComposerAttachmentControls
+                                                isMobile={isMobile}
+                                                isVSCode={isVSCode}
+                                                footerIconButtonClass={footerIconButtonClass}
+                                                iconSizeClass={iconSizeClass}
+                                                fileInputRef={fileInputRef}
+                                                handleLocalFileSelect={handleLocalFileSelect}
+                                                handlePickLocalFiles={handlePickLocalFiles}
+                                                handleOpenCommandMenu={handleOpenCommandMenu}
+                                                openIssuePicker={openIssuePicker}
+                                                openPrPicker={openPrPicker}
+                                                onOpenSettings={onOpenSettings}
+                                            />
+                                            <PermissionAutoAcceptButton
+                                                footerIconButtonClass={footerIconButtonClass}
+                                                iconSizeClass={iconSizeClass}
+                                                permissionScopeSessionId={permissionScopeSessionId}
+                                                permissionAutoAcceptEnabled={permissionAutoAcceptEnabled}
+                                                handlePermissionAutoAcceptToggle={handlePermissionAutoAcceptToggle}
+                                            />
+                                        </div>
+                                        <div className="flex items-center min-w-0 gap-x-1 justify-end">
+                                            <div className="flex items-center gap-x-1 min-w-0 max-w-[60vw] flex-shrink">
+                                                <MemoMobileModelButton onOpenModel={handleOpenMobileControls} className="min-w-0 flex-shrink" />
+                                                <MemoMobileAgentButton
+                                                    onOpenAgentPanel={handleOpenAgentPanel}
+                                                    onCycleAgent={handleCycleAgent}
+                                                    className="min-w-0 flex-shrink"
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-x-1 flex-shrink-0">
+                                                <MemoBrowserVoiceButton />
+                                                <ComposerActionButtons
+                                                    isMobile={isMobile}
+                                                    footerIconButtonClass={footerIconButtonClass}
+                                                    sendIconSizeClass={sendIconSizeClass}
+                                                    stopIconSizeClass={stopIconSizeClass}
+                                                    canSend={canSend}
+                                                    canAbort={canAbort}
+                                                    hasContent={!!hasContent}
+                                                    currentSessionId={currentSessionId}
+                                                    newSessionDraftOpen={newSessionDraftOpen}
+                                                    onPrimaryAction={handlePrimaryAction}
+                                                    onQueueMessage={handleQueueMessage}
+                                                    onAbort={handleAbort}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <MemoModelControls
+                                        className="hidden"
+                                        mobilePanel={mobileControlsPanel}
+                                        onMobilePanelChange={setMobileControlsPanel}
+                                        onMobilePanelSelection={handleReturnToUnifiedControls}
+                                        onAgentPanelSelection={() => setMobileControlsPanel(null)}
+                                    />
+                                    <MemoUnifiedControlsDrawer
+                                        open={mobileControlsOpen}
+                                        onClose={handleCloseMobileControls}
+                                        onOpenModel={() => handleOpenMobilePanel('model')}
+                                        onOpenEffort={() => handleOpenMobilePanel('variant')}
+                                    />
+                                </>
+                            ) : (
+                                <>
+                                    <div className={cn("flex items-center flex-shrink-0", footerGapClass)}>
                                         <ComposerAttachmentControls
                                             isMobile={isMobile}
                                             isVSCode={isVSCode}
@@ -3727,133 +3367,67 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                                             openPrPicker={openPrPicker}
                                             onOpenSettings={onOpenSettings}
                                         />
+                                        <FocusModeButton
+                                            footerIconButtonClass={footerIconButtonClass}
+                                            iconSizeClass={iconSizeClass}
+                                            isExpandedInput={isExpandedInput}
+                                            onToggle={handleToggleExpandedInput}
+                                        />
                                         <PermissionAutoAcceptButton
                                             footerIconButtonClass={footerIconButtonClass}
                                             iconSizeClass={iconSizeClass}
                                             permissionScopeSessionId={permissionScopeSessionId}
                                             permissionAutoAcceptEnabled={permissionAutoAcceptEnabled}
                                             handlePermissionAutoAcceptToggle={handlePermissionAutoAcceptToggle}
+                                            withTooltip
                                         />
                                     </div>
-                                    <div className="flex items-center min-w-0 gap-x-1 justify-end">
-                                        <div className="flex items-center gap-x-1 min-w-0 max-w-[60vw] flex-shrink">
-                                            <MemoMobileModelButton onOpenModel={handleOpenMobileControls} className="min-w-0 flex-shrink" />
-                                            <MemoMobileAgentButton
-                                                onOpenAgentPanel={handleOpenAgentPanel}
-                                                onCycleAgent={handleCycleAgent}
-                                                className="min-w-0 flex-shrink"
-                                            />
-                                        </div>
-                                        <div className="flex items-center gap-x-1 flex-shrink-0">
-                                            <MemoBrowserVoiceButton />
-                                            <ComposerActionButtons
-                                                isMobile={isMobile}
-                                                footerIconButtonClass={footerIconButtonClass}
-                                                sendIconSizeClass={sendIconSizeClass}
-                                                stopIconSizeClass={stopIconSizeClass}
-                                                canSend={canSend}
-                                                canAbort={canAbort}
-                                                hasContent={!!hasContent}
-                                                currentSessionId={currentSessionId}
-                                                newSessionDraftOpen={newSessionDraftOpen}
-                                                onPrimaryAction={handlePrimaryAction}
-                                                onQueueMessage={handleQueueMessage}
-                                                onAbort={handleAbort}
-                                            />
-                                        </div>
+                                    <div className={cn('flex items-center flex-1 justify-end', footerGapClass, 'md:gap-x-3')}>
+                                        <MemoModelControls className={cn('flex-1 min-w-0 justify-end')} />
+                                        <MemoBrowserVoiceButton />
+                                        <ComposerActionButtons
+                                            isMobile={isMobile}
+                                            footerIconButtonClass={footerIconButtonClass}
+                                            sendIconSizeClass={sendIconSizeClass}
+                                            stopIconSizeClass={stopIconSizeClass}
+                                            canSend={canSend}
+                                            canAbort={canAbort}
+                                            hasContent={!!hasContent}
+                                            currentSessionId={currentSessionId}
+                                            newSessionDraftOpen={newSessionDraftOpen}
+                                            onPrimaryAction={handlePrimaryAction}
+                                            onQueueMessage={handleQueueMessage}
+                                            onAbort={handleAbort}
+                                        />
                                     </div>
-                                </div>
-                                <MemoModelControls
-                                    className="hidden"
-                                    mobilePanel={mobileControlsPanel}
-                                    onMobilePanelChange={setMobileControlsPanel}
-                                    onMobilePanelSelection={handleReturnToUnifiedControls}
-                                    onAgentPanelSelection={() => setMobileControlsPanel(null)}
-                                />
-                                <MemoUnifiedControlsDrawer
-                                    open={mobileControlsOpen}
-                                    onClose={handleCloseMobileControls}
-                                    onOpenModel={() => handleOpenMobilePanel('model')}
-                                    onOpenEffort={() => handleOpenMobilePanel('variant')}
-                                />
-                            </>
-                        ) : (
-                            <>
-                                <div className={cn("flex items-center flex-shrink-0", footerGapClass)}>
-                                    <ComposerAttachmentControls
-                                        isMobile={isMobile}
-                                        isVSCode={isVSCode}
-                                        footerIconButtonClass={footerIconButtonClass}
-                                        iconSizeClass={iconSizeClass}
-                                        fileInputRef={fileInputRef}
-                                        handleLocalFileSelect={handleLocalFileSelect}
-                                        handlePickLocalFiles={handlePickLocalFiles}
-                                        handleOpenCommandMenu={handleOpenCommandMenu}
-                                        openIssuePicker={openIssuePicker}
-                                        openPrPicker={openPrPicker}
-                                        onOpenSettings={onOpenSettings}
-                                    />
-                                    <FocusModeButton
-                                        footerIconButtonClass={footerIconButtonClass}
-                                        iconSizeClass={iconSizeClass}
-                                        isExpandedInput={isExpandedInput}
-                                        onToggle={handleToggleExpandedInput}
-                                    />
-                                    <PermissionAutoAcceptButton
-                                        footerIconButtonClass={footerIconButtonClass}
-                                        iconSizeClass={iconSizeClass}
-                                        permissionScopeSessionId={permissionScopeSessionId}
-                                        permissionAutoAcceptEnabled={permissionAutoAcceptEnabled}
-                                        handlePermissionAutoAcceptToggle={handlePermissionAutoAcceptToggle}
-                                        withTooltip
-                                    />
-                                </div>
-                                <div className={cn('flex items-center flex-1 justify-end', footerGapClass, 'md:gap-x-3')}>
-                                    <MemoModelControls className={cn('flex-1 min-w-0 justify-end')} />
-                                    <MemoBrowserVoiceButton />
-                                    <ComposerActionButtons
-                                        isMobile={isMobile}
-                                        footerIconButtonClass={footerIconButtonClass}
-                                        sendIconSizeClass={sendIconSizeClass}
-                                        stopIconSizeClass={stopIconSizeClass}
-                                        canSend={canSend}
-                                        canAbort={canAbort}
-                                        hasContent={!!hasContent}
-                                        currentSessionId={currentSessionId}
-                                        newSessionDraftOpen={newSessionDraftOpen}
-                                        onPrimaryAction={handlePrimaryAction}
-                                        onQueueMessage={handleQueueMessage}
-                                        onAbort={handleAbort}
-                                    />
-                                </div>
-                            </>
-                        )}
+                                </>
+                            )}
+                        </div>
+
+                        {/* Mobile Session Status Bar - above input */}
+                        {isMobile && <MobileSessionStatusBar />}
                     </div>
-
-                    {/* Mobile Session Status Bar - above input */}
-                    {isMobile && <MobileSessionStatusBar />}
                 </div>
-            </div>
-        </form>
+            </form>
 
-        {/* Issue Picker Dialog */}
-        <GitHubIssuePickerDialog
-            open={issuePickerOpen}
-            onOpenChange={setIssuePickerOpen}
-            mode="select"
-            onSelect={(issue) => {
-                setLinkedIssue(issue);
-                setLinkedPr(null);
-            }}
-        />
-        <GitHubPrPickerDialog
-            open={prPickerOpen}
-            onOpenChange={setPrPickerOpen}
-            onSelect={(pr) => {
-                setLinkedPr(pr);
-                setLinkedIssue(null);
-            }}
-        />
+            {/* Issue Picker Dialog */}
+            <GitHubIssuePickerDialog
+                open={issuePickerOpen}
+                onOpenChange={setIssuePickerOpen}
+                mode="select"
+                onSelect={(issue) => {
+                    setLinkedIssue(issue);
+                    setLinkedPr(null);
+                }}
+            />
+            <GitHubPrPickerDialog
+                open={prPickerOpen}
+                onOpenChange={setPrPickerOpen}
+                onSelect={(pr) => {
+                    setLinkedPr(pr);
+                    setLinkedIssue(null);
+                }}
+            />
         </>
     );
 };
