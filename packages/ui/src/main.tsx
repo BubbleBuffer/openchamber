@@ -1,5 +1,8 @@
+import './lib/sentry'
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { reactErrorHandler } from '@sentry/react'
 import './styles/fonts'
 import './index.css'
 import App from './App.tsx'
@@ -50,7 +53,11 @@ if (!rootElement) {
   throw new Error('Root element not found');
 }
 
-createRoot(rootElement).render(
+createRoot(rootElement, {
+  onUncaughtError: reactErrorHandler(),
+  onCaughtError: reactErrorHandler(),
+  onRecoverableError: reactErrorHandler(),
+}).render(
   <StrictMode>
     <ThemeSystemProvider>
       <ThemeProvider>
