@@ -268,6 +268,8 @@ export const useGitIdentitiesStore = create<GitIdentitiesStore>()(
       }),
       {
         name: "git-identities-store",
+        // RC-11: Bump version + add migrate when partialize fields change.
+        version: 1,
         storage: createJSONStorage(() => getSafeStorage()),
         partialize: (state) => ({
           selectedProfileId: state.selectedProfileId,

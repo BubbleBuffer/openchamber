@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Session } from '@/lib/opencode/client';
 import { updateDesktopSettings } from '@/lib/persistence';
+import { asReporter } from '@/lib/reportError';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 
 type SafeStorageLike = {
@@ -67,7 +68,9 @@ export const useSidebarPersistence = (args: Args) => {
       ...project,
       sidebarCollapsed: collapsed.has(project.id),
     }));
-    void updateDesktopSettings({ projects: updatedProjects }).catch(() => {});
+    void updateDesktopSettings({ projects: updatedProjects }).catch(
+      asReporter({ action: 'Save sidebar layout', scope: 'sidebar:layout', silent: true }),
+    );
   }, [isVSCode]);
 
   const scheduleCollapsedProjectsPersist = React.useCallback((collapsed: Set<string>) => {

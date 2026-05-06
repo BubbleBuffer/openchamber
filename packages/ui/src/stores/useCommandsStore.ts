@@ -417,6 +417,8 @@ export const useCommandsStore = create<CommandsStore>()(
       }),
       {
         name: "commands-store",
+        // RC-11: Bump version + add migrate when partialize fields change.
+        version: 1,
         storage: createJSONStorage(() => getSafeStorage()),
         partialize: (state) => ({
           selectedCommandName: state.selectedCommandName,

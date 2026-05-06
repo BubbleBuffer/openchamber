@@ -138,6 +138,8 @@ export const useMessageQueueStore = create<MessageQueueStore>()(
             }),
             {
                 name: 'message-queue-store',
+                // RC-11: Bump version + add migrate when partialize fields change.
+                version: 1,
                 storage: createJSONStorage(() => getSafeStorage()),
                 partialize: (state) => ({
                     queuedMessages: state.queuedMessages,

@@ -24,6 +24,7 @@ import { stripMessageDiffSnapshots, stripSessionDiffSnapshots } from "./sanitize
 import { syncDebug } from "./debug"
 import { getReconnectCandidateSessionIds } from "./reconnect-recovery"
 import { opencodeClient } from "@/lib/opencode/client"
+import { reportError } from "@/lib/reportError"
 import { usePermissionStore } from "@/stores/permissionStore"
 import { useProviderConfigStore } from "@/stores/useProviderConfigStore"
 import { useAgentConfigStore } from "@/stores/useAgentConfigStore"
@@ -227,8 +228,15 @@ function enqueuePartsRepair(directory: string, sessionID: string, childStores: C
     }
     try {
       await repairSessionParts(directory, sessionID, store)
-    } catch {
-      // Transient failure — next SSE event or reconnect will catch up.
+    } catch (error) {
+      // RC-2: Repair already retries via `retry()` (3 attempts with backoff).
+      // If we land here, all retries have failed. Previously this was a
+      // silent `catch {}` and messages stayed with empty parts forever.
+      // Surface it so the user knows to reload, deduped per-session.
+      reportError(error, {
+        action: "Failed to load message parts",
+        scope: `parts-repair:${sessionID}`,
+      })
     } finally {
       pendingRepairs.delete(k)
     }
@@ -1361,7 +1369,7 @@ export function SyncProvider(props: {
                   : String(rawError)
                 const wrapped = new Error(`session.list failed${status ? ` (${status})` : ""}: ${message}`)
                 if (status !== undefined) {
-                  ;(wrapped as Error & { status?: number }).status = status
+                  ; (wrapped as Error & { status?: number }).status = status
                 }
                 throw wrapped
               }
@@ -1715,12 +1723,12 @@ export function useSidebarSessions(directory?: string): Session[] {
       const nextSession = stableUpdatedAt === rawUpdatedAt
         ? session
         : {
-            ...session,
-            time: {
-              ...session.time,
-              updated: stableUpdatedAt,
-            },
-          }
+          ...session,
+          time: {
+            ...session.time,
+            updated: stableUpdatedAt,
+          },
+        }
       sessionsById.set(session.id, nextSession)
       return nextSession
     })

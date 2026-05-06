@@ -1,5 +1,6 @@
 import { useUIStore } from '@/stores/useUIStore';
 import { updateDesktopSettings } from '@/lib/persistence';
+import { asReporter } from '@/lib/reportError';
 import { isVSCodeRuntime } from '@/lib/desktop';
 
 type ModelRef = { providerID: string; modelID: string };
@@ -16,10 +17,10 @@ const refsEqual = (a: ModelRef[], b: ModelRef[]): boolean => {
 
 export const startModelPrefsAutoSave = () => {
   if (typeof window === 'undefined') {
-    return () => {};
+    return () => { };
   }
   if (isVSCodeRuntime()) {
-    return () => {};
+    return () => { };
   }
 
   let timer: number | null = null;
@@ -44,7 +45,9 @@ export const startModelPrefsAutoSave = () => {
       recentModels: payload.recentModels.slice(),
     };
 
-    void updateDesktopSettings(payload).catch(() => {});
+    void updateDesktopSettings(payload).catch(
+      asReporter({ action: 'Save model preferences', scope: 'modelPrefs:autosave', silent: true }),
+    );
   };
 
   const schedule = () => {
