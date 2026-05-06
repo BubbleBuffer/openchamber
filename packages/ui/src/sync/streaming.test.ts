@@ -27,4 +27,37 @@ describe("updateStreamingState stuck session recovery", () => {
     expect(useStreamingStore.getState().messageStreamStates.get("m1")?.phase).toBe("completed")
     expect(stuckSessionId).toBe("s1")
   })
+
+  // RC-5: Sessions that go busy but never produce an assistant message must
+  // also recover. The per-message stuck check can't catch this because no
+  // streamState entry is created without a streaming assistant message.
+  test("recovers sessions stuck busy with no assistant message ever produced", () => {
+    useStreamingStore.setState({
+      streamingMessageIds: new Map(),
+      messageStreamStates: new Map(),
+      busySinceBySessionId: new Map(),
+    })
+    const state = {
+      session_status: { s2: { type: "busy" } },
+      message: { s2: [] }, // No assistant message — server hung before any output
+      session: [], sessionTotal: 0, limit: 50, status: "ready",
+      vcs: undefined, projectMeta: undefined, icon: undefined,
+      command: [], lsp: [], session_diff: {}, todo: {},
+      part: {}, permission: {}, question: {},
+    } as unknown as State
+
+    // First call records busySince = now.
+    updateStreamingState(state)
+    expect(useStreamingStore.getState().busySinceBySessionId.get("s2")).toBeGreaterThan(0)
+
+    // Backdate busySince so the timeout window has elapsed.
+    useStreamingStore.setState({
+      busySinceBySessionId: new Map([["s2", Date.now() - 6 * 60 * 1000]]),
+    })
+
+    let stuckSessionId: string | undefined
+    updateStreamingState(state, { onStuckSession: (id) => { stuckSessionId = id } })
+    expect(stuckSessionId).toBe("s2")
+    expect(useStreamingStore.getState().busySinceBySessionId.has("s2")).toBe(false)
+  })
 })

@@ -256,14 +256,14 @@ export function applyDirectoryEvent(
           syncDebug.reducer.messageUpdatedUnchanged(info.sessionID, info.id, info.role, (info as { finish?: unknown }).finish, (info.time as { completed?: number })?.completed)
           return false
         }
-      const next = [...messages]
-      next[result.index] = info
-      draft.message[info.sessionID] = next
-    } else {
-      const next = [...messages]
-      next.splice(result.index, 0, info)
-      draft.message[info.sessionID] = next
-    }
+        const next = [...messages]
+        next[result.index] = info
+        draft.message[info.sessionID] = next
+      } else {
+        const next = [...messages]
+        next.splice(result.index, 0, info)
+        draft.message[info.sessionID] = next
+      }
 
       // Fallback: transition session_status to idle when an assistant message
       // completes. OpenCode may not always send a session.status (idle) event
@@ -535,7 +535,7 @@ function applyOrphanDeltasToPart(draft: State, messageID: string, part: Part): P
     const idx = dedupeFields.indexOf(field)
     if (idx >= 0) dedupeFields.splice(idx, 1)
   }
-  ;(merged as DedupeMetadata).__dedupeNextDeltaFields = dedupeFields
+  ; (merged as DedupeMetadata).__dedupeNextDeltaFields = dedupeFields
 
   delete messageBucket[part.id]
   if (Object.keys(messageBucket).length === 0) {

@@ -16,17 +16,34 @@ type SessionCache = {
   part: Record<string, Part[] | undefined>
   permission: Record<string, PermissionRequest[] | undefined>
   question: Record<string, QuestionRequest[] | undefined>
+  partDeltaBuffer?: Record<string, Record<string, Array<{ field: string; delta: string }>> | undefined>
 }
 
 export function dropSessionCaches(store: SessionCache, sessionIDs: Iterable<string>) {
   const stale = new Set(Array.from(sessionIDs).filter(Boolean))
   if (stale.size === 0) return
 
+  // RC-1: Collect messageIDs belonging to stale sessions so we can drop their
+  // orphan-delta buffers along with the part/message state.
+  const staleMessageIDs = new Set<string>()
+  for (const sessionID of stale) {
+    const messages = store.message[sessionID]
+    if (!messages) continue
+    for (const message of messages) staleMessageIDs.add(message.id)
+  }
+
   for (const key of Object.keys(store.part ?? {})) {
     const parts = store.part[key]
     if (!parts?.some((part) => stale.has((part as { sessionID?: string })?.sessionID ?? "")))
       continue
     delete store.part[key]
+    staleMessageIDs.add(key)
+  }
+
+  if (store.partDeltaBuffer) {
+    for (const messageID of staleMessageIDs) {
+      delete store.partDeltaBuffer[messageID]
+    }
   }
 
   for (const sessionID of stale) {

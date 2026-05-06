@@ -197,4 +197,103 @@ describe('applyDirectoryEvent', () => {
     expect(state.part[messageID]?.[0]?.state?.status).toBe('completed')
     expect(state.part[messageID]?.[0]?.state?.time?.end).toBe(20)
   })
+
+  // RC-1: Orphan delta arriving before its parent part must not be dropped.
+  it('replays a buffered orphan delta when the matching part.updated arrives', () => {
+    const state = structuredClone(INITIAL_STATE)
+    const messageID = 'msg-orphan'
+    const partID = 'part-orphan'
+
+    // Delta arrives first (race) — must be buffered, not dropped.
+    applyDirectoryEvent(state, {
+      type: 'message.part.delta',
+      properties: { messageID, partID, field: 'text', delta: 'Hello' },
+    })
+
+    // No part yet, but buffer should hold the delta.
+    expect(state.part[messageID]).toBeUndefined()
+    expect(state.partDeltaBuffer[messageID]?.[partID]).toHaveLength(1)
+
+    // Part arrives — delta should be replayed onto it.
+    applyDirectoryEvent(state, {
+      type: 'message.part.updated',
+      properties: {
+        part: { id: partID, type: 'text', messageID, text: '' },
+      },
+    })
+
+    expect(state.part[messageID]?.[0]?.text).toBe('Hello')
+    expect(state.partDeltaBuffer[messageID]).toBeUndefined()
+  })
+
+  it('preserves multiple buffered deltas in arrival order', () => {
+    const state = structuredClone(INITIAL_STATE)
+    const messageID = 'msg-orphan-2'
+    const partID = 'part-orphan-2'
+
+    for (const chunk of ['Hel', 'lo, ', 'wor', 'ld']) {
+      applyDirectoryEvent(state, {
+        type: 'message.part.delta',
+        properties: { messageID, partID, field: 'text', delta: chunk },
+      })
+    }
+
+    applyDirectoryEvent(state, {
+      type: 'message.part.updated',
+      properties: {
+        part: { id: partID, type: 'text', messageID, text: '' },
+      },
+    })
+
+    expect(state.part[messageID]?.[0]?.text).toBe('Hello, world')
+  })
+
+  it('clears orphan buffer on message.part.removed', () => {
+    const state = structuredClone(INITIAL_STATE)
+    const messageID = 'msg-orphan-3'
+    const partID = 'part-orphan-3'
+
+    applyDirectoryEvent(state, {
+      type: 'message.part.delta',
+      properties: { messageID, partID, field: 'text', delta: 'lost' },
+    })
+    expect(state.partDeltaBuffer[messageID]?.[partID]).toBeDefined()
+
+    applyDirectoryEvent(state, {
+      type: 'message.part.removed',
+      properties: { messageID, partID },
+    })
+    expect(state.partDeltaBuffer[messageID]).toBeUndefined()
+  })
+
+  // RC-6: trimSessions must not silently drop sessions when limit is exceeded.
+  it('auto-grows session limit instead of dropping sessions', () => {
+    const state = structuredClone(INITIAL_STATE)
+    state.limit = 2
+
+    const mkSession = (id) => ({
+      id,
+      title: id,
+      version: 'v1',
+      time: { created: 1, updated: 1 },
+      directory: '/x',
+    })
+
+    applyDirectoryEvent(state, {
+      type: 'session.created',
+      properties: { info: mkSession('s001') },
+    })
+    applyDirectoryEvent(state, {
+      type: 'session.created',
+      properties: { info: mkSession('s002') },
+    })
+    applyDirectoryEvent(state, {
+      type: 'session.created',
+      properties: { info: mkSession('s003') },
+    })
+
+    // All three sessions retained; limit grew rather than trimming.
+    expect(state.session.map((s) => s.id)).toEqual(['s001', 's002', 's003'])
+    expect(state.limit).toBeGreaterThanOrEqual(3)
+  })
 })

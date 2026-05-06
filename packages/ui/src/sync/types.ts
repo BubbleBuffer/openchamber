@@ -62,6 +62,16 @@ export type State = {
   limit: number
   message: Record<string, Message[]>
   part: Record<string, Part[]>
+  /**
+   * RC-1: Buffer for `message.part.delta` events that arrive before their
+   * parent part exists in `part[messageID]`. Drained when the matching part
+   * appears via `message.part.updated`. Without this, the first delta for a
+   * streaming part was silently dropped, producing truncated assistant
+   * replies on slow connections.
+   *
+   * Keyed by messageID -> partID -> queued deltas in arrival order.
+   */
+  partDeltaBuffer: Record<string, Record<string, Array<{ field: string; delta: string }>>>
 }
 
 /** Global store state */
@@ -133,9 +143,14 @@ export const INITIAL_STATE: State = {
   mcp: {},
   lsp: [],
   vcs: undefined,
-  limit: 5,
+  // Soft cap on in-memory sessions per directory. Bootstrap raises this to
+  // max(loaded, 50). NOTE: trimSessions auto-grows this limit when exceeded
+  // by SSE events — we never silently drop sessions. The initial value is a
+  // pre-bootstrap buffer so early SSE events don't trigger trimming.
+  limit: 50,
   message: {},
   part: {},
+  partDeltaBuffer: {},
 }
 
 export const INITIAL_GLOBAL_STATE: GlobalState = {

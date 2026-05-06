@@ -25,11 +25,18 @@ export type StreamingStore = {
   streamingMessageIds: Map<string, string | null>
   /** Lifecycle phase per message */
   messageStreamStates: Map<string, MessageStreamState>
+  /**
+   * RC-5: When did each session enter `busy` state? Used to detect sessions
+   * that are stuck busy but never produced an assistant message (server hung
+   * before any output), which the per-message stuck check can't catch.
+   */
+  busySinceBySessionId: Map<string, number>
 }
 
 export const useStreamingStore = create<StreamingStore>()(() => ({
   streamingMessageIds: new Map(),
   messageStreamStates: new Map(),
+  busySinceBySessionId: new Map(),
 }))
 
 /**
@@ -47,9 +54,11 @@ export function updateStreamingState(
   const currentStore = useStreamingStore.getState()
   const currentStreamingIds = currentStore.streamingMessageIds
   const currentStreamStates = currentStore.messageStreamStates
+  const currentBusySince = currentStore.busySinceBySessionId
 
   const nextStreamingIds = new Map<string, string | null>()
   const nextStreamStates = new Map(currentStreamStates)
+  const nextBusySince = new Map(currentBusySince)
   let changed = false
 
   // Fast path: only scan sessions that are actually busy.
@@ -62,6 +71,12 @@ export function updateStreamingState(
   }
 
   for (const sessionID of busySessionIds) {
+    // RC-5: Track when each session first entered busy. Cleared when the
+    // session leaves busy below.
+    if (!nextBusySince.has(sessionID)) {
+      nextBusySince.set(sessionID, now)
+      changed = true
+    }
     const messages = state.message[sessionID]
     if (!messages || messages.length === 0) continue
 
@@ -125,7 +140,30 @@ export function updateStreamingState(
       if (messages.some((m) => m.id === msgId)) { sessionID = sid; break }
     }
     nextStreamStates.set(msgId, { ...streamState, phase: "completed", completedAt: now })
-    if (sessionID) { nextStreamingIds.set(sessionID, null); options?.onStuckSession?.(sessionID) }
+    if (sessionID) {
+      nextStreamingIds.set(sessionID, null)
+      nextBusySince.delete(sessionID)
+      options?.onStuckSession?.(sessionID)
+    }
+    changed = true
+  }
+
+  // RC-5: Recover sessions stuck in busy with no assistant message ever produced.
+  // The per-message stuck check above only catches sessions that started
+  // streaming and then went silent. If the server hung before producing any
+  // output, no streamState exists for the session — handle that here.
+  for (const [sessionID, busySince] of nextBusySince) {
+    if (!busySessionIds.has(sessionID)) {
+      // No longer busy — drop tracker.
+      nextBusySince.delete(sessionID)
+      changed = true
+      continue
+    }
+    if (now - busySince < STUCK_SESSION_TIMEOUT_MS) continue
+    const hasStreamingMessage = nextStreamingIds.get(sessionID) != null
+    if (hasStreamingMessage) continue
+    nextBusySince.delete(sessionID)
+    options?.onStuckSession?.(sessionID)
     changed = true
   }
 
@@ -133,6 +171,7 @@ export function updateStreamingState(
     useStreamingStore.setState({
       streamingMessageIds: nextStreamingIds,
       messageStreamStates: nextStreamStates,
+      busySinceBySessionId: nextBusySince,
     })
   }
 }
