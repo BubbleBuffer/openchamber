@@ -112,6 +112,33 @@ const JsonRow = React.memo(
       [onCopyPath, node.id],
     );
 
+    // Long-press fallback for touch devices (no context menu).
+    const longPressTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    const longPressFiredRef = React.useRef(false);
+    const cancelLongPress = React.useCallback(() => {
+      if (longPressTimerRef.current !== null) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    }, []);
+    const handlePointerDown = React.useCallback(
+      (e: React.PointerEvent) => {
+        if (e.pointerType !== 'touch' || !onCopyPath) return;
+        longPressFiredRef.current = false;
+        cancelLongPress();
+        longPressTimerRef.current = setTimeout(() => {
+          longPressFiredRef.current = true;
+          onCopyPath(node.id);
+          longPressTimerRef.current = null;
+        }, 500);
+      },
+      [onCopyPath, node.id, cancelLongPress],
+    );
+    const handlePointerEnd = React.useCallback(() => {
+      cancelLongPress();
+    }, [cancelLongPress]);
+    React.useEffect(() => () => cancelLongPress(), [cancelLongPress]);
+
     const keyColor = getKeyColor(node.depth);
     const valueColor = getValueColor(node);
     const isCollapsible = node.isExpandable && node.children && node.children.length > 0;
@@ -121,6 +148,10 @@ const JsonRow = React.memo(
         className="flex items-center py-0.5 px-2 hover:bg-[var(--surface-hover)] rounded-sm cursor-default font-mono text-xs leading-5 whitespace-nowrap"
         style={{ paddingLeft: `${indent + 8}px` }}
         onContextMenu={handleContextMenu}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerEnd}
+        onPointerLeave={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
       >
         {isCollapsible ? (
           <button
