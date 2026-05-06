@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, test } from "bun:test"
 import { createEventPipeline } from "./event-pipeline"
 import type { Event, OpencodeClient } from "@/lib/opencode/client"
 
@@ -20,11 +20,11 @@ function mockSdk(events: Event[]): OpencodeClient {
 }
 
 describe("createEventPipeline", () => {
-  it("does not orphan remaining events when onEvent throws", async () => {
+  test("does not orphan remaining events when onEvent throws", async () => {
     const events: Event[] = [
-      { type: "session.status", properties: { sessionID: "s1", info: { type: "busy" } } } as Event,
-      { type: "message.updated", properties: { info: { id: "m1", sessionID: "s1", role: "assistant" } } } as Event,
-      { type: "session.status", properties: { sessionID: "s1", info: { type: "idle" } } } as Event,
+      { type: "session.status", properties: { sessionID: "s1", info: { type: "busy" } } } as unknown as Event,
+      { type: "message.updated", properties: { info: { id: "m1", sessionID: "s1", role: "assistant" } } } as unknown as Event,
+      { type: "session.status", properties: { sessionID: "s1", info: { type: "idle" } } } as unknown as Event,
     ]
     const received: string[] = []
     let shouldThrow = false
@@ -42,7 +42,7 @@ describe("createEventPipeline", () => {
     expect(received.filter((t) => t === "session.status")).toHaveLength(2)
   })
 
-  it("increases reconnect delay with consecutive failures", async () => {
+  test("increases reconnect delay with consecutive failures", async () => {
     let attempts = 0
     const sdk: OpencodeClient = {
       global: { event: async () => { attempts++; throw new Error("fail") } },
@@ -54,6 +54,6 @@ describe("createEventPipeline", () => {
     })
     await new Promise((r) => setTimeout(r, 600))
     cleanup()
-    expect(attempts).toBeGreaterThanOrEqual(3)
+    expect(attempts).toBeGreaterThan(3)
   })
 })

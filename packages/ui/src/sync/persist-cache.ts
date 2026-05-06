@@ -65,7 +65,9 @@ export function writeCache<T>(directory: string, key: CacheKey, value: T | undef
         try { localStorage.setItem(k, serialized) } catch { console.warn("[persist-cache] Quota exceeded even after clearing directory cache. Dropping write for", key) }
       }
     }
-  } catch {}
+  } catch {
+    // ignore
+  }
 }
 
 function clearCache(directory: string): void {

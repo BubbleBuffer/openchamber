@@ -1,9 +1,9 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, test } from "bun:test"
 import { updateStreamingState, useStreamingStore } from "./streaming"
 import type { State } from "./types"
 
 describe("updateStreamingState stuck session recovery", () => {
-  it("forces completion after STUCK_SESSION_TIMEOUT_MS of no updates", () => {
+  test("forces completion after STUCK_SESSION_TIMEOUT_MS of no updates", () => {
     const state = {
       session_status: { s1: { type: "busy" } },
       message: { s1: [{ id: "m1", sessionID: "s1", role: "assistant", time: { created: 1, updated: 1 }, parts: [] }] },

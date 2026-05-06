@@ -449,7 +449,7 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
       nextAbortFlags.delete(sessionId)
       const nextAbortControllers = new Map(state.abortControllers)
       const controller = nextAbortControllers.get(sessionId)
-      if (controller) { try { controller.abort() } catch {} nextAbortControllers.delete(sessionId) }
+      if (controller) { try { controller.abort() } catch { /* ignore */ } nextAbortControllers.delete(sessionId) }
       return { sessionAbortFlags: nextAbortFlags, abortControllers: nextAbortControllers }
     })
   },

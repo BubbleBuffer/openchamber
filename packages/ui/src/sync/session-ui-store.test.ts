@@ -1,8 +1,8 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, test } from "bun:test"
 import { useSessionUIStore } from "./session-ui-store"
 
 describe("cleanupSession", () => {
-  it("removes abortControllers and sessionAbortFlags for a session", () => {
+  test("removes abortControllers and sessionAbortFlags for a session", () => {
     const store = useSessionUIStore.getState()
     store.abortControllers.set("s1", new AbortController())
     store.sessionAbortFlags.set("s1", { timestamp: Date.now(), acknowledged: false })

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, test } from "bun:test"
 import { writeCache, readCache } from "./persist-cache"
 
 // Minimal localStorage mock for Node/bun test environment
@@ -16,7 +16,7 @@ Object.defineProperty(globalThis, "localStorage", {
 })
 
 describe("persist-cache quota recovery", () => {
-  it("clears directory cache and retries on quota error", () => {
+  test("clears directory cache and retries on quota error", () => {
     const dir = "/tmp/quota-test-dir"
     let count = 0
     const originalSetItem = localStorage.setItem.bind(localStorage)
