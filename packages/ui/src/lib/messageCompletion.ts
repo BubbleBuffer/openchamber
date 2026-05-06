@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Part } from "@/lib/opencode/client";
 import { isFullySyntheticMessage } from "@/lib/messages/synthetic";
 
@@ -15,7 +14,7 @@ export interface MessageInfo {
 }
 
 export interface MessageRecord {
-    info: MessageInfo & Record<string, any>;
+    info: MessageInfo & Record<string, unknown>;
     parts: Part[];
 }
 
@@ -37,12 +36,10 @@ export function isMessageComplete(messageInfo: MessageInfo, parts: Part[] = []):
 
     const hasActiveTools = parts.some((part) => {
         switch (part.type) {
-            case 'reasoning': {
-                const time = (part as any)?.time;
-                return !time || typeof time.end === 'undefined';
-            }
+            case 'reasoning':
+                return typeof part.time?.end === 'undefined';
             case 'tool': {
-                const status = (part as any)?.state?.status;
+                const status = part.state?.status;
                 return status === 'running' || status === 'pending';
             }
             default:
