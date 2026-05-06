@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { IconBackgroundPicker } from '@/components/ui/IconBackgroundPicker';
 import { toast } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { PROJECT_ICONS, PROJECT_COLORS, PROJECT_COLOR_MAP, getProjectIconImageUrl } from '@/lib/projectMeta';
@@ -397,24 +398,12 @@ export const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
               <label className="typography-ui-label font-medium text-foreground">
                 Icon Background
               </label>
-              <div className="flex flex-wrap items-center gap-2">
-                <input
-                  type="color"
-                  value={iconBackground ?? '#000000'}
-                  onChange={(event) => setIconBackground(event.target.value)}
-                  className="h-8 w-10 cursor-pointer rounded border border-border bg-transparent p-1"
-                  aria-label="Project icon background color"
-                />
-                <Input
-                  value={iconBackground ?? ''}
-                  onChange={(event) => setIconBackground(event.target.value)}
-                  placeholder="#000000"
-                  className="h-8 w-[8.5rem]"
-                />
-                <Button size="sm" variant="outline" onClick={() => setIconBackground(null)}>
-                  Clear
-                </Button>
-              </div>
+              <IconBackgroundPicker
+                value={iconBackground ?? null}
+                onChange={setIconBackground}
+                size="md"
+                aria-label="Project icon background color"
+              />
             </div>
           )}
         </div>

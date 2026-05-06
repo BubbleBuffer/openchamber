@@ -2,6 +2,7 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
+import { IconBackgroundPicker } from '@/components/ui/IconBackgroundPicker';
 import { toast } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { useProjectsStore } from '@/stores/useProjectsStore';
@@ -385,32 +386,13 @@ export const ProjectsPage: React.FC = () => {
                 </div>
               )}
               {effectiveHasImageIcon && (
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <input
-                    type="color"
-                    value={iconBackground ?? '#000000'}
-                    onChange={(event) => setIconBackground(event.target.value)}
-                    className="h-7 w-9 cursor-pointer rounded border border-border bg-transparent p-1"
+                <div className="mt-2">
+                  <IconBackgroundPicker
+                    value={iconBackground ?? null}
+                    onChange={setIconBackground}
+                    size="sm"
                     aria-label="Project icon background color"
                   />
-                  <Input
-                    value={iconBackground ?? ''}
-                    onChange={(event) => setIconBackground(event.target.value)}
-                    placeholder="#000000"
-                    className="h-7 w-[8rem]"
-                  />
-                  <Button
-                    type="button"
-                    size="xs"
-                    variant="outline"
-                    onClick={() => setIconBackground(null)}
-                    className="h-7 w-7 p-0"
-                    aria-label="Clear icon background"
-                    title="Clear background"
-                    disabled={!iconBackground}
-                  >
-                    <RiCloseLine className="h-3.5 w-3.5" />
-                  </Button>
                 </div>
               )}
               <div className="mt-2 flex flex-wrap items-center gap-2">
