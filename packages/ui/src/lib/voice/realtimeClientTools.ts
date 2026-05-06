@@ -4,6 +4,7 @@ import { useProviderConfigStore } from "@/stores/useProviderConfigStore";
 import { useAgentConfigStore } from "@/stores/useAgentConfigStore";
 import { getSyncPermissions } from "@/sync/sync-refs";
 import { respondToPermission } from "@/sync/session-actions";
+import { voiceLog } from './voiceDebug';
 
 /**
  * Static client tools for the realtime voice interface.
@@ -42,7 +43,7 @@ export const realtimeClientTools = {
         }
 
         try {
-            console.log("[Voice] Sending message to session:", sessionId);
+            voiceLog("[Voice] Sending message to session:", sessionId);
             await useSessionUIStore
                 .getState()
                 .sendMessage(parsed.data.message, currentProviderId, currentModelId, currentAgentName ?? undefined);
@@ -91,7 +92,7 @@ export const realtimeClientTools = {
 
         try {
             const decision = parsed.data.decision;
-            console.log(`[Voice] Processing permission request ${request.id}: ${decision}`);
+            voiceLog(`[Voice] Processing permission request ${request.id}: ${decision}`);
 
             // Respond to the permission based on decision
             const response: "once" | "always" | "reject" = decision === "allow" ? "once" : "reject";

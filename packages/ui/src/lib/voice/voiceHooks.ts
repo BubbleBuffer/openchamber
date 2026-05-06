@@ -23,6 +23,7 @@ import {
     type VoiceMessage,
 } from "./contextFormatters";
 import { getVoiceSession, isVoiceSessionStarted } from "./voiceSession";
+import { voiceLog } from './voiceDebug';
 
 // Re-export registry functions from voiceSession.ts for convenience
 export {
@@ -48,14 +49,14 @@ function reportContextualUpdate(update: string | null | undefined): void {
     const voiceSession = getVoiceSession();
     if (!voiceSession || !isVoiceSessionStarted()) {
         if (VOICE_CONFIG.ENABLE_DEBUG_LOGGING) {
-            console.log("[Voice] Skipping contextual update - no active session");
+            voiceLog("[Voice] Skipping contextual update - no active session");
         }
         return;
     }
 
     try {
         if (VOICE_CONFIG.ENABLE_DEBUG_LOGGING) {
-            console.log("[Voice] Sending contextual update:", update.substring(0, 100));
+            voiceLog("[Voice] Sending contextual update:", update.substring(0, 100));
         }
         voiceSession.sendContextualUpdate(update);
     } catch (error) {
@@ -82,7 +83,7 @@ export const voiceHooks = {
     onMessages(sessionId: string, messages: VoiceMessage[]): void {
         if (VOICE_CONFIG.DISABLE_MESSAGES) {
             if (VOICE_CONFIG.ENABLE_DEBUG_LOGGING) {
-                console.log("[Voice] Message forwarding disabled");
+                voiceLog("[Voice] Message forwarding disabled");
             }
             return;
         }
@@ -106,7 +107,7 @@ export const voiceHooks = {
     ): void {
         if (VOICE_CONFIG.DISABLE_PERMISSION_REQUESTS) {
             if (VOICE_CONFIG.ENABLE_DEBUG_LOGGING) {
-                console.log("[Voice] Permission request forwarding disabled");
+                voiceLog("[Voice] Permission request forwarding disabled");
             }
             return;
         }
@@ -124,7 +125,7 @@ export const voiceHooks = {
     onReady(sessionId: string): void {
         if (VOICE_CONFIG.DISABLE_READY_EVENTS) {
             if (VOICE_CONFIG.ENABLE_DEBUG_LOGGING) {
-                console.log("[Voice] Ready event forwarding disabled");
+                voiceLog("[Voice] Ready event forwarding disabled");
             }
             return;
         }

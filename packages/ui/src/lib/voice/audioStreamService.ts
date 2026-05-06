@@ -12,7 +12,7 @@
  * ```typescript
  * audioStreamService.configure({ baseURL: 'http://localhost:8001/v1', model: 'whisper-1' });
  * audioStreamService.startListening('en', (text, isFinal) => {
- *   if (isFinal) console.log('transcript:', text);
+ *   if (isFinal) voiceLog('transcript:', text);
  * });
  * audioStreamService.stopListening();
  * ```

@@ -13,6 +13,7 @@
  */
 
 import { VOICE_CONFIG } from "./voiceConfig";
+import { voiceLog } from './voiceDebug';
 
 /** Message type for voice formatting */
 export interface VoiceMessage {
@@ -74,7 +75,7 @@ export function formatNewMessages(
     }
 
     if (VOICE_CONFIG.ENABLE_DEBUG_LOGGING) {
-        console.log(`[Voice] Formatting ${messages.length} messages for session ${sessionId}`);
+        voiceLog(`[Voice] Formatting ${messages.length} messages for session ${sessionId}`);
     }
 
     // Format each message and filter out nulls
@@ -108,7 +109,7 @@ export function formatPermissionRequest(
     toolArgs: unknown
 ): string {
     if (VOICE_CONFIG.ENABLE_DEBUG_LOGGING) {
-        console.log(`[Voice] Formatting permission request ${requestId} for session ${sessionId}`);
+        voiceLog(`[Voice] Formatting permission request ${requestId} for session ${sessionId}`);
     }
 
     // Per VOICE_CONFIG.LIMITED_TOOL_CALLS, we don't include toolArgs in voice output
@@ -124,7 +125,7 @@ export function formatPermissionRequest(
  */
 export function formatReadyEvent(sessionId: string): string {
     if (VOICE_CONFIG.ENABLE_DEBUG_LOGGING) {
-        console.log(`[Voice] Formatting ready event for session ${sessionId}`);
+        voiceLog(`[Voice] Formatting ready event for session ${sessionId}`);
     }
 
     return "Claude Code finished working. Ready for next instruction.";

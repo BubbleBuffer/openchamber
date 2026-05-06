@@ -37,6 +37,7 @@ import { useVoiceSettingsStore } from '@/stores/useVoiceSettingsStore';
 import { useServerTTS } from './useServerTTS';
 import { useSayTTS } from './useSayTTS';
 import { summarizeText, shouldSummarize, sanitizeForTTS } from '@/lib/voice/summarize';
+import { voiceLog, voiceWarn } from '@/lib/voice/voiceDebug';
 
 export type BrowserVoiceStatus = 'idle' | 'listening' | 'processing' | 'speaking' | 'error';
 
@@ -182,7 +183,7 @@ export function useBrowserVoice(): UseBrowserVoiceReturn {
     if (prevSessionIdRef.current !== null && prevSessionIdRef.current !== currentSessionId) {
       // Session changed - stop any active voice session
       if (isActiveRef.current) {
-        console.log('[useBrowserVoice] Session changed, stopping voice');
+        voiceLog('[useBrowserVoice] Session changed, stopping voice');
         isActiveRef.current = false;
         processingMessageRef.current = false;
         browserVoiceService.stopListening();
@@ -290,13 +291,13 @@ export function useBrowserVoice(): UseBrowserVoiceReturn {
   const handleSpeechError = useCallback((errorMsg: string) => {
     // Ignore errors if we've already stopped voice mode
     if (!isActiveRef.current) {
-      console.log('[useBrowserVoice] Ignoring error after voice stopped:', errorMsg);
+      voiceLog('[useBrowserVoice] Ignoring error after voice stopped:', errorMsg);
       return;
     }
 
     const normalizedError = errorMsg.toLowerCase();
     if (normalizedError.includes('aborted')) {
-      console.log('[useBrowserVoice] Ignoring non-fatal aborted error');
+      voiceLog('[useBrowserVoice] Ignoring non-fatal aborted error');
       setError(null);
       setStatus('listening');
       return;
@@ -309,7 +310,7 @@ export function useBrowserVoice(): UseBrowserVoiceReturn {
       normalizedError.includes('service not allowed');
 
     if (isHidden && isPermissionStyleError && conversationMode) {
-      console.log('[useBrowserVoice] Suppressing permission error while app hidden; will resume on visibility');
+      voiceLog('[useBrowserVoice] Suppressing permission error while app hidden; will resume on visibility');
       pendingResumeOnVisibleRef.current = true;
       setError(null);
       setStatus('idle');
@@ -376,7 +377,7 @@ export function useBrowserVoice(): UseBrowserVoiceReturn {
       // Create session if none exists
       let sessionId = currentSessionId;
       if (!sessionId) {
-        console.log('[useBrowserVoice] No active session, creating new session...');
+        voiceLog('[useBrowserVoice] No active session, creating new session...');
         const newSession = await createSession();
         if (!newSession) {
           setError('Failed to create session');
@@ -385,7 +386,7 @@ export function useBrowserVoice(): UseBrowserVoiceReturn {
           return;
         }
         sessionId = newSession.id;
-        console.log('[useBrowserVoice] Created new session:', sessionId);
+        voiceLog('[useBrowserVoice] Created new session:', sessionId);
       }
 
       // Send message to AI
@@ -425,7 +426,7 @@ export function useBrowserVoice(): UseBrowserVoiceReturn {
               // Summarize text if enabled and over threshold
               let textToSpeak = textParts;
               if (summarizeVoiceConversation && shouldSummarize(textParts, 'voice')) {
-                console.log('[useBrowserVoice] Summarizing AI response before speaking...');
+                voiceLog('[useBrowserVoice] Summarizing AI response before speaking...');
                 textToSpeak = await summarizeText(textParts, {
                   threshold: summarizeCharacterThreshold,
                 });
@@ -471,7 +472,7 @@ export function useBrowserVoice(): UseBrowserVoiceReturn {
                 const ttsVoice = voiceProvider === 'openai-compatible' ? openaiCompatibleVoice : openaiVoice;
                 const ttsBaseURL = voiceProvider === 'openai-compatible' ? openaiCompatibleUrl : undefined;
                 const ttsModel = voiceProvider === 'openai-compatible' ? openaiCompatibleTtsModel : undefined;
-                console.log('[useBrowserVoice] Using server TTS with voice:', ttsVoice, 'provider:', voiceProvider);
+                voiceLog('[useBrowserVoice] Using server TTS with voice:', ttsVoice, 'provider:', voiceProvider);
                 await speakServerTTS(textToSpeak, {
                   voice: ttsVoice,
                   model: ttsModel,
@@ -479,9 +480,9 @@ export function useBrowserVoice(): UseBrowserVoiceReturn {
                   pitch: speechPitch,
                   volume: speechVolume,
                   baseURL: ttsBaseURL,
-                  onStart: () => console.log('[useBrowserVoice] Server TTS started'),
+                  onStart: () => voiceLog('[useBrowserVoice] Server TTS started'),
                   onEnd: () => {
-                    console.log('[useBrowserVoice] Server TTS ended');
+                    voiceLog('[useBrowserVoice] Server TTS ended');
                     restartListening();
                   },
                   onError: (errorMsg) => {
@@ -493,15 +494,15 @@ export function useBrowserVoice(): UseBrowserVoiceReturn {
                 });
               } else if (voiceProvider === 'say' && isSayTTSAvailable) {
                 // Use macOS 'say' command
-                console.log('[useBrowserVoice] Using macOS Say TTS with voice:', sayVoice);
+                voiceLog('[useBrowserVoice] Using macOS Say TTS with voice:', sayVoice);
                 // Convert speechRate (0.5-2.0) to words per minute (100-400)
                 const wordsPerMinute = Math.round(100 + (speechRate - 0.5) * 200);
                 await speakSayTTS(textToSpeak, {
                   voice: sayVoice,
                   rate: wordsPerMinute,
-                  onStart: () => console.log('[useBrowserVoice] Say TTS started'),
+                  onStart: () => voiceLog('[useBrowserVoice] Say TTS started'),
                   onEnd: () => {
-                    console.log('[useBrowserVoice] Say TTS ended');
+                    voiceLog('[useBrowserVoice] Say TTS ended');
                     restartListening();
                   },
                   onError: (errorMsg) => {
@@ -512,11 +513,11 @@ export function useBrowserVoice(): UseBrowserVoiceReturn {
               } else {
                 // Use browser TTS (desktop and mobile)
                 // Pre-load voices and unlock audio context before speaking
-                console.log('[useBrowserVoice] Using browser TTS');
+                voiceLog('[useBrowserVoice] Using browser TTS');
                 
                 // Warn user if they selected OpenAI but it's unavailable
                 if (voiceProvider === 'openai' && !isServerTTSAvailable) {
-                  console.warn('[useBrowserVoice] OpenAI voice selected but unavailable, falling back to browser voice');
+                  voiceWarn('[useBrowserVoice] OpenAI voice selected but unavailable, falling back to browser voice');
                   setError('OpenAI voice unavailable (API key not configured). Using browser voice instead.');
                 }
                 
@@ -533,7 +534,7 @@ export function useBrowserVoice(): UseBrowserVoiceReturn {
               
               // Ignore errors if we've stopped voice (e.g., user cancelled during speech)
               if (!isActiveRef.current) {
-                console.log('[useBrowserVoice] Ignoring speech error after voice stopped:', errorMsg);
+                voiceLog('[useBrowserVoice] Ignoring speech error after voice stopped:', errorMsg);
                 return;
               }
               

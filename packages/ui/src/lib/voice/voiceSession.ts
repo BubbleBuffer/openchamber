@@ -18,7 +18,7 @@ let activeVoiceSession: VoiceSession | null = null;
  */
 export function registerVoiceSession(session: VoiceSession): void {
     activeVoiceSession = session;
-    console.log("[Voice] Session registered");
+    voiceLog("[Voice] Session registered");
 }
 
 /**
@@ -27,7 +27,7 @@ export function registerVoiceSession(session: VoiceSession): void {
  */
 export function unregisterVoiceSession(): void {
     activeVoiceSession = null;
-    console.log("[Voice] Session unregistered");
+    voiceLog("[Voice] Session unregistered");
 }
 
 /**
@@ -44,3 +44,4 @@ export function getVoiceSession(): VoiceSession | null {
 export function isVoiceSessionStarted(): boolean {
     return activeVoiceSession !== null;
 }
+import { voiceLog } from './voiceDebug';
