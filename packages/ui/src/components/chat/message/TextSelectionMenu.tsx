@@ -4,7 +4,7 @@ import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSessions } from '@/sync/sync-context';
 import { useInputStore } from '@/sync/input-store';
 import { useUIStore } from '@/stores/useUIStore';
-import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { RiBookletLine, RiChatNewLine, RiAddLine, RiFileCopyLine, RiLoader4Line } from '@remixicon/react';
 import { cn } from '@/lib/utils';
 import { copyTextToClipboard } from '@/lib/clipboard';

@@ -3,7 +3,7 @@ import type { UsageWindow } from '@/types';
 import { formatPercent, formatWindowLabel, calculatePace, calculateExpectedUsagePercent } from '@/lib/quota';
 import { UsageProgressBar } from './UsageProgressBar';
 import { PaceIndicator } from './PaceIndicator';
-import { useQuotaStore } from '@/stores/useQuotaStore';
+import { useQuotaStore } from '@/stores/quota/useQuotaStore';
 import { Checkbox } from '@/components/ui/checkbox';
 
 interface UsageCardProps {

@@ -2,8 +2,8 @@ import React from 'react';
 import { RiFileEditLine, RiArrowDownSLine, RiArrowUpSLine } from '@remixicon/react';
 import type { ToolPart } from '@/lib/opencode/client';
 import { Popover } from '@base-ui/react/popover';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
-import { useIsGitRepo } from '@/stores/useGitStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
+import { useIsGitRepo } from '@/stores/git/useGitStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { RuntimeAPIContext } from '@/contexts/runtimeAPIContext';
 import {

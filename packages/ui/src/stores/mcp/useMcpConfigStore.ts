@@ -1,12 +1,12 @@
 import { create } from 'zustand';
 import { devtools, persist, createJSONStorage } from 'zustand/middleware';
-import { getSafeStorage } from './utils/safeStorage';
+import { getSafeStorage } from '../utils/safeStorage';
 import {
   startConfigUpdate,
   finishConfigUpdate,
 } from '@/lib/config/configUpdate';
-import { refreshAfterOpenCodeRestart } from '@/stores/useAgentsStore';
-import { useProjectsStore } from '@/stores/useProjectsStore';
+import { refreshAfterOpenCodeRestart } from '@/stores/agents/useAgentsStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { opencodeClient } from '@/lib/opencode/client';
 
 export type McpScope = 'user' | 'project';

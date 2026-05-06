@@ -7,7 +7,7 @@ import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { ProviderLogo } from '@/components/ui/ProviderLogo';
 import { cn } from '@/lib/utils';
 import { isIMECompositionEvent } from '@/lib/ime';
-import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useModelLists } from '@/hooks/useModelLists';
 import type { ModelMetadata } from '@/types';
 

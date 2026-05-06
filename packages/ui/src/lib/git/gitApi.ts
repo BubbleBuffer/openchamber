@@ -6,8 +6,8 @@ import { opencodeClient } from '../opencode/client';
 import { renderMagicPrompt } from '../tools/magicPrompts';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useContextStore } from '@/stores/contextStore';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
-import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
+import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 
 export type {
   GitStatus,

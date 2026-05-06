@@ -5,8 +5,8 @@ import type { ProjectEntry } from '@/lib/api/types';
 import type { DesktopSettings } from '@/lib/desktop/desktop';
 import { updateDesktopSettings } from '@/lib/config/persistence';
 import { createProjectIdFromPath } from '@/lib/project/projectId';
-import { getSafeStorage } from './utils/safeStorage';
-import { useDirectoryStore } from './useDirectoryStore';
+import { getSafeStorage } from '../utils/safeStorage';
+import { useDirectoryStore } from '../files/useDirectoryStore';
 import { streamDebugEnabled } from '@/stores/utils/streamDebug';
 import { PROJECT_COLORS } from '@/lib/project/projectMeta';
 

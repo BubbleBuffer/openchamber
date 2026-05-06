@@ -9,10 +9,10 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollShadow } from '@/components/ui/ScrollShadow';
 import { cn, formatDirectoryName } from '@/lib/utils';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { useMultiRunStore } from '@/stores/useMultiRunStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
-import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { getWorktreeSetupCommands } from '@/lib/config/openchamberConfig';
 import type { ProjectRef } from '@/lib/config/openchamberConfig';
 import type { CreateMultiRunParams, MultiRunModelSelection } from '@/types/multirun';

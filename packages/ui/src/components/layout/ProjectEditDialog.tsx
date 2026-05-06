@@ -12,7 +12,7 @@ import { IconBackgroundPicker } from '@/components/ui/IconBackgroundPicker';
 import { toast } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { PROJECT_ICONS, PROJECT_COLORS, PROJECT_COLOR_MAP, getProjectIconImageUrl } from '@/lib/project/projectMeta';
-import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 
 interface ProjectEditDialogProps {

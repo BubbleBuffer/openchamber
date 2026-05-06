@@ -5,8 +5,8 @@
  * the opencode.ai zen API with gpt-5-nano.
  */
 
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
-import { useVoiceSettingsStore } from '@/stores/useVoiceSettingsStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
+import { useVoiceSettingsStore } from '@/stores/voice/useVoiceSettingsStore';
 
 const resolveSummarizeUrl = (): string => {
     if (typeof window === 'undefined') {

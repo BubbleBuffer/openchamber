@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useGitStore, useGitBranches, useGitLoadingBranches } from '@/stores/useGitStore';
+import { useGitStore, useGitBranches, useGitLoadingBranches } from '@/stores/git/useGitStore';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { getRootBranch } from '@/lib/worktrees/worktreeStatus';
 

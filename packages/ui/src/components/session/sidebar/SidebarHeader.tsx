@@ -22,7 +22,7 @@ import {
 } from '@remixicon/react';
 import { cn } from '@/lib/utils';
 import { ArrowsMerge } from '@/components/icons/ArrowsMerge';
-import { useSessionDisplayStore } from '@/stores/useSessionDisplayStore';
+import { useSessionDisplayStore } from '@/stores/session/useSessionDisplayStore';
 
 type Props = {
   hideDirectoryControls: boolean;

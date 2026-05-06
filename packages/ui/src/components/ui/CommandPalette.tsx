@@ -12,7 +12,7 @@ import {
 import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { useDeviceInfo } from '@/lib/device';
 import {

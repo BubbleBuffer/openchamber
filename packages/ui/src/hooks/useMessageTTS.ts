@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useState } from 'react';
-import { useVoiceSettingsStore } from '@/stores/useVoiceSettingsStore';
+import { useVoiceSettingsStore } from '@/stores/voice/useVoiceSettingsStore';
 import { useServerTTS } from './useServerTTS';
 import { useSayTTS } from './useSayTTS';
 import { browserVoiceService } from '@/lib/voice/browserVoiceService';

@@ -9,18 +9,18 @@ import { sessionEvents } from '@/lib/session/sessionEvents';
 import { formatDirectoryName, cn } from '@/lib/utils';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useAllLiveSessions, useAllSessionStatuses } from '@/sync/sync-context';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { useSync } from '@/sync/use-sync';
 import { useSessionPrefetch } from './sidebar/hooks/useSessionPrefetch';
-import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { getSafeStorage } from '@/stores/utils/safeStorage';
-import { useGitStore, useGitAllBranches, useGitRepoStatusMap } from '@/stores/useGitStore';
+import { useGitStore, useGitAllBranches, useGitRepoStatusMap } from '@/stores/git/useGitStore';
 import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 import { NewWorktreeDialog } from './NewWorktreeDialog';
 import { ScheduledTasksDialog } from './ScheduledTasksDialog';
-import { useSessionFoldersStore } from '@/stores/useSessionFoldersStore';
+import { useSessionFoldersStore } from '@/stores/session/useSessionFoldersStore';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useArchivedAutoFolders } from './sidebar/hooks/useArchivedAutoFolders';
 import { useSessionSidebarSections } from './sidebar/hooks/useSessionSidebarSections';
@@ -35,7 +35,7 @@ import { useProjectRepoStatus } from './sidebar/hooks/useProjectRepoStatus';
 import { useProjectSessionLists } from './sidebar/hooks/useProjectSessionLists';
 import { useSessionFolderCleanup } from './sidebar/hooks/useSessionFolderCleanup';
 import { useStickyProjectHeaders } from './sidebar/hooks/useStickyProjectHeaders';
-import { getGitHubPrStatusKey, usePrVisualSummaryByKeys, useGitHubPrStatusStore } from '@/stores/useGitHubPrStatusStore';
+import { getGitHubPrStatusKey, usePrVisualSummaryByKeys, useGitHubPrStatusStore } from '@/stores/github/useGitHubPrStatusStore';
 import { ProjectEditDialog } from '@/components/layout/ProjectEditDialog';
 import { UpdateDialog } from '@/components/ui/UpdateDialog';
 import { SessionGroupSection } from './sidebar/SessionGroupSection';
@@ -57,7 +57,7 @@ import {
   type DeleteSessionConfirmState,
 } from './sidebar/ConfirmDialogs';
 import { BulkActionBar } from './sidebar/BulkActionBar';
-import { useSessionMultiSelectStore } from '@/stores/useSessionMultiSelectStore';
+import { useSessionMultiSelectStore } from '@/stores/session/useSessionMultiSelectStore';
 import { type SessionGroup, type SessionNode } from './sidebar/types';
 import {
   type ActiveNowEntry,
@@ -75,7 +75,7 @@ import {
 } from './sidebar/utils';
 import { refreshGlobalSessions, useGlobalSessionsStore } from '@/stores/useGlobalSessionsStore';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
-import { useGitHubAuthStore } from '@/stores/useGitHubAuthStore';
+import { useGitHubAuthStore } from '@/stores/github/useGitHubAuthStore';
 import { subscribeOpenchamberEvents } from '@/lib/config/openchamberEvents';
 
 const PROJECT_COLLAPSE_STORAGE_KEY = 'oc.sessions.projectCollapse';

@@ -1,7 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useContextStore } from '@/stores/contextStore';
 import { formatEffortLabel, getAgentDisplayName, getModelDisplayName } from './mobileControlsUtils';

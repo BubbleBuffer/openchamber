@@ -7,7 +7,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDeviceInfo } from '@/lib/device';
 import { RiArrowDownSLine, RiArrowRightSLine, RiCheckLine, RiCloseLine, RiPencilAiLine, RiSearchLine, RiStarFill, RiStarLine, RiTimeLine } from '@remixicon/react';

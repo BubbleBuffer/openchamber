@@ -2,7 +2,7 @@ import React from 'react';
 import { MobileDrawerPanel } from '@/components/layout/MobileDrawerPanel';
 import { ProviderLogo } from '@/components/ui/ProviderLogo';
 import { cn } from '@/lib/utils';
-import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
 import { useContextStore } from '@/stores/contextStore';

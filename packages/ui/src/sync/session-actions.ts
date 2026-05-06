@@ -10,7 +10,7 @@ import { useInputStore } from "./input-store"
 import type { ChildStoreManager } from "./child-store"
 import { opencodeClient } from "@/lib/opencode/client"
 import { useGlobalSessionsStore } from "@/stores/useGlobalSessionsStore"
-import { useProviderConfigStore } from "@/stores/useProviderConfigStore"
+import { useProviderConfigStore } from "@/stores/config/useProviderConfigStore"
 import { registerSessionDirectory } from "./sync-refs"
 import { toast } from "@/components/ui"
 

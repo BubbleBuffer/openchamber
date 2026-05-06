@@ -5,14 +5,14 @@ import { devtools, persist, createJSONStorage } from "zustand/middleware";
 import type { Agent } from "@/lib/opencode/client";
 import { opencodeClient } from "@/lib/opencode/client";
 import { scopeMatches, subscribeToConfigChanges } from "@/lib/config/configSync";
-import { getSafeStorage } from "./utils/safeStorage";
+import { getSafeStorage } from "../utils/safeStorage";
 import { filterVisibleAgents } from "./useAgentsStore";
 import { getRegisteredRuntimeAPIs } from "@/contexts/runtimeAPIRegistry";
 import { updateDesktopSettings } from "@/lib/config/persistence";
 import { useSessionUIStore } from "@/sync/session-ui-store";
 import { useSelectionStore } from "@/sync/selection-store";
-import { useProviderConfigStore } from "./useProviderConfigStore";
-import type { DirectoryScopedConfig } from "./useProviderConfigStore";
+import { useProviderConfigStore } from "../config/useProviderConfigStore";
+import type { DirectoryScopedConfig } from "../config/useProviderConfigStore";
 
 const GIT_UTILITY_PROVIDER_ID = "zen";
 const GIT_UTILITY_PREFERRED_MODEL_ID = "big-pickle";

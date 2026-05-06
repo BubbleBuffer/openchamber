@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { McpStatus } from '@/lib/opencode/client';
 import { opencodeClient } from '@/lib/opencode/client';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 
 export type McpStatusMap = Record<string, McpStatus>;
 export type McpRuntimeDiagnostic = {

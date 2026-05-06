@@ -3,5 +3,5 @@
 // New code should import directly from useProviderConfigStore / useAgentConfigStore.
 
 export { useProviderConfigStore } from "./useProviderConfigStore";
-export { useAgentConfigStore } from "./useAgentConfigStore";
-export { useVoiceSettingsStore } from "./useVoiceSettingsStore";
+export { useAgentConfigStore } from "../agents/useAgentConfigStore";
+export { useVoiceSettingsStore } from "../voice/useVoiceSettingsStore";

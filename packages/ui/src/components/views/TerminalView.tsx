@@ -2,7 +2,7 @@ import React from 'react';
 import { RiAddLine, RiArrowDownLine, RiArrowGoBackLine, RiArrowLeftLine, RiArrowRightLine, RiArrowUpLine, RiCloseLine, RiCommandLine } from '@remixicon/react';
 
 import { useSessionUIStore } from '@/sync/session-ui-store';
-import { useTerminalStore } from '@/stores/useTerminalStore';
+import { useTerminalStore } from '@/stores/terminal/useTerminalStore';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { type TerminalStreamEvent } from '@/lib/api/types';
 import { useThemeSystem } from '@/contexts/useThemeSystem';

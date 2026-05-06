@@ -59,7 +59,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { useFileSearchStore } from '@/stores/useFileSearchStore';
+import { useFileSearchStore } from '@/stores/files/useFileSearchStore';
 import { useDeviceInfo } from '@/lib/device';
 import { cn, getModifierLabel, getRevealLabel, hasModifier } from '@/lib/utils';
 import { getLanguageFromExtension, getImageMimeType, isImageFile } from '@/lib/tools/toolHelpers';
@@ -69,9 +69,9 @@ import type { Extension } from '@codemirror/state';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { useUIStore } from '@/stores/useUIStore';
-import { useFilesViewTabsStore } from '@/stores/useFilesViewTabsStore';
-import { useGitStatus } from '@/stores/useGitStore';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useFilesViewTabsStore } from '@/stores/files/useFilesViewTabsStore';
+import { useGitStatus } from '@/stores/git/useGitStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { buildCodeMirrorCommentWidgets, normalizeLineRange, useInlineCommentController } from '@/components/comments';
 import { opencodeClient } from '@/lib/opencode/client';
 import { useDirectoryShowHidden } from '@/lib/files/directoryShowHidden';
@@ -82,7 +82,7 @@ import { FileTypeIcon } from '@/components/icons/FileTypeIcon';
 import { ensurePierreThemeRegistered } from '@/lib/shiki/appThemeRegistry';
 import { getDefaultTheme } from '@/lib/theme/themes';
 import { openDesktopFileInApp, openDesktopPath } from '@/lib/desktop/desktop';
-import { useOpenInAppsStore } from '@/stores/useOpenInAppsStore';
+import { useOpenInAppsStore } from '@/stores/files/useOpenInAppsStore';
 import { eventMatchesShortcut, getEffectiveShortcutCombo } from '@/lib/shortcuts';
 import {
   type FileNode,

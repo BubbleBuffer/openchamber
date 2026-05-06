@@ -2,7 +2,7 @@ import React from 'react';
 import type { Session } from '@/lib/opencode/client';
 import { updateDesktopSettings } from '@/lib/config/persistence';
 import { asReporter } from '@/lib/errors/reportError';
-import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 
 type SafeStorageLike = {
   getItem: (key: string) => string | null;

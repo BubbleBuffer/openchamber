@@ -18,8 +18,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { RiAddLine, RiAiAgentFill, RiAiAgentLine, RiDeleteBinLine, RiFileCopyLine, RiMore2Line, RiRobot2Line, RiRobotLine, RiRestartLine, RiEditLine } from '@remixicon/react';
-import { useAgentsStore, isAgentBuiltIn, isAgentHidden, type AgentScope, type AgentDraft } from '@/stores/useAgentsStore';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useAgentsStore, isAgentBuiltIn, isAgentHidden, type AgentScope, type AgentDraft } from '@/stores/agents/useAgentsStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { cn } from '@/lib/utils';
 import type { Agent } from '@/lib/opencode/client';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';

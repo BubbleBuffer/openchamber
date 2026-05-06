@@ -5,7 +5,7 @@ import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useViewportStore } from '@/sync/viewport-store';
 import { useSessions, useDirectorySync } from '@/sync/sync-context';
 import { MEMORY_LIMITS } from '@/stores/types/sessionTypes';
-import { useGitHubPrStatusStore } from '@/stores/useGitHubPrStatusStore';
+import { useGitHubPrStatusStore } from '@/stores/github/useGitHubPrStatusStore';
 import { getBackgroundTrimLimit } from '@/stores/types/sessionTypes';
 import { getStreamPerfSnapshot, getVsCodeStreamPerfSnapshot, resetStreamPerf, type StreamPerfSnapshot } from '@/stores/utils/streamDebug';
 import { Card } from '@/components/ui/card';

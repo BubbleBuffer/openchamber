@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { RiAddLine, RiDeleteBinLine, RiFileCopyLine, RiMore2Line, RiEditLine, RiBookOpenLine } from '@remixicon/react';
-import { useSkillsStore, type DiscoveredSkill } from '@/stores/useSkillsStore';
+import { useSkillsStore, type DiscoveredSkill } from '@/stores/skills/useSkillsStore';
 import { cn } from '@/lib/utils';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { SettingsProjectSelector } from '@/components/sections/shared/SettingsProjectSelector';

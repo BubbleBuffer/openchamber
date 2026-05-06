@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useGitIdentitiesStore, type GitIdentityProfile, type GitIdentityAuthType } from '@/stores/useGitIdentitiesStore';
+import { useGitIdentitiesStore, type GitIdentityProfile, type GitIdentityAuthType } from '@/stores/git/useGitIdentitiesStore';
 import {
   RiDeleteBinLine,
   RiGitBranchLine,

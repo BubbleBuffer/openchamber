@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { RiArrowDownSLine, RiFolderLine } from '@remixicon/react';
-import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 import { cn } from '@/lib/utils';
 

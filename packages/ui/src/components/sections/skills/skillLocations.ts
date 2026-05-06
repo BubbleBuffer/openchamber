@@ -1,4 +1,4 @@
-import type { SkillScope, SkillSource } from '@/stores/useSkillsStore';
+import type { SkillScope, SkillSource } from '@/stores/skills/useSkillsStore';
 
 export type SkillLocationValue = 'user-opencode' | 'project-opencode' | 'user-agents' | 'project-agents';
 

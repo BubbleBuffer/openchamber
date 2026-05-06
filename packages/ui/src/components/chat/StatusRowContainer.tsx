@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { useAssistantStatus } from '@/hooks/useAssistantStatus';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { StatusRow } from './StatusRow';
 

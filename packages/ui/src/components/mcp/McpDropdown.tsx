@@ -16,9 +16,9 @@ import { Switch } from '@/components/ui/switch';
 import { MobileOverlayPanel } from '@/components/ui/MobileOverlayPanel';
 import { cn } from '@/lib/utils';
 import { useDeviceInfo } from '@/lib/device';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
-import { useMcpConfigStore } from '@/stores/useMcpConfigStore';
-import { computeMcpHealth, useMcpStore } from '@/stores/useMcpStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
+import { useMcpConfigStore } from '@/stores/mcp/useMcpConfigStore';
+import { computeMcpHealth, useMcpStore } from '@/stores/mcp/useMcpStore';
 import { McpIcon } from '@/components/icons/McpIcon';
 
 const statusTooltip = (status: McpStatus | undefined): string => {

@@ -13,7 +13,7 @@ import type {
   SkillsCatalogSourceResponse,
 } from '@/lib/api/types';
 
-import { refreshSkillsAfterOpenCodeRestart, useSkillsStore } from '@/stores/useSkillsStore';
+import { refreshSkillsAfterOpenCodeRestart, useSkillsStore } from '@/stores/skills/useSkillsStore';
 import { opencodeClient } from '@/lib/opencode/client';
 import { startConfigUpdate, finishConfigUpdate, updateConfigUpdateMessage } from '@/lib/config/configUpdate';
 

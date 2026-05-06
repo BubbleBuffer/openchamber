@@ -12,7 +12,7 @@ import {
   RiFolderAddLine,
 } from '@remixicon/react';
 import { cn } from '@/lib/utils';
-import type { SessionFolder } from '@/stores/useSessionFoldersStore';
+import type { SessionFolder } from '@/stores/session/useSessionFoldersStore';
 
 interface SessionFolderItemProps<TSessionNode> {
   folder: SessionFolder;

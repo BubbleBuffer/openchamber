@@ -4,10 +4,10 @@ import { AgentManagerSidebar } from './AgentManagerSidebar';
 import { AgentManagerEmptyState } from './AgentManagerEmptyState';
 import { AgentGroupDetail } from './AgentGroupDetail';
 import { cn } from '@/lib/utils';
-import { useAgentGroupsStore } from '@/stores/useAgentGroupsStore';
+import { useAgentGroupsStore } from '@/stores/agents/useAgentGroupsStore';
 import { useMultiRunStore } from '@/stores/useMultiRunStore';
-import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import type { CreateMultiRunParams } from '@/types/multirun';
 
 interface AgentManagerViewProps {

@@ -4,9 +4,9 @@ import { RiBookletLine, RiFolder3Line, RiGitBranchLine } from '@remixicon/react'
 import { SortableTabsStrip } from '@/components/ui/sortable-tabs-strip';
 import { ProjectNotesTodoPanel } from '@/components/session/ProjectNotesTodoPanel';
 import { GitView } from '@/components/views';
-import { useGitStore } from '@/stores/useGitStore';
-import { useProjectsStore } from '@/stores/useProjectsStore';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useGitStore } from '@/stores/git/useGitStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';

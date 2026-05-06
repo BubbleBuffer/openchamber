@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { getModelDisplayName } from './mobileControlsUtils';
 
 interface MobileModelButtonProps {

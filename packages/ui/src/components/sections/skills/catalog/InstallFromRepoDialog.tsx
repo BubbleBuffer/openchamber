@@ -24,10 +24,10 @@ import { RiFolderLine, RiGitRepositoryLine, RiRobot2Line, RiUser3Line } from '@r
 
 import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 import type { SkillsCatalogItem } from '@/lib/api/types';
-import { useSkillsCatalogStore } from '@/stores/useSkillsCatalogStore';
-import { useSkillsStore } from '@/stores/useSkillsStore';
-import { useGitIdentitiesStore } from '@/stores/useGitIdentitiesStore';
-import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useSkillsCatalogStore } from '@/stores/skills/useSkillsCatalogStore';
+import { useSkillsStore } from '@/stores/skills/useSkillsStore';
+import { useGitIdentitiesStore } from '@/stores/git/useGitIdentitiesStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { InstallConflictsDialog, type ConflictDecision, type SkillConflict } from './InstallConflictsDialog';
 import {
   SKILL_LOCATION_OPTIONS,

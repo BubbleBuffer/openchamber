@@ -20,8 +20,8 @@ import {
 import { RiFolderLine, RiRobot2Line, RiUser3Line } from '@remixicon/react';
 
 import type { SkillsCatalogItem } from '@/lib/api/types';
-import { useSkillsCatalogStore } from '@/stores/useSkillsCatalogStore';
-import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useSkillsCatalogStore } from '@/stores/skills/useSkillsCatalogStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { InstallConflictsDialog, type ConflictDecision, type SkillConflict } from './InstallConflictsDialog';
 import {
   SKILL_LOCATION_OPTIONS,

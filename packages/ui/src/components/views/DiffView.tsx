@@ -3,7 +3,7 @@ import { RiArrowDownSLine, RiArrowRightSLine, RiEditLine, RiGitCommitLine, RiLoa
 
 import { useUIStore } from '@/stores/useUIStore';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
-import { useGitStore, useGitStatus, useIsGitRepo, useGitFileCount, useGitLoadingStatus } from '@/stores/useGitStore';
+import { useGitStore, useGitStatus, useIsGitRepo, useGitFileCount, useGitLoadingStatus } from '@/stores/git/useGitStore';
 import { cn } from '@/lib/utils';
 import type { GitStatus } from '@/lib/api/types';
 import {

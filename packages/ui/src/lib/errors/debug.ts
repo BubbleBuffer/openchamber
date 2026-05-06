@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useSessionUIStore } from '@/sync/session-ui-store';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
-import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { opencodeClient } from '@/lib/opencode/client';
 import { checkIsGitRepository } from '@/lib/git/gitApi';
 import { streamDebugEnabled } from '@/stores/utils/streamDebug';

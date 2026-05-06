@@ -8,8 +8,8 @@ import {
 } from '@remixicon/react';
 import { BrowserVoiceButton } from '@/components/voice';
 // sessionStore removed — currentSessionId comes from useSessionUIStore
-import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useMessageQueueStore, type QueuedMessage } from '@/stores/messageQueueStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
@@ -49,10 +49,10 @@ import { GitHubIssuePickerDialog } from '@/components/session/GitHubIssuePickerD
 import { GitHubPrPickerDialog } from '@/components/session/GitHubPrPickerDialog';
 import { useChatSearchDirectory } from '@/hooks/useChatSearchDirectory';
 import { opencodeClient } from '@/lib/opencode/client';
-import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { PROJECT_ICON_MAP, getProjectIconImageUrl } from '@/lib/project/projectMeta';
-import { useGitBranches, useGitStore, useIsGitRepo } from '@/stores/useGitStore';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useGitBranches, useGitStore, useIsGitRepo } from '@/stores/git/useGitStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { createWorktreeDraft } from '@/lib/session/worktreeSessionCreator';
 import { buildSessionTargetOptions } from '@/sync/session-worktree-contract';

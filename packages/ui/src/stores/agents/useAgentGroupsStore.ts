@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { opencodeClient } from '@/lib/opencode/client';
 import { listProjectWorktrees, removeProjectWorktree, type ProjectRef } from '@/lib/worktrees/worktreeManager';
-import { useDirectoryStore } from './useDirectoryStore';
-import { useProjectsStore } from './useProjectsStore';
+import { useDirectoryStore } from '../files/useDirectoryStore';
+import { useProjectsStore } from '../projects/useProjectsStore';
 import { deleteSessionInDirectory } from '@/sync/session-actions';
 import { retry } from '@/sync/retry';
 import type { WorktreeMetadata } from '@/types/worktree';

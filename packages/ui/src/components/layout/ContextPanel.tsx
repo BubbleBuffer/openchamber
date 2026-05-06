@@ -8,7 +8,7 @@ import { DiffView, FilesView, PlanView } from '@/components/views';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { cn } from '@/lib/utils';
-import { useFilesViewTabsStore } from '@/stores/useFilesViewTabsStore';
+import { useFilesViewTabsStore } from '@/stores/files/useFilesViewTabsStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { ContextPanelContent } from './ContextSidebarTab';
 

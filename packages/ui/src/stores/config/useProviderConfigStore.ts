@@ -6,10 +6,10 @@ import type { Provider } from "@/lib/opencode/client";
 import { opencodeClient } from "@/lib/opencode/client";
 import { scopeMatches, subscribeToConfigChanges } from "@/lib/config/configSync";
 import type { ModelMetadata } from "@/types";
-import { getSafeStorage } from "./utils/safeStorage";
-import { useDirectoryStore } from "@/stores/useDirectoryStore";
+import { getSafeStorage } from "../utils/safeStorage";
+import { useDirectoryStore } from "@/stores/files/useDirectoryStore";
 import { streamDebugEnabled } from "@/stores/utils/streamDebug";
-import { useAgentConfigStore } from "./useAgentConfigStore";
+import { useAgentConfigStore } from "../agents/useAgentConfigStore";
 
 const MODELS_DEV_API_URL = "https://models.dev/api.json";
 const MODELS_DEV_PROXY_URL = "/api/openchamber/models-metadata";

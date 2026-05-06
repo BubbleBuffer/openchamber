@@ -10,7 +10,7 @@ import type { ToolPart as ToolPartType, ToolState as ToolStateUnion } from '@/li
 import { toolDisplayStyles } from '@/lib/theme/typography';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { useOptionalThemeSystem } from '@/contexts/useThemeSystem';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useDirectorySync, useSessionMessageRecords, useEnsureSessionMessages } from '@/sync/sync-context';
 import { getSyncChildStores } from '@/sync/sync-refs';

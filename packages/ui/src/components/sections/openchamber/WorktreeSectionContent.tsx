@@ -3,10 +3,10 @@ import { RiAddLine, RiCloseLine, RiDeleteBinLine, RiInformationLine } from '@rem
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSessions } from '@/sync/sync-context';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { useDeviceInfo } from '@/lib/device';
 import { checkIsGitRepository } from '@/lib/git/gitApi';
 import { getWorktreeSetupCommands, saveWorktreeSetupCommands } from '@/lib/config/openchamberConfig';

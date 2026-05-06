@@ -2,7 +2,7 @@ import type { DesktopSettings } from '@/lib/desktop/desktop';
 import { createProjectIdFromPath } from '@/lib/project/projectId';
 import { useUIStore } from '@/stores/useUIStore';
 import { useMessageQueueStore } from '@/stores/messageQueueStore';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { setDirectoryShowHidden } from '@/lib/files/directoryShowHidden';
 import { setFilesViewShowGitignored } from '@/lib/files/filesViewShowGitignored';
 import { loadAppearancePreferences, applyAppearancePreferences } from '@/lib/theme/appearancePersistence';

@@ -36,14 +36,14 @@ import {
   RiArrowDownSLine,
 } from '@remixicon/react';
 import { cn } from '@/lib/utils';
-import { useProjectsStore } from '@/stores/useProjectsStore';
-import { useGitHubAuthStore } from '@/stores/useGitHubAuthStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
+import { useGitHubAuthStore } from '@/stores/github/useGitHubAuthStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
 import * as sessionActions from '@/sync/session-actions';
-import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useContextStore } from '@/stores/contextStore';
 import { validateWorktreeCreate, createWorktree } from '@/lib/worktrees/worktreeManager';
 import { withWorktreeUpstreamDefaults } from '@/lib/worktrees/worktreeCreate';
@@ -54,7 +54,7 @@ import { opencodeClient } from '@/lib/opencode/client';
 import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
 import { rankBranchesForQuery } from '@/lib/worktrees/branchSearch';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
-import { useGitBranches, useGitStore, useGitLoadingBranches } from '@/stores/useGitStore';
+import { useGitBranches, useGitStore, useGitLoadingBranches } from '@/stores/git/useGitStore';
 import { GitHubIntegrationDialog } from './GitHubIntegrationDialog';
 import { SortableTabsStrip } from '@/components/ui/sortable-tabs-strip';
 import { MobileOverlayPanel } from '@/components/ui/MobileOverlayPanel';

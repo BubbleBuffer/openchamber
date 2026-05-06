@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { RiAddLine, RiTerminalBoxLine, RiMore2Line, RiDeleteBinLine, RiFileCopyLine, RiRestartLine, RiEditLine } from '@remixicon/react';
 import { useCommandsStore, isCommandBuiltIn, type Command } from '@/stores/useCommandsStore';
-import { useSkillsStore } from '@/stores/useSkillsStore';
+import { useSkillsStore } from '@/stores/skills/useSkillsStore';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { cn } from '@/lib/utils';
 import { SettingsProjectSelector } from '@/components/sections/shared/SettingsProjectSelector';

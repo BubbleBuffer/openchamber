@@ -23,7 +23,7 @@ import { isDesktopShell, isVSCodeRuntime, isWebRuntime } from '@/lib/desktop/des
 import { useDeviceInfo } from '@/lib/device';
 import { usePwaDetection } from '@/hooks/usePwaDetection';
 import { updateDesktopSettings } from '@/lib/config/persistence';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import {
     setDirectoryShowHidden,

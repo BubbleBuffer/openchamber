@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSessions } from '@/sync/sync-context';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { cn } from '@/lib/utils';
 
 interface SidebarContextSummaryProps {

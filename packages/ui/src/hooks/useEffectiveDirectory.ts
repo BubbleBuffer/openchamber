@@ -2,7 +2,7 @@ import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSessionWorktreeStore } from '@/sync/session-worktree-store';
 import { getAttachedSessionDirectory } from '@/sync/session-worktree-contract';
 import { useSessionDirectory } from '@/sync/sync-context';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 
 /**
  * Hook that resolves the effective working directory for tabs (Git, Diff, Files, Terminal).

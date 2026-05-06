@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
 import { getAgentDisplayName } from './mobileControlsUtils';

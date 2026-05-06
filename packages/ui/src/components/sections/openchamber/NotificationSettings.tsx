@@ -1,8 +1,8 @@
 import React from 'react';
 import { RiInformationLine, RiRestartLine } from '@remixicon/react';
 import { useUIStore } from '@/stores/useUIStore';
-import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { isDesktopShell, isVSCodeRuntime } from '@/lib/desktop/desktop';
 import { useDeviceInfo } from '@/lib/device';
 import { updateDesktopSettings } from '@/lib/config/persistence';

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui';
-import { useSkillsStore, type SkillConfig, type SkillScope, type SupportingFile, type PendingFile } from '@/stores/useSkillsStore';
+import { useSkillsStore, type SkillConfig, type SkillScope, type SupportingFile, type PendingFile } from '@/stores/skills/useSkillsStore';
 import { RiAddLine, RiBookOpenLine, RiDeleteBinLine, RiFileLine, RiFolderLine, RiRobot2Line, RiUser3Line } from '@remixicon/react';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import {

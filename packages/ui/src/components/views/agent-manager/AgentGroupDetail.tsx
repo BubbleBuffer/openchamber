@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { cn } from '@/lib/utils';
 import { ProviderLogo } from '@/components/ui/ProviderLogo';
-import { useAgentGroupsStore, type AgentGroup, type AgentGroupSession } from '@/stores/useAgentGroupsStore';
+import { useAgentGroupsStore, type AgentGroup, type AgentGroupSession } from '@/stores/agents/useAgentGroupsStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useGlobalSessionStatus, useAllSessionStatuses } from '@/sync/sync-context';
 import { ChatContainer } from '@/components/chat/ChatContainer';

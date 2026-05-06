@@ -8,7 +8,7 @@
 
 import type { Session } from "@/lib/opencode/client"
 import { opencodeClient } from "@/lib/opencode/client"
-import { useSessionFoldersStore } from "@/stores/useSessionFoldersStore"
+import { useSessionFoldersStore } from "@/stores/session/useSessionFoldersStore"
 import {
   createSession as createSessionAction,
   deleteSession as deleteSessionAction,

@@ -1,8 +1,8 @@
 import React from 'react';
 import { cn, fuzzyMatch } from '@/lib/utils';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
-import { useAgentsStore, isAgentBuiltIn, type AgentWithExtras } from '@/stores/useAgentsStore';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
+import { useAgentsStore, isAgentBuiltIn, type AgentWithExtras } from '@/stores/agents/useAgentsStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 
 interface AgentInfo {

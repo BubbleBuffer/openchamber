@@ -42,9 +42,9 @@ import { useViewportStore } from '@/sync/viewport-store';
 import { DraggableSessionRow } from './sessionFolderDnd';
 import type { SessionNode, SessionSummaryMeta } from './types';
 import { formatSessionCompactDateLabel, formatSessionDateLabel, normalizePath, renderHighlightedText, resolveSessionDiffStats } from './utils';
-import { useSessionDisplayStore } from '@/stores/useSessionDisplayStore';
+import { useSessionDisplayStore } from '@/stores/session/useSessionDisplayStore';
 import { useSessionUnseenCount } from '@/sync/notification-store';
-import { useSessionMultiSelectStore } from '@/stores/useSessionMultiSelectStore';
+import { useSessionMultiSelectStore } from '@/stores/session/useSessionMultiSelectStore';
 
 type Folder = { id: string; name: string; sessionIds: string[] };
 

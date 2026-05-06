@@ -17,9 +17,9 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
-import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
-import { useVoiceSettingsStore } from '@/stores/useVoiceSettingsStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
+import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
+import { useVoiceSettingsStore } from '@/stores/voice/useVoiceSettingsStore';
 
 interface ServerTTSStatusCache {
   available: boolean;

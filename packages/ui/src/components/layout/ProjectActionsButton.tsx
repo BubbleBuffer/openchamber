@@ -20,7 +20,7 @@ import { useDeviceInfo } from '@/lib/device';
 import { isDesktopShell } from '@/lib/desktop/desktop';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
-import { useTerminalStore } from '@/stores/useTerminalStore';
+import { useTerminalStore } from '@/stores/terminal/useTerminalStore';
 import { useDesktopSshStore } from '@/stores/useDesktopSshStore';
 import { openExternalUrl } from '@/lib/url';
 import {

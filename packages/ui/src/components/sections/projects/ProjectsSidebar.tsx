@@ -1,5 +1,5 @@
 import React from 'react';
-import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { Button } from '@/components/ui/button';
 import { SettingsSidebarLayout } from '@/components/sections/shared/SettingsSidebarLayout';

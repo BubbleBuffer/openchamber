@@ -18,8 +18,8 @@ import { DroppableFolderWrapper, SessionFolderDndScope } from './sessionFolderDn
 import type { SortableDragHandleProps } from './sortableItems';
 import type { GroupSearchData, SessionGroup, SessionNode } from './types';
 import { compareSessionsByPinnedAndTime, isBranchDifferentFromLabel, normalizePath, renderHighlightedText } from './utils';
-import type { SessionFolder } from '@/stores/useSessionFoldersStore';
-import { useSessionDisplayStore } from '@/stores/useSessionDisplayStore';
+import type { SessionFolder } from '@/stores/session/useSessionFoldersStore';
+import { useSessionDisplayStore } from '@/stores/session/useSessionDisplayStore';
 import { openExternalUrl } from '@/lib/url';
 
 type DeleteFolderConfirm = {

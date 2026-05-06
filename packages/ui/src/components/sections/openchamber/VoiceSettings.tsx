@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useBrowserVoice } from '@/hooks/useBrowserVoice';
-import { useVoiceSettingsStore } from '@/stores/useVoiceSettingsStore';
+import { useVoiceSettingsStore } from '@/stores/voice/useVoiceSettingsStore';
 import { useDeviceInfo } from '@/lib/device';
 
 import {

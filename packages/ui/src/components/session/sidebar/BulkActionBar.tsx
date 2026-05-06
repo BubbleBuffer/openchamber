@@ -14,7 +14,7 @@ import {
   RiFolderLine,
 } from '@remixicon/react';
 import { cn } from '@/lib/utils';
-import type { SessionFolder } from '@/stores/useSessionFoldersStore';
+import type { SessionFolder } from '@/stores/session/useSessionFoldersStore';
 
 type Props = {
   selectedCount: number;

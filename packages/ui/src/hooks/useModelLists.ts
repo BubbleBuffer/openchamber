@@ -1,5 +1,5 @@
 import React from 'react';
-import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
 import type { Provider } from '@/lib/opencode/client';
 

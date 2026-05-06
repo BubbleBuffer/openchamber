@@ -1,10 +1,10 @@
 import React from 'react';
 import { RiCodeLine, RiFileImageLine, RiFileLine, RiFilePdfLine, RiFolder3Fill, RiRefreshLine } from '@remixicon/react';
 import { cn, truncatePathMiddle } from '@/lib/utils';
-import { useFileSearchStore } from '@/stores/useFileSearchStore';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
-import { useProjectsStore } from '@/stores/useProjectsStore';
-import { useFilesViewTabsStore } from '@/stores/useFilesViewTabsStore';
+import { useFileSearchStore } from '@/stores/files/useFileSearchStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
+import { useFilesViewTabsStore } from '@/stores/files/useFilesViewTabsStore';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useChatSearchDirectory } from '@/hooks/useChatSearchDirectory';
 import type { ProjectFileSearchHit } from '@/lib/opencode/client';

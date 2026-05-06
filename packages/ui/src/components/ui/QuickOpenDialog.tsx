@@ -22,8 +22,8 @@ import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { getContextFileOpenFailureMessage, validateContextFileOpen } from '@/lib/files/contextFileOpenGuard';
 import { useDirectoryShowHidden } from '@/lib/files/directoryShowHidden';
 import { useFilesViewShowGitignored } from '@/lib/files/filesViewShowGitignored';
-import { useFileSearchStore } from '@/stores/useFileSearchStore';
-import { useFilesViewTabsStore } from '@/stores/useFilesViewTabsStore';
+import { useFileSearchStore } from '@/stores/files/useFileSearchStore';
+import { useFilesViewTabsStore } from '@/stores/files/useFilesViewTabsStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 

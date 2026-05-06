@@ -16,7 +16,7 @@ import { getToolIcon } from './toolPresentation';
 import { getToolMetadata } from '@/lib/tools/toolHelpers';
 import { isExpandableTool, isStandaloneTool, isStaticTool } from './toolRenderUtils';
 import { RuntimeAPIContext } from '@/contexts/runtimeAPIContext';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { useUIStore } from '@/stores/useUIStore';
 import ReasoningPart from './ReasoningPart';
 import JustificationBlock from './JustificationBlock';

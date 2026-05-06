@@ -10,8 +10,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DirectoryTree } from './DirectoryTree';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
-import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { useFileSystemAccess } from '@/hooks/useFileSystemAccess';
 import { cn, formatPathForDisplay } from '@/lib/utils';
 import { toast } from '@/components/ui';

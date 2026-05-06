@@ -7,7 +7,7 @@ import {
   finishConfigUpdate,
   updateConfigUpdateMessage,
 } from "@/lib/config/configUpdate";
-import { getSafeStorage } from "./utils/safeStorage";
+import { getSafeStorage } from "../utils/safeStorage";
 
 import { opencodeClient } from '@/lib/opencode/client';
 

@@ -15,8 +15,8 @@ import { AgentSelector } from '@/components/sections/commands/AgentSelector';
 import { isPrimaryMode } from '@/components/chat/mobileControlsUtils';
 import { CommandAutocomplete, type CommandAutocompleteHandle, type CommandInfo } from '@/components/chat/CommandAutocomplete';
 import { FileMentionAutocomplete, type FileMentionHandle } from '@/components/chat/FileMentionAutocomplete';
-import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
 import type { ScheduledTask } from '@/lib/scheduledTasksApi';
 

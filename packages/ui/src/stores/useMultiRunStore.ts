@@ -9,8 +9,8 @@ import { createWorktreeWithDefaults, resolveRootTrackingRemote } from '@/lib/wor
 import { getRootBranch } from '@/lib/worktrees/worktreeStatus';
 import { checkIsGitRepository } from '@/lib/git/gitApi';
 // sessionStore removed — sync bootstrap handles session loading
-import { useDirectoryStore } from './useDirectoryStore';
-import { useProjectsStore } from './useProjectsStore';
+import { useDirectoryStore } from './files/useDirectoryStore';
+import { useProjectsStore } from './projects/useProjectsStore';
 
 /**
  * Generate a git-safe slug from a string.

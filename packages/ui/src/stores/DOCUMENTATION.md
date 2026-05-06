@@ -4,6 +4,30 @@
 
 `packages/ui/src/stores` contains app-level Zustand stores for persistent UI state, runtime state, and feature caches.
 
+## Directory layout
+
+Domain-specific stores live in subfolders. Cross-cutting / app-shell stores
+stay at the root of `stores/`. Imports use `@/stores/<domain>/<store>` for
+domain stores and `@/stores/<store>` for the root ones.
+
+| Folder        | Stores                                                                 |
+| ------------- | ---------------------------------------------------------------------- |
+| `agents/`     | `useAgentsStore`, `useAgentConfigStore`, `useAgentGroupsStore`         |
+| `session/`    | `useSessionDisplayStore`, `useSessionFoldersStore`, `useSessionMultiSelectStore` |
+| `github/`     | `useGitHubAuthStore`, `useGitHubPrStatusStore`                         |
+| `git/`        | `useGitStore`, `useGitIdentitiesStore`                                 |
+| `files/`      | `useFileSearchStore`, `useFilesViewTabsStore`, `useDirectoryStore`, `useOpenInAppsStore` |
+| `config/`     | `useConfigStore`, `useProviderConfigStore`                             |
+| `mcp/`        | `useMcpStore`, `useMcpConfigStore`                                     |
+| `skills/`     | `useSkillsStore`, `useSkillsCatalogStore`                              |
+| `projects/`   | `useProjectsStore`                                                     |
+| `voice/`      | `useVoiceSettingsStore`                                                |
+| `quota/`      | `useQuotaStore`                                                        |
+| `terminal/`   | `useTerminalStore`                                                     |
+| `types/`      | Shared store-level type definitions                                    |
+| `utils/`      | Shared store-level helpers (`safeStorage`, etc.)                       |
+| (root)        | App-shell / cross-cutting stores: `useUIStore`, `useDialogStore`, `useUpdateStore`, `useFeatureFlagsStore`, `useDesktopSshStore`, `useTodosPersistStore`, `useMultiRunStore`, `useInlineCommentDraftStore`, `useMagicPromptsStore`, `useCommandsStore`, `useGlobalSessionsStore`, `globalSessions`, `messageQueueStore`, `permissionStore`, `contextStore`, `fileStore` |
+
 Not all state in the UI belongs here.
 
 Use a store when state is:

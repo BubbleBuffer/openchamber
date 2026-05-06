@@ -3,7 +3,7 @@ import { toast } from '@/components/ui';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
-import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { sessionEvents } from '@/lib/session/sessionEvents';

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { StoreApi, UseBoundStore } from "zustand";
 import { devtools, persist, createJSONStorage } from "zustand/middleware";
-import { getSafeStorage } from "./utils/safeStorage";
+import { getSafeStorage } from "../utils/safeStorage";
 import {
   getGitIdentities,
   createGitIdentity,

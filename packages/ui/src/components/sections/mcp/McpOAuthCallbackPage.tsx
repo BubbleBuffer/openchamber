@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { useMcpStore } from '@/stores/useMcpStore';
+import { useMcpStore } from '@/stores/mcp/useMcpStore';
 import { parseMcpOAuthCallbackContext, parseMcpOAuthCallbackStateKey } from '@/components/sections/mcp/mcpOAuth';
 
 const parseQueryParam = (params: URLSearchParams, key: string): string | null => {

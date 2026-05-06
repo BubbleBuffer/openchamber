@@ -21,10 +21,10 @@ import {
 } from '@remixicon/react';
 import { cn } from '@/lib/utils';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
-import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
-import { useGitHubAuthStore } from '@/stores/useGitHubAuthStore';
+import { useGitHubAuthStore } from '@/stores/github/useGitHubAuthStore';
 import { validateWorktreeCreate } from '@/lib/worktrees/worktreeManager';
 import { SortableTabsStrip } from '@/components/ui/sortable-tabs-strip';
 import { MobileOverlayPanel } from '@/components/ui/MobileOverlayPanel';

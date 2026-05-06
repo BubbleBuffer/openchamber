@@ -22,7 +22,7 @@ import {
 
 import { RiAddLine, RiDeleteBinLine, RiRefreshLine, RiDownloadLine, RiStarLine, RiSearchLine } from '@remixicon/react';
 
-import { useSkillsCatalogStore } from '@/stores/useSkillsCatalogStore';
+import { useSkillsCatalogStore } from '@/stores/skills/useSkillsCatalogStore';
 import { cn } from '@/lib/utils';
 import type { SkillsCatalogItem } from '@/lib/api/types';
 

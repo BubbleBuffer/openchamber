@@ -9,7 +9,7 @@ import {
 } from "@/lib/config/configUpdate";
 import { emitConfigChange, scopeMatches, subscribeToConfigChanges } from "@/lib/config/configSync";
 import { getSafeStorage } from "./utils/safeStorage";
-import { useProjectsStore } from "@/stores/useProjectsStore";
+import { useProjectsStore } from "@/stores/projects/useProjectsStore";
 
 
 export type CommandScope = 'user' | 'project';

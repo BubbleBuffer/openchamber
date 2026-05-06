@@ -52,12 +52,12 @@ import { MobileOverlayPanel } from '@/components/ui/MobileOverlayPanel';
 import { SimpleMarkdownRenderer } from '@/components/chat/MarkdownRenderer';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
-import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
-import { useGitHubAuthStore } from '@/stores/useGitHubAuthStore';
-import { getGitHubPrStatusKey, useGitHubPrStatusStore } from '@/stores/useGitHubPrStatusStore';
+import { useGitHubAuthStore } from '@/stores/github/useGitHubAuthStore';
+import { getGitHubPrStatusKey, useGitHubPrStatusStore } from '@/stores/github/useGitHubPrStatusStore';
 import type {
   GitHubPullRequest,
   GitHubCheckRun,

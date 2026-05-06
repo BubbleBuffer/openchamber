@@ -1,5 +1,5 @@
 import React from 'react';
-import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { isDesktopShell, isTauriShell } from '@/lib/desktop/desktop';
 import { desktopHostsGet, locationMatchesHost, redactSensitiveUrl } from '@/lib/desktop/desktopHosts';
 import { setDesktopWindowTitle } from '@/lib/desktop/desktopNative';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useVoiceContext } from '@/hooks/useVoiceContext';
-import { useVoiceSettingsStore } from '@/stores/useVoiceSettingsStore';
+import { useVoiceSettingsStore } from '@/stores/voice/useVoiceSettingsStore';
 
 const VoiceContextBridge = React.memo(function VoiceContextBridge() {
     useVoiceContext();

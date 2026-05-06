@@ -19,10 +19,10 @@ import {
 } from '@remixicon/react';
 import { cn } from '@/lib/utils';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
-import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
-import { useGitHubAuthStore } from '@/stores/useGitHubAuthStore';
+import { useGitHubAuthStore } from '@/stores/github/useGitHubAuthStore';
 import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
 import type { GitHubPullRequestContextResult, GitHubPullRequestSummary, GitHubPullRequestsListResult } from '@/lib/api/types';
 

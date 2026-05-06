@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { ProviderLogo } from '@/components/ui/ProviderLogo';
-import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,7 @@ import {
 import { toast } from '@/components/ui';
 import { RiStackLine, RiToolsLine, RiBrainAi3Line, RiFileImageLine, RiArrowDownSLine, RiCheckLine, RiSearchLine, RiInformationLine, RiEyeLine, RiEyeOffLine } from '@remixicon/react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { reloadOpenCodeConfiguration } from '@/stores/useAgentsStore';
+import { reloadOpenCodeConfiguration } from '@/stores/agents/useAgentsStore';
 import { cn } from '@/lib/utils';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { openExternalUrl } from '@/lib/url';

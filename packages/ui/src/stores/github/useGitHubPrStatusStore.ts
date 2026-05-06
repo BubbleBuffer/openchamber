@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { GitHubPullRequestStatus, RuntimeAPIs } from '@/lib/api/types';
-import { getSafeStorage } from './utils/safeStorage';
+import { getSafeStorage } from '../utils/safeStorage';
 
 const PR_REVALIDATE_TTL_MS = 90_000;
 const PR_REVALIDATE_INTERVAL_MS = 15_000;

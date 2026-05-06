@@ -14,9 +14,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ModelSelector } from '@/components/sections/agents/ModelSelector';
 import { AgentSelector } from '@/components/sections/commands/AgentSelector';
-import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
-import { useAgentsStore } from '@/stores/useAgentsStore';
+import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
+import { useAgentsStore } from '@/stores/agents/useAgentsStore';
 import { isPrimaryMode } from '@/components/chat/mobileControlsUtils';
 import { cn } from '@/lib/utils';
 import { RiArrowDownSLine } from '@remixicon/react';

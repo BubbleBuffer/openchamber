@@ -1,9 +1,9 @@
 import React from 'react';
 import { useSessionUIStore } from '@/sync/session-ui-store';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useFireworksCelebration } from '@/contexts/FireworksContext';
 import type { GitIdentityProfile, CommitFileEntry } from '@/lib/api/types';
-import { useGitIdentitiesStore } from '@/stores/useGitIdentitiesStore';
+import { useGitIdentitiesStore } from '@/stores/git/useGitIdentitiesStore';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import {
@@ -15,7 +15,7 @@ import {
   useIsGitRepo,
   useGitLoadingStatus,
   useGitLoadingLog,
-} from '@/stores/useGitStore';
+} from '@/stores/git/useGitStore';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { ScrollShadow } from '@/components/ui/ScrollShadow';
 import {

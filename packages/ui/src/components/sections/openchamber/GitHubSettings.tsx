@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
-import { useGitHubAuthStore } from '@/stores/useGitHubAuthStore';
+import { useGitHubAuthStore } from '@/stores/github/useGitHubAuthStore';
 import type { GitHubAuthStatus } from '@/lib/api/types';
 import { useDeviceInfo } from '@/lib/device';
 import { cn } from '@/lib/utils';

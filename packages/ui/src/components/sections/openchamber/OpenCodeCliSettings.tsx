@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { RiFolderLine, RiInformationLine } from '@remixicon/react';
 import { isDesktopShell, isTauriShell } from '@/lib/desktop/desktop';
 import { updateDesktopSettings } from '@/lib/config/persistence';
-import { reloadOpenCodeConfiguration } from '@/stores/useAgentsStore';
+import { reloadOpenCodeConfiguration } from '@/stores/agents/useAgentsStore';
 
 export const OpenCodeCliSettings: React.FC = () => {
   const [value, setValue] = React.useState('');

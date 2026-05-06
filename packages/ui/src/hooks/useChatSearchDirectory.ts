@@ -1,5 +1,5 @@
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
-import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSessionWorktreeStore } from '@/sync/session-worktree-store';
 import { getAttachedSessionDirectory } from '@/sync/session-worktree-contract';

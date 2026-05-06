@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { useSessionUIStore } from '@/sync/session-ui-store';
-import { useProviderConfigStore } from "@/stores/useProviderConfigStore";
-import { useAgentConfigStore } from "@/stores/useAgentConfigStore";
+import { useProviderConfigStore } from "@/stores/config/useProviderConfigStore";
+import { useAgentConfigStore } from "@/stores/agents/useAgentConfigStore";
 import { getSyncPermissions } from "@/sync/sync-refs";
 import { respondToPermission } from "@/sync/session-actions";
 import { voiceLog } from './voiceDebug';

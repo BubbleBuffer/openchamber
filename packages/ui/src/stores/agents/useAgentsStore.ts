@@ -9,14 +9,14 @@ import {
   finishConfigUpdate,
   updateConfigUpdateMessage,
 } from "@/lib/config/configUpdate";
-import { getSafeStorage } from "./utils/safeStorage";
-import { useProviderConfigStore } from "@/stores/useProviderConfigStore"
-import { useAgentConfigStore } from "@/stores/useAgentConfigStore";
+import { getSafeStorage } from "../utils/safeStorage";
+import { useProviderConfigStore } from "@/stores/config/useProviderConfigStore"
+import { useAgentConfigStore } from "@/stores/agents/useAgentConfigStore";
 import { useCommandsStore } from "@/stores/useCommandsStore";
-import { useProjectsStore } from "@/stores/useProjectsStore";
-import { useSkillsCatalogStore } from "@/stores/useSkillsCatalogStore";
-import { useSkillsStore } from "@/stores/useSkillsStore";
-import { useDirectoryStore } from "@/stores/useDirectoryStore";
+import { useProjectsStore } from "@/stores/projects/useProjectsStore";
+import { useSkillsCatalogStore } from "@/stores/skills/useSkillsCatalogStore";
+import { useSkillsStore } from "@/stores/skills/useSkillsStore";
+import { useDirectoryStore } from "@/stores/files/useDirectoryStore";
 
 const getConfigDirectory = (): string | null => {
   try {

@@ -26,8 +26,8 @@ import {
 } from '@remixicon/react';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
-import { useProjectsStore } from '@/stores/useProjectsStore';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { refreshGlobalSessions } from '@/stores/useGlobalSessionsStore';
 import { subscribeOpenchamberEvents } from '@/lib/config/openchamberEvents';
 import { PROJECT_COLOR_MAP, PROJECT_ICON_MAP, getProjectIconImageUrl } from '@/lib/project/projectMeta';

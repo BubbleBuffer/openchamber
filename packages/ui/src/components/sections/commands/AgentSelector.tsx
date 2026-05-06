@@ -6,8 +6,8 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useAgentsStore, filterVisibleAgents } from '@/stores/useAgentsStore';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useAgentsStore, filterVisibleAgents } from '@/stores/agents/useAgentsStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDeviceInfo } from '@/lib/device';
 import { RiArrowDownSLine, RiRobot2Line } from '@remixicon/react';

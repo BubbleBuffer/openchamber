@@ -5,7 +5,7 @@ import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { IconBackgroundPicker } from '@/components/ui/IconBackgroundPicker';
 import { toast } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { PROJECT_COLORS, PROJECT_ICONS, PROJECT_COLOR_MAP as COLOR_MAP, getProjectIconImageUrl } from '@/lib/project/projectMeta';
 import { RiCloseLine } from '@remixicon/react';

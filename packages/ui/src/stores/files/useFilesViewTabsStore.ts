@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, devtools, persist } from 'zustand/middleware';
 
-import { getSafeStorage } from './utils/safeStorage';
+import { getSafeStorage } from '../utils/safeStorage';
 
 type RootTabsState = {
   openPaths: string[];

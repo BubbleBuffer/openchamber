@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { defaultCodeDark, defaultCodeLight } from '@/lib/theme/codeTheme';
 import { MessageFreshnessDetector } from '@/lib/messages/messageFreshness';
-import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { useFeatureFlagsStore } from '@/stores/useFeatureFlagsStore';
 import { useUIStore } from '@/stores/useUIStore';

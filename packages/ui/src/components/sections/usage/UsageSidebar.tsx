@@ -7,7 +7,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { QUOTA_PROVIDERS, resolveUsageTone } from '@/lib/quota';
-import { useQuotaStore } from '@/stores/useQuotaStore';
+import { useQuotaStore } from '@/stores/quota/useQuotaStore';
 import { updateDesktopSettings } from '@/lib/config/persistence';
 import { RiRefreshLine } from '@remixicon/react';
 

@@ -2,13 +2,13 @@ import React from 'react';
 import { cn, getModifierLabel } from '@/lib/utils';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
-import { useProjectsStore } from '@/stores/useProjectsStore';
-import { useAgentsStore } from '@/stores/useAgentsStore';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
+import { useAgentsStore } from '@/stores/agents/useAgentsStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { useCommandsStore } from '@/stores/useCommandsStore';
-import { useMcpConfigStore } from '@/stores/useMcpConfigStore';
-import { useSkillsStore } from '@/stores/useSkillsStore';
-import { useSkillsCatalogStore } from '@/stores/useSkillsCatalogStore';
+import { useMcpConfigStore } from '@/stores/mcp/useMcpConfigStore';
+import { useSkillsStore } from '@/stores/skills/useSkillsStore';
+import { useSkillsCatalogStore } from '@/stores/skills/useSkillsCatalogStore';
 import {
   RiAiAgentLine,
   RiAiGenerate2,
@@ -59,7 +59,7 @@ import { OpenChamberPage } from '@/components/sections/openchamber/OpenChamberPa
 import { McpIcon } from '@/components/icons/McpIcon';
 import { useDeviceInfo } from '@/lib/device';
 import { isDesktopShell, isVSCodeRuntime, isWebRuntime } from '@/lib/desktop/desktop';
-import { reloadOpenCodeConfiguration } from '@/stores/useAgentsStore';
+import { reloadOpenCodeConfiguration } from '@/stores/agents/useAgentsStore';
 import {
   SETTINGS_PAGE_METADATA,
   getSettingsPageMeta,

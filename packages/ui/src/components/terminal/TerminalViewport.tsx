@@ -6,7 +6,7 @@ import { RiKeyboardLine } from '@remixicon/react';
 import { isMobileDeviceViaCSS } from '@/lib/device';
 import type { TerminalTheme } from '@/lib/terminal/terminalTheme';
 import { getGhosttyTerminalOptions } from '@/lib/terminal/terminalTheme';
-import type { TerminalChunk } from '@/stores/useTerminalStore';
+import type { TerminalChunk } from '@/stores/terminal/useTerminalStore';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { cn } from '@/lib/utils';
 import { OverlayScrollbar } from '@/components/ui/OverlayScrollbar';

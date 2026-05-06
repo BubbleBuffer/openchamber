@@ -4,7 +4,7 @@ import { cn, fuzzyMatch } from '@/lib/utils';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSessionMessages } from '@/sync/sync-context';
 import { useCommandsStore } from '@/stores/useCommandsStore';
-import { useSkillsStore } from '@/stores/useSkillsStore';
+import { useSkillsStore } from '@/stores/skills/useSkillsStore';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 
 type CommandSource = 'openchamber' | 'opencode';

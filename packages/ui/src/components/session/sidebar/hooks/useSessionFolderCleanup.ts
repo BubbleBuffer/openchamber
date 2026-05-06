@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Session } from '@/lib/opencode/client';
-import { useSessionFoldersStore } from '@/stores/useSessionFoldersStore';
+import { useSessionFoldersStore } from '@/stores/session/useSessionFoldersStore';
 import { dedupeSessionsById, getArchivedScopeKey, isSessionRelatedToProject, normalizePath } from '../utils';
 
 type NormalizedProject = {

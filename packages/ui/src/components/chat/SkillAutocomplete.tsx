@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn, fuzzyMatch } from '@/lib/utils';
-import { useSkillsStore } from '@/stores/useSkillsStore';
+import { useSkillsStore } from '@/stores/skills/useSkillsStore';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 
 interface SkillInfo {

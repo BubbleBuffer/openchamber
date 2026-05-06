@@ -23,9 +23,9 @@ import {
   type ProjectRef,
 } from '@/lib/config/openchamberConfig';
 import { generateBranchName } from '@/lib/git/branchNameGenerator';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { useUIStore } from '@/stores/useUIStore';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
 import { useInputStore } from '@/sync/input-store';

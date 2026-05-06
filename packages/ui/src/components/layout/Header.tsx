@@ -19,19 +19,19 @@ import { SortableTabsStrip, type SortableTabsStripItem } from '@/components/ui/s
 import { RiArrowLeftSLine, RiChat4Line, RiChatNewLine, RiCheckLine, RiCloseLine, RiCommandLine, RiFileTextLine, RiFolder6Line, RiGitBranchLine, RiGithubFill, RiLayoutLeftLine, RiLayoutRightLine, RiPlayListAddLine, RiRefreshLine, RiServerLine, RiStackLine, RiTerminalBoxLine, RiTimerLine, RiAlertLine, type RemixiconComponentType } from '@remixicon/react';
 import { DiffIcon } from '@/components/icons/DiffIcon';
 import { useUIStore, type MainTab } from '@/stores/useUIStore';
-import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSessionWorktreeStore } from '@/sync/session-worktree-store';
 import { formatSessionWorktreeBadge } from '@/sync/session-worktree-contract';
 import { useAllLiveSessions, useSession, useSessionMessagesResolved } from '@/sync/sync-context';
 import { getAllSyncSessions } from '@/sync/sync-refs';
-import { useProjectsStore } from '@/stores/useProjectsStore';
-import { useQuotaAutoRefresh, useQuotaStore } from '@/stores/useQuotaStore';
-import { useGitBranchLabel } from '@/stores/useGitStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
+import { useQuotaAutoRefresh, useQuotaStore } from '@/stores/quota/useQuotaStore';
+import { useGitBranchLabel } from '@/stores/git/useGitStore';
 import { useGlobalSessionsStore } from '@/stores/useGlobalSessionsStore';
 import { useFeatureFlagsStore } from '@/stores/useFeatureFlagsStore';
 
-import { useGitHubAuthStore } from '@/stores/useGitHubAuthStore';
+import { useGitHubAuthStore } from '@/stores/github/useGitHubAuthStore';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { ContextUsageDisplay } from '@/components/ui/ContextUsageDisplay';
 import { useDeviceInfo } from '@/lib/device';

@@ -1,7 +1,7 @@
 import React from 'react';
 import { getRootBranch } from '@/lib/worktrees/worktreeStatus';
 import { mapWithConcurrency } from '@/lib/concurrency';
-import { useGitStore } from '@/stores/useGitStore';
+import { useGitStore } from '@/stores/git/useGitStore';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 
 type Project = { id: string; path: string; normalizedPath: string };

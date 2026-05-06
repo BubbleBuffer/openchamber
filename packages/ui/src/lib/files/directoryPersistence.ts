@@ -1,5 +1,5 @@
 import { isVSCodeRuntime } from '@/lib/desktop/desktop';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 
 export const applyPersistedDirectoryPreferences = async (): Promise<void> => {
   if (typeof window === 'undefined') {

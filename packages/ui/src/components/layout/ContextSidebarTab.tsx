@@ -6,7 +6,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { deriveMessageRole } from '@/components/chat/message/messageRole';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { generateSyntaxTheme } from '@/lib/theme/syntaxThemeGenerator';
-import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSessions, useSessionMessageRecords } from '@/sync/sync-context';
 import { copyTextToClipboard } from '@/lib/clipboard';

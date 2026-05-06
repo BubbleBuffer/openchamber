@@ -9,9 +9,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { RiAddLine, RiDeleteBinLine, RiMore2Line, RiPlugLine, RiRefreshLine, RiServerLine, RiGlobalLine } from '@remixicon/react';
-import { useMcpConfigStore, type McpDraft, type McpServerConfig } from '@/stores/useMcpConfigStore';
-import { useMcpStore } from '@/stores/useMcpStore';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useMcpConfigStore, type McpDraft, type McpServerConfig } from '@/stores/mcp/useMcpConfigStore';
+import { useMcpStore } from '@/stores/mcp/useMcpStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { isMobileDeviceViaCSS } from '@/lib/device';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui';

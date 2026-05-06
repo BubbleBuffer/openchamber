@@ -6,11 +6,11 @@
 
 import { toast } from '@/components/ui';
 import { useSessionUIStore } from '@/sync/session-ui-store';
-import { useProjectsStore } from '@/stores/useProjectsStore';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
-import { useProviderConfigStore } from '@/stores/useProviderConfigStore';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
+import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useContextStore } from '@/stores/contextStore';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { checkIsGitRepository, previewGitWorktree } from '@/lib/git/gitApi';
 import { generateBranchName } from '@/lib/git/branchNameGenerator';
 import { getRootBranch } from '@/lib/worktrees/worktreeStatus';

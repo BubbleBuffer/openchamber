@@ -3,7 +3,7 @@ import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { Checkbox } from '@/components/ui/checkbox';
 import { UsageCard } from './UsageCard';
 import { QUOTA_PROVIDERS } from '@/lib/quota';
-import { useQuotaAutoRefresh, useQuotaStore } from '@/stores/useQuotaStore';
+import { useQuotaAutoRefresh, useQuotaStore } from '@/stores/quota/useQuotaStore';
 import { updateDesktopSettings } from '@/lib/config/persistence';
 import { ProviderLogo } from '@/components/ui/ProviderLogo';
 import {

@@ -26,7 +26,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { useAgentGroupsStore, type AgentGroup } from '@/stores/useAgentGroupsStore';
+import { useAgentGroupsStore, type AgentGroup } from '@/stores/agents/useAgentGroupsStore';
 import { useAllSessionStatuses } from '@/sync/sync-context';
 
 const formatRelativeTime = (timestamp: number): string => {

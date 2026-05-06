@@ -12,13 +12,13 @@ import {
   envRecordToArray,
   type McpDraft,
   type McpScope,
-} from '@/stores/useMcpConfigStore';
+} from '@/stores/mcp/useMcpConfigStore';
 import {
   parseImportedMcpSnippet,
   applyImportedMcpToDraft,
 } from './mcpImport';
-import { useMcpStore } from '@/stores/useMcpStore';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useMcpStore } from '@/stores/mcp/useMcpStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import {
   RiAddLine,
   RiArrowDownSLine,

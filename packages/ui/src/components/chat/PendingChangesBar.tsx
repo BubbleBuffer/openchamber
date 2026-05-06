@@ -1,7 +1,7 @@
 import React from 'react';
 import { RiFileEditLine, RiArrowDownSLine, RiArrowUpSLine } from '@remixicon/react';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
-import { useGitStore, useIsGitRepo } from '@/stores/useGitStore';
+import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
+import { useGitStore, useIsGitRepo } from '@/stores/git/useGitStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { RuntimeAPIContext } from '@/contexts/runtimeAPIContext';
 import { sessionEvents } from '@/lib/session/sessionEvents';

@@ -24,8 +24,8 @@ import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 import { updateDesktopSettings } from '@/lib/config/persistence';
 import type { DesktopSettings, SkillCatalogConfig } from '@/lib/desktop/desktop';
-import { useSkillsCatalogStore } from '@/stores/useSkillsCatalogStore';
-import { useGitIdentitiesStore } from '@/stores/useGitIdentitiesStore';
+import { useSkillsCatalogStore } from '@/stores/skills/useSkillsCatalogStore';
+import { useGitIdentitiesStore } from '@/stores/git/useGitIdentitiesStore';
 
 const generateCatalogId = () => `custom:${Date.now()}-${Math.random().toString(16).slice(2)}`;
 

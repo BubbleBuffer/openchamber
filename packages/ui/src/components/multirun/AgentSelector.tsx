@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { useAgentConfigStore } from '@/stores/useAgentConfigStore';
+import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 
 export interface AgentSelectorProps {
   /** Currently selected agent name (empty string for no agent) */

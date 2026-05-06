@@ -1164,8 +1164,8 @@ onCommand('createSessionWithPrompt', (payload) => {
 
   Promise.all([
     import('@/sync/session-ui-store'),
-    import('@/stores/useProviderConfigStore'),
-    import('@/stores/useAgentConfigStore'),
+    import('@/stores/config/useProviderConfigStore'),
+    import('@/stores/agents/useAgentConfigStore'),
     import('@/sync/input-store'),
   ]).then(([{ useSessionUIStore }, { useProviderConfigStore }, { useAgentConfigStore }, { useInputStore }]) => {
     const sessionStore = useSessionUIStore.getState();
