@@ -29,7 +29,7 @@ import { useProviderConfigStore } from "@/stores/useProviderConfigStore"
 import { useAgentConfigStore } from "@/stores/useAgentConfigStore"
 import { useTodosPersistStore } from "@/stores/useTodosPersistStore"
 import { toast } from "@/components/ui"
-import { logClientError } from "@/lib/clientErrorLogger"
+import * as Sentry from "@sentry/react"
 import { appendNotification } from "./notification-store"
 import type { State } from "./types"
 import type { SessionStatus } from "@/lib/opencode/client"
@@ -1275,7 +1275,15 @@ export function handleEvent(
     const sessionID = getSessionIdFromPayload(payload) ?? undefined
     const messageID = getMessageIdFromPayload(payload) ?? undefined
     console.error("[sync-context] Event application failed:", error, { type: payload.type, sessionID, messageID, directory: resolvedDirectory })
-    logClientError(error, { source: "sync-event-handler", eventType: payload.type, sessionID, messageID, directory: resolvedDirectory })
+    Sentry.captureException(error, {
+      extra: {
+        source: "sync-event-handler",
+        eventType: payload.type,
+        sessionID,
+        messageID,
+        directory: resolvedDirectory,
+      },
+    })
   }
 
   updateRoutingIndexFromEvent(routingIndex, resolvedDirectory, payload)
@@ -1428,7 +1436,10 @@ export function SyncProvider(props: {
 
       reconnectResyncing.add(directory)
       void resyncDirectoryAfterReconnect(directory, store, routingIndex)
-        .catch((error) => { console.error("[sync-context] Resync failed for", directory, error); logClientError(error, { source: "sync-resync", directory }) })
+        .catch((error) => {
+          console.error("[sync-context] Resync failed for", directory, error);
+          Sentry.captureException(error, { extra: { source: "sync-resync", directory } });
+        })
         .finally(() => {
           reconnectResyncing.delete(directory)
         })
