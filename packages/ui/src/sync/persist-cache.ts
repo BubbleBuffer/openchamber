@@ -39,7 +39,7 @@ function cacheKey(directory: string, key: CacheKey): string {
   return `${storagePrefix(directory)}.${key}`
 }
 
-function readCache<T>(directory: string, key: CacheKey): T | undefined {
+export function readCache<T>(directory: string, key: CacheKey): T | undefined {
   try {
     const raw = localStorage.getItem(cacheKey(directory, key))
     if (!raw) return undefined
@@ -49,17 +49,23 @@ function readCache<T>(directory: string, key: CacheKey): T | undefined {
   }
 }
 
-function writeCache<T>(directory: string, key: CacheKey, value: T | undefined): void {
+export function writeCache<T>(directory: string, key: CacheKey, value: T | undefined): void {
   try {
     const k = cacheKey(directory, key)
     if (value === undefined) {
       localStorage.removeItem(k)
-    } else {
-      localStorage.setItem(k, JSON.stringify(value))
+      return
     }
-  } catch {
-    // localStorage quota exceeded — ignore
-  }
+    const serialized = JSON.stringify(value)
+    try {
+      localStorage.setItem(k, serialized)
+    } catch (error) {
+      if (error instanceof DOMException && (error.name === "QuotaExceededError" || error.name === "NS_ERROR_DOM_QUOTA_REACHED")) {
+        clearCache(directory)
+        try { localStorage.setItem(k, serialized) } catch { console.warn("[persist-cache] Quota exceeded even after clearing directory cache. Dropping write for", key) }
+      }
+    }
+  } catch {}
 }
 
 function clearCache(directory: string): void {

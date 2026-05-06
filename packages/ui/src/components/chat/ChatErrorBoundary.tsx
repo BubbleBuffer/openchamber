@@ -1,5 +1,6 @@
 import React from 'react';
 import { RiChat3Line, RiRestartLine } from '@remixicon/react';
+import { logClientError } from '@/lib/clientErrorLogger';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
@@ -26,7 +27,7 @@ export class ChatErrorBoundary extends React.Component<ChatErrorBoundaryProps, C
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     this.setState({ error, errorInfo });
-
+    logClientError(error, { source: 'ChatErrorBoundary', sessionId: this.props.sessionId, componentStack: errorInfo.componentStack });
     if (process.env.NODE_ENV === 'development') {
       console.error('Chat error caught by boundary:', error, errorInfo);
     }

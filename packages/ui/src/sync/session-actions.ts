@@ -12,6 +12,7 @@ import { opencodeClient } from "@/lib/opencode/client"
 import { useGlobalSessionsStore } from "@/stores/useGlobalSessionsStore"
 import { useProviderConfigStore } from "@/stores/useProviderConfigStore"
 import { registerSessionDirectory } from "./sync-refs"
+import { toast } from "@/components/ui"
 
 // Reference set by SyncProvider — allows actions to access SDK and stores
 let _sdk: OpencodeClient | null = null
@@ -425,12 +426,26 @@ export async function optimisticSend(input: {
 // Abort
 // ---------------------------------------------------------------------------
 
+const ABORT_MAX_RETRIES = 3
+const ABORT_BASE_DELAY_MS = 500
+
 export async function abortCurrentOperation(sessionId: string): Promise<void> {
-  try {
-    await sdk().session.abort({ sessionID: sessionId, directory: dir() })
-  } catch (error) {
-    console.error("[session-actions] abort failed", error)
+  let lastError: unknown
+  for (let attempt = 0; attempt < ABORT_MAX_RETRIES; attempt++) {
+    try {
+      await sdk().session.abort({ sessionID: sessionId, directory: dir() })
+      return
+    } catch (error) {
+      lastError = error
+      if (attempt < ABORT_MAX_RETRIES - 1) {
+        const delay = ABORT_BASE_DELAY_MS * Math.pow(2, attempt)
+        await new Promise((r) => setTimeout(r, delay))
+      }
+    }
   }
+  console.error("[session-actions] abort failed after retries", lastError)
+  toast.error("Failed to abort operation", { description: "The session may still be running. Please try again.", id: `abort-fail-${sessionId}` })
+  throw lastError
 }
 
 // ---------------------------------------------------------------------------

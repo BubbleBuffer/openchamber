@@ -26,9 +26,13 @@ function createDirectoryStore(directory: string): StoreApi<DirectoryStore> {
 
   // Subscribe to persist metadata changes back to localStorage
   store.subscribe((state, prev) => {
-    if (state.vcs !== prev.vcs) persistVcs(directory, state.vcs)
-    if (state.projectMeta !== prev.projectMeta) persistProjectMeta(directory, state.projectMeta)
-    if (state.icon !== prev.icon) persistIcon(directory, state.icon)
+    try {
+      if (state.vcs !== prev.vcs) persistVcs(directory, state.vcs)
+      if (state.projectMeta !== prev.projectMeta) persistProjectMeta(directory, state.projectMeta)
+      if (state.icon !== prev.icon) persistIcon(directory, state.icon)
+    } catch (error) {
+      console.error("[child-store] Persist subscription failed:", error)
+    }
   })
 
   return store

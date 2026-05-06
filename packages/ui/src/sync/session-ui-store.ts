@@ -119,6 +119,7 @@ export type SessionUIState = {
   setNewSessionDraftTarget: (target: { projectId?: string | null; selectedProjectId?: string | null; directoryOverride?: string | null }, options?: { force?: boolean }) => void
   setDraftPreserveDirectoryOverride: (value: boolean) => void
   acknowledgeSessionAbort: (sessionId: string) => void
+  cleanupSession: (sessionId: string) => void
   clearAbortPrompt: () => void
   armAbortPrompt: (durationMs?: number) => number | null
   clearError: () => void
@@ -441,6 +442,17 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
       if (existing) flags.set(sessionId, { ...existing, acknowledged: true })
       return { sessionAbortFlags: flags }
     }),
+
+  cleanupSession: (sessionId) => {
+    set((state) => {
+      const nextAbortFlags = new Map(state.sessionAbortFlags)
+      nextAbortFlags.delete(sessionId)
+      const nextAbortControllers = new Map(state.abortControllers)
+      const controller = nextAbortControllers.get(sessionId)
+      if (controller) { try { controller.abort() } catch {} nextAbortControllers.delete(sessionId) }
+      return { sessionAbortFlags: nextAbortFlags, abortControllers: nextAbortControllers }
+    })
+  },
 
   clearAbortPrompt: () => set({ abortPromptSessionId: null, abortPromptExpiresAt: null }),
 

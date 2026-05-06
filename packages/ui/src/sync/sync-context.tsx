@@ -29,12 +29,14 @@ import { useProviderConfigStore } from "@/stores/useProviderConfigStore"
 import { useAgentConfigStore } from "@/stores/useAgentConfigStore"
 import { useTodosPersistStore } from "@/stores/useTodosPersistStore"
 import { toast } from "@/components/ui"
+import { logClientError } from "@/lib/clientErrorLogger"
 import { appendNotification } from "./notification-store"
 import type { State } from "./types"
 import type { SessionStatus } from "@/lib/opencode/client"
 import type { PermissionRequest } from "@/types/permission"
 import type { QuestionRequest } from "@/types/question"
 import * as sessionActions from "./session-actions"
+import { useSessionUIStore } from "./session-ui-store"
 
 // ---------------------------------------------------------------------------
 // Context
@@ -334,7 +336,7 @@ function toSessionStatus(status: Awaited<ReturnType<typeof opencodeClient.getSes
   return undefined
 }
 
-type EventRoutingIndex = {
+export type EventRoutingIndex = {
   sessionDirectoryById: Map<string, string>
   messageSessionById: Map<string, string>
   sessionMessageIdsById: Map<string, Set<string>>
@@ -714,7 +716,8 @@ const updateRoutingIndexFromEvent = (
   }
 }
 
-async function resyncDirectoryAfterReconnect(
+/** @internal Exported for unit testing */
+export async function resyncDirectoryAfterReconnect(
   directory: string,
   store: StoreApi<DirectoryStore>,
   routingIndex: EventRoutingIndex,
@@ -987,7 +990,8 @@ async function resyncDirectoryAfterReconnect(
   ingestDirectoryStateIntoRoutingIndex(routingIndex, directory, store.getState())
 }
 
-function handleEvent(
+/** @internal Exported for unit testing */
+export function handleEvent(
   rawDirectory: string,
   payload: Event,
   childStores: ChildStoreManager,
@@ -1226,39 +1230,52 @@ function handleEvent(
       break
   }
 
-  if (applyDirectoryEvent(draft, payload, {
-    onSetSessionTodo: (sessionID, todos) => {
-      useTodosPersistStore.getState().setSessionTodos(sessionID, todos)
-    },
-  })) {
-    store.setState(draft)
-    const sessionID = getSessionIdFromPayload(payload) ?? undefined
-    const messageID = getMessageIdFromPayload(payload) ?? undefined
-    syncDebug.dispatch.eventApplied(payload.type, sessionID, messageID)
+  try {
+    if (applyDirectoryEvent(draft, payload, {
+      onSetSessionTodo: (sessionID, todos) => {
+        useTodosPersistStore.getState().setSessionTodos(sessionID, todos)
+      },
+    })) {
+      store.setState(draft)
+      const sessionID = getSessionIdFromPayload(payload) ?? undefined
+      const messageID = getMessageIdFromPayload(payload) ?? undefined
+      syncDebug.dispatch.eventApplied(payload.type, sessionID, messageID)
 
-    // Parts-gap recovery on message.updated: if the message was inserted or
-    // replaced but draft.part[messageID] is empty, the parts were lost or
-    // never arrived. Trigger repair so the UI doesn't render a blank bubble.
-    if (sessionID && messageID && payload.type === "message.updated") {
-      const after = store.getState()
-      const info = (payload.properties as { info: Message }).info
-      if (info.role === "assistant" && (!after.part[messageID] || after.part[messageID].length === 0)) {
+      // Parts-gap recovery on message.updated: if the message was inserted or
+      // replaced but draft.part[messageID] is empty, the parts were lost or
+      // never arrived. Trigger repair so the UI doesn't render a blank bubble.
+      if (sessionID && messageID && payload.type === "message.updated") {
+        const after = store.getState()
+        const info = (payload.properties as { info: Message }).info
+        if (info.role === "assistant" && (!after.part[messageID] || after.part[messageID].length === 0)) {
+          enqueuePartsRepair(resolvedDirectory, sessionID, childStores)
+        }
+      }
+
+      // Cleanup session UI state when sessions are deleted or archived
+      const cleanedSessionID = getSessionIdFromPayload(payload) ?? undefined
+      if (cleanedSessionID && (payload.type === "session.deleted" || (payload.type === "session.updated" && (payload.properties as { info: Session }).info.time.archived))) {
+        useSessionUIStore.getState().cleanupSession(cleanedSessionID)
+      }
+    } else {
+      const sessionID = getSessionIdFromPayload(payload) ?? undefined
+      const messageID = getMessageIdFromPayload(payload) ?? undefined
+      syncDebug.dispatch.eventNoChange(payload.type, sessionID, messageID)
+
+      // Parts-gap recovery: if a part event was dropped because the parts array
+      // was missing (message not yet inserted or parts lost), trigger a repair
+      // fetch for the session.
+      if (sessionID && messageID && (
+        payload.type === "message.part.delta" || payload.type === "message.part.updated"
+      )) {
         enqueuePartsRepair(resolvedDirectory, sessionID, childStores)
       }
     }
-  } else {
+  } catch (error) {
     const sessionID = getSessionIdFromPayload(payload) ?? undefined
     const messageID = getMessageIdFromPayload(payload) ?? undefined
-    syncDebug.dispatch.eventNoChange(payload.type, sessionID, messageID)
-
-    // Parts-gap recovery: if a part event was dropped because the parts array
-    // was missing (message not yet inserted or parts lost), trigger a repair
-    // fetch for the session.
-    if (sessionID && messageID && (
-      payload.type === "message.part.delta" || payload.type === "message.part.updated"
-    )) {
-      enqueuePartsRepair(resolvedDirectory, sessionID, childStores)
-    }
+    console.error("[sync-context] Event application failed:", error, { type: payload.type, sessionID, messageID, directory: resolvedDirectory })
+    logClientError(error, { source: "sync-event-handler", eventType: payload.type, sessionID, messageID, directory: resolvedDirectory })
   }
 
   updateRoutingIndexFromEvent(routingIndex, resolvedDirectory, payload)
@@ -1369,6 +1386,8 @@ export function SyncProvider(props: {
             await runBootstrap(attempt + 1)
           } else if (state.session.length === 0) {
             console.warn(`[bootstrap] sessions empty for ${directory} after ${attempt + 1} attempts; giving up`)
+            store.setState({ status: "error" as const })
+            toast.error("Failed to load chat sessions", { description: "Please reload the page or check your connection.", id: `bootstrap-fail-${directory}` })
           }
         }
 
@@ -1409,10 +1428,7 @@ export function SyncProvider(props: {
 
       reconnectResyncing.add(directory)
       void resyncDirectoryAfterReconnect(directory, store, routingIndex)
-        .catch(() => {
-          // Transient failure during resync — next SSE event, transport switch,
-          // or reconnect will catch up.
-        })
+        .catch((error) => { console.error("[sync-context] Resync failed for", directory, error); logClientError(error, { source: "sync-resync", directory }) })
         .finally(() => {
           reconnectResyncing.delete(directory)
         })

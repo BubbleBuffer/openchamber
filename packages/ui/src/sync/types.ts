@@ -40,7 +40,7 @@ export type ProjectMeta = {
 
 /** Per-directory store state */
 export type State = {
-  status: "loading" | "partial" | "complete"
+  status: "loading" | "partial" | "complete" | "error"
   agent: Agent[]
   command: Command[]
   project: string
