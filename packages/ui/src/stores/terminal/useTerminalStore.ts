@@ -451,6 +451,10 @@ export const useTerminalStore = create<TerminalStore>()(
         name: TERMINAL_STORE_NAME,
         // RC-11: Bump version + add migrate when partialize fields change.
         version: 1,
+        migrate: (persistedState, version) => {
+          void version;
+          return persistedState;
+        },
         storage: createJSONStorage(() => getSafeSessionStorage()),
         partialize: (state): PersistedTerminalStoreState => ({
           sessions: Array.from(state.sessions.entries()).map(([directory, dirState]) => [

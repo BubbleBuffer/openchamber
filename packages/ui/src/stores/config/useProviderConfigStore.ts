@@ -1013,6 +1013,10 @@ export const useProviderConfigStore = create<ProviderConfigStore>()(
                 name: "provider-config-store",
                 // RC-11: Bump version + add migrate when partialize fields change.
                 version: 1,
+                migrate: (persistedState, version) => {
+                    void version;
+                    return persistedState;
+                },
                 storage: createJSONStorage(() => getSafeStorage()),
                 partialize: (state) => ({
                     activeDirectoryKey: state.activeDirectoryKey,

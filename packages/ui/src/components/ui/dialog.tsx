@@ -46,7 +46,7 @@ function DialogClose({
   ...props
 }: React.ComponentProps<typeof BaseDialog.Close> & AsChildProps) {
   const r = renderFromAsChild(asChild, children);
-  return <BaseDialog.Close data-slot="dialog-close" {...props} {...r} />
+  return <BaseDialog.Close data-slot="dialog-close" nativeButton={false} {...props} {...r} />
 }
 
 const DialogOverlay = React.forwardRef<

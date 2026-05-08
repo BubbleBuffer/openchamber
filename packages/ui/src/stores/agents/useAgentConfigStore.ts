@@ -695,6 +695,10 @@ export const useAgentConfigStore = create<AgentConfigStore>()(
                 name: "agent-config-store",
                 // RC-11: Bump version + add migrate when partialize fields change.
                 version: 1,
+                migrate: (persistedState, version) => {
+                    void version;
+                    return persistedState;
+                },
                 storage: createJSONStorage(() => getSafeStorage()),
                 partialize: (state) => ({
                     currentAgentName: state.currentAgentName,

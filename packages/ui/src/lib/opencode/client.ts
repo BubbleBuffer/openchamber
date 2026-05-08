@@ -1434,7 +1434,7 @@ class OpencodeService {
         });
         return entries;
       } catch (error) {
-        console.error('Failed to list directory contents:', error);
+        console.warn('Failed to list directory contents:', error);
         throw error;
       }
     }
@@ -1467,7 +1467,7 @@ class OpencodeService {
       });
       return entries;
     } catch (error) {
-      console.error('Failed to list directory contents:', error);
+      console.warn('Failed to list directory contents:', error);
       throw error;
     }
     })();

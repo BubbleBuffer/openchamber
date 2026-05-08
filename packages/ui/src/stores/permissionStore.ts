@@ -227,6 +227,10 @@ export const usePermissionStore = create<PermissionStore>()(
                 name: "permission-store",
                 // RC-11: Bump version + add migrate when partialize fields change.
                 version: 1,
+                migrate: (persistedState, version) => {
+                    void version;
+                    return persistedState;
+                },
                 storage: getStorage(),
                 partialize: (state) => ({ autoAccept: state.autoAccept }),
                 merge: (persistedState, currentState) => {
