@@ -38,6 +38,7 @@ function DropdownMenuTrigger({
   return (
     <BaseMenu.Trigger
       data-slot="dropdown-menu-trigger"
+      nativeButton={false}
       {...props}
       {...r}
     />
