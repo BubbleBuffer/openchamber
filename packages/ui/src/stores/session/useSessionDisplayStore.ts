@@ -18,6 +18,10 @@ export const useSessionDisplayStore = create<SessionDisplayStore>()(
       name: 'session-display-mode',
       // RC-11: Bump version + add migrate when partialize fields change.
       version: 1,
+      migrate: (persistedState, version) => {
+        void version;
+        return persistedState;
+      },
     },
   ),
 );

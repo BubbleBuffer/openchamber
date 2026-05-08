@@ -351,6 +351,10 @@ export const useMcpConfigStore = create<McpConfigStore>()(
         name: 'mcp-config-store',
         // RC-11: Bump version + add migrate when partialize fields change.
         version: 1,
+        migrate: (persistedState, version) => {
+          void version;
+          return persistedState;
+        },
         storage: createJSONStorage(() => getSafeStorage()),
         partialize: (state) => ({ selectedMcpName: state.selectedMcpName }),
       },

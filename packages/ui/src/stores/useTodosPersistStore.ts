@@ -55,6 +55,10 @@ export const useTodosPersistStore = create<TodosPersistState>()(
             {
                 name: 'openchamber-session-todos',
                 version: 1,
+                migrate: (persistedState, version) => {
+                    void version;
+                    return persistedState;
+                },
                 storage: createJSONStorage(() => getSafeStorage()),
                 partialize: (state) => ({ sessions: state.sessions }),
             },

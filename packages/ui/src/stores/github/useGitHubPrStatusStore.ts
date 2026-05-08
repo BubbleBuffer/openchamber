@@ -604,6 +604,10 @@ export const useGitHubPrStatusStore = create<GitHubPrStatusStore>()(
       name: PR_STATUS_STORAGE_KEY,
       // RC-11: Bump version + add migrate when partialize fields change.
       version: 1,
+      migrate: (persistedState, version) => {
+        void version;
+        return persistedState;
+      },
       storage: createJSONStorage(() => getSafeStorage()),
       partialize: (state) => ({
         entries: Object.fromEntries(

@@ -469,6 +469,10 @@ export const useSkillsStore = create<SkillsStore>()(
         name: "skills-store",
         // RC-11: Bump version + add migrate when partialize fields change.
         version: 1,
+        migrate: (persistedState, version) => {
+          void version;
+          return persistedState;
+        },
         storage: createJSONStorage(() => getSafeStorage()),
         partialize: (state) => ({
           selectedSkillName: state.selectedSkillName,
