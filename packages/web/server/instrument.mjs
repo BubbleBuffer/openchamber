@@ -21,4 +21,12 @@ Sentry.init({
   release: process.env.SENTRY_RELEASE ?? undefined,
   sendDefaultPii: false,
   tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1.0,
+  // Enable source map parsing so stack traces resolve original source
+  // locations in Sentry. Bun processes source maps from filesystem.
+  sourceMaps: true,
+  integrations: (integrations) => {
+    // Bun doesn't support util.getSystemErrorMap() — the systemError
+    // integration crashes with TypeError on every invocation.
+    return integrations.filter((i) => i.name !== 'SystemError');
+  },
 });
