@@ -1178,7 +1178,11 @@ const MessageList = React.forwardRef<MessageListHandle, MessageListProps>(({
         });
     }), [baseDisplayMessages, retryOverlay]);
 
-    const { projection, staticTurns, streamingTurn } = useTurnRecords(displayMessages, {
+    const reversedDisplayMessages = React.useMemo(() => {
+        return [...displayMessages].reverse();
+    }, [displayMessages]);
+
+    const { projection, staticTurns, streamingTurn } = useTurnRecords(reversedDisplayMessages, {
         sessionKey,
         showTextJustificationActivity: chatRenderMode === 'sorted',
     });
@@ -1200,7 +1204,7 @@ const MessageList = React.forwardRef<MessageListHandle, MessageListProps>(({
         });
 
         const orderedEntries: RenderEntry[] = [];
-        displayMessages.forEach((message, index) => {
+        reversedDisplayMessages.forEach((message, index) => {
             const turnEntry = turnEntryByUserMessageId.get(message.info.id);
             if (turnEntry) {
                 orderedEntries.push(turnEntry);
@@ -1215,13 +1219,13 @@ const MessageList = React.forwardRef<MessageListHandle, MessageListProps>(({
                 kind: 'ungrouped',
                 key: `msg:${message.info.id}`,
                 message,
-                previousMessage: index > 0 ? displayMessages[index - 1] : undefined,
-                nextMessage: index < displayMessages.length - 1 ? displayMessages[index + 1] : undefined,
+                previousMessage: index > 0 ? reversedDisplayMessages[index - 1] : undefined,
+                nextMessage: index < reversedDisplayMessages.length - 1 ? reversedDisplayMessages[index + 1] : undefined,
             });
         });
 
         return orderedEntries;
-    }), [displayMessages, projection.lastTurnId, projection.ungroupedMessageIds, staticTurns]);
+    }), [reversedDisplayMessages, projection.lastTurnId, projection.ungroupedMessageIds, staticTurns]);
 
     const trailingStreamingEntry = React.useMemo<RenderEntry | undefined>(() => {
         if (streamingTurn) {
@@ -1237,7 +1241,7 @@ const MessageList = React.forwardRef<MessageListHandle, MessageListProps>(({
             return undefined;
         }
 
-        const lastMessage = displayMessages[displayMessages.length - 1];
+        const lastMessage = reversedDisplayMessages[reversedDisplayMessages.length - 1];
         if (!lastMessage || !projection.ungroupedMessageIds.has(lastMessage.info.id)) {
             return undefined;
         }
@@ -1246,10 +1250,10 @@ const MessageList = React.forwardRef<MessageListHandle, MessageListProps>(({
             kind: 'ungrouped',
             key: `msg:${lastMessage.info.id}`,
             message: lastMessage,
-            previousMessage: displayMessages.length > 1 ? displayMessages[displayMessages.length - 2] : undefined,
+            previousMessage: reversedDisplayMessages.length > 1 ? reversedDisplayMessages[reversedDisplayMessages.length - 2] : undefined,
             nextMessage: undefined,
         } satisfies RenderEntry;
-    }, [displayMessages, projection.lastTurnId, projection.ungroupedMessageIds, streamingTurn]);
+    }, [reversedDisplayMessages, projection.lastTurnId, projection.ungroupedMessageIds, streamingTurn]);
 
     if (trailingStreamingEntry) {
         streamPerfCount('ui.message_list.render.streaming');
@@ -1300,6 +1304,7 @@ const MessageList = React.forwardRef<MessageListHandle, MessageListProps>(({
         useAnimationFrameWithResizeObserver: true,
         overscan: MESSAGE_LIST_OVERSCAN,
         enabled: shouldVirtualizeHistory,
+        initialOffset: 0,
     });
 
     React.useEffect(() => {
@@ -1416,16 +1421,6 @@ const MessageList = React.forwardRef<MessageListHandle, MessageListProps>(({
         return indexMap;
     }, [allEntries]);
 
-    const turnIndexMap = React.useMemo(() => {
-        const indexMap = new Map<string, number>();
-        allEntries.forEach((entry, index) => {
-            if (entry.kind === 'turn') {
-                indexMap.set(entry.turn.turnId, index);
-            }
-        });
-        return indexMap;
-    }, [allEntries]);
-
     const findMessageElement = React.useCallback((messageId: string): HTMLElement | null => {
         const container = resolveScrollContainer();
         if (!container) {
@@ -1444,24 +1439,6 @@ const MessageList = React.forwardRef<MessageListHandle, MessageListProps>(({
         return true;
     }, [historyEntries.length, historyVirtualizer, shouldVirtualizeHistory]);
 
-    const scrollMessageElementIntoView = React.useCallback((messageId: string, behavior: ScrollBehavior = 'auto') => {
-        const container = resolveScrollContainer();
-        if (!container) {
-            return false;
-        }
-        const messageElement = findMessageElement(messageId);
-        if (!messageElement) {
-            return false;
-        }
-
-        const containerRect = container.getBoundingClientRect();
-        const messageRect = messageElement.getBoundingClientRect();
-        const offset = 50;
-        const top = messageRect.top - containerRect.top + container.scrollTop - offset;
-        container.scrollTo({ top, behavior });
-        return true;
-    }, [findMessageElement, resolveScrollContainer]);
-
     React.useEffect(() => {
         if (!ref) {
             return;
@@ -1470,42 +1447,36 @@ const MessageList = React.forwardRef<MessageListHandle, MessageListProps>(({
         const handle: MessageListHandle = {
             scrollToTurnId: (turnId: string, options?: { behavior?: ScrollBehavior }) => {
                 const behavior = options?.behavior ?? 'auto';
-                const index = turnIndexMap.get(turnId);
-                if (index === undefined) {
-                    return false;
-                }
-
-                const targetIsTail = trailingStreamingEntry !== undefined && index >= historyEntries.length;
-                if (targetIsTail) {
-                    return false;
-                }
-
                 const container = resolveScrollContainer();
                 if (!container) {
                     return false;
                 }
                 const turnElement = container.querySelector<HTMLElement>(`[data-turn-id="${turnId}"]`);
-                if (!turnElement) {
-                    return scrollHistoryIndexIntoView(index, behavior);
+                if (turnElement) {
+                    turnElement.scrollIntoView({ behavior, block: 'nearest' });
+                    return true;
                 }
-                turnElement.scrollIntoView({ behavior, block: 'start' });
-                return true;
+                const reversedIndex = historyEntries.findIndex(
+                    (e) => e.kind === 'turn' && e.turn.turnId === turnId,
+                );
+                if (reversedIndex !== -1) {
+                    return scrollHistoryIndexIntoView(reversedIndex, behavior);
+                }
+                return false;
             },
 
             scrollToMessageId: (messageId: string, options?: { behavior?: ScrollBehavior }) => {
                 const behavior = options?.behavior ?? 'auto';
-                const index = messageIndexMap.get(messageId);
-                if (index === undefined) {
+                const container = resolveScrollContainer();
+                if (!container) {
                     return false;
                 }
-
-                const targetIsTail = trailingStreamingEntry !== undefined && index >= historyEntries.length;
-                if (targetIsTail) {
-                    return false;
+                const messageElement = container.querySelector<HTMLElement>(`[data-message-id="${messageId}"]`);
+                if (messageElement) {
+                    messageElement.scrollIntoView({ behavior, block: 'nearest' });
+                    return true;
                 }
-
-                return scrollMessageElementIntoView(messageId, behavior)
-                    || scrollHistoryIndexIntoView(index, behavior);
+                return false;
             },
 
             captureViewportAnchor: () => {
@@ -1592,7 +1563,7 @@ const MessageList = React.forwardRef<MessageListHandle, MessageListProps>(({
         return () => {
             objectRef.current = null;
         };
-    }, [findMessageElement, historyEntries.length, messageIndexMap, resolveScrollContainer, scrollHistoryIndexIntoView, scrollMessageElementIntoView, trailingStreamingEntry, turnIndexMap, ref]);
+    }, [findMessageElement, historyEntries, messageIndexMap, resolveScrollContainer, scrollHistoryIndexIntoView, ref]);
 
     const disableFadeIn = false;
 
