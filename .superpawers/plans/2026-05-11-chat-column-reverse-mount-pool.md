@@ -1526,17 +1526,10 @@ git commit -m "feat(chat): delete useChatScrollManager, wire useUserScrollDetect
 
 **Files:**
 - Modify: `packages/ui/src/components/chat/SessionMount.tsx`
-- Modify: `packages/ui/src/components/chat/hooks/useChatTimelineController.ts`
 
-**Rationale:** With 25 messages per page, load-more should trigger more aggressively — within 5 estimated entry heights of the top edge.
+**Rationale:** With 25 messages per page, load-more should trigger more aggressively — within 5 estimated entry heights of the top edge. In column-reverse, "near the visual top" (where oldest messages are) means `scrollTop` is close to `scrollHeight - clientHeight`.
 
-- [ ] **Step 1: Update load-more trigger in timeline controller**
-
-In `useChatTimelineController.ts`, look at `fetchOlderHistory` and `loadEarlier`. The current logic doesn't have an explicit scroll-position threshold — it just checks `hasMoreAboveTurns`. The actual scroll-driven load-more is probably in `MessageList` or triggered by user interaction.
-
-Looking at `MessageList.tsx`, `LoadOlderButton` is rendered at the top. With column-reverse, "top" is visually the start of history (oldest messages). The user scrolls up (positive `scrollTop`) to reach older messages.
-
-The load-more trigger should be automatic on scroll, not just via button. In `SessionMount.tsx`, add a scroll-driven load-more effect. In column-reverse, "near the visual top" (where oldest messages are) means `scrollTop` is close to `scrollHeight - clientHeight`. The distance from visual top: `scrollHeight - scrollTop - clientHeight`.
+- [ ] **Step 1: Add scroll-driven automatic load-more effect to SessionMount**
 
 ```typescript
 React.useEffect(() => {
