@@ -285,6 +285,35 @@ export const SessionMount = React.memo(({
     });
     const { loadEarlier, resumeToBottomInstant } = timelineController;
 
+    // Refs for stable scroll listener deps (timelineController is not memoized)
+    const canLoadEarlierRef = React.useRef(timelineController.historySignals.canLoadEarlier);
+    const isLoadingOlderRef = React.useRef(timelineController.isLoadingOlder);
+    const loadEarlierRef = React.useRef(timelineController.loadEarlier);
+
+    React.useEffect(() => {
+        canLoadEarlierRef.current = timelineController.historySignals.canLoadEarlier;
+        isLoadingOlderRef.current = timelineController.isLoadingOlder;
+        loadEarlierRef.current = timelineController.loadEarlier;
+    });
+
+    // Aggressive automatic load-more: trigger within 5 estimated entry heights of top edge
+    React.useEffect(() => {
+        if (!isActive) return;
+        const container = scrollRef.current;
+        if (!container) return;
+
+        const handleScroll = () => {
+            const distanceFromTop = container.scrollHeight - container.scrollTop - container.clientHeight;
+            const threshold = 5 * 160; // 5 estimated entry heights (160px default)
+            if (distanceFromTop < threshold && canLoadEarlierRef.current && !isLoadingOlderRef.current) {
+                void loadEarlierRef.current();
+            }
+        };
+
+        container.addEventListener('scroll', handleScroll, { passive: true });
+        return () => container.removeEventListener('scroll', handleScroll);
+    }, [isActive, scrollRef]);
+
     const runLatestInstantResume = React.useCallback(async () => {
         await resumeToBottomInstant();
     }, [resumeToBottomInstant]);
