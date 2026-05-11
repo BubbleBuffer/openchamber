@@ -17,7 +17,7 @@ import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { generateSyntaxTheme } from '@/lib/theme/syntaxThemeGenerator';
 import { cn } from '@/lib/utils';
 
-import type { AnimationHandlers, ContentChangeReason } from '@/hooks/useChatScrollManager';
+import type { AnimationHandlers, ContentChangeReason } from '@/components/chat/timeline/types';
 import MessageHeader from './message/MessageHeader';
 import MessageBody from './message/MessageBody';
 import type { AgentMentionInfo } from './message/types';

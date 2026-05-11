@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import type { TurnActivityRecord as TurnActivityPart } from '../../lib/turns/types';
 import type { ToolPart as ToolPartType } from '@/lib/opencode/client';
 import type { StreamPhase } from '../types';
-import type { ContentChangeReason } from '@/hooks/useChatScrollManager';
+import type { ContentChangeReason } from '@/components/chat/timeline/types';
 import type { ToolPopupContent } from '../types';
 import ToolPart from './ToolPart';
 import { MinDurationShineText } from './MinDurationShineText';

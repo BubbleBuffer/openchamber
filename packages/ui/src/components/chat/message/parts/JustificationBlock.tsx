@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Part } from '@/lib/opencode/client';
-import type { ContentChangeReason } from '@/hooks/useChatScrollManager';
+import type { ContentChangeReason } from '@/components/chat/timeline/types';
 import { useUIStore } from '@/stores/useUIStore';
 import { ReasoningTimelineBlock } from './ReasoningPart';
 

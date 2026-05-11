@@ -5,7 +5,7 @@ import { measureElement as measureVirtualElement, type VirtualItem, useVirtualiz
 import ChatMessage from './ChatMessage';
 import { areOptionalRenderRelevantMessagesEqual, areRelevantTurnGroupingContextsEqual, areRenderRelevantMessagesEqual } from './message/renderCompare';
 import TurnItem from './components/TurnItem';
-import type { AnimationHandlers, ContentChangeReason } from '@/hooks/useChatScrollManager';
+import type { AnimationHandlers, ContentChangeReason } from '@/components/chat/timeline/types';
 import { filterSyntheticParts } from '@/lib/messages/synthetic';
 import type { ChatMessageEntry, TurnRecord, TurnGroupingContext } from './lib/turns/types';
 import { useTurnRecords } from './hooks/useTurnRecords';
