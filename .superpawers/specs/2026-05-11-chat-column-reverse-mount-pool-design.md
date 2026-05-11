@@ -63,16 +63,38 @@ ChatView
 
 `useChatScrollManager.ts` (~400 lines). Replaced by `useLoadMoreCompensation` + `useUserScrollDetector` (combined ~80 lines).
 
+**AnimationHandlers and ContentChangeReason migration:** `useChatScrollManager.ts` exports `AnimationHandlers` and `ContentChangeReason` imported by 10 files (`MessageList.tsx`, `ChatMessage.tsx`, `ProgressiveGroup.tsx`, `ReasoningPart.tsx`, `JustificationBlock.tsx`, `AssistantTextPart.tsx`, `ToolPart.tsx`, `MessageBody.tsx`, `TurnActivity.tsx`, `ChatContainer.tsx`). These types move to a new shared file: `packages/ui/src/components/chat/timeline/types.ts`. The scroll manager's animation wiring (`onAnimationStart`, `onAnimationComplete`) is re-homed: the scroll compensation hook exposes animation callbacks; the user scroll detector hooks into wheel/touch start. All existing imports update paths.
+
+**MessageFreshnessDetector migration:** `useChatScrollManager.ts:508` calls `MessageFreshnessDetector.getInstance().recordSessionStart(currentSessionId)`. This call moves to `ChatContainer`'s session-switch effect, decoupled from scroll logic.
+
 Deleted logic and why it's unnecessary with `column-reverse`:
 
 | Deleted | Why unnecessary |
 |---|---|
-| `scrollPinnedToBottom` / `scrollToBottomInternal` | Browser handles anchoring. New content extends downward naturally. |
+| `scrollPinnedToBottom` / `scrollToBottomInternal` | Browser anchors naturally via column-reverse + overflow-anchor. |
 | `followMode` / `smooth` | No JS scrolling needed. |
 | `isPinned` / `updatePinnedState` | Replaced by single `userScrolledUp` boolean. |
 | `PIN_THRESHOLD_RATIO` distance-from-bottom detection | Replaced by explicit toggle: user scrolled up or not. |
 | `ResizeObserver` → `scrollToBottom` on content growth | Content growth pushes up in column-reverse — browser handles it. |
 | `showScrollButton` complex threshold logic | Trivial: show when `userScrolledUp && scrollTop !== 0`. |
+
+### ScrollShadow Adaptation
+
+`ChatContainer.tsx:123-131` wraps the viewport in a `ScrollShadow` component that computes overflow visibility using `scrollTop` and `clientHeight`. With `column-reverse`, `scrollTop = 0` means "at bottom" — the shadow directions flip.
+
+**Fix:** ScrollShadow receives a `reversed` prop. When true, the overflow check flips: the "top" shadow shows when `scrollTop > 0` (user scrolled up from bottom), and the "bottom" shadow shows when scrolled past the start. The existing `checkOverflow` function (`ScrollShadow.tsx:96-103`) is parameterized for this.
+
+### Mobile / Touch / Keyboard
+
+The current `useChatScrollManager` handles mobile `touchstart`/`touchmove` for scroll-intent detection. In `column-reverse`:
+
+- **Touch scroll intent:** `useUserScrollDetector` listens for `wheel` + `touchmove` events. A touch gesture scrolling upward (fingers move down on screen, content moves up) sets `userScrolledUp = true`. Same for trackpad/mouse wheel upward.
+- **Soft keyboard:** When the keyboard opens on mobile (via the chat input focus), the viewport-height changes. In `column-reverse`, the browser handles this naturally — content stays anchored at the bottom. No JavaScript keyboard-handling needed.
+- **Safari/WebKit:** Known issues with `column-reverse` + keyboard viewport resize. Mitigation: on `visualViewport.resize` event, if `!userScrolledUp`, force `scrollTop = 0` to re-anchor. This is a single `scrollTo` call in the detector, not the full ResizeObserver loop from the old scroll manager.
+
+### OverlayScrollbar
+
+Currently one `OverlayScrollbar` per `ChatViewport` (`ChatContainer.tsx:169`). With 10 mounts, there would be 10 instances. Each `SessionMount` renders its own `OverlayScrollbar`. Only the active mount's scrollbar is visible (hidden mounts have `opacity: 0`). This is fine — each mount is a self-contained viewport with independent scroll state. No sharing needed.
 
 ## Data Flow
 
@@ -82,10 +104,10 @@ Deleted logic and why it's unnecessary with `column-reverse`:
 user clicks session
 → setCurrentSession(sessionId)
 → ChatContainer: if sessionId in mountPool:
-    → swap activeSession → new. (DOM-only, opacity swap, no re-render)
+    → swap isActive flag. (no React mount cycle, DOM stays attached)
     → no syncSession call (data + DOM already exist)
 → if sessionId NOT in mountPool:
-    → if pool.size >= 10: evict least-recently-accessed, prefer non-streaming
+    → if pool.size >= 10: evict least-recent, prefer non-streaming
     → mount new SessionMount for sessionId
     → sync.syncSession(sessionId) if not cached in sync store
     → render into column-reverse (bottom-anchored by default)
@@ -96,23 +118,27 @@ user clicks session
 ```typescript
 type SessionMountState = {
   id: string;
-  order: number;        // monotonically increasing access counter for LRU
   isActive: boolean;
-  isStreaming: boolean; // checked during eviction
-  mountedAt: number;    // Date.now()
 };
 ```
 
+The pool uses a `Map<sessionId, SessionMountState>`. LRU tracking uses JavaScript `Map` insertion order — on access, delete and re-insert the entry (moving it to the end). The oldest-by-access entry is always `Map.keys().next().value`. No manual `order` counter needed.
+
 ### Eviction Policy
 
-1. Pick candidate with lowest `order` (least recently accessed).
-2. Never evict the session being activated.
-3. Prefer non-streaming sessions.
-4. If all are streaming, evict the oldest-by-order anyway — streaming state lives in the sync store and will reconcile on re-mount.
+1. If pool size < 10, no eviction.
+2. If pool is full and a new session needs to mount:
+   a. Iterate Map in insertion order (oldest first).
+   b. Skip the incoming session ID.
+   c. Pick the first non-streaming session (read streaming state from the sync store imperatively: `useStreamingStore.getState().isStreaming(sessionId)`).
+   d. If all are streaming, pick the oldest by insertion order.
+3. Unmount the evicted `SessionMount`. Sync store data is unaffected (LRU 8 cache handles that separately).
 
 ### Streaming in Hidden Mounts
 
-Non-active sessions continue to receive SSE events through the sync store. The hidden `SessionMount` re-renders at full render cost. Optimization: extend the existing `MessageRow` `React.memo` comparator to bail out when session is not active. This prevents wasted virtualizer measurements for off-screen views.
+Non-active sessions continue receiving SSE events through the sync layer. The hidden `SessionMount` re-renders on store changes — React re-renders, not remounts. Cost is minimized by the virtualizer (only visible-area measurements) and by extending `MessageRow`'s `React.memo` comparator to bail out when the owning session is not active. The `isActive` flag is passed via React context (`SessionMount` provides `ActiveSessionContext`) so `MessageRow` reads it without prop-drilling through 5+ layers.
+
+The spec says "DOM-only, opacity swap" — precise wording: no React mount/unmount cycle occurs. Re-renders from store updates still fire, but the DOM stays attached. This eliminates the loading flash and preserves virtualizer measurements.
 
 ### Sync Layer — No Changes
 
@@ -128,53 +154,64 @@ The existing sync layer's LRU 8 session cache + SSE keep data current. The mount
   flex-direction: column-reverse;
   overflow-y: auto;
   height: 100%;
-  scroll-behavior: auto;
-  overflow-anchor: none;
 }
 ```
 
-- `scroll-behavior: auto` — no smooth scrolling (fights column-reverse anchoring).
-- `overflow-anchor: none` — existing override, keeps browser from hijacking anchor.
-- Scroll position 0 = bottom of content. Negative values = scrolled up toward older messages.
+- No `scroll-behavior: smooth` — smooth scrolling fights column-reverse anchoring.
+- **Remove `overflow-anchor: none`** (currently set in `ChatContainer.tsx:50`). The browser's `overflow-anchor` is what gives column-reverse its natural bottom-pinning behavior. Keeping `none` defeats the purpose.
+- Scroll position 0 = bottom of content (newest). Positive scrollTop = scrolled up toward older messages.
+- For empty sessions: use `justify-content: flex-end` so the input area sits at the bottom.
 
 ### Virtualizer Integration
 
-`@tanstack/react-virtual` works with `column-reverse` with two adjustments:
+`@tanstack/react-virtual` works with `column-reverse` with these adjustments:
 
-1. **`initialOffset: 0`** — the virtualizer starts at scroll position 0, which is the bottom in column-reverse. Messages render newest-first.
-2. **`scrollToFn` wrapper** — the virtualizer's default `scrollToFn` computes `element.scrollTop` offsets. With column-reverse, scrollTop is negative when scrolled up. The wrapper translates offsets for the reversed coordinate space.
+1. **Data order: oldest-to-newest.** The message array stays in chronological order (index 0 = oldest). In `column-reverse`, flex-end is index 0 (the first flex child renders at the scroll-bottom). Users see newest messages first because the browser scrolls to flex-end, and the virtualizer's `initialOffset: 0` aligns with position 0 = bottom.
 
-The virtualizer's lazy rendering still works — only visible + overscan messages are rendered. Prepending (load-more) adds entries at the logical top, which is the scroll-end in column-reverse. The load-more scroll compensation adapts to this.
+2. **`initialOffset: 0`** — the virtualizer starts at scroll position 0 (bottom). No `scrollToIndex` needed on mount.
+
+3. **`scrollToFn` wrapper** — `@tanstack/react-virtual` accepts `scrollToFn: (offset, options) => element.scrollTo({ top: offset, ...options })`. In `column-reverse`, `offset` is always non-negative (browser normalizes). The virtualizer's `scrollToIndex` computes positive offsets. No transformation needed — the existing contract already works.
+
+4. **`scrollToIndex` / `scrollToTurn` / `scrollToMessage`** — existing code (`MessageList.tsx:1443`) uses `historyVirtualizer.scrollToIndex(index, { align: 'start' })`. "Start" means the start of the flex axis (flex-end = oldest messages). To scroll to a specific message, `align: 'end'` targets the visual top (newer messages). The `scrollToTurn`/`scrollToMessage` callers in `useChatTimelineController` need their `align` flipped: `'start' → 'end'`, `'end' → 'start'`.
+
+5. **Hash-based scroll targets** — `ChatContainer.tsx:597-600` detects `window.location.hash` and skips auto-scroll. The hash target detection stays; the scroll-to-target logic uses `scrollToIndex` with the flipped `align` from point 4.
+
+The virtualizer's lazy rendering still works — only visible + overscan messages are rendered. Prepending (load-more) adds entries at index 0 (logical top/oldest), which is the flex-end in column-reverse. The load-more scroll compensation (above) handles the position fix.
 
 ### Load-More Scroll Compensation
 
-When older messages load via prepend, they're added at the flex-end (scroll-bottom in column-reverse). Without compensation, the user jumps. Solution: the existing `useLayoutEffect` snapshot pattern (`useChatTimelineController.ts:276-300`) is adapted for the reversed space.
+When older messages load via prepend, they're added at the flex-end (the scroll-top edge in column-reverse). The viewport content height grows at the top. Without compensation, the user's view jumps. Solution: snapshot scroll position before prepend, restore after DOM commit.
+
+In `column-reverse`, `scrollTop` is 0 at the bottom and **positive** when scrolled up (browsers normalize it). Content prepend adds height at the flex-end (start of the flex axis), which shifts the viewport upward unless compensated:
 
 ```
 Before prepend:
-  snapshot scrollHeight + scrollTop
+  snapshot: scrollHeight, scrollTop
 After prepend DOM commit (in useLayoutEffect, before paint):
-  restore: scrollTop = newScrollHeight - oldScrollHeight + oldScrollTop
+  heightAdded = newScrollHeight - oldScrollHeight
+  scrollTop = oldScrollTop + heightAdded
 ```
 
-This is direction-agnostic math — same principle as current code, just with `column-reverse` scroll values.
+If user was scrolled up 300px and 200px of content is prepended, the viewport shifts 200px upward. Adding `heightAdded` to scrollTop compensates so the user stays at the same logical position.
+
+This replaces the current compensation in `useChatTimelineController.ts:276-300`. The snapshot/restore `useLayoutEffect` pattern is reused — only the math changes.
 
 ### User Scroll Interaction
 
 ```
-wheel/touch event (delta < 0, scrolling up in reversed space)
+onScroll event: scrollTop > 0 (user scrolled up from bottom in column-reverse)
 → set userScrolledUp = true
 → jump-to-newest button appears
 
-scrollTop reaches 0 (bottom)
+scrollTop reaches 0 (bottom/anchor point)
 → set userScrolledUp = false
-→ button hides, browser resumes natural anchoring
+→ button hides
 
 jump-to-newest button click
 → scrollTo({ top: 0, behavior: 'smooth' })
 ```
 
-No `PIN_THRESHOLD_RATIO`, no distance-from-bottom math, no ResizeObserver scroll handler. A single boolean flag and a button.
+Detection is event-agnostic: check `scrollTop > 0` rather than trying to parse wheel delta or touch direction per-event. The scroll event already reflects the final position. A single `onScroll` handler sets the boolean. No `PIN_THRESHOLD_RATIO`, no ResizeObserver scroll handler.
 
 ## Message Loading
 
@@ -185,6 +222,8 @@ No `PIN_THRESHOLD_RATIO`, no distance-from-bottom math, no ResizeObserver scroll
 | `MESSAGE_PAGE_SIZE` | 200 | 25 |
 
 Located in `packages/ui/src/sync/types.ts` or `use-sync.ts` (wherever the constant is defined).
+
+This reduction is coupled to the mount pool: with 10 sessions mounted, 200 messages each would be 2000 entries — wasteful since the virtualizer only renders ~15 at a time. 25 per session keeps the working set small while providing enough history context for load-more triggers. Coupled with the virtualizer, the user sees no difference — they still scroll up to load more on demand.
 
 ### Load-More Threshold
 
@@ -206,13 +245,13 @@ Each step is independently testable:
 
 ### Step 3: Convert ChatViewport to column-reverse
 **Files:** `ChatViewport` component, virtualizer config
-**Change:** Flex direction switch. `initialOffset: 0`. `scrollToFn` wrapper. Keep `overflow-anchor: none` (prevents browser scroll anchoring from interfering).
-**Verify:** Messages render bottom-first. New messages anchor naturally. No scroll flash.
+**Change:** Flex direction switch. Remove `overflow-anchor: none` (let browser handle pinning). `initialOffset: 0`. Adapt `scrollToIndex` calls to flip `align` (`'start'` ↔ `'end'`). Adapt ScrollShadow with `reversed` prop.
+**Verify:** Messages render bottom-first. New messages anchor naturally. No scroll flash. ScrollShadow shows correct shadows.
 
 ### Step 4: Delete Scroll Manager, Build Replacements
-**Files:** Delete `useChatScrollManager.ts` (all pinning/follow-mode/ResizeObserver scroll/threshold logic). Keep `useChatTimelineController.ts` load-more compensation — adapt for column-reverse space. New: `useUserScrollDetector.ts`.
-**Change:** Strip out all pinning/follow-mode/ResizeObserver scroll/threshold logic. Implement simple user-scrolled-up boolean + jump-to-newest button. Adapt the existing `useLayoutEffect` prepend compensation from `useChatTimelineController` into a standalone `useLoadMoreCompensation` hook that handles column-reverse scroll math.
-**Verify:** New messages auto-anchor at bottom. Manual scroll up disables anchoring. Jump-to-newest button works. Load-more scroll compensation works.
+**Files:** Delete `useChatScrollManager.ts`. Create `types.ts` (AnimationHandlers, ContentChangeReason migration). Create `useUserScrollDetector.ts`. Adapt `useChatTimelineController.ts` load-more compensation for column-reverse math.
+**Change:** Move `AnimationHandlers`/`ContentChangeReason` to shared types file. Update all 10 downstream imports. Implement `useUserScrollDetector` (wheel + touchmove detection, single boolean, jump-to-newest on scrollTop=0). Move `MessageFreshnessDetector.recordSessionStart()` to `ChatContainer` session-switch effect. Adapt load-more `useLayoutEffect` formula: `scrollTop = oldScrollTop + heightAdded`.
+**Verify:** New messages auto-anchor at bottom. Manual scroll up via mouse/touch disables anchoring. Jump-to-newest button works. Load-more scroll compensation works. No <25-message edge case jumps.
 
 ### Step 5: Tighten Load-More Threshold
 **Files:** Virtualizer config / timeline controller
@@ -220,19 +259,20 @@ Each step is independently testable:
 **Verify:** Scrolling up loads more messages seamlessly. No content gap.
 
 ### Step 6: Polish
-**Files:** `MessageRow` memo comparator (extend), empty state handling
-**Change:** Bail out of virtualizer measurement when `!isActive`. Handle edge cases: empty sessions, sessions with < 25 messages, session being evicted mid-stream.
-**Verify:** Hidden sessions don't cause measurable layout overhead. Edge cases handled gracefully.
+**Files:** `MessageRow` memo comparator, `ActiveSessionContext`, `ChatViewport` empty state
+**Change:** Add `ActiveSessionContext` provider in `SessionMount`. Extend `MessageRow` `React.memo` comparator to skip rendering when `!isActive` (read via context). Handle empty sessions: `justify-content: flex-end` keeps input at bottom. Verify safe-area and keyboard on mobile via visualViewport resize handling.
+**Verify:** Hidden sessions don't cause measurable layout overhead. Empty sessions render correctly. Mobile keyboard doesn't cause scroll jumps. Safari/WebKit column-reverse + keyboard works.
 
 ## Risks & Mitigations
 
 | Risk | Mitigation |
 |---|---|
 | `@tanstack/react-virtual` + `column-reverse` has unknown edge cases | Test first in step 3. Fallback: `transform: scaleY(-1)` container + children (Approach C lite) or keep DOM order with `scrollToIndex` at mount. |
-| Mount pool increases memory (10 sessions × DOM trees) | 10 × 25 messages is negligible (~250 entries in store, ~150 visible measurements in virtualizer). Measure with `performance.mark` on mount/unmount. |
-| Streaming in hidden sessions causes wasted renders | Extend existing `MessageRow` `React.memo` comparator to bail out when `!isActive`. Already has a custom comparator (`areRenderRelevantMessagesEqual`). |
-| Load-more scroll compensation bugs in column-reverse | The `useLayoutEffect` snapshot pattern is direction-agnostic. Test with large conversation history. |
-| Safari `overflow-anchor` behavior differs from Chrome | Test on WebKit. Safari has known issues with `column-reverse` overflow. Mitigation: keep `overflow-anchor: none` and rely fully on our approach. |
+| Mount pool increases memory (10 sessions × DOM trees) | 10 × 25 messages is negligible (~250 entries in store, ~150 visible measurements in virtualizer). Pool size of 10 covers typical usage (switching between a handful of active sessions). Reduce to 5 if memory pressure observed. Measure with `performance.mark` on mount/unmount. |
+| Streaming in hidden sessions causes wasted renders | Use `ActiveSessionContext` — `MessageRow` `React.memo` comparator bails out when `!isActive`. |
+| Load-more scroll compensation bugs in column-reverse | Formula: `scrollTop = oldScrollTop + heightAdded`. Test with large conversation history. |
+| Safari/WebKit `column-reverse` + keyboard viewport resize | Detect via `visualViewport.resize`. If `!userScrolledUp`, force `scrollTop = 0` to re-anchor. Test on iOS Safari. |
+| `AnimationHandlers` / `ContentChangeReason` downstream breakage | All 10 consumers update imports to `types.ts`. Catch at build time via TypeScript. |
 
 ## Non-Goals
 
@@ -240,5 +280,5 @@ Each step is independently testable:
 - Changing the virtualizer library (`@tanstack/react-virtual` stays).
 - Changing turn grouping or message normalization.
 - Changing the SSE/event pipeline.
-- PWA/mobile-specific changes (covered by existing mobile-first patterns).
+- Mobile/PWA layout changes beyond scroll/keyboard behavior (existing mobile-first patterns handle responsive layout).
 - VS Code or Desktop shell changes (shared UI layer only).
