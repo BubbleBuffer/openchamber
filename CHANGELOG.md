@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.9.10] - 2026-05-11
+
+- Sentry: fixed source map uploads by setting `NODE_ENV=production` during build and pointing the plugin at the correct EU-region Sentry host (`de.sentry.io`).
+
+## [1.9.9] - 2026-05-11
+
+- Sentry: added release name fallback to package version in vite plugin and server SDK, and wired `SENTRY_ORG`/`SENTRY_PROJECT`/`SENTRY_AUTH_TOKEN` env vars into the release workflow.
+
 ## [1.9.8] - 2026-04-22
 
 - Sessions/Reliability: fixed parent-child session sync during reconnects and navigation, so status and progress stay aligned in complex session trees (thanks to @jwcrystal).
