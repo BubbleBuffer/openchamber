@@ -126,7 +126,7 @@ git commit -m "feat(chat): extract AnimationHandlers and ContentChangeReason to 
 **Files:**
 - Modify: `packages/ui/src/components/chat/MessageList.tsx:8`
 - Modify: `packages/ui/src/components/chat/ChatMessage.tsx:20`
-- Modify: `packages/ui/src/components/chat/MessageBody.tsx:21`
+- Modify: `packages/ui/src/components/chat/message/MessageBody.tsx:21`
 - Modify: `packages/ui/src/components/chat/components/TurnActivity.tsx:7`
 - Modify: `packages/ui/src/components/chat/message/parts/AssistantTextPart.tsx:5`
 - Modify: `packages/ui/src/components/chat/message/parts/ProgressiveGroup.tsx:7`
@@ -491,7 +491,7 @@ export function useSessionMountPool(): UseSessionMountPoolResult {
 
   return {
     mountedSessions,
-    activeSessionId: activeSessionIdRef.current,
+    activeSessionId: Array.from(mountedSessions.values()).find((s) => s.isActive)?.id ?? null,
     activateSession,
   };
 }
@@ -773,9 +773,10 @@ const DEFAULT_RETRY_MESSAGE = 'Quota limit reached. Retrying automatically.';
 type SessionMountProps = {
   sessionId: string;
   isActive: boolean;
+  onScrollStateChange?: (state: { userScrolledUp: boolean; scrollToBottom: () => void }) => void;
 };
 
-export const SessionMount = React.memo(({ sessionId, isActive }: SessionMountProps) => {
+export const SessionMount = React.memo(({ sessionId, isActive, onScrollStateChange }: SessionMountProps) => {
   const sync = useSync();
   const { isMobile } = useDeviceInfo();
   const isExpandedInput = useUIStore((state) => state.isExpandedInput);
@@ -1040,23 +1041,58 @@ Remove the following from `ChatContainer` (they move into `SessionMount`):
 5. Render `SessionMount` instances
 6. Render `ChatInput` and `ScrollToBottomButton`
 
-- [ ] **Step 2: Add session-switch effect with MessageFreshnessDetector**
+- [ ] **Step 2: Add session-switch effect with MessageFreshnessDetector and hash detection**
 
-In `ChatContainer`, add:
+In `ChatContainer`, add the session-switch effect. Preserve the existing hash-based scroll target detection from `ChatContainer.tsx:597-600`:
 
 ```typescript
+const lastScrolledSessionRef = React.useRef<string | null>(null);
+
 React.useEffect(() => {
   if (!currentSessionId) return;
   activateSession(currentSessionId);
   MessageFreshnessDetector.getInstance().recordSessionStart(currentSessionId);
+  
+  // Hash-based scroll target: skip auto-scroll-to-bottom when URL has a hash.
+  // The actual scroll-to-target is handled by SessionMount's timeline controller.
+  if (typeof window !== 'undefined' && window.location.hash.length > 0) {
+    lastScrolledSessionRef.current = currentSessionId;
+    return;
+  }
+  lastScrolledSessionRef.current = currentSessionId;
 }, [currentSessionId, activateSession]);
 ```
 
+The `SessionMount` component will receive a `skipInitialScroll` prop derived from `lastScrolledSessionRef` in a future task, but for now just track the hash state.
+
 - [ ] **Step 3: Update ChatContainer render to use mount pool**
 
-Replace the entire render block (lines 766–810 and earlier conditional returns) with:
+Replace the render block with mount pool. **Preserve the no-session early returns** — `ChatContainer.tsx:641-668` has `ChatEmptyState` and draft-composer branches for when `!currentSessionId`:
 
 ```tsx
+// No session selected — show empty state or draft composer
+if (!currentSessionId && !draftOpen) {
+  return (
+    <div className="relative flex flex-col h-full bg-background">
+      {returnToParentButton}
+      <ChatEmptyState />
+    </div>
+  );
+}
+
+if (!currentSessionId && draftOpen) {
+  return (
+    <div className="relative flex flex-col h-full bg-background">
+      {returnToParentButton}
+      <div className="flex-1" />
+      <div className="relative z-10 bg-background">
+        <ChatInput scrollToBottom={() => {}} />
+      </div>
+    </div>
+  );
+}
+
+// Active session — render mount pool
 return (
   <div className="relative flex flex-col h-full bg-background">
     {returnToParentButton}
@@ -1087,9 +1123,9 @@ return (
 
 The `ScrollToBottomButton` and `ChatInput` will be properly wired in Task 14 when `useUserScrollDetector` is connected.
 
-- [ ] **Step 4: Verify type-check**
+- [ ] **Step 4: Verify type-check and lint**
 
-Run: `bun run type-check`
+Run: `bun run type-check && bun run lint`
 Expected: No errors. `ChatContainer` is now simplified. Some props to `ScrollToBottomButton` and `ChatInput` are temporarily no-ops.
 
 - [ ] **Step 5: Commit**
@@ -1214,6 +1250,39 @@ In `MessageList.tsx`, update `scrollHistoryIndexIntoView` (line 1437–1445):
 ```
 
 Change `align: 'start'` to `align: 'center'`.
+
+- [ ] **Step 3.5: Add reversed-index mapping for scrollToTurnId/scrollToMessageId**
+
+The virtualizer uses the reversed (newest-first) array, but `useChatTimelineController` computes indices in chronological order. In `MessageList.tsx`, update `scrollToTurnId` and `scrollToMessageId` inside the `MessageListHandle` to map the target turn/message to its position in the reversed array:
+
+```typescript
+scrollToTurnId: React.useCallback((turnId: string, behavior: ScrollBehavior = 'auto') => {
+  const turnElement = contentRef.current?.querySelector(`[data-turn-id="${turnId}"]`);
+  if (turnElement) {
+    turnElement.scrollIntoView({ behavior, block: 'nearest' });
+    return true;
+  }
+  // Fallback: find the entry in the reversed array
+  const reversedIndex = historyEntries.findIndex(
+    (e) => e.kind === 'turn' && e.turn.turnId === turnId,
+  );
+  if (reversedIndex !== -1) {
+    return scrollHistoryIndexIntoView(reversedIndex, behavior);
+  }
+  return false;
+}, [historyEntries, scrollHistoryIndexIntoView, contentRef]),
+
+scrollToMessageId: React.useCallback((messageId: string, behavior: ScrollBehavior = 'auto') => {
+  const messageElement = contentRef.current?.querySelector(`[data-message-id="${messageId}"]`);
+  if (messageElement) {
+    messageElement.scrollIntoView({ behavior, block: 'nearest' });
+    return true;
+  }
+  return false;
+}, [contentRef]),
+```
+
+This uses DOM queries first (which work regardless of array order) and falls back to virtualizer index lookup in the reversed array.
 
 - [ ] **Step 4: Adapt scrollIntoView for column-reverse**
 
@@ -1397,39 +1466,7 @@ In `ChatContainer.tsx`:
    ```typescript
    import { useUserScrollDetector } from './hooks/useUserScrollDetector';
    ```
-2. Create an `activeScrollRef` that points to the active mount's scroll container. Use `useRef`:
-   ```typescript
-   const activeScrollRef = React.useRef<HTMLDivElement | null>(null);
-   ```
-   
-   Actually, since each `SessionMount` has its own scroll container, and we need `ChatContainer` to scroll the active one, we can use a callback ref pattern or have `SessionMount` expose an imperative handle. For simplicity, `ChatContainer` can create one `useUserScrollDetector` and we need to point its `scrollRef` at the active mount's scroll container.
-
-   A simpler approach: `ChatContainer` doesn't need `useUserScrollDetector` at all. Instead, each `SessionMount` manages its own scroll state, and `ChatContainer` asks the active `SessionMount` to scroll to bottom.
-
-   But `ScrollToBottomButton` is in `ChatContainer`, so it needs to know if the user scrolled up. We can either:
-   a. Move `ScrollToBottomButton` into `SessionMount`
-   b. Have `SessionMount` expose `userScrolledUp` via a callback
-   c. Have `ChatContainer` read `userScrolledUp` from a shared ref
-
-   The cleanest is (a): move `ScrollToBottomButton` and `ChatInput` into `SessionMount`. But the spec shows them at the `ChatContainer` level.
-
-   Let's go with (b): `SessionMount` accepts an `onScrollStateChange` callback, and `ChatContainer` tracks the active session's scroll state.
-
-   ```typescript
-   // In ChatContainer
-   const [activeScrollState, setActiveScrollState] = React.useState({ userScrolledUp: false, scrollToBottom: () => {} });
-   
-   // In SessionMount props
-   onScrollStateChange?: (state: { userScrolledUp: boolean; scrollToBottom: () => void }) => void;
-   
-   // In SessionMount
-   const { userScrolledUp, scrollToBottom, onScroll } = useUserScrollDetector(scrollRef);
-   React.useEffect(() => {
-     onScrollStateChange?.({ userScrolledUp, scrollToBottom });
-   }, [userScrolledUp, scrollToBottom, onScrollStateChange]);
-   ```
-
-   Then `ChatContainer` passes `setActiveScrollState` to the active `SessionMount`.
+2. The active mount manages its own scroll state via `useUserScrollDetector`. `ChatContainer` receives scroll state through the `onScrollStateChange` callback on `SessionMount`. No `activeScrollRef` needed — `SessionMount` calls `onScrollStateChange` with `{ userScrolledUp, scrollToBottom }` whenever its scroll state changes.
 
 3. Update `ChatContainer` render:
    ```tsx
@@ -1471,9 +1508,9 @@ In `ChatContainer.tsx`:
 rm packages/ui/src/hooks/useChatScrollManager.ts
 ```
 
-- [ ] **Step 6: Verify type-check**
+- [ ] **Step 6: Verify type-check and lint**
 
-Run: `bun run type-check`
+Run: `bun run type-check && bun run lint`
 Expected: No errors.
 
 - [ ] **Step 7: Commit**
@@ -1499,7 +1536,7 @@ In `useChatTimelineController.ts`, look at `fetchOlderHistory` and `loadEarlier`
 
 Looking at `MessageList.tsx`, `LoadOlderButton` is rendered at the top. With column-reverse, "top" is visually the start of history (oldest messages). The user scrolls up (positive `scrollTop`) to reach older messages.
 
-The load-more trigger should be automatic on scroll, not just via button. In `SessionMount.tsx`, we can add an effect that watches `scrollTop` and triggers `timelineController.loadEarlier()` when near the top:
+The load-more trigger should be automatic on scroll, not just via button. In `SessionMount.tsx`, add a scroll-driven load-more effect. In column-reverse, "near the visual top" (where oldest messages are) means `scrollTop` is close to `scrollHeight - clientHeight`. The distance from visual top: `scrollHeight - scrollTop - clientHeight`.
 
 ```typescript
 React.useEffect(() => {
@@ -1508,46 +1545,16 @@ React.useEffect(() => {
   if (!container) return;
 
   const handleScroll = () => {
-    const nearTop = container.scrollHeight - container.scrollTop - container.clientHeight < 5 * 160; // 5 * estimated height
-    if (nearTop && timelineController.historySignals.canLoadEarlier && !timelineController.isLoadingOlder) {
+    const distanceFromTop = container.scrollHeight - container.scrollTop - container.clientHeight;
+    const threshold = 5 * 160; // 5 estimated entry heights (160px default)
+    if (distanceFromTop < threshold && timelineController.historySignals.canLoadEarlier && !timelineController.isLoadingOlder) {
       void timelineController.loadEarlier();
     }
   };
 
   container.addEventListener('scroll', handleScroll, { passive: true });
   return () => container.removeEventListener('scroll', handleScroll);
-}, [isActive, scrollRef, timelineController]);
-```
-
-Wait, in column-reverse, "top" of the viewport (visually) corresponds to large `scrollTop` values. `scrollHeight - scrollTop - clientHeight` is the distance from the viewport bottom to the content bottom... no.
-
-In standard scrolling:
-- `scrollTop` = distance from content top to viewport top
-- `scrollHeight - scrollTop - clientHeight` = distance from viewport bottom to content bottom
-
-In column-reverse:
-- `scrollTop = 0` = content top = visual bottom
-- `scrollTop` increases as you scroll toward visual top
-- `scrollHeight - clientHeight` = maximum scrollTop = content bottom = visual top
-
-So "near the visual top" (where older messages are) means `scrollTop` is close to `scrollHeight - clientHeight`.
-
-The distance from visual top is:
-```
-const distanceFromVisualTop = scrollHeight - scrollTop - clientHeight;
-```
-
-Wait, that's the same formula as "distance from bottom" in standard scrolling! In standard scrolling, `scrollHeight - scrollTop - clientHeight = 0` means you're at the bottom. In column-reverse, `scrollHeight - scrollTop - clientHeight = 0` means you're at the visual top (oldest messages).
-
-So "near the top" in column-reverse = `scrollHeight - scrollTop - clientHeight` is small.
-
-The load-more trigger:
-```typescript
-const distanceFromTop = container.scrollHeight - container.scrollTop - container.clientHeight;
-const threshold = 5 * 160; // 5 estimated entry heights
-if (distanceFromTop < threshold && canLoadEarlier && !isLoading) {
-  void loadEarlier();
-}
+}, [isActive, scrollRef, timelineController.historySignals.canLoadEarlier, timelineController.isLoadingOlder, timelineController.loadEarlier]);
 ```
 
 - [ ] **Step 2: Verify type-check**
