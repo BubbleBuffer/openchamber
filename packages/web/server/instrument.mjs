@@ -1,4 +1,10 @@
 import * as Sentry from '@sentry/node';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkg = JSON.parse(readFileSync(resolve(__dirname, '..', 'package.json'), 'utf8'));
 
 const originalConsoleError = console.error;
 
@@ -18,7 +24,7 @@ console.error = (...args) => {
 Sentry.init({
   dsn: 'https://fdd1d15d875e43828cbc8e4cbdb8fff6@o4511341573636096.ingest.de.sentry.io/4511341589430352',
   environment: process.env.NODE_ENV ?? 'development',
-  release: process.env.SENTRY_RELEASE ?? undefined,
+  release: process.env.SENTRY_RELEASE || pkg.version,
   sendDefaultPii: false,
   tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1.0,
   // Enable source map parsing so stack traces resolve original source
