@@ -52,16 +52,18 @@ ChatView
 | Component | Role |
 |---|---|
 | `ChatContainer` | Mount pool management. Maintains `Map<sessionId, SessionMountState>`. LRU eviction at 10 entries. Delegates `syncSession` calls. Owns no scroll logic. |
-| `SessionMount` | One per mounted session. Wraps a `ChatViewport`. Conditionally visible via `opacity` + `pointer-events`. Explicitly skipped from scroll anchoring when idle. |
-| `ChatViewport` | `column-reverse` flex container with `overflow-y: auto`. Owns the virtualizer and MessageList. Scroll interaction reduced to: load-more compensation + user-scrolling-up flag. |
-| `MessageList` | Unchanged logic. Existing virtualization, turn grouping, `React.memo` all stay. |
+| `SessionMount` | One per mounted session. Wraps a `ChatViewport`. Conditionally visible via `opacity` + `pointer-events`. Provides `ActiveSessionContext`. |
+| `ChatViewport` | `column-reverse` flex container with `overflow-y: auto`. Owns the virtualizer and MessageList. Reverses the sync store's chronological array for the virtualizer. |
+| `MessageList` | Unchanged logic aside from receiving reversed data. Existing virtualization, turn grouping, `React.memo` all stay. |
 | `useSessionMountPool` (new hook) | Extracted from ChatContainer. Exposes: `mountedSessions`, `activateSession(id)`, `evict()` logic. |
-| `useLoadMoreCompensation` (replaces `useChatScrollManager`) | Thin hook: snapshot scroll position before prepend, restore after DOM commit via `useLayoutEffect`. |
-| `useUserScrollDetector` (new hook) | Single boolean: `userScrolledUp`. Set on wheel/touch scrolling upward. Reset when scroll reaches position 0 (bottom in column-reverse). Drives jump-to-newest button visibility. |
+| `useUserScrollDetector` (new hook) | Single boolean: `userScrolledUp`. Reads `scrollTop > 0` from onScroll. Drives jump-to-newest button visibility. |
+| `useSSEAnchorSuppression` (new hook) | Detects SSE-triggered virtualizer prepends. When user is at bottom (not scrolled up), suppresses the virtualizer's scroll adjustment so new messages appear naturally. |
 
 ### What Gets Deleted
 
-`useChatScrollManager.ts` (~400 lines). Replaced by `useLoadMoreCompensation` + `useUserScrollDetector` (combined ~80 lines).
+`useChatScrollManager.ts` (~400 lines). Replaced by `useUserScrollDetector` + `useSSEAnchorSuppression` (combined ~60 lines).
+
+**Load-more compensation deleted entirely.** The current `useChatTimelineController.ts:276-300` snapshot/restore pattern is unnecessary with `column-reverse` and newest-first array: older messages append at the end of the virtualizer array with zero index-shift for existing items.
 
 **AnimationHandlers and ContentChangeReason migration:** `useChatScrollManager.ts` exports `AnimationHandlers` and `ContentChangeReason` imported by 10 files (`MessageList.tsx`, `ChatMessage.tsx`, `ProgressiveGroup.tsx`, `ReasoningPart.tsx`, `JustificationBlock.tsx`, `AssistantTextPart.tsx`, `ToolPart.tsx`, `MessageBody.tsx`, `TurnActivity.tsx`, `ChatContainer.tsx`). These types move to a new shared file: `packages/ui/src/components/chat/timeline/types.ts`. The scroll manager's animation wiring (`onAnimationStart`, `onAnimationComplete`) is re-homed: the scroll compensation hook exposes animation callbacks; the user scroll detector hooks into wheel/touch start. All existing imports update paths.
 
@@ -166,35 +168,25 @@ The existing sync layer's LRU 8 session cache + SSE keep data current. The mount
 
 `@tanstack/react-virtual` works with `column-reverse` with these adjustments:
 
-1. **Data order: oldest-to-newest.** The message array stays in chronological order (index 0 = oldest). In `column-reverse`, flex-end is index 0 (the first flex child renders at the scroll-bottom). Users see newest messages first because the browser scrolls to flex-end, and the virtualizer's `initialOffset: 0` aligns with position 0 = bottom.
+1. **Data order: newest-to-oldest.** The message array is reversed from chronological order before passing to the virtualizer. Index 0 = newest message. In `column-reverse`, flex-start is at the visual bottom, so index 0 (newest) renders at the bottom — the user sees newest first at `scrollTop = 0`.
 
-2. **`initialOffset: 0`** — the virtualizer starts at scroll position 0 (bottom). No `scrollToIndex` needed on mount.
+2. **`initialOffset: 0`** — the virtualizer starts at scroll position 0 (bottom of the viewport = newest messages). No `scrollToIndex` needed on mount.
 
-3. **`scrollToFn` wrapper** — `@tanstack/react-virtual` accepts `scrollToFn: (offset, options) => element.scrollTo({ top: offset, ...options })`. In `column-reverse`, `offset` is always non-negative (browser normalizes). The virtualizer's `scrollToIndex` computes positive offsets. No transformation needed — the existing contract already works.
+3. **SSE new messages:** New messages are chronologically newest, so they prepend to the reversed array at index 0. The virtualizer's prepend mechanism fires `onChange` with an adjusted offset to keep the view stable. For SSE new messages when the user is at the bottom (pinned), suppress this adjustment — the user should naturally see the new content. When the user has scrolled up (reading history), keep the adjustment so their view doesn't jump.
 
-4. **`scrollToIndex` / `scrollToTurn` / `scrollToMessage`** — existing code (`MessageList.tsx:1443`) uses `historyVirtualizer.scrollToIndex(index, { align: 'start' })`. "Start" means the start of the flex axis (flex-end = oldest messages). To scroll to a specific message, `align: 'end'` targets the visual top (newer messages). The `scrollToTurn`/`scrollToMessage` callers in `useChatTimelineController` need their `align` flipped: `'start' → 'end'`, `'end' → 'start'`.
+4. **Load-more old messages:** Older messages are chronologically oldest, so they append to the end of the reversed array. No virtualizer index shift occurs for existing items. **No scroll compensation needed** — older messages extend above the user's current view. The virtualizer handle this natively as `count` increases at the tail.
 
-5. **Hash-based scroll targets** — `ChatContainer.tsx:597-600` detects `window.location.hash` and skips auto-scroll. The hash target detection stays; the scroll-to-target logic uses `scrollToIndex` with the flipped `align` from point 4.
+5. **`scrollToIndex` / `scrollToTurn` / `scrollToMessage`:** Existing code (`MessageList.tsx:1443`) uses `historyVirtualizer.scrollToIndex(index, { align: 'start' })`. With `column-reverse` and newest-first array, "start" (visual bottom) ≈ newest. To scroll to a specific message, compute its index in the reversed array and use `align: 'center'` — direction-agnostic. The `scrollToTurn`/`scrollToMessage` callers in `useChatTimelineController` adapt to map chronological index → reversed index.
 
-The virtualizer's lazy rendering still works — only visible + overscan messages are rendered. Prepending (load-more) adds entries at index 0 (logical top/oldest), which is the flex-end in column-reverse. The load-more scroll compensation (above) handles the position fix.
+6. **Hash-based scroll targets:** `ChatContainer.tsx:597-600` detects `window.location.hash` and skips auto-scroll. The hash target detection stays; the scroll-to-target computes the reversed-array index for the target message.
+
+Reversal is done via `useMemo` on the sync store's chronological message array. The virtualizer's `count` is `reversedMessages.length`. This is cheap — the array is already small (25 base, growing via load-more).
 
 ### Load-More Scroll Compensation
 
-When older messages load via prepend, they're added at the flex-end (the scroll-top edge in column-reverse). The viewport content height grows at the top. Without compensation, the user's view jumps. Solution: snapshot scroll position before prepend, restore after DOM commit.
+With the reversed (newest-first) array: older messages append at the end of the virtualizer array (highest indices = top of viewport in column-reverse). Appending doesn't shift existing virtualizer item positions — items 0...(N-1) stay where they are. **No scroll compensation needed.** The user's current view stays stable; older messages become visible when they scroll up.
 
-In `column-reverse`, `scrollTop` is 0 at the bottom and **positive** when scrolled up (browsers normalize it). Content prepend adds height at the flex-end (start of the flex axis), which shifts the viewport upward unless compensated:
-
-```
-Before prepend:
-  snapshot: scrollHeight, scrollTop
-After prepend DOM commit (in useLayoutEffect, before paint):
-  heightAdded = newScrollHeight - oldScrollHeight
-  scrollTop = oldScrollTop + heightAdded
-```
-
-If user was scrolled up 300px and 200px of content is prepended, the viewport shifts 200px upward. Adding `heightAdded` to scrollTop compensates so the user stays at the same logical position.
-
-This replaces the current compensation in `useChatTimelineController.ts:276-300`. The snapshot/restore `useLayoutEffect` pattern is reused — only the math changes.
+This eliminates the `useLayoutEffect` snapshot/restore pattern entirely for load-more. The virtualizer handles growing `count` at the tail natively without scroll-side-effects. This is a significant simplification over the current `useChatTimelineController.ts:276-300` compensation logic.
 
 ### User Scroll Interaction
 
@@ -244,14 +236,14 @@ Each step is independently testable:
 **Verify:** Switching between recently-viewed sessions is instant. No loading flash. DOM remains intact.
 
 ### Step 3: Convert ChatViewport to column-reverse
-**Files:** `ChatViewport` component, virtualizer config
-**Change:** Flex direction switch. Remove `overflow-anchor: none` (let browser handle pinning). `initialOffset: 0`. Adapt `scrollToIndex` calls to flip `align` (`'start'` ↔ `'end'`). Adapt ScrollShadow with `reversed` prop.
-**Verify:** Messages render bottom-first. New messages anchor naturally. No scroll flash. ScrollShadow shows correct shadows.
+**Files:** `ChatViewport` component, `MessageList` data input, virtualizer config
+**Change:** Flex direction switch. Remove `overflow-anchor: none`. `initialOffset: 0`. Reverse sync store's chronological array to newest-first before passing to virtualizer (`useMemo`). Adapt `scrollToIndex` calls to map chronological index → reversed index + use `align: 'center'`. Adapt ScrollShadow with `reversed` prop.
+**Verify:** Messages render newest-first at bottom. New messages anchor naturally. No scroll flash. ScrollShadow shows correct shadows. Scrolling up shows older messages in correct order.
 
 ### Step 4: Delete Scroll Manager, Build Replacements
-**Files:** Delete `useChatScrollManager.ts`. Create `types.ts` (AnimationHandlers, ContentChangeReason migration). Create `useUserScrollDetector.ts`. Adapt `useChatTimelineController.ts` load-more compensation for column-reverse math.
-**Change:** Move `AnimationHandlers`/`ContentChangeReason` to shared types file. Update all 10 downstream imports. Implement `useUserScrollDetector` (wheel + touchmove detection, single boolean, jump-to-newest on scrollTop=0). Move `MessageFreshnessDetector.recordSessionStart()` to `ChatContainer` session-switch effect. Adapt load-more `useLayoutEffect` formula: `scrollTop = oldScrollTop + heightAdded`.
-**Verify:** New messages auto-anchor at bottom. Manual scroll up via mouse/touch disables anchoring. Jump-to-newest button works. Load-more scroll compensation works. No <25-message edge case jumps.
+**Files:** Delete `useChatScrollManager.ts`. Create `types.ts` (AnimationHandlers, ContentChangeReason migration). Create `useUserScrollDetector.ts`. Create `useSSEAnchorSuppression.ts`. Remove load-more scroll compensation from `useChatTimelineController.ts` (no longer needed — column-reverse + newest-first array eliminates it).
+**Change:** Move `AnimationHandlers`/`ContentChangeReason` to shared types file. Update all 10 downstream imports. Implement `useUserScrollDetector` (read `scrollTop > 0` from onScroll, single boolean, jump-to-newest on scrollTo(0)). Move `MessageFreshnessDetector.recordSessionStart()` to `ChatContainer` session-switch effect. Implement `useSSEAnchorSuppression` — when user is at bottom, prevent virtualizer prepend adjustment so new SSE messages appear naturally.
+**Verify:** New messages auto-anchor at bottom. Manual scroll up via mouse/touch disables anchoring. Jump-to-newest button works. Load-more has no scroll jump. SSE messages appear without interruption.
 
 ### Step 5: Tighten Load-More Threshold
 **Files:** Virtualizer config / timeline controller
@@ -270,7 +262,7 @@ Each step is independently testable:
 | `@tanstack/react-virtual` + `column-reverse` has unknown edge cases | Test first in step 3. Fallback: `transform: scaleY(-1)` container + children (Approach C lite) or keep DOM order with `scrollToIndex` at mount. |
 | Mount pool increases memory (10 sessions × DOM trees) | 10 × 25 messages is negligible (~250 entries in store, ~150 visible measurements in virtualizer). Pool size of 10 covers typical usage (switching between a handful of active sessions). Reduce to 5 if memory pressure observed. Measure with `performance.mark` on mount/unmount. |
 | Streaming in hidden sessions causes wasted renders | Use `ActiveSessionContext` — `MessageRow` `React.memo` comparator bails out when `!isActive`. |
-| Load-more scroll compensation bugs in column-reverse | Formula: `scrollTop = oldScrollTop + heightAdded`. Test with large conversation history. |
+| SSE prepend adjustment conflicts with anchoring | `useSSEAnchorSuppression` suppresses virtualizer prepend offset when user is at bottom. Test both pinned-at-bottom and scrolled-up scenarios. |
 | Safari/WebKit `column-reverse` + keyboard viewport resize | Detect via `visualViewport.resize`. If `!userScrolledUp`, force `scrollTop = 0` to re-anchor. Test on iOS Safari. |
 | `AnimationHandlers` / `ContentChangeReason` downstream breakage | All 10 consumers update imports to `types.ts`. Catch at build time via TypeScript. |
 
