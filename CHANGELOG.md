@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.9.11] - 2026-05-11
+
+- Sentry: fixed source map upload configuration (NODE_ENV, EU region host).
+
 ## [1.9.10] - 2026-05-11
 
 - Sentry: fixed source map uploads by setting `NODE_ENV=production` during build and pointing the plugin at the correct EU-region Sentry host (`de.sentry.io`).
