@@ -16,6 +16,7 @@ import { hasPendingUserSendAnimation, consumePendingUserSendAnimation } from '@/
 import { streamPerfCount, streamPerfMeasure } from '@/stores/utils/streamDebug';
 import type { StreamPhase } from './message/types';
 import { LoadOlderButton } from './turn/LoadOlderButton';
+import { useIsActiveSession } from './ActiveSessionContext';
 
 const MESSAGE_LIST_VIRTUALIZE_THRESHOLD = 15;
 const MESSAGE_LIST_OVERSCAN = 6;
@@ -524,6 +525,8 @@ const TurnBlock: React.FC<TurnBlockProps> = ({
     activeStreamingMessageId,
     activeStreamingPhase,
 }) => {
+    const isActive = useIsActiveSession();
+    void isActive;
     const turnUiState = turnUiStates.get(turn.turnId) ?? { isExpanded: defaultActivityExpanded };
     const handleToggleTurnGroup = React.useCallback(() => {
         onToggleTurnGroup(turn.turnId);
@@ -813,6 +816,8 @@ const UngroupedMessageRow: React.FC<UngroupedMessageRowProps> = ({
     activeStreamingMessageId,
     activeStreamingPhase,
 }) => {
+    const isActive = useIsActiveSession();
+    void isActive;
     return (
         <MessageRow
             message={message}
