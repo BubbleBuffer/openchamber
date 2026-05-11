@@ -131,6 +131,8 @@ export function updateStreamingState(
     }
   }
 
+  const stuckSessionIds: string[] = []
+
   // Stuck session recovery: force completion if no updates for STUCK_SESSION_TIMEOUT_MS
   for (const [msgId, streamState] of currentStreamStates) {
     if (streamState.phase !== "streaming") continue
@@ -143,7 +145,7 @@ export function updateStreamingState(
     if (sessionID) {
       nextStreamingIds.set(sessionID, null)
       nextBusySince.delete(sessionID)
-      options?.onStuckSession?.(sessionID)
+      stuckSessionIds.push(sessionID)
     }
     changed = true
   }
@@ -163,7 +165,7 @@ export function updateStreamingState(
     const hasStreamingMessage = nextStreamingIds.get(sessionID) != null
     if (hasStreamingMessage) continue
     nextBusySince.delete(sessionID)
-    options?.onStuckSession?.(sessionID)
+    stuckSessionIds.push(sessionID)
     changed = true
   }
 
@@ -173,6 +175,12 @@ export function updateStreamingState(
       messageStreamStates: nextStreamStates,
       busySinceBySessionId: nextBusySince,
     })
+  }
+
+  // Call callbacks AFTER the streaming store is updated so that any re-entrant
+  // subscriber runs see the completed state and don't trigger stuck recovery again.
+  for (const sessionID of stuckSessionIds) {
+    options?.onStuckSession?.(sessionID)
   }
 }
 
