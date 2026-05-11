@@ -3,10 +3,8 @@ import { RiArrowLeftLine } from '@remixicon/react';
 import type { Session } from '@/lib/opencode/client';
 
 import { ChatInput } from './ChatInput';
-import { useUIStore } from '@/stores/useUIStore';
 import ChatEmptyState from './ChatEmptyState';
 import ScrollToBottomButton from './components/ScrollToBottomButton';
-import { useDeviceInfo } from '@/lib/device';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +12,8 @@ import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSessions } from '@/sync/sync-context';
 import { getAllSyncSessions } from '@/sync/sync-refs';
 import { SessionMount } from './SessionMount';
+import { useSessionMountPool } from './hooks/useSessionMountPool';
+import { MessageFreshnessDetector } from '@/lib/messages/messageFreshness';
 
 export const ChatContainer: React.FC = () => {
     // Session UI state
@@ -22,12 +22,10 @@ export const ChatContainer: React.FC = () => {
     const setCurrentSession = useSessionUIStore((s) => s.setCurrentSession);
     const newSessionDraft = useSessionUIStore((s) => s.newSessionDraft);
 
-    // UI store
-    const isExpandedInput = useUIStore((state) => state.isExpandedInput);
-
-    const { isMobile } = useDeviceInfo();
     const draftOpen = Boolean(newSessionDraft?.open);
-    const isDesktopExpandedInput = isExpandedInput && !isMobile;
+
+    // Mount pool
+    const { mountedSessions, activateSession } = useSessionMountPool();
 
     // Sessions
     const sessions = useSessions();
@@ -69,9 +67,21 @@ export const ChatContainer: React.FC = () => {
         }
     }, [currentSessionId, draftOpen, openNewSessionDraft]);
 
+    // Session switch: activate in mount pool and record freshness
+    React.useEffect(() => {
+        if (!currentSessionId) return;
+        activateSession(currentSessionId);
+        const hasHashTarget = typeof window !== 'undefined' && window.location.hash.length > 0;
+        if (!hasHashTarget) {
+            MessageFreshnessDetector.getInstance().recordSessionStart(currentSessionId);
+        }
+    }, [currentSessionId, activateSession]);
+
+    // No session selected
     if (!currentSessionId && !draftOpen) {
         return (
-            <div className="flex flex-col h-full bg-background">
+            <div className="relative flex flex-col h-full bg-background">
+                {returnToParentButton}
                 <ChatEmptyState />
             </div>
         );
@@ -79,43 +89,35 @@ export const ChatContainer: React.FC = () => {
 
     if (!currentSessionId && draftOpen) {
         return (
-            <div className="relative flex flex-col h-full bg-background transform-gpu">
-                {!isDesktopExpandedInput ? (
-                <div className="flex-1 flex items-center justify-center">
-                    <ChatEmptyState />
-                </div>
-                ) : null}
-                <div
-                    className={cn(
-                        'relative z-10',
-                        isDesktopExpandedInput
-                            ? 'flex-1 min-h-0 bg-background'
-                            : 'bg-background'
-                    )}
-                >
+            <div className="relative flex flex-col h-full bg-background">
+                {returnToParentButton}
+                <div className="flex-1" />
+                <div className="relative z-10 bg-background">
                     <ChatInput scrollToBottom={() => {}} />
                 </div>
             </div>
         );
     }
 
-    if (!currentSessionId) {
-        return null;
-    }
-
+    // Active session — render mount pool
     return (
         <div className="relative flex flex-col h-full bg-background">
             {returnToParentButton}
-            <SessionMount sessionId={currentSessionId} isActive={true} />
-            <div
-                className={cn(
-                    'relative z-10',
-                    isDesktopExpandedInput
-                        ? 'flex-1 min-h-0 bg-background'
-                        : 'bg-background',
-                    isMobile && 'pb-[env(safe-area-inset-bottom,0px)]'
-                )}
-            >
+            <div className="relative flex-1 min-h-0">
+                {Array.from(mountedSessions.values()).map((mountState) => (
+                    <div
+                        key={mountState.id}
+                        className={cn(
+                            'absolute inset-0 flex flex-col transition-opacity duration-150',
+                            mountState.isActive ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 pointer-events-none z-0'
+                        )}
+                        aria-hidden={!mountState.isActive}
+                    >
+                        <SessionMount sessionId={mountState.id} isActive={mountState.isActive} />
+                    </div>
+                ))}
+            </div>
+            <div className="relative z-10 bg-background">
                 <ScrollToBottomButton visible={false} onClick={() => {}} />
                 <ChatInput scrollToBottom={() => {}} />
             </div>

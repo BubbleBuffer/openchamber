@@ -1,11 +1,10 @@
 import React from 'react';
-import type { Message, Part } from '@/lib/opencode/client';
+import type { Message } from '@/lib/opencode/client';
 
-import MessageList, { type MessageListHandle } from './MessageList';
+import { type MessageListHandle } from './MessageList';
 import ChatEmptyState from './ChatEmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useChatScrollManager } from '@/hooks/useChatScrollManager';
-import type { AnimationHandlers, ContentChangeReason } from '@/components/chat/timeline/types';
 import { useChatTimelineController } from './hooks/useChatTimelineController';
 import { useChatTurnNavigation } from './hooks/useChatTurnNavigation';
 import { useDeviceInfo } from '@/lib/device';
@@ -17,7 +16,6 @@ import {
 } from './lib/blockingRequests';
 
 import { useUIStore } from '@/stores/useUIStore';
-import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useViewportStore } from '@/sync/viewport-store';
 import { useStreamingStore } from '@/sync/streaming';
 import {
@@ -28,18 +26,14 @@ import {
     useSessionStatus,
 } from '@/sync/sync-context';
 import { useSync } from '@/sync/use-sync';
-import { getAllSyncSessions } from '@/sync/sync-refs';
 import { ActiveSessionContext } from './ActiveSessionContext';
 import { ChatViewport } from './ChatViewport';
 
-const EMPTY_MESSAGES: Array<{ info: Message; parts: Part[] }> = [];
 const EMPTY_PERMISSIONS: import('@/types/permission').PermissionRequest[] = [];
 const EMPTY_QUESTIONS: import('@/types/question').QuestionRequest[] = [];
 const IDLE_SESSION_STATUS = { type: 'idle' as const };
 const SESSION_RESELECTED_EVENT = 'openchamber:session-reselected';
 const DEFAULT_RETRY_MESSAGE = 'Quota limit reached. Retrying automatically.';
-
-type SessionMessageRecord = { info: Message; parts: Part[] };
 
 type HydratingToolSkeletonRow = {
     id: string;
