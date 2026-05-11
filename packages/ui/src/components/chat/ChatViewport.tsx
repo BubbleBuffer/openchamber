@@ -13,8 +13,6 @@ import { cn } from '@/lib/utils';
 import { useDeviceInfo } from '@/lib/device';
 import type { AnimationHandlers, ContentChangeReason } from '@/components/chat/timeline/types';
 
-const CHAT_SCROLL_STYLE = { overflowAnchor: 'none' } as const;
-
 export type ChatViewportProps = {
     currentSessionId: string;
     isDesktopExpandedInput: boolean;
@@ -80,15 +78,15 @@ export const ChatViewport = React.memo(({
         >
             <div className="absolute inset-0">
                 <ScrollShadow
+                    reversed
                     className="absolute inset-0 overflow-y-auto overflow-x-hidden z-0 chat-scroll overlay-scrollbar-target"
                     ref={scrollRef}
-                    style={CHAT_SCROLL_STYLE}
                     observeMutations={false}
                     hideTopShadow={isMobile && stickyUserHeader}
                     data-scroll-shadow="true"
                     data-scrollbar="chat"
                 >
-                    <div className="relative z-0 min-h-full">
+                    <div className="relative z-0 min-h-full flex flex-col justify-end">
                         <MessageList
                             ref={messageListRef}
                             sessionKey={currentSessionId}
@@ -121,8 +119,6 @@ export const ChatViewport = React.memo(({
                         <div className="mb-3">
                             <StatusRowContainer />
                         </div>
-
-                        <div className="flex-shrink-0" style={{ height: isMobile ? '40px' : '10vh' }} aria-hidden="true" />
                     </div>
                 </ScrollShadow>
                 <OverlayScrollbar containerRef={scrollRef} suppressVisibility={isProgrammaticFollowActive} userIntentOnly observeMutations={false} />
