@@ -3,6 +3,7 @@ import { getRootBranch } from '@/lib/worktrees/worktreeStatus';
 import { mapWithConcurrency } from '@/lib/concurrency';
 import { useGitStore } from '@/stores/git/useGitStore';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
+import { checkIsGitRepositoriesBatch } from '@/lib/git/gitApi';
 
 type Project = { id: string; path: string; normalizedPath: string };
 
@@ -24,17 +25,21 @@ export const useProjectRepoStatus = (args: Args): void => {
   const { git } = useRuntimeAPIs();
   const ensureStatus = useGitStore((state) => state.ensureStatus);
 
-  // Derive repo status from centralized Git store
   React.useEffect(() => {
     if (!git || normalizedProjects.length === 0) {
       setProjectRepoStatus(new Map());
       return;
     }
 
-    // Trigger ensureStatus for each project to populate store
-    normalizedProjects.forEach((project) => {
-      void ensureStatus(project.normalizedPath, git);
-    });
+    const batchCheckAndEnsure = async () => {
+      const normalizedPaths = normalizedProjects.map((p) => p.normalizedPath);
+      await checkIsGitRepositoriesBatch(normalizedPaths).catch(() => {});
+
+      normalizedProjects.forEach((project) => {
+        void ensureStatus(project.normalizedPath, git);
+      });
+    };
+    void batchCheckAndEnsure();
   }, [normalizedProjects, git, ensureStatus, setProjectRepoStatus]);
 
   // Read isGitRepo from the store-populated state

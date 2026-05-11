@@ -11,6 +11,31 @@ const gpgconfCandidates = ['gpgconf', '/opt/homebrew/bin/gpgconf', '/usr/local/b
 let resolvedGitBinary = null;
 const worktreeBootstrapState = new Map();
 
+async function resolveDefaultBranch(git) {
+  const candidates = [];
+
+  const originHead = await git
+    .raw(['symbolic-ref', '-q', 'refs/remotes/origin/HEAD'])
+    .then((value) => String(value || '').trim())
+    .catch(() => '');
+
+  if (originHead) {
+    candidates.push(originHead.replace(/^refs\/remotes\//, ''));
+  }
+
+  candidates.push('origin/main', 'origin/master', 'main', 'master');
+
+  for (const ref of candidates) {
+    const exists = await git
+      .raw(['rev-parse', '--verify', ref])
+      .then((value) => String(value || '').trim())
+      .catch(() => '');
+    if (exists) return ref;
+  }
+
+  return null;
+}
+
 const WORKTREE_BOOTSTRAP_PENDING = 'pending';
 const WORKTREE_BOOTSTRAP_READY = 'ready';
 const WORKTREE_BOOTSTRAP_FAILED = 'failed';
@@ -1524,6 +1549,21 @@ export async function getRangeDiff(directory, { base, head, path, contextLines =
     // ignore
   }
 
+  if (resolvedBase === baseRef) {
+    const localExists = await git
+      .raw(['rev-parse', '--verify', baseRef])
+      .then((value) => String(value || '').trim())
+      .catch(() => '');
+    if (!localExists) {
+      const fallback = await resolveDefaultBranch(git);
+      if (fallback) {
+        resolvedBase = fallback;
+      } else {
+        throw new Error(`Could not resolve base ref '${baseRef}' and no default branch found`);
+      }
+    }
+  }
+
   const args = ['diff', '--no-color'];
   if (typeof contextLines === 'number' && !Number.isNaN(contextLines)) {
     args.push(`-U${Math.max(0, contextLines)}`);
@@ -1553,6 +1593,21 @@ export async function getRangeFiles(directory, { base, head } = {}) {
     }
   } catch {
     // ignore
+  }
+
+  if (resolvedBase === baseRef) {
+    const localExists = await git
+      .raw(['rev-parse', '--verify', baseRef])
+      .then((value) => String(value || '').trim())
+      .catch(() => '');
+    if (!localExists) {
+      const fallback = await resolveDefaultBranch(git);
+      if (fallback) {
+        resolvedBase = fallback;
+      } else {
+        throw new Error(`Could not resolve base ref '${baseRef}' and no default branch found`);
+      }
+    }
   }
 
   const raw = await git.raw(['diff', '--name-only', `${resolvedBase}...${headRef}`]);
@@ -2594,10 +2649,27 @@ export async function getLog(directory, options = {}) {
 
   try {
     const maxCount = options.maxCount || 50;
+
+    let resolvedFrom = options.from;
+    let resolvedTo = options.to;
+
+    if (resolvedFrom) {
+      const fromExists = await git
+        .raw(['rev-parse', '--verify', resolvedFrom])
+        .then((value) => String(value || '').trim())
+        .catch(() => '');
+      if (!fromExists) {
+        const fallback = await resolveDefaultBranch(git);
+        if (fallback) {
+          resolvedFrom = fallback;
+        }
+      }
+    }
+
     const baseLog = await git.log({
       maxCount,
-      from: options.from,
-      to: options.to,
+      from: resolvedFrom,
+      to: resolvedTo,
       file: options.file
     });
 
@@ -2609,12 +2681,12 @@ export async function getLog(directory, options = {}) {
       '--shortstat'
     ];
 
-    if (options.from && options.to) {
-      logArgs.push(`${options.from}..${options.to}`);
-    } else if (options.from) {
-      logArgs.push(`${options.from}..HEAD`);
-    } else if (options.to) {
-      logArgs.push(options.to);
+    if (resolvedFrom && resolvedTo) {
+      logArgs.push(`${resolvedFrom}..${resolvedTo}`);
+    } else if (resolvedFrom) {
+      logArgs.push(`${resolvedFrom}..HEAD`);
+    } else if (resolvedTo) {
+      logArgs.push(resolvedTo);
     }
 
     if (options.file) {

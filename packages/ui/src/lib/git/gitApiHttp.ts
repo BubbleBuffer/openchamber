@@ -54,11 +54,22 @@ const resolveBaseOrigin = (): string => {
 const API_BASE = '/api/git';
 const GIT_STATUS_CACHE_TTL_MS = 1200;
 const GIT_REPO_CHECK_CACHE_TTL_MS = 5000;
+const WORKTREES_CACHE_TTL_MS = 30000;
+const WORKTREE_BOOTSTRAP_CACHE_TTL_MS = 10000;
 
 const gitStatusCache = new Map<string, { value: GitStatus; expiresAt: number }>();
 const gitStatusInFlight = new Map<string, Promise<GitStatus>>();
 const gitRepoCache = new Map<string, { value: boolean; expiresAt: number }>();
 const gitRepoInFlight = new Map<string, Promise<boolean>>();
+const worktreesCache = new Map<string, { value: GitWorktreeInfo[]; expiresAt: number }>();
+const worktreesInFlight = new Map<string, Promise<GitWorktreeInfo[]>>();
+const worktreeBootstrapCache = new Map<string, { value: import('../api/types').GitWorktreeBootstrapStatus; expiresAt: number }>();
+const worktreeBootstrapInFlight = new Map<string, Promise<import('../api/types').GitWorktreeBootstrapStatus>>();
+
+function errorDetail(status: number, statusText: string): string {
+  if (status === 0) return 'Network/CORS error (status 0)';
+  return statusText || `HTTP ${status}`;
+}
 
 const normalizeDirectoryKey = (directory: string): string => directory.trim();
 
@@ -96,9 +107,14 @@ export async function checkIsGitRepository(directory: string): Promise<boolean> 
   }
 
   const task = (async () => {
-    const response = await fetch(buildUrl(`${API_BASE}/check`, directory));
+    let response: Response;
+    try {
+      response = await fetch(buildUrl(`${API_BASE}/check`, directory));
+    } catch (err) {
+      throw new Error(`Failed to check git repository: Network error — ${err instanceof Error ? err.message : String(err)}`);
+    }
     if (!response.ok) {
-      throw new Error(`Failed to check git repository: ${response.statusText}`);
+      throw new Error(`Failed to check git repository: ${errorDetail(response.status, response.statusText)}`);
     }
     const data = await response.json();
     const isGitRepository = Boolean(data.isGitRepository);
@@ -119,6 +135,33 @@ export async function checkIsGitRepository(directory: string): Promise<boolean> 
   }
 }
 
+export async function checkIsGitRepositoriesBatch(directories: string[]): Promise<Record<string, boolean>> {
+  if (directories.length === 0) return {};
+
+  const response = await fetch(`${resolveBaseOrigin()}${API_BASE}/check-batch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ directories }),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.error || `Failed to batch-check git repositories: ${errorDetail(response.status, response.statusText)}`);
+  }
+  const data = await response.json();
+  const results: Record<string, boolean> = data.results || {};
+
+  const now = Date.now();
+  for (const [dir, isRepo] of Object.entries(results)) {
+    const key = normalizeDirectoryKey(dir);
+    gitRepoCache.set(key, {
+      value: isRepo,
+      expiresAt: now + GIT_REPO_CHECK_CACHE_TTL_MS,
+    });
+  }
+
+  return results;
+}
+
 export async function getGitStatus(directory: string, options?: { mode?: 'light' }): Promise<GitStatus> {
   const mode = options?.mode;
   const key = mode === 'light' ? `${normalizeDirectoryKey(directory)}::light` : normalizeDirectoryKey(directory);
@@ -134,9 +177,14 @@ export async function getGitStatus(directory: string, options?: { mode?: 'light'
   }
 
   const task = (async () => {
-    const response = await fetch(buildUrl(`${API_BASE}/status`, directory, mode ? { mode } : undefined));
+    let response: Response;
+    try {
+      response = await fetch(buildUrl(`${API_BASE}/status`, directory, mode ? { mode } : undefined));
+    } catch (err) {
+      throw new Error(`Failed to get git status: Network error — ${err instanceof Error ? err.message : String(err)}`);
+    }
     if (!response.ok) {
-      throw new Error(`Failed to get git status: ${response.statusText}`);
+      throw new Error(`Failed to get git status: ${errorDetail(response.status, response.statusText)}`);
     }
     const payload = await response.json() as GitStatus;
     gitStatusCache.set(key, {
@@ -402,12 +450,40 @@ export async function generatePullRequestDescription(
 }
 
 export async function listGitWorktrees(directory: string): Promise<GitWorktreeInfo[]> {
-  const response = await fetch(buildUrl(`${API_BASE}/worktrees`, directory));
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to list worktrees');
+  const key = normalizeDirectoryKey(directory);
+  const now = Date.now();
+  const cached = worktreesCache.get(key);
+  if (cached && cached.expiresAt > now) {
+    return cached.value;
   }
-  return response.json();
+
+  const inFlight = worktreesInFlight.get(key);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const task = (async () => {
+    const response = await fetch(buildUrl(`${API_BASE}/worktrees`, directory));
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: response.statusText }));
+      throw new Error(error.error || 'Failed to list worktrees');
+    }
+    const data = await response.json();
+    worktreesCache.set(key, {
+      value: data,
+      expiresAt: Date.now() + WORKTREES_CACHE_TTL_MS,
+    });
+    return data;
+  })();
+
+  worktreesInFlight.set(key, task);
+  try {
+    return await task;
+  } finally {
+    if (worktreesInFlight.get(key) === task) {
+      worktreesInFlight.delete(key);
+    }
+  }
 }
 
 export async function validateGitWorktree(directory: string, payload: CreateGitWorktreePayload): Promise<GitWorktreeValidationResult> {
@@ -426,12 +502,40 @@ export async function validateGitWorktree(directory: string, payload: CreateGitW
 }
 
 export async function getGitWorktreeBootstrapStatus(directory: string): Promise<import('../api/types').GitWorktreeBootstrapStatus> {
-  const response = await fetch(buildUrl(`${API_BASE}/worktrees/bootstrap-status`, directory));
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to get worktree bootstrap status');
+  const key = normalizeDirectoryKey(directory);
+  const now = Date.now();
+  const cached = worktreeBootstrapCache.get(key);
+  if (cached && cached.expiresAt > now) {
+    return cached.value;
   }
-  return response.json();
+
+  const inFlight = worktreeBootstrapInFlight.get(key);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const task = (async () => {
+    const response = await fetch(buildUrl(`${API_BASE}/worktrees/bootstrap-status`, directory));
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: response.statusText }));
+      throw new Error(error.error || 'Failed to get worktree bootstrap status');
+    }
+    const data: import('../api/types').GitWorktreeBootstrapStatus = await response.json();
+    worktreeBootstrapCache.set(key, {
+      value: data,
+      expiresAt: Date.now() + WORKTREE_BOOTSTRAP_CACHE_TTL_MS,
+    });
+    return data;
+  })();
+
+  worktreeBootstrapInFlight.set(key, task);
+  try {
+    return await task;
+  } finally {
+    if (worktreeBootstrapInFlight.get(key) === task) {
+      worktreeBootstrapInFlight.delete(key);
+    }
+  }
 }
 
 export async function previewGitWorktree(directory: string, payload: CreateGitWorktreePayload): Promise<GitWorktreeCreateResult> {
@@ -608,7 +712,9 @@ export async function getGitLog(
     })
   );
   if (!response.ok) {
-    throw new Error(`Failed to get git log: ${response.statusText}`);
+    const body = await response.json().catch(() => null);
+    const message = body?.error || errorDetail(response.status, response.statusText);
+    throw new Error(`Failed to get git log: ${message}`);
   }
   return response.json();
 }

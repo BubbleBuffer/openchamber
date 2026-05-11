@@ -102,6 +102,34 @@ export function registerGitRoutes(app) {
     }
   });
 
+  app.post('/api/git/check-batch', async (req, res) => {
+    const { isGitRepository } = await getGitLibraries();
+    try {
+      const { directories } = req.body || {};
+      if (!Array.isArray(directories) || directories.length === 0) {
+        return res.status(400).json({ error: 'directories array is required' });
+      }
+      if (directories.length > 50) {
+        return res.status(400).json({ error: 'maximum 50 directories per batch request' });
+      }
+
+      const results = {};
+      await Promise.all(
+        directories.map(async (dir) => {
+          try {
+            results[dir] = await isGitRepository(dir);
+          } catch {
+            results[dir] = false;
+          }
+        })
+      );
+      res.json({ results });
+    } catch (error) {
+      console.error('Failed to batch-check git repositories:', error);
+      res.status(500).json({ error: 'Failed to batch-check git repositories' });
+    }
+  });
+
   app.get('/api/git/remote-url', async (req, res) => {
     const { getRemoteUrl } = await getGitLibraries();
     try {

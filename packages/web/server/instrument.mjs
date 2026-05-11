@@ -33,6 +33,6 @@ Sentry.init({
   integrations: (integrations) => {
     // Bun doesn't support util.getSystemErrorMap() — the systemError
     // integration crashes with TypeError on every invocation.
-    return integrations.filter((i) => i.name !== 'SystemError');
+    return integrations.filter((i) => i.name !== 'NodeSystemError');
   },
 });

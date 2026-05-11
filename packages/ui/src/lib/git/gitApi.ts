@@ -58,6 +58,25 @@ export async function checkIsGitRepository(directory: string): Promise<boolean> 
   return gitHttp.checkIsGitRepository(directory);
 }
 
+export async function checkIsGitRepositoriesBatch(directories: string[]): Promise<Record<string, boolean>> {
+  if (directories.length === 0) return {};
+  const runtime = getRuntimeGit();
+  if (runtime) {
+    const results: Record<string, boolean> = {};
+    await Promise.all(
+      directories.map(async (dir) => {
+        try {
+          results[dir] = await runtime.checkIsGitRepository(dir);
+        } catch {
+          results[dir] = false;
+        }
+      })
+    );
+    return results;
+  }
+  return gitHttp.checkIsGitRepositoriesBatch(directories);
+}
+
 export async function getGitStatus(directory: string, options?: { mode?: 'light' }): Promise<import('../api/types').GitStatus> {
   const runtime = getRuntimeGit();
   if (runtime) return runtime.getGitStatus(directory);
