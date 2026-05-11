@@ -4,8 +4,9 @@ import type { Message } from '@/lib/opencode/client';
 import { type MessageListHandle } from './MessageList';
 import ChatEmptyState from './ChatEmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useChatScrollManager } from '@/hooks/useChatScrollManager';
 import { useChatTimelineController } from './hooks/useChatTimelineController';
+import { useUserScrollDetector } from './hooks/useUserScrollDetector';
+import { useSSEAnchorSuppression } from './hooks/useSSEAnchorSuppression';
 import { useChatTurnNavigation } from './hooks/useChatTurnNavigation';
 import { useDeviceInfo } from '@/lib/device';
 import { usePlanDetection } from '@/hooks/usePlanDetection';
@@ -16,10 +17,8 @@ import {
 } from './lib/blockingRequests';
 
 import { useUIStore } from '@/stores/useUIStore';
-import { useViewportStore } from '@/sync/viewport-store';
 import { useStreamingStore } from '@/sync/streaming';
 import {
-    useSessionMessageCount,
     useSessionMessageRecords,
     useSessions,
     useDirectorySync,
@@ -87,7 +86,6 @@ export const SessionMount = React.memo(({
     // UI store
     const isExpandedInput = useUIStore((state) => state.isExpandedInput);
     const stickyUserHeader = useUIStore((state) => state.stickyUserHeader);
-    const chatRenderMode = useUIStore((state) => state.chatRenderMode);
 
     // Sync actions
     const sync = useSync();
@@ -100,11 +98,6 @@ export const SessionMount = React.memo(({
         (id: string, _direction: 'up' | 'down') => sync.loadMore(id),
         [sync],
     );
-
-    // Viewport store
-    const updateViewportAnchor = useViewportStore((s) => s.updateViewportAnchor);
-    const isSyncing = useViewportStore((s) => s.isSyncing);
-    const sessionMemoryStateMap = useViewportStore((s) => s.sessionMemoryState);
 
     // Streaming state
     const streamingMessageId = useStreamingStore(
@@ -124,7 +117,6 @@ export const SessionMount = React.memo(({
     );
 
     // Session data
-    const sessionMessageCount = useSessionMessageCount(sessionId);
     const hasLoadedSessionMessages = useDirectorySync(
         React.useCallback(
             (state) => state.message[sessionId] !== undefined,
@@ -258,37 +250,28 @@ export const SessionMount = React.memo(({
     const { isMobile } = useDeviceInfo();
     const isDesktopExpandedInput = isExpandedInput && !isMobile;
     const messageListRef = React.useRef<MessageListHandle | null>(null);
+    const scrollRef = React.useRef<HTMLDivElement | null>(null);
 
-    const sessionBlockingCards = React.useMemo(() => {
-        return [...sessionPermissions, ...sessionQuestions];
-    }, [sessionPermissions, sessionQuestions]);
+    const { userScrolledUp, scrollToBottom, onScroll } = useUserScrollDetector(scrollRef);
+    useSSEAnchorSuppression(scrollRef, userScrolledUp, sessionMessages.length);
 
-    const activeTurnChangeRef = React.useRef<(turnId: string | null) => void>(() => {});
-    const handleActiveTurnChange = React.useCallback((turnId: string | null) => {
-        activeTurnChangeRef.current(turnId);
-    }, []);
+    const getAnimationHandlers = React.useCallback(
+        (): import('@/components/chat/timeline/types').AnimationHandlers => ({
+            onChunk: () => {},
+            onComplete: () => {},
+            onStreamingCandidate: () => {},
+            onAnimationStart: () => {},
+            onReservationCancelled: () => {},
+            onReasoningBlock: () => {},
+            onAnimatedHeightChange: () => {},
+        }),
+        [],
+    );
 
-    const {
-        scrollRef,
-        handleMessageContentChange,
-        getAnimationHandlers,
-        prepareForBottomResume,
-        scrollToBottom,
-        isPinned,
-        isOverflowing,
-        isProgrammaticFollowActive,
-    } = useChatScrollManager({
-        currentSessionId: sessionId,
-        sessionMessageCount,
-        sessionIsWorking,
-        sessionMemoryState: sessionMemoryStateMap,
-        updateViewportAnchor,
-        isSyncing,
-        isMobile,
-        chatRenderMode,
-        sessionPermissions: sessionBlockingCards,
-        onActiveTurnChange: handleActiveTurnChange,
-    });
+    const handleMessageContentChange = React.useCallback(
+        (): void => {},
+        [],
+    );
 
     const viewportMessages = sessionMessages;
 
@@ -299,10 +282,6 @@ export const SessionMount = React.memo(({
         scrollRef,
         messageListRef,
         loadMoreMessages,
-        prepareForBottomResume,
-        scrollToBottom,
-        isPinned,
-        isOverflowing,
     });
     const { loadEarlier, resumeToBottomInstant } = timelineController;
 
@@ -315,14 +294,10 @@ export const SessionMount = React.memo(({
     }, [runLatestInstantResume]);
 
     React.useEffect(() => {
-        activeTurnChangeRef.current = timelineController.handleActiveTurnChange;
-    }, [timelineController.handleActiveTurnChange]);
-
-    React.useEffect(() => {
         if (sessionPermissions.length === 0 && sessionQuestions.length === 0) {
             return;
         }
-        handleMessageContentChange('permission');
+        handleMessageContentChange();
     }, [handleMessageContentChange, sessionPermissions, sessionQuestions]);
 
     const handleLoadOlder = React.useCallback(() => {
@@ -344,7 +319,6 @@ export const SessionMount = React.memo(({
         const handleSessionReselected = (event: Event) => {
             const customEvent = event as CustomEvent<string>;
             if (customEvent.detail !== sessionId) return;
-            if (isPinned || !isOverflowing || isProgrammaticFollowActive) return;
             void resumeToBottomInstant();
         };
 
@@ -352,7 +326,7 @@ export const SessionMount = React.memo(({
         return () => {
             window.removeEventListener(SESSION_RESELECTED_EVENT, handleSessionReselected as EventListener);
         };
-    }, [sessionId, isOverflowing, isPinned, isProgrammaticFollowActive, resumeToBottomInstant]);
+    }, [sessionId, resumeToBottomInstant]);
 
     React.useLayoutEffect(() => {
         const container = scrollRef.current;
@@ -429,10 +403,8 @@ export const SessionMount = React.memo(({
 
         const load = async () => {
             await loadMessages(sessionId).finally(() => {
-                const statusType = sessionStatusForCurrent.type ?? 'idle';
-                const isActivePhase = statusType === 'busy' || statusType === 'retry';
                 const hasHashTarget = typeof window !== 'undefined' && window.location.hash.length > 0;
-                const shouldSkipScroll = hasHashTarget || (isActivePhase && isPinned);
+                const shouldSkipScroll = hasHashTarget;
 
                 if (!shouldSkipScroll) {
                     if (typeof window === 'undefined') {
@@ -447,15 +419,14 @@ export const SessionMount = React.memo(({
         };
 
         void load();
-    }, [sessionId, hasLoadedSessionMessages, isPinned, loadMessages, resumeToLatestInstant, sessionStatusForCurrent.type]);
+    }, [sessionId, hasLoadedSessionMessages, loadMessages, resumeToLatestInstant]);
 
     // Notify parent of scroll state changes
     React.useEffect(() => {
-        onScrollStateChange?.({
-            userScrolledUp: !isPinned,
-            scrollToBottom: () => scrollToBottom({ instant: true, force: true }),
-        });
-    }, [isPinned, onScrollStateChange, scrollToBottom]);
+        if (isActive && onScrollStateChange) {
+            onScrollStateChange({ userScrolledUp, scrollToBottom });
+        }
+    }, [isActive, onScrollStateChange, userScrolledUp, scrollToBottom]);
 
     if (isSessionHydrating && sessionMessages.length === 0 && !streamingMessageId) {
         return (
@@ -547,7 +518,8 @@ export const SessionMount = React.memo(({
                 scrollToBottom={scrollToBottom}
                 sessionQuestions={sessionQuestions}
                 sessionPermissions={sessionPermissions}
-                isProgrammaticFollowActive={isProgrammaticFollowActive}
+                isProgrammaticFollowActive={false}
+                onScroll={onScroll}
             />
         </ActiveSessionContext.Provider>
     );

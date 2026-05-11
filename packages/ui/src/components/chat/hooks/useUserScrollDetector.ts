@@ -2,7 +2,7 @@ import React from 'react';
 
 export interface UseUserScrollDetectorResult {
   userScrolledUp: boolean;
-  scrollToBottom: (options?: { behavior?: ScrollBehavior }) => void;
+  scrollToBottom: (options?: { instant?: boolean; force?: boolean }) => void;
   onScroll: (event: React.UIEvent<HTMLDivElement>) => void;
 }
 
@@ -11,10 +11,10 @@ export function useUserScrollDetector(
 ): UseUserScrollDetectorResult {
   const [userScrolledUp, setUserScrolledUp] = React.useState(false);
 
-  const scrollToBottom = React.useCallback((options?: { behavior?: ScrollBehavior }) => {
+  const scrollToBottom = React.useCallback((options?: { instant?: boolean; force?: boolean }) => {
     const container = scrollRef.current;
     if (!container) return;
-    container.scrollTo({ top: 0, behavior: options?.behavior ?? 'smooth' });
+    container.scrollTo({ top: 0, behavior: options?.instant ? 'auto' : 'smooth' });
   }, [scrollRef]);
 
   const onScroll = React.useCallback((event: React.UIEvent<HTMLDivElement>) => {

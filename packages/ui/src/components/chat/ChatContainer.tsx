@@ -27,6 +27,15 @@ export const ChatContainer: React.FC = () => {
     // Mount pool
     const { mountedSessions, activateSession } = useSessionMountPool();
 
+    // Active session scroll state
+    const [activeScrollState, setActiveScrollState] = React.useState<{
+        userScrolledUp: boolean;
+        scrollToBottom: () => void;
+    }>({
+        userScrolledUp: false,
+        scrollToBottom: () => {},
+    });
+
     // Sessions
     const sessions = useSessions();
 
@@ -113,13 +122,20 @@ export const ChatContainer: React.FC = () => {
                         )}
                         aria-hidden={!mountState.isActive}
                     >
-                        <SessionMount sessionId={mountState.id} isActive={mountState.isActive} />
+                        <SessionMount
+                            sessionId={mountState.id}
+                            isActive={mountState.isActive}
+                            onScrollStateChange={mountState.isActive ? setActiveScrollState : undefined}
+                        />
                     </div>
                 ))}
             </div>
             <div className="relative z-10 bg-background">
-                <ScrollToBottomButton visible={false} onClick={() => {}} />
-                <ChatInput scrollToBottom={() => {}} />
+                <ScrollToBottomButton
+                    visible={activeScrollState.userScrolledUp}
+                    onClick={() => activeScrollState.scrollToBottom()}
+                />
+                <ChatInput scrollToBottom={() => activeScrollState.scrollToBottom()} />
             </div>
         </div>
     );

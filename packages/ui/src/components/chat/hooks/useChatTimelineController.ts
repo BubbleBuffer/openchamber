@@ -32,10 +32,6 @@ interface UseChatTimelineControllerOptions {
     scrollRef: React.RefObject<HTMLDivElement | null>;
     messageListRef: React.RefObject<MessageListHandle | null>;
     loadMoreMessages: (sessionId: string, direction: 'up' | 'down') => Promise<void>;
-    prepareForBottomResume: (options?: { instant?: boolean; force?: boolean }) => void;
-    scrollToBottom: (options?: { instant?: boolean; force?: boolean; followBottom?: boolean }) => void;
-    isPinned: boolean;
-    isOverflowing: boolean;
 }
 
 export interface UseChatTimelineControllerResult {
@@ -46,7 +42,6 @@ export interface UseChatTimelineControllerResult {
     isLoadingOlder: boolean;
     pendingRevealWork: boolean;
     activeTurnId: string | null;
-    showScrollToBottom: boolean;
     turnWindowModel: TurnWindowModel;
     loadEarlier: () => Promise<void>;
     revealBufferedTurns: () => Promise<boolean>;
@@ -66,10 +61,6 @@ export const useChatTimelineController = ({
     scrollRef,
     messageListRef,
     loadMoreMessages,
-    prepareForBottomResume,
-    scrollToBottom,
-    isPinned,
-    isOverflowing,
 }: UseChatTimelineControllerOptions): UseChatTimelineControllerResult => {
     const previousTurnWindowModelRef = React.useRef<TurnWindowModel | null>(null);
     const previousMessagesRef = React.useRef<ChatMessageEntry[] | null>(null);
@@ -92,7 +83,6 @@ export const useChatTimelineController = ({
 
     const turnModelRef = React.useRef(turnWindowModel);
     const turnStartRef = React.useRef(turnStart);
-    const isPinnedRef = React.useRef(isPinned);
     const isLoadingOlderRef = React.useRef(isLoadingOlder);
     const pendingRevealWorkRef = React.useRef(pendingRevealWork);
     const sessionIdRef = React.useRef<string | null>(sessionId);
@@ -127,10 +117,6 @@ export const useChatTimelineController = ({
     React.useEffect(() => {
         turnStartRef.current = turnStart;
     }, [turnStart]);
-
-    React.useEffect(() => {
-        isPinnedRef.current = isPinned;
-    }, [isPinned]);
 
     React.useEffect(() => {
         isLoadingOlderRef.current = isLoadingOlder;
@@ -182,7 +168,7 @@ export const useChatTimelineController = ({
         setTurnStart((current) => {
             const previousInitial = getInitialTurnStart(previousTurnCount);
             const nextInitial = getInitialTurnStart(nextTurnCount);
-            if (isPinnedRef.current && current === previousInitial) {
+            if (current === previousInitial) {
                 return nextInitial;
             }
             return clampTurnStart(current, nextTurnCount);
@@ -432,7 +418,6 @@ export const useChatTimelineController = ({
         const nextStart = getInitialTurnStart(turnModelRef.current.turnCount);
         setPendingRevealWork(false);
         setIsLoadingOlder(false);
-        prepareForBottomResume({ force: true });
 
         const shouldWaitForRender = nextStart !== turnStartRef.current;
         if (shouldWaitForRender) {
@@ -440,14 +425,13 @@ export const useChatTimelineController = ({
             await waitForNextRenderCommit();
         }
 
-        scrollToBottom({ force: true });
-    }, [prepareForBottomResume, scrollToBottom, waitForNextRenderCommit]);
+        scrollRef.current?.scrollTo({ top: 0 });
+    }, [scrollRef, waitForNextRenderCommit]);
 
     const resumeToBottomInstant = React.useCallback(async () => {
         const nextStart = getInitialTurnStart(turnModelRef.current.turnCount);
         setPendingRevealWork(false);
         setIsLoadingOlder(false);
-        prepareForBottomResume({ instant: true, force: true });
 
         const shouldWaitForRender = nextStart !== turnStartRef.current;
         if (shouldWaitForRender) {
@@ -455,8 +439,8 @@ export const useChatTimelineController = ({
             await waitForNextRenderCommit();
         }
 
-        scrollToBottom({ instant: true, force: true, followBottom: true });
-    }, [prepareForBottomResume, scrollToBottom, waitForNextRenderCommit]);
+        scrollRef.current?.scrollTo({ top: 0 });
+    }, [scrollRef, waitForNextRenderCommit]);
 
     const handleActiveTurnChange = React.useCallback((turnId: string | null) => {
         setActiveTurnId(turnId);
@@ -470,7 +454,6 @@ export const useChatTimelineController = ({
         isLoadingOlder,
         pendingRevealWork,
         activeTurnId,
-        showScrollToBottom: isOverflowing && !isPinned && !pendingRevealWork,
         turnWindowModel,
         loadEarlier,
         revealBufferedTurns,

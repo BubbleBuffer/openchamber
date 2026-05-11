@@ -40,6 +40,7 @@ export type ChatViewportProps = {
     sessionQuestions: QuestionRequest[];
     sessionPermissions: PermissionRequest[];
     isProgrammaticFollowActive: boolean;
+    onScroll?: (event: React.UIEvent<HTMLDivElement>) => void;
 };
 
 export const ChatViewport = React.memo(({
@@ -64,6 +65,7 @@ export const ChatViewport = React.memo(({
     sessionQuestions,
     sessionPermissions,
     isProgrammaticFollowActive,
+    onScroll,
 }: ChatViewportProps) => {
     const { isMobile } = useDeviceInfo();
     return (
@@ -81,6 +83,7 @@ export const ChatViewport = React.memo(({
                     reversed
                     className="absolute inset-0 overflow-y-auto overflow-x-hidden z-0 chat-scroll overlay-scrollbar-target"
                     ref={scrollRef}
+                    onScroll={onScroll}
                     observeMutations={false}
                     hideTopShadow={isMobile && stickyUserHeader}
                     data-scroll-shadow="true"
@@ -146,7 +149,8 @@ export const ChatViewport = React.memo(({
         && prev.scrollToBottom === next.scrollToBottom
         && prev.sessionQuestions === next.sessionQuestions
         && prev.sessionPermissions === next.sessionPermissions
-        && prev.isProgrammaticFollowActive === next.isProgrammaticFollowActive;
+        && prev.isProgrammaticFollowActive === next.isProgrammaticFollowActive
+        && prev.onScroll === next.onScroll;
 });
 
 ChatViewport.displayName = 'ChatViewport';
