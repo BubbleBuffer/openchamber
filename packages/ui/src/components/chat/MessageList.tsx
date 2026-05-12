@@ -1074,7 +1074,12 @@ const MessageList = React.forwardRef<MessageListHandle, MessageListProps>(({
         });
     }), [baseDisplayMessages, retryOverlay]);
 
-    const { projection, staticTurns, streamingTurn } = useTurnRecords(displayMessages, {
+    const reversedDisplayMessages = React.useMemo(
+        () => [...displayMessages].reverse(),
+        [displayMessages],
+    );
+
+    const { projection, staticTurns, streamingTurn } = useTurnRecords(reversedDisplayMessages, {
         sessionKey,
         showTextJustificationActivity: chatRenderMode === 'sorted',
     });
@@ -1096,7 +1101,7 @@ const MessageList = React.forwardRef<MessageListHandle, MessageListProps>(({
         });
 
         const orderedEntries: RenderEntry[] = [];
-        displayMessages.forEach((message, index) => {
+        reversedDisplayMessages.forEach((message: ChatMessageEntry, i: number) => {
             const turnEntry = turnEntryByUserMessageId.get(message.info.id);
             if (turnEntry) {
                 orderedEntries.push(turnEntry);
@@ -1111,13 +1116,13 @@ const MessageList = React.forwardRef<MessageListHandle, MessageListProps>(({
                 kind: 'ungrouped',
                 key: `msg:${message.info.id}`,
                 message,
-                previousMessage: index > 0 ? displayMessages[index - 1] : undefined,
-                nextMessage: index < displayMessages.length - 1 ? displayMessages[index + 1] : undefined,
+                previousMessage: i + 1 < reversedDisplayMessages.length ? reversedDisplayMessages[i + 1] : undefined,
+                nextMessage: i - 1 >= 0 ? reversedDisplayMessages[i - 1] : undefined,
             });
         });
 
         return orderedEntries;
-    }), [displayMessages, projection.lastTurnId, projection.ungroupedMessageIds, staticTurns]);
+    }), [reversedDisplayMessages, projection.lastTurnId, projection.ungroupedMessageIds, staticTurns]);
 
     const trailingStreamingEntry = React.useMemo<RenderEntry | undefined>(() => {
         if (streamingTurn) {
@@ -1133,19 +1138,19 @@ const MessageList = React.forwardRef<MessageListHandle, MessageListProps>(({
             return undefined;
         }
 
-        const lastMessage = displayMessages[displayMessages.length - 1];
-        if (!lastMessage || !projection.ungroupedMessageIds.has(lastMessage.info.id)) {
+        const firstMessage = reversedDisplayMessages[0];
+        if (!firstMessage || !projection.ungroupedMessageIds.has(firstMessage.info.id)) {
             return undefined;
         }
 
         return {
             kind: 'ungrouped',
-            key: `msg:${lastMessage.info.id}`,
-            message: lastMessage,
-            previousMessage: displayMessages.length > 1 ? displayMessages[displayMessages.length - 2] : undefined,
+            key: `msg:${firstMessage.info.id}`,
+            message: firstMessage,
+            previousMessage: reversedDisplayMessages.length > 1 ? reversedDisplayMessages[1] : undefined,
             nextMessage: undefined,
         } satisfies RenderEntry;
-    }, [displayMessages, projection.lastTurnId, projection.ungroupedMessageIds, streamingTurn]);
+    }, [reversedDisplayMessages, projection.lastTurnId, projection.ungroupedMessageIds, streamingTurn]);
 
     if (trailingStreamingEntry) {
         streamPerfCount('ui.message_list.render.streaming');
