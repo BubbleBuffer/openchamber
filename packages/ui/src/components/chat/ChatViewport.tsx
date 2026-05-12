@@ -81,7 +81,7 @@ export const ChatViewport = React.memo(({
             <div className="absolute inset-0">
                 <ScrollShadow
                     reversed
-                    className="absolute inset-0 overflow-y-auto overflow-x-hidden z-0 chat-scroll overlay-scrollbar-target"
+                    className="flex flex-col-reverse absolute inset-0 overflow-y-auto overflow-x-hidden z-0 chat-scroll overlay-scrollbar-target"
                     ref={scrollRef}
                     onScroll={onScroll}
                     observeMutations={false}
@@ -89,39 +89,37 @@ export const ChatViewport = React.memo(({
                     data-scroll-shadow="true"
                     data-scrollbar="chat"
                 >
-                    <div className="relative z-0 min-h-full flex flex-col justify-end">
-                        <MessageList
-                            ref={messageListRef}
-                            sessionKey={currentSessionId}
-                            turnStart={turnStart}
-                            disableStaging={pendingRevealWork}
-                            messages={renderedMessages}
-                            sessionIsWorking={sessionIsWorking}
-                            activeStreamingMessageId={streamingMessageId}
-                            activeStreamingPhase={activeStreamingPhase}
-                            retryOverlay={retryOverlay}
-                            onMessageContentChange={handleMessageContentChange}
-                            getAnimationHandlers={getAnimationHandlers}
-                            hasMoreAbove={hasMoreAboveTurns}
-                            isLoadingOlder={isLoadingOlder}
-                            onLoadOlder={handleLoadOlder}
-                            scrollToBottom={scrollToBottom}
-                            scrollRef={scrollRef}
-                        />
-                        {(sessionQuestions.length > 0 || sessionPermissions.length > 0) && (
-                            <div>
-                                {sessionQuestions.map((question) => (
-                                    <QuestionCard key={question.id} question={question} />
-                                ))}
-                                {sessionPermissions.map((permission) => (
-                                    <PermissionCard key={permission.id} permission={permission} />
-                                ))}
-                            </div>
-                        )}
-
-                        <div className="mb-3">
-                            <StatusRowContainer />
+                    <MessageList
+                        ref={messageListRef}
+                        sessionKey={currentSessionId}
+                        turnStart={turnStart}
+                        disableStaging={pendingRevealWork}
+                        messages={renderedMessages}
+                        sessionIsWorking={sessionIsWorking}
+                        activeStreamingMessageId={streamingMessageId}
+                        activeStreamingPhase={activeStreamingPhase}
+                        retryOverlay={retryOverlay}
+                        onMessageContentChange={handleMessageContentChange}
+                        getAnimationHandlers={getAnimationHandlers}
+                        hasMoreAbove={hasMoreAboveTurns}
+                        isLoadingOlder={isLoadingOlder}
+                        onLoadOlder={handleLoadOlder}
+                        scrollToBottom={scrollToBottom}
+                        scrollRef={scrollRef}
+                    />
+                    {(sessionQuestions.length > 0 || sessionPermissions.length > 0) && (
+                        <div>
+                            {sessionQuestions.map((question) => (
+                                <QuestionCard key={question.id} question={question} />
+                            ))}
+                            {sessionPermissions.map((permission) => (
+                                <PermissionCard key={permission.id} permission={permission} />
+                            ))}
                         </div>
+                    )}
+
+                    <div className="mb-3">
+                        <StatusRowContainer />
                     </div>
                 </ScrollShadow>
                 <OverlayScrollbar containerRef={scrollRef} suppressVisibility={isProgrammaticFollowActive} userIntentOnly observeMutations={false} />

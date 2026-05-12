@@ -20,7 +20,7 @@ import {
 } from "./session-prefetch-cache"
 
 const SKIP_PARTS = new Set(["patch", "step-start", "step-finish"])
-const MESSAGE_PAGE_SIZE = 25
+const MESSAGE_PAGE_SIZE = 5
 const MAX_SEEN_DIRS = 30
 const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
 
