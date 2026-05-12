@@ -32,6 +32,7 @@ local-dev*
 .opencode/plans/*
 .hive
 docs/personal/*
+scripts/rebuild-and-restart.sh
 
 # Build outputs
 build/

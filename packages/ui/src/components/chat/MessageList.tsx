@@ -904,60 +904,6 @@ const MessageListEntry: React.FC<MessageListEntryProps> = ({
 
 MessageListEntry.displayName = 'MessageListEntry';
 
-// Inner component that renders staged turn entries.
-const StaticHistoryList: React.FC<{
-    entries: RenderEntry[];
-    contentRef: React.RefObject<HTMLDivElement | null>;
-    onMessageContentChange: (reason?: ContentChangeReason) => void;
-    getAnimationHandlers: (messageId: string) => AnimationHandlers;
-    scrollToBottom?: (options?: { instant?: boolean; force?: boolean }) => void;
-    stickyUserHeader: boolean;
-    defaultActivityExpanded: boolean;
-    turnUiStates: Map<string, TurnUiState>;
-    onToggleTurnGroup: (turnId: string) => void;
-    chatRenderMode: 'sorted' | 'live';
-    shouldAnimateUserMessage: (message: ChatMessageEntry) => boolean;
-    onUserAnimationConsumed: (messageId: string) => void;
-    activeStreamingPhase?: StreamPhase | null;
-}> = ({ entries, contentRef, onMessageContentChange, getAnimationHandlers, scrollToBottom, stickyUserHeader, defaultActivityExpanded, turnUiStates, onToggleTurnGroup, chatRenderMode, shouldAnimateUserMessage, onUserAnimationConsumed, activeStreamingPhase }) => {
-    const renderEntry = React.useCallback((entry: RenderEntry) => {
-        return (
-            <MessageListEntry
-                key={entry.key}
-                entry={entry}
-                onMessageContentChange={onMessageContentChange}
-                getAnimationHandlers={getAnimationHandlers}
-                scrollToBottom={scrollToBottom}
-                stickyUserHeader={stickyUserHeader}
-                sessionIsWorking={false}
-                defaultActivityExpanded={defaultActivityExpanded}
-                turnUiStates={turnUiStates}
-                onToggleTurnGroup={onToggleTurnGroup}
-                chatRenderMode={chatRenderMode}
-                shouldAnimateUserMessage={shouldAnimateUserMessage}
-                onUserAnimationConsumed={onUserAnimationConsumed}
-                activeStreamingMessageId={null}
-                activeStreamingPhase={activeStreamingPhase}
-            />
-        );
-    }, [activeStreamingPhase, chatRenderMode, defaultActivityExpanded, getAnimationHandlers, onMessageContentChange, onToggleTurnGroup, onUserAnimationConsumed, scrollToBottom, shouldAnimateUserMessage, stickyUserHeader, turnUiStates]);
-
-    return (
-        <div ref={contentRef} className="relative w-full">
-            {entries.map((entry) => (
-                <div
-                    key={entry.key}
-                    data-turn-entry={entry.key}
-                >
-                    {renderEntry(entry)}
-                </div>
-            ))}
-        </div>
-    );
-};
-
-StaticHistoryList.displayName = 'StaticHistoryList';
-
 const StreamingTailContent: React.FC<{
     entry: RenderEntry;
     onMessageContentChange: (reason?: ContentChangeReason) => void;
@@ -1444,22 +1390,31 @@ const MessageList = React.forwardRef<MessageListHandle, MessageListProps>(({
                 />
 
                 <FadeInDisabledProvider disabled={disableFadeIn}>
-                    <div className="relative w-full">
-                        <StaticHistoryList
-                            entries={historyEntries}
-                            contentRef={historyContentRef}
-                            onMessageContentChange={stableHistoryContentChange}
-                            getAnimationHandlers={stableGetAnimationHandlers}
-                            scrollToBottom={stableScrollToBottom}
-                            stickyUserHeader={stickyUserHeader}
-                            defaultActivityExpanded={defaultActivityExpanded}
-                            turnUiStates={turnUiStates}
-                            onToggleTurnGroup={toggleTurnGroup}
-                            chatRenderMode={chatRenderMode}
-                            shouldAnimateUserMessage={shouldAnimateUserMessage}
-                            onUserAnimationConsumed={onUserAnimationConsumed}
-                            activeStreamingPhase={activeStreamingPhase}
-                        />
+                    <div ref={historyContentRef} className="flex flex-col-reverse relative w-full">
+                        {historyEntries.map((entry) => (
+                            <div
+                                key={entry.key}
+                                data-turn-entry={entry.key}
+                            >
+                                <MessageListEntry
+                                    key={entry.key}
+                                    entry={entry}
+                                    onMessageContentChange={stableHistoryContentChange}
+                                    getAnimationHandlers={stableGetAnimationHandlers}
+                                    scrollToBottom={stableScrollToBottom}
+                                    stickyUserHeader={stickyUserHeader}
+                                    sessionIsWorking={false}
+                                    defaultActivityExpanded={defaultActivityExpanded}
+                                    turnUiStates={turnUiStates}
+                                    onToggleTurnGroup={toggleTurnGroup}
+                                    chatRenderMode={chatRenderMode}
+                                    shouldAnimateUserMessage={shouldAnimateUserMessage}
+                                    onUserAnimationConsumed={onUserAnimationConsumed}
+                                    activeStreamingMessageId={null}
+                                    activeStreamingPhase={activeStreamingPhase}
+                                />
+                            </div>
+                        ))}
                         {trailingStreamingEntry ? (
                             <StreamingTailContent
                                 entry={trailingStreamingEntry}
