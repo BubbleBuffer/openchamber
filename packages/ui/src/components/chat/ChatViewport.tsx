@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Message, Part } from '@/lib/opencode/client';
 
-import MessageList, { type MessageListHandle } from './MessageList';
+import VirtualizedMessageList, { type MessageListHandle } from './VirtualizedMessageList';
 import { PermissionCard } from './permissions/PermissionCard';
 import { QuestionCard } from './permissions/QuestionCard';
 import { StatusRowContainer } from './status/StatusRowContainer';
@@ -36,7 +36,6 @@ export type ChatViewportProps = {
     handleMessageContentChange: (reason?: ContentChangeReason) => void;
     getAnimationHandlers: (messageId: string) => AnimationHandlers;
     handleLoadOlder: () => void;
-    scrollToBottom: (options?: { instant?: boolean; force?: boolean }) => void;
     sessionQuestions: QuestionRequest[];
     sessionPermissions: PermissionRequest[];
     isProgrammaticFollowActive: boolean;
@@ -61,7 +60,6 @@ export const ChatViewport = React.memo(({
     handleMessageContentChange,
     getAnimationHandlers,
     handleLoadOlder,
-    scrollToBottom,
     sessionQuestions,
     sessionPermissions,
     isProgrammaticFollowActive,
@@ -80,8 +78,7 @@ export const ChatViewport = React.memo(({
         >
             <div className="absolute inset-0">
                 <ScrollShadow
-                    reversed
-                    className="flex flex-col-reverse absolute inset-0 overflow-y-auto overflow-x-hidden z-0 chat-scroll overlay-scrollbar-target"
+                    className="flex absolute inset-0 overflow-y-auto overflow-x-hidden z-0 chat-scroll overlay-scrollbar-target"
                     ref={scrollRef}
                     onScroll={onScroll}
                     observeMutations={false}
@@ -89,7 +86,7 @@ export const ChatViewport = React.memo(({
                     data-scroll-shadow="true"
                     data-scrollbar="chat"
                 >
-                    <MessageList
+                    <VirtualizedMessageList
                         ref={messageListRef}
                         sessionKey={currentSessionId}
                         turnStart={turnStart}
@@ -104,8 +101,6 @@ export const ChatViewport = React.memo(({
                         hasMoreAbove={hasMoreAboveTurns}
                         isLoadingOlder={isLoadingOlder}
                         onLoadOlder={handleLoadOlder}
-                        scrollToBottom={scrollToBottom}
-                        scrollRef={scrollRef}
                     />
                     {(sessionQuestions.length > 0 || sessionPermissions.length > 0) && (
                         <div>
@@ -144,7 +139,6 @@ export const ChatViewport = React.memo(({
         && prev.handleMessageContentChange === next.handleMessageContentChange
         && prev.getAnimationHandlers === next.getAnimationHandlers
         && prev.handleLoadOlder === next.handleLoadOlder
-        && prev.scrollToBottom === next.scrollToBottom
         && prev.sessionQuestions === next.sessionQuestions
         && prev.sessionPermissions === next.sessionPermissions
         && prev.isProgrammaticFollowActive === next.isProgrammaticFollowActive

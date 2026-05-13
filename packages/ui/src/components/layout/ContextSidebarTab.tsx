@@ -515,7 +515,7 @@ export const ContextPanelContent: React.FC = () => {
         <div>
           <div className="typography-micro text-muted-foreground">Raw Messages</div>
           <div className="mt-2.5 space-y-1">
-            {[...sessionMessages].reverse().map((message) => {
+            {sessionMessages.map((message) => {
               const role = deriveMessageRole(message.info).role;
               const isExpanded = expandedRawMessages[message.info.id] === true;
               const isCopied = copiedRawMessageId === message.info.id;

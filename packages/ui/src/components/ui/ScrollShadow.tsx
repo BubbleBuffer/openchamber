@@ -9,7 +9,6 @@ export type ScrollShadowProps = React.HTMLAttributes<HTMLElement> & {
   hideTopShadow?: boolean;
   hideBottomShadow?: boolean;
   observeMutations?: boolean;
-  reversed?: boolean;
   onVisibilityChange?: (state: "both" | "none" | "top" | "bottom" | "left" | "right") => void;
 };
 
@@ -36,7 +35,6 @@ export const ScrollShadow = React.forwardRef<HTMLElement, ScrollShadowProps>(
         hideTopShadow = false,
         hideBottomShadow = false,
         observeMutations = true,
-        reversed = false,
         onVisibilityChange,
         style,
         className,
@@ -97,15 +95,11 @@ export const ScrollShadow = React.forwardRef<HTMLElement, ScrollShadowProps>(
       const SUBPIXEL_TOLERANCE = 1;
       const hasBefore =
         orientation === "vertical"
-          ? reversed
-            ? el.scrollHeight - (el.scrollTop + el.clientHeight) > offset + SUBPIXEL_TOLERANCE
-            : el.scrollTop > offset + SUBPIXEL_TOLERANCE
+          ? el.scrollTop > offset + SUBPIXEL_TOLERANCE
           : el.scrollLeft > offset + SUBPIXEL_TOLERANCE;
       let hasAfter =
         orientation === "vertical"
-          ? reversed
-            ? el.scrollTop > offset + SUBPIXEL_TOLERANCE
-            : el.scrollHeight - (el.scrollTop + el.clientHeight) > offset + SUBPIXEL_TOLERANCE
+          ? el.scrollHeight - (el.scrollTop + el.clientHeight) > offset + SUBPIXEL_TOLERANCE
           : el.scrollWidth - (el.scrollLeft + el.clientWidth) > offset + SUBPIXEL_TOLERANCE;
 
       const effectiveHasBefore = hideTopShadow && orientation === "vertical" ? false : hasBefore;
@@ -121,7 +115,7 @@ export const ScrollShadow = React.forwardRef<HTMLElement, ScrollShadowProps>(
         visibleRef.current = next;
         onVisibilityChange?.(next);
       }
-    }, [clearAttributes, hideTopShadow, hideBottomShadow, isEnabled, offset, onVisibilityChange, orientation, reversed, setAttributes]);
+    }, [clearAttributes, hideTopShadow, hideBottomShadow, isEnabled, offset, onVisibilityChange, orientation, setAttributes]);
 
     React.useEffect(() => {
       const el = internalRef.current;

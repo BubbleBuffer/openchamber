@@ -1,12 +1,10 @@
 import React from 'react';
 import type { Message } from '@/lib/opencode/client';
 
-import { type MessageListHandle } from './MessageList';
+import { type MessageListHandle } from './VirtualizedMessageList';
 import ChatEmptyState from './ChatEmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useChatTimelineController } from './hooks/useChatTimelineController';
-import { useUserScrollDetector } from './hooks/useUserScrollDetector';
-import { useSSEAnchorSuppression } from './hooks/useSSEAnchorSuppression';
 import { useChatTurnNavigation } from './hooks/useChatTurnNavigation';
 import { useDeviceInfo } from '@/lib/device';
 import { usePlanDetection } from '@/hooks/usePlanDetection';
@@ -81,7 +79,6 @@ export type SessionMountProps = {
 export const SessionMount = React.memo(({
     sessionId,
     isActive,
-    onScrollStateChange,
 }: SessionMountProps) => {
     // UI store
     const isExpandedInput = useUIStore((state) => state.isExpandedInput);
@@ -252,9 +249,6 @@ export const SessionMount = React.memo(({
     const messageListRef = React.useRef<MessageListHandle | null>(null);
     const scrollRef = React.useRef<HTMLDivElement | null>(null);
 
-    const { userScrolledUp, scrollToBottom, onScroll } = useUserScrollDetector(scrollRef);
-    useSSEAnchorSuppression(scrollRef, userScrolledUp, sessionMessages.length);
-
     const getAnimationHandlers = React.useCallback(
         (): import('@/components/chat/timeline/types').AnimationHandlers => ({
             onChunk: () => {},
@@ -284,35 +278,6 @@ export const SessionMount = React.memo(({
         loadMoreMessages,
     });
     const { loadEarlier, resumeToBottomInstant } = timelineController;
-
-    // Refs for stable scroll listener deps (timelineController is not memoized)
-    const canLoadEarlierRef = React.useRef(timelineController.historySignals.canLoadEarlier);
-    const isLoadingOlderRef = React.useRef(timelineController.isLoadingOlder);
-    const loadEarlierRef = React.useRef(timelineController.loadEarlier);
-
-    React.useEffect(() => {
-        canLoadEarlierRef.current = timelineController.historySignals.canLoadEarlier;
-        isLoadingOlderRef.current = timelineController.isLoadingOlder;
-        loadEarlierRef.current = timelineController.loadEarlier;
-    });
-
-    // Aggressive automatic load-more: trigger within 5 estimated entry heights of top edge
-    React.useEffect(() => {
-        if (!isActive) return;
-        const container = scrollRef.current;
-        if (!container) return;
-
-        const handleScroll = () => {
-            const distanceFromTop = container.scrollHeight - container.scrollTop - container.clientHeight;
-            const threshold = 5 * 160; // 5 estimated entry heights (160px default)
-            if (distanceFromTop < threshold && canLoadEarlierRef.current && !isLoadingOlderRef.current) {
-                void loadEarlierRef.current();
-            }
-        };
-
-        container.addEventListener('scroll', handleScroll, { passive: true });
-        return () => container.removeEventListener('scroll', handleScroll);
-    }, [isActive, scrollRef]);
 
     const runLatestInstantResume = React.useCallback(async () => {
         await resumeToBottomInstant();
@@ -450,13 +415,6 @@ export const SessionMount = React.memo(({
         void load();
     }, [sessionId, hasLoadedSessionMessages, loadMessages, resumeToLatestInstant]);
 
-    // Notify parent of scroll state changes
-    React.useEffect(() => {
-        if (isActive && onScrollStateChange) {
-            onScrollStateChange({ userScrolledUp, scrollToBottom });
-        }
-    }, [isActive, onScrollStateChange, userScrolledUp, scrollToBottom]);
-
     if (isSessionHydrating && sessionMessages.length === 0 && !streamingMessageId) {
         return (
             <ActiveSessionContext.Provider value={{ isActive }}>
@@ -544,11 +502,9 @@ export const SessionMount = React.memo(({
                 handleMessageContentChange={handleMessageContentChange}
                 getAnimationHandlers={getAnimationHandlers}
                 handleLoadOlder={handleLoadOlder}
-                scrollToBottom={scrollToBottom}
                 sessionQuestions={sessionQuestions}
                 sessionPermissions={sessionPermissions}
                 isProgrammaticFollowActive={false}
-                onScroll={onScroll}
             />
         </ActiveSessionContext.Provider>
     );

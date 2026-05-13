@@ -1,7 +1,7 @@
 import React from 'react';
 
 import type { ChatMessageEntry } from '../lib/turns/types';
-import type { MessageListHandle } from '../MessageList';
+import type { MessageListHandle } from '../VirtualizedMessageList';
 import { TURN_WINDOW_DEFAULTS } from '../lib/turns/constants';
 import {
     buildTurnWindowModel,
@@ -14,7 +14,7 @@ import {
 import type { TurnHistorySignals } from '../lib/turns/historySignals';
 import { getMemoryLimits, type SessionHistoryMeta } from '@/stores/types/sessionTypes';
 
-type ViewportAnchor = { messageId: string; offsetTop: number };
+type ViewportAnchor = { entryKey: string; offsetTop: number };
 
 type PendingScrollRequest = {
     sessionId: string;
