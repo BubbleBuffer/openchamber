@@ -67,6 +67,7 @@ interface VirtualizedMessageListProps {
   hasMoreAbove: boolean;
   isLoadingOlder: boolean;
   onLoadOlder: () => void;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const VirtualizedMessageList = React.forwardRef<ChatViewerHandle, VirtualizedMessageListProps>(
@@ -85,6 +86,7 @@ const VirtualizedMessageList = React.forwardRef<ChatViewerHandle, VirtualizedMes
       hasMoreAbove,
       isLoadingOlder,
       onLoadOlder,
+      scrollRef,
     },
     ref,
   ) => {
@@ -102,7 +104,6 @@ const VirtualizedMessageList = React.forwardRef<ChatViewerHandle, VirtualizedMes
     }>({ sessionKey: undefined, previousOrder: [], animatedIds: new Set() });
     const stableGetAnimationHandlers = useStableEvent(getAnimationHandlers);
     const stableOnLoadOlder = useStableEvent(onLoadOlder);
-    const scrollRef = React.useRef<HTMLDivElement | null>(null);
 
     React.useEffect(() => { setTurnUiStates(new Map()); }, [activityRenderMode]);
 
@@ -243,10 +244,10 @@ const VirtualizedMessageList = React.forwardRef<ChatViewerHandle, VirtualizedMes
     const historyEntries = staticRenderEntries;
 
     const allEntries = React.useMemo(() => {
-      const result: RenderEntry[] = [];
-      if (trailingStreamingEntry) result.push(trailingStreamingEntry);
-      result.push(...historyEntries);
-      return result;
+      if (trailingStreamingEntry) {
+        return [...historyEntries, trailingStreamingEntry];
+      }
+      return historyEntries;
     }, [historyEntries, trailingStreamingEntry]);
 
     const estimateEntrySize = React.useCallback(
@@ -381,47 +382,41 @@ const VirtualizedMessageList = React.forwardRef<ChatViewerHandle, VirtualizedMes
       restoreViewportAnchor: (anchor: { entryKey: string; offsetTop: number }) => {
         return restoreViewportAnchor({ entryKey: anchor.entryKey, offsetFromTop: anchor.offsetTop });
       },
-    }), [allEntries, messageIndexMap, virtualizer, captureViewportAnchor, restoreViewportAnchor]);
+    }), [allEntries, messageIndexMap, virtualizer, captureViewportAnchor, restoreViewportAnchor, scrollRef]);
 
     const disableFadeIn = false;
 
     return (
       <FadeInDisabledProvider disabled={disableFadeIn}>
-        <div
-          ref={scrollRef}
-          className="absolute inset-0 overflow-y-auto overflow-x-hidden z-0 chat-scroll overlay-scrollbar-target"
-          data-scrollbar="chat"
-        >
-          <LoadOlderButton
-            hasMoreAbove={turnStart > 0 || hasMoreAbove}
-            isLoadingOlder={isLoadingOlder}
-            onLoadOlder={stableOnLoadOlder}
-          />
+        <LoadOlderButton
+          hasMoreAbove={turnStart > 0 || hasMoreAbove}
+          isLoadingOlder={isLoadingOlder}
+          onLoadOlder={stableOnLoadOlder}
+        />
 
-          <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
-            {virtualizer.getVirtualItems().map((virtualItem) => {
-              const entry = allEntries[virtualItem.index];
-              if (!entry) return null;
-              const isStreaming = entry === trailingStreamingEntry;
-              return (
-                <div
-                  key={virtualItem.key}
-                  data-index={virtualItem.index}
-                  ref={virtualizer.measureElement}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    transform: `translateY(${virtualItem.start}px)`,
-                    width: '100%',
-                  }}
-                >
-                  <div data-turn-entry={entry.key}>
-                    {renderEntry(entry, isStreaming)}
-                  </div>
+        <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
+          {virtualizer.getVirtualItems().map((virtualItem) => {
+            const entry = allEntries[virtualItem.index];
+            if (!entry) return null;
+            const isStreaming = entry === trailingStreamingEntry;
+            return (
+              <div
+                key={virtualItem.key}
+                data-index={virtualItem.index}
+                ref={virtualizer.measureElement}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  transform: `translateY(${virtualItem.start}px)`,
+                  width: '100%',
+                }}
+              >
+                <div data-turn-entry={entry.key}>
+                  {renderEntry(entry, isStreaming)}
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
       </FadeInDisabledProvider>
     );

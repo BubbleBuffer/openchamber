@@ -101,6 +101,7 @@ export const ChatViewport = React.memo(({
                         hasMoreAbove={hasMoreAboveTurns}
                         isLoadingOlder={isLoadingOlder}
                         onLoadOlder={handleLoadOlder}
+                        scrollRef={scrollRef}
                     />
                     {(sessionQuestions.length > 0 || sessionPermissions.length > 0) && (
                         <div>

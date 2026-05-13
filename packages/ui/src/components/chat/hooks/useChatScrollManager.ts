@@ -23,28 +23,30 @@ export function useChatScrollManager({
 }: UseChatScrollManagerOptions) {
   const isAtBottomRef = React.useRef(true);
   const prevEntryCountRef = React.useRef(entryCount);
+  const loadMoreRef = React.useRef(loadMore);
+  loadMoreRef.current = loadMore;
+  const canLoadMoreRef = React.useRef(canLoadMore);
+  canLoadMoreRef.current = canLoadMore;
+  const isLoadingOlderRef = React.useRef(isLoadingOlder);
+  isLoadingOlderRef.current = isLoadingOlder;
 
   React.useEffect(() => {
     const scrollEl = virtualizer.scrollElement;
     if (!scrollEl || !isActive) return;
 
-    const checkIfAtBottom = () => {
+    const handleScroll = () => {
       const scrollBottom = scrollEl.scrollTop + scrollEl.clientHeight;
       const totalHeight = scrollEl.scrollHeight;
       isAtBottomRef.current = totalHeight - scrollBottom < BOTTOM_THRESHOLD_PX;
+
+      if (virtualizer.range && virtualizer.range.startIndex <= LOAD_MORE_START_INDEX && canLoadMoreRef.current && !isLoadingOlderRef.current) {
+        loadMoreRef.current();
+      }
     };
 
-    scrollEl.addEventListener('scroll', checkIfAtBottom, { passive: true });
-    return () => scrollEl.removeEventListener('scroll', checkIfAtBottom);
+    scrollEl.addEventListener('scroll', handleScroll, { passive: true });
+    return () => scrollEl.removeEventListener('scroll', handleScroll);
   }, [virtualizer, isActive]);
-
-  React.useEffect(() => {
-    if (!isActive) return;
-    const range = virtualizer.range;
-    if (range && range.startIndex <= LOAD_MORE_START_INDEX && canLoadMore && !isLoadingOlder) {
-      loadMore();
-    }
-  });
 
   React.useEffect(() => {
     if (!isActive) return;
