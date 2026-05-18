@@ -68,6 +68,8 @@ interface VirtualizedMessageListProps {
   isLoadingOlder: boolean;
   onLoadOlder: () => void;
   scrollRef: React.RefObject<HTMLDivElement | null>;
+  onScrollStateChange?: (state: { userScrolledUp: boolean; scrollToBottom: () => void }) => void;
+  onAtBottomChange?: (atBottom: boolean) => void;
 }
 
 const VirtualizedMessageList = React.forwardRef<ChatViewerHandle, VirtualizedMessageListProps>(
@@ -87,6 +89,8 @@ const VirtualizedMessageList = React.forwardRef<ChatViewerHandle, VirtualizedMes
       isLoadingOlder,
       onLoadOlder,
       scrollRef,
+      onScrollStateChange,
+      onAtBottomChange,
     },
     ref,
   ) => {
@@ -269,14 +273,19 @@ const VirtualizedMessageList = React.forwardRef<ChatViewerHandle, VirtualizedMes
       overscan: OVERSCAN,
     });
 
-    useChatScrollManager({
+    const scrollManager = useChatScrollManager({
       virtualizer,
       entryCount: allEntries.length,
       isActive: true,
       loadMore: stableOnLoadOlder,
       canLoadMore: turnStart > 0 || hasMoreAbove,
       isLoadingOlder,
+      onScrollStateChange,
     });
+
+    React.useEffect(() => {
+      onAtBottomChange?.(scrollManager.isAtBottom);
+    }, [scrollManager.isAtBottom, onAtBottomChange]);
 
     const { captureViewportAnchor, restoreViewportAnchor } = useViewportAnchor(scrollRef);
 

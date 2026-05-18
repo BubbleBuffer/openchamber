@@ -79,6 +79,7 @@ export type SessionMountProps = {
 export const SessionMount = React.memo(({
     sessionId,
     isActive,
+    onScrollStateChange,
 }: SessionMountProps) => {
     // UI store
     const isExpandedInput = useUIStore((state) => state.isExpandedInput);
@@ -249,6 +250,13 @@ export const SessionMount = React.memo(({
     const messageListRef = React.useRef<MessageListHandle | null>(null);
     const scrollRef = React.useRef<HTMLDivElement | null>(null);
 
+    const scrollToBottomRef = React.useRef<() => void>(() => {});
+
+    const handleScrollStateChange = React.useCallback((state: { userScrolledUp: boolean; scrollToBottom: () => void }) => {
+        scrollToBottomRef.current = state.scrollToBottom;
+        onScrollStateChange?.(state);
+    }, [onScrollStateChange]);
+
     const getAnimationHandlers = React.useCallback(
         (): import('@/components/chat/timeline/types').AnimationHandlers => ({
             onChunk: () => {},
@@ -257,13 +265,15 @@ export const SessionMount = React.memo(({
             onAnimationStart: () => {},
             onReservationCancelled: () => {},
             onReasoningBlock: () => {},
-            onAnimatedHeightChange: () => {},
+            onAnimatedHeightChange: () => { scrollToBottomRef.current(); },
         }),
         [],
     );
 
     const handleMessageContentChange = React.useCallback(
-        (): void => {},
+        (): void => {
+            scrollToBottomRef.current();
+        },
         [],
     );
 
@@ -504,7 +514,7 @@ export const SessionMount = React.memo(({
                 handleLoadOlder={handleLoadOlder}
                 sessionQuestions={sessionQuestions}
                 sessionPermissions={sessionPermissions}
-                isProgrammaticFollowActive={false}
+                onScrollStateChange={onScrollStateChange ? handleScrollStateChange : undefined}
             />
         </ActiveSessionContext.Provider>
     );

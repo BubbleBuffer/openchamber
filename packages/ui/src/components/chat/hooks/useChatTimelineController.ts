@@ -425,7 +425,10 @@ export const useChatTimelineController = ({
             await waitForNextRenderCommit();
         }
 
-        scrollRef.current?.scrollTo({ top: 0 });
+        const container = scrollRef.current;
+        if (container) {
+            container.scrollTop = container.scrollHeight;
+        }
     }, [scrollRef, waitForNextRenderCommit]);
 
     const resumeToBottomInstant = React.useCallback(async () => {
@@ -439,7 +442,10 @@ export const useChatTimelineController = ({
             await waitForNextRenderCommit();
         }
 
-        scrollRef.current?.scrollTo({ top: 0 });
+        const container = scrollRef.current;
+        if (container) {
+            container.scrollTop = container.scrollHeight;
+        }
     }, [scrollRef, waitForNextRenderCommit]);
 
     const handleActiveTurnChange = React.useCallback((turnId: string | null) => {

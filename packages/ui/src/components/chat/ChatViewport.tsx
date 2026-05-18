@@ -38,8 +38,7 @@ export type ChatViewportProps = {
     handleLoadOlder: () => void;
     sessionQuestions: QuestionRequest[];
     sessionPermissions: PermissionRequest[];
-    isProgrammaticFollowActive: boolean;
-    onScroll?: (event: React.UIEvent<HTMLDivElement>) => void;
+    onScrollStateChange?: (state: { userScrolledUp: boolean; scrollToBottom: () => void }) => void;
 };
 
 export const ChatViewport = React.memo(({
@@ -62,10 +61,15 @@ export const ChatViewport = React.memo(({
     handleLoadOlder,
     sessionQuestions,
     sessionPermissions,
-    isProgrammaticFollowActive,
-    onScroll,
+    onScrollStateChange,
 }: ChatViewportProps) => {
     const { isMobile } = useDeviceInfo();
+    const [isAtBottom, setIsAtBottom] = React.useState(true);
+
+    const handleAtBottomChange = React.useCallback((atBottom: boolean) => {
+        setIsAtBottom(atBottom);
+    }, []);
+
     return (
         <div
             className={cn(
@@ -78,9 +82,8 @@ export const ChatViewport = React.memo(({
         >
             <div className="absolute inset-0">
                 <ScrollShadow
-                    className="flex absolute inset-0 overflow-y-auto overflow-x-hidden z-0 chat-scroll overlay-scrollbar-target"
+                    className="absolute inset-0 overflow-y-auto overflow-x-hidden z-0 chat-scroll overlay-scrollbar-target"
                     ref={scrollRef}
-                    onScroll={onScroll}
                     observeMutations={false}
                     hideTopShadow={isMobile && stickyUserHeader}
                     data-scroll-shadow="true"
@@ -102,6 +105,8 @@ export const ChatViewport = React.memo(({
                         isLoadingOlder={isLoadingOlder}
                         onLoadOlder={handleLoadOlder}
                         scrollRef={scrollRef}
+                        onScrollStateChange={onScrollStateChange}
+                        onAtBottomChange={handleAtBottomChange}
                     />
                     {(sessionQuestions.length > 0 || sessionPermissions.length > 0) && (
                         <div>
@@ -117,8 +122,10 @@ export const ChatViewport = React.memo(({
                     <div className="mb-3">
                         <StatusRowContainer />
                     </div>
+
+                    <div className="h-10 shrink-0" />
                 </ScrollShadow>
-                <OverlayScrollbar containerRef={scrollRef} suppressVisibility={isProgrammaticFollowActive} userIntentOnly observeMutations={false} />
+                <OverlayScrollbar containerRef={scrollRef} suppressVisibility={isAtBottom} userIntentOnly observeMutations={false} />
             </div>
         </div>
     );
@@ -141,9 +148,5 @@ export const ChatViewport = React.memo(({
         && prev.getAnimationHandlers === next.getAnimationHandlers
         && prev.handleLoadOlder === next.handleLoadOlder
         && prev.sessionQuestions === next.sessionQuestions
-        && prev.sessionPermissions === next.sessionPermissions
-        && prev.isProgrammaticFollowActive === next.isProgrammaticFollowActive
-        && prev.onScroll === next.onScroll;
+        && prev.sessionPermissions === next.sessionPermissions;
 });
-
-ChatViewport.displayName = 'ChatViewport';
