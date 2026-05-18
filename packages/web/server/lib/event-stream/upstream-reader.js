@@ -38,6 +38,8 @@ export function createUpstreamSseReader({
   onConnect,
   onDisconnect,
   onError,
+  onStall,
+  onResume,
 }) {
   let running = null;
   let stopped = false;
@@ -67,6 +69,8 @@ export function createUpstreamSseReader({
         signal?.addEventListener('abort', abortActive, { once: true });
 
         let abortReason = null;
+        let wasStalled = false;
+        let stallStartTime = 0;
         let stallTimer = null;
         const clearStallTimer = () => {
           if (stallTimer) {
@@ -80,9 +84,13 @@ export function createUpstreamSseReader({
             return;
           }
 
+          stallStartTime = Date.now();
           stallTimer = setTimeout(() => {
             abortReason = 'upstream_stalled';
+            wasStalled = true;
+            const duration = Date.now() - stallStartTime;
             controller.abort();
+            onStall?.({ duration });
           }, stallTimeoutMs);
         };
 
@@ -114,6 +122,11 @@ export function createUpstreamSseReader({
           }
 
           onConnect?.({ response, lastEventId });
+
+          if (wasStalled) {
+            wasStalled = false;
+            onResume?.({ lastEventId });
+          }
 
           const decoder = new TextDecoder();
           const reader = response.body.getReader();
