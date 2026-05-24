@@ -1,4 +1,5 @@
 import { WebSocketServer } from 'ws';
+import webPush from 'web-push';
 
 import { parseRequestPathname } from '../terminal/index.js';
 import {
@@ -14,6 +15,10 @@ import {
   DEFAULT_UPSTREAM_RECONNECT_DELAY_MS,
   DEFAULT_UPSTREAM_STALL_TIMEOUT_MS,
 } from './upstream-reader.js';
+import { createNotificationEmitterRuntime } from '../notifications/emitter-runtime.js';
+import { createPushRuntime } from '../notifications/push-runtime.js';
+import { createOpenCodeWatcherRuntime } from '../opencode/services/watcher.js';
+import { EVENTS } from '../core/events.js';
 
 export function createGlobalUiEventBroadcaster({
   sseClients,
@@ -175,3 +180,133 @@ export function createMessageStreamWsRuntime({
     },
   };
 }
+
+/**
+ * @param {object} deps
+ * @param {import('../core/event-bus.js').EventBus<import('../core/events.js').ServerEvents>} deps.eventBus
+ * @param {object} deps.openCodeRuntime
+ * @param {NodeJS.Process} deps.process
+ * @param {import('fs').promises|null} deps.fsPromises
+ * @param {typeof import('path')|null} deps.path
+ * @param {Function} deps.readSettingsFromDiskMigrated
+ * @param {Function} deps.writeSettingsToDisk
+ * @param {string} deps.pushSubscriptionsFilePath
+ */
+export const createEventStreamRuntime = (deps) => {
+  const {
+    eventBus, openCodeRuntime, process,
+    fsPromises, path,
+    readSettingsFromDiskMigrated, writeSettingsToDisk,
+    pushSubscriptionsFilePath,
+  } = deps;
+
+  const uiNotificationClients = new Set();
+  const uiNotificationWsClients = new Set();
+  const uiOpenChamberEventClients = new Set();
+  const DESKTOP_NOTIFY_PREFIX = '[OpenChamberDesktopNotify] ';
+  const getDesktopNotifyEnabled = () => false;
+
+  let broadcastGlobalUiEventFn = null;
+  const setBroadcastGlobalUiEvent = (fn) => { broadcastGlobalUiEventFn = fn; };
+
+  const notificationEmitterRuntime = createNotificationEmitterRuntime({
+    process,
+    getDesktopNotifyEnabled,
+    desktopNotifyPrefix: DESKTOP_NOTIFY_PREFIX,
+    getUiNotificationClients: () => uiNotificationClients,
+    getBroadcastGlobalUiEvent: () => broadcastGlobalUiEventFn,
+  });
+
+  const { writeSseEvent, emitDesktopNotification, broadcastUiNotification } = notificationEmitterRuntime;
+
+  const pushRuntime = createPushRuntime({
+    fsPromises, path, webPush,
+    PUSH_SUBSCRIPTIONS_FILE_PATH: pushSubscriptionsFilePath,
+    readSettingsFromDiskMigrated,
+    writeSettingsToDisk,
+  });
+
+  const globalMessageStreamHub = createGlobalMessageStreamHub({ openCodeRuntime });
+
+  const processForwardedEventPayload = (payload, emitSyntheticEvent) => {
+    if (!payload || typeof payload !== 'object' || typeof emitSyntheticEvent !== 'function') return;
+    if (payload.type !== 'session.status') return;
+    const properties = payload.properties && typeof payload.properties === 'object' ? payload.properties : {};
+    const info = properties.info && typeof properties.info === 'object' ? properties.info : {};
+    const sessionId = typeof properties.sessionID === 'string' ? properties.sessionID.trim() : '';
+    const status = typeof info.type === 'string' ? info.type.trim() : '';
+    if (!sessionId || !status) return;
+    emitSyntheticEvent({
+      type: 'openchamber:session-status',
+      properties: { sessionId, status, timestamp: Date.now(), metadata: { attempt: info.attempt, message: info.message, next: info.next }, needsAttention: false },
+    });
+    emitSyntheticEvent({
+      type: 'openchamber:session-activity',
+      properties: { sessionId, phase: status === 'busy' || status === 'retry' ? 'busy' : 'idle' },
+    });
+  };
+
+  let globalWatcherStartPromise = null;
+
+  const ensureGlobalWatcherStarted = async () => {
+    if (globalWatcherStartPromise) return globalWatcherStartPromise;
+    globalWatcherStartPromise = (async () => {
+      const watcher = createOpenCodeWatcherRuntime({
+        waitForOpenCodePort: null,
+        openCodeRuntime,
+        globalEventHub: globalMessageStreamHub,
+        onPayload: (payload) => {
+          processForwardedEventPayload(payload, (syntheticPayload) => {
+            for (const res of uiNotificationClients) {
+              try { writeSseEvent(res, syntheticPayload); } catch {}
+            }
+          });
+          eventBus.emit(EVENTS.EVENT_RECEIVED, { payload, directory: undefined });
+        },
+      });
+      await watcher.start();
+    })().catch((error) => {
+      globalWatcherStartPromise = null;
+      throw error;
+    });
+    return globalWatcherStartPromise;
+  };
+
+  const broadcastToClients = (payload) => {
+    if (broadcastGlobalUiEventFn) { broadcastGlobalUiEventFn(payload); return; }
+    for (const res of uiNotificationClients) {
+      try { writeSseEvent(res, payload); } catch {}
+    }
+  };
+
+  const disposers = [
+    eventBus.on(EVENTS.NOTIFICATION_SEND_UI, ({ payload }) => broadcastToClients(payload)),
+    eventBus.on(EVENTS.NOTIFICATION_SEND_DESKTOP, ({ payload }) => emitDesktopNotification(payload)),
+    eventBus.on(EVENTS.NOTIFICATION_SEND_PUSH, ({ payload, options }) => {
+      void pushRuntime.sendPushToAllUiSessions?.(payload, options);
+    }),
+    eventBus.on(EVENTS.OPENCODE_READY, () => { void ensureGlobalWatcherStarted(); }),
+  ];
+
+  return {
+    writeSseEvent,
+    broadcastUiNotification,
+    emitDesktopNotification,
+    ensureGlobalWatcherStarted,
+    addUiNotificationClient: (res) => { uiNotificationClients.add(res); },
+    removeUiNotificationClient: (res) => { uiNotificationClients.delete(res); },
+    processUpstreamPayload: (payload) => {
+      eventBus.emit(EVENTS.EVENT_RECEIVED, { payload, directory: undefined });
+    },
+    getUiNotificationClients: () => uiNotificationClients,
+    getUiNotificationWsClients: () => uiNotificationWsClients,
+    getUiOpenChamberEventClients: () => uiOpenChamberEventClients,
+    pushRuntime,
+    globalMessageStreamHub,
+    setBroadcastGlobalUiEvent,
+    dispose: () => {
+      disposers.forEach(fn => fn());
+      globalWatcherStartPromise = null;
+    },
+  };
+};

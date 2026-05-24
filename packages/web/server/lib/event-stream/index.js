@@ -8,6 +8,7 @@ export {
 } from './protocol.js';
 
 export {
+  createEventStreamRuntime,
   createGlobalUiEventBroadcaster,
   createMessageStreamWsRuntime,
 } from './runtime.js';
