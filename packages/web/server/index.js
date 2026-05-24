@@ -12,16 +12,13 @@ import net from 'net';
 import { fileURLToPath } from 'url';
 import os from 'os';
 import crypto from 'crypto';
-import webPush from 'web-push';
+
 
 import { createEventBus } from './lib/core/event-bus.js';
 import { createOpenCodeRuntime } from './lib/opencode/runtime.js';
 
 import { createUiAuth } from './lib/ui-auth/ui-auth.js';
-import { createTunnelAuth } from './lib/opencode/auth/tunnel-auth.js';
 import { createManagedTunnelConfigRuntime } from './lib/tunnels/managed-config.js';
-import { createTunnelProviderRegistry } from './lib/tunnels/registry.js';
-import { createCloudflareTunnelProvider } from './lib/tunnels/providers/cloudflare.js';
 import { createRequestSecurityRuntime } from './lib/security/request-security.js';
 import {
   TUNNEL_MODE_MANAGED_LOCAL,
@@ -35,15 +32,11 @@ import {
   normalizeTunnelMode,
   normalizeTunnelProvider,
 } from './lib/tunnels/types.js';
-import { prepareNotificationLastMessage } from './lib/notifications/index.js';
+
 import { registerTtsRoutes } from './lib/tts/routes.js';
 import { detectSayTtsCapability } from './lib/tts/capability-runtime.js';
 import { createTerminalRuntime } from './lib/terminal/runtime.js';
-import {
-  createGlobalUiEventBroadcaster,
-  createGlobalMessageStreamHub,
-  createMessageStreamWsRuntime,
-} from './lib/event-stream/index.js';
+import { createMessageStreamWsRuntime } from './lib/event-stream/index.js';
 import { createFsSearchRuntime as createFsSearchRuntimeFactory } from './lib/fs/search.js';
 import { createOpenCodeEnvRuntime } from './lib/opencode/env/env-runtime.js';
 import { resolveOpenCodeEnvConfig } from './lib/opencode/env/env-config.js';
@@ -66,17 +59,16 @@ import { createSettingsRuntime } from './lib/opencode/settings/settings-runtime.
 import { createOpenCodeResolutionRuntime } from './lib/opencode/resolution/opencode-resolution-runtime.js';
 import { createBootstrapRuntime } from './lib/opencode/bootstrap/bootstrap-runtime.js';
 import { createSessionRuntime } from './lib/opencode/session/session-runtime.js';
-import { createOpenCodeWatcherRuntime } from './lib/opencode/services/watcher.js';
 import { createScheduledTasksRuntime } from './lib/scheduled-tasks/runtime.js';
 import { createServerStartupRuntime } from './lib/opencode/bootstrap/server-startup-runtime.js';
-import { createTunnelWiringRuntime } from './lib/opencode/network/tunnel-wiring-runtime.js';
+
 import { createStartupPipelineRuntime } from './lib/opencode/bootstrap/startup-pipeline-runtime.js';
 import { runCliEntryIfMain } from './lib/opencode/bootstrap/cli-entry-runtime.js';
 import { registerNotificationRoutes } from './lib/notifications/routes.js';
-import { createNotificationEmitterRuntime } from './lib/notifications/emitter-runtime.js';
 import { createNotificationRuntime } from './lib/notifications/runtime.js';
-import { createPushRuntime } from './lib/notifications/push-runtime.js';
 import { createNotificationTemplateRuntime } from './lib/notifications/template-runtime.js';
+import { createEventStreamRuntime } from './lib/event-stream/runtime.js';
+import { createTunnelRuntime } from './lib/tunnels/tunnel-runtime.js';
 import { createGracefulShutdownRuntime } from './lib/opencode/bootstrap/shutdown-runtime.js';
 import { createProjectConfigRuntime } from './lib/projects/project-config.js';
 
@@ -85,7 +77,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DEFAULT_PORT = 3000;
-const DESKTOP_NOTIFY_PREFIX = '[OpenChamberDesktopNotify] ';
 const HEALTH_CHECK_INTERVAL = 15000;
 const SHUTDOWN_TIMEOUT = 10000;
 const MODELS_DEV_API_URL = 'https://models.dev/api.json';
@@ -235,20 +226,6 @@ const getUiSessionTokenFromRequest = (...args) => requestSecurityRuntime.getUiSe
 const rejectWebSocketUpgrade = (...args) => requestSecurityRuntime.rejectWebSocketUpgrade(...args);
 const isRequestOriginAllowed = (...args) => requestSecurityRuntime.isRequestOriginAllowed(...args);
 
-// ── Push runtime ──────────────────────────────────────────────────
-const pushRuntime = createPushRuntime({
-  fsPromises, path, webPush, PUSH_SUBSCRIPTIONS_FILE_PATH, readSettingsFromDiskMigrated, writeSettingsToDisk,
-});
-const getOrCreateVapidKeys = (...args) => pushRuntime.getOrCreateVapidKeys(...args);
-const addOrUpdatePushSubscription = (...args) => pushRuntime.addOrUpdatePushSubscription(...args);
-const removePushSubscription = (...args) => pushRuntime.removePushSubscription(...args);
-const sendPushToAllUiSessions = (...args) => pushRuntime.sendPushToAllUiSessions(...args);
-const updateUiVisibility = (...args) => pushRuntime.updateUiVisibility(...args);
-const isAnyUiVisible = (...args) => pushRuntime.isAnyUiVisible(...args);
-const isUiVisible = (...args) => pushRuntime.isUiVisible(...args);
-const ensurePushInitialized = (...args) => pushRuntime.ensurePushInitialized(...args);
-const setPushInitialized = (...args) => pushRuntime.setPushInitialized(...args);
-
 // ── Terminal constants ────────────────────────────────────────────
 const TERMINAL_INPUT_WS_MAX_REBINDS_PER_WINDOW = 128;
 const TERMINAL_INPUT_WS_REBIND_WINDOW_MS = 60 * 1000;
@@ -320,12 +297,9 @@ const syncFromHmrState = () => {
 let server = null;
 let expressApp = null;
 let uiAuthController = null;
-let activeTunnelController = null;
 let terminalRuntime = null;
 let messageStreamRuntime = null;
 let exitOnShutdown = true;
-let runtimeManagedRemoteTunnelHostname = '';
-let runtimeManagedRemoteTunnelToken = '';
 
 // ── Env runtime (binary resolution) ──────────────────────────────
 const userProvidedOpenCodePassword = hmrStateRuntime.getUserProvidedOpenCodePassword(hmrState);
@@ -370,6 +344,9 @@ const openCodeResolutionRuntime = createOpenCodeResolutionRuntime({
 });
 const getOpenCodeResolutionSnapshot = (...args) => openCodeResolutionRuntime.getOpenCodeResolutionSnapshot(...args);
 
+// ── Forwarding reference (set after eventStreamRuntime is created) ─
+let uiNotificationClients = new Set();
+
 // ── Server utils runtime (Express helpers, not OpenCode state) ────
 const serverUtilsRuntime = createServerUtilsRuntime({
   fs, os, path, process,
@@ -388,14 +365,6 @@ const waitForOpenCodePort = (...args) => serverUtilsRuntime.waitForOpenCodePort(
 const buildAugmentedPath = (...args) => serverUtilsRuntime.buildAugmentedPath(...args);
 const buildManagedOpenCodePath = (...args) => serverUtilsRuntime.buildManagedOpenCodePath(...args);
 const parseSseDataPayload = (...args) => serverUtilsRuntime.parseSseDataPayload(...args);
-const fetchAgentsSnapshot = (...args) => serverUtilsRuntime.fetchAgentsSnapshot(...args);
-const fetchProvidersSnapshot = (...args) => serverUtilsRuntime.fetchProvidersSnapshot(...args);
-const fetchModelsSnapshot = (...args) => serverUtilsRuntime.fetchModelsSnapshot(...args);
-
-// ── Tunnel provider ───────────────────────────────────────────────
-const tunnelProviderRegistry = createTunnelProviderRegistry([createCloudflareTunnelProvider()]);
-tunnelProviderRegistry.seal();
-const tunnelAuthController = createTunnelAuth();
 
 // ── EventBus ──────────────────────────────────────────────────────
 const eventBus = createEventBus();
@@ -431,53 +400,16 @@ openCodeRuntime = createOpenCodeRuntime({
   },
 });
 
-// ── SSE notification clients ──────────────────────────────────────
-const uiNotificationClients = new Set();
-const uiNotificationWsClients = new Set();
-const uiOpenChamberEventClients = new Set();
+// ── Runtime construction (wired through EventBus) ──────────────────
+const eventStreamRuntime = createEventStreamRuntime({
+  eventBus, openCodeRuntime, process, fsPromises, path,
+  readSettingsFromDiskMigrated, writeSettingsToDisk,
+  pushSubscriptionsFilePath: PUSH_SUBSCRIPTIONS_FILE_PATH,
+});
+const { writeSseEvent, ensureGlobalWatcherStarted, pushRuntime } = eventStreamRuntime;
 
-const notificationEmitterRuntime = createNotificationEmitterRuntime({
-  process,
-  getDesktopNotifyEnabled: () => ENV_DESKTOP_NOTIFY,
-  desktopNotifyPrefix: DESKTOP_NOTIFY_PREFIX,
-  getUiNotificationClients: () => uiNotificationClients,
-  getBroadcastGlobalUiEvent: () => broadcastGlobalUiEvent,
-});
-const writeSseEvent = (...args) => notificationEmitterRuntime.writeSseEvent(...args);
-const emitDesktopNotification = (...args) => notificationEmitterRuntime.emitDesktopNotification(...args);
-const broadcastGlobalUiEvent = createGlobalUiEventBroadcaster({
-  sseClients: uiNotificationClients, wsClients: uiNotificationWsClients, writeSseEvent,
-});
-const broadcastUiNotification = (...args) => notificationEmitterRuntime.broadcastUiNotification(...args);
-
-// ── Session runtime ───────────────────────────────────────────────
-const sessionRuntime = createSessionRuntime({
-  writeSseEvent,
-  getNotificationClients: () => uiNotificationClients,
-  broadcastEvent: broadcastGlobalUiEvent,
-});
-sessionRuntime.resetAllSessionActivityToIdle();
-
-// ── Notification template & trigger runtimes ──────────────────────
-const notificationTemplateRuntime = createNotificationTemplateRuntime({
-  readSettingsFromDisk,
-  persistSettings,
-  openCodeRuntime,
-  resolveGitBinaryForSpawn,
-});
-const createTimeoutSignal = (...args) => notificationTemplateRuntime.createTimeoutSignal(...args);
-const resolveNotificationTemplate = (...args) => notificationTemplateRuntime.resolveNotificationTemplate(...args);
-const shouldApplyResolvedTemplateMessage = (...args) => notificationTemplateRuntime.shouldApplyResolvedTemplateMessage(...args);
-const summarizeText = (...args) => notificationTemplateRuntime.summarizeText(...args);
-const extractTextFromParts = (...args) => notificationTemplateRuntime.extractTextFromParts(...args);
-const extractLastMessageText = (...args) => notificationTemplateRuntime.extractLastMessageText(...args);
-const fetchLastAssistantMessageText = (...args) => notificationTemplateRuntime.fetchLastAssistantMessageText(...args);
-const maybeCacheSessionInfoFromEvent = (...args) => notificationTemplateRuntime.maybeCacheSessionInfoFromEvent(...args);
-const buildTemplateVariables = (...args) => notificationTemplateRuntime.buildTemplateVariables(...args);
-const fetchFreeZenModels = (...args) => notificationTemplateRuntime.fetchFreeZenModels(...args);
-const resolveZenModel = (...args) => notificationTemplateRuntime.resolveZenModel(...args);
-const validateZenModelAtStartup = (...args) => notificationTemplateRuntime.validateZenModelAtStartup(...args);
-const getCachedZenModels = (...args) => notificationTemplateRuntime.getCachedZenModels(...args);
+// Forward the uiNotificationClients reference for serverUtilsRuntime
+uiNotificationClients = eventStreamRuntime.getUiNotificationClients();
 
 const notificationRuntime = createNotificationRuntime({
   eventBus,
@@ -486,44 +418,35 @@ const notificationRuntime = createNotificationRuntime({
   persistSettings,
   resolveGitBinaryForSpawn,
 });
-const maybeSendPushForTrigger = (...args) => notificationRuntime.maybeSendPushForTrigger(...args);
 const setAutoAcceptSession = (...args) => notificationRuntime.setAutoAcceptSession(...args);
 
-// ── Event stream (SSE/WS hub) ─────────────────────────────────────
-const globalMessageStreamHub = createGlobalMessageStreamHub({
-  openCodeRuntime,
+// ── Template runtime subset (needed by TTS + models routes) ────────
+const notificationTemplateRuntime = createNotificationTemplateRuntime({
+  eventBus, readSettingsFromDisk, persistSettings, openCodeRuntime, resolveGitBinaryForSpawn,
 });
+const resolveZenModel = (...args) => notificationTemplateRuntime.resolveZenModel(...args);
+const fetchFreeZenModels = (...args) => notificationTemplateRuntime.fetchFreeZenModels(...args);
+const getCachedZenModels = (...args) => notificationTemplateRuntime.getCachedZenModels(...args);
 
-globalMessageStreamHub.subscribeStatus((status) => {
-  if (status.type === 'connect') sessionRuntime.resetAllSessionActivityToIdle();
-});
+// ── Session runtime ───────────────────────────────────────────────
+const sessionRuntime = createSessionRuntime({ eventBus });
+sessionRuntime.resetAllSessionActivityToIdle();
 
-// ── Watcher ───────────────────────────────────────────────────────
-const openCodeWatcherRuntime = createOpenCodeWatcherRuntime({
-  waitForOpenCodePort: (...args) => waitForOpenCodePort(...args),
-  openCodeRuntime,
-  parseSseDataPayload,
-  globalEventHub: globalMessageStreamHub,
-  onPayload: (payload) => {
-    maybeCacheSessionInfoFromEvent(payload);
-    void maybeSendPushForTrigger(payload);
-    sessionRuntime.processOpenCodeSsePayload(payload);
-  },
+// ── Tunnel runtime ────────────────────────────────────────────────
+const tunnelRuntime = createTunnelRuntime({
+  eventBus, crypto, URL,
+  readSettingsFromDiskMigrated, readManagedRemoteTunnelConfigFromDisk,
+  normalizeTunnelProvider, normalizeTunnelMode, normalizeOptionalPath,
+  normalizeManagedRemoteTunnelHostname, normalizeTunnelBootstrapTtlMs,
+  normalizeTunnelSessionTtlMs, isSupportedTunnelMode,
+  upsertManagedRemoteTunnelToken, resolveManagedRemoteTunnelToken,
+  TUNNEL_MODE_QUICK, TUNNEL_MODE_MANAGED_LOCAL, TUNNEL_MODE_MANAGED_REMOTE,
+  TUNNEL_PROVIDER_CLOUDFLARE, TunnelServiceError,
 });
-let globalWatcherStartPromise = null;
-const ensureGlobalWatcherStarted = async () => {
-  if (globalWatcherStartPromise) return globalWatcherStartPromise;
-  globalWatcherStartPromise = openCodeWatcherRuntime.start().catch((error) => {
-    globalWatcherStartPromise = null;
-    throw error;
-  });
-  return globalWatcherStartPromise;
-};
 
 // ── Synthetic event forwarding ────────────────────────────────────
 const processForwardedEventPayload = (payload, emitSyntheticEvent) => {
   if (!payload || typeof payload !== 'object' || typeof emitSyntheticEvent !== 'function') return;
-  maybeCacheSessionInfoFromEvent(payload);
   if (payload.type !== 'session.status') return;
   const properties = payload.properties && typeof payload.properties === 'object' ? payload.properties : {};
   const info = properties.info && typeof properties.info === 'object' ? properties.info : {};
@@ -547,23 +470,6 @@ const bootstrapRuntime = createBootstrapRuntime({
   registerOpenChamberRoutes, express,
 });
 
-const tunnelWiringRuntime = createTunnelWiringRuntime({
-  crypto, URL, tunnelProviderRegistry, tunnelAuthController,
-  readSettingsFromDiskMigrated, readManagedRemoteTunnelConfigFromDisk,
-  normalizeTunnelProvider, normalizeTunnelMode, normalizeOptionalPath,
-  normalizeManagedRemoteTunnelHostname, normalizeTunnelBootstrapTtlMs,
-  normalizeTunnelSessionTtlMs, isSupportedTunnelMode,
-  upsertManagedRemoteTunnelToken, resolveManagedRemoteTunnelToken,
-  TUNNEL_MODE_QUICK, TUNNEL_MODE_MANAGED_LOCAL, TUNNEL_MODE_MANAGED_REMOTE,
-  TUNNEL_PROVIDER_CLOUDFLARE, TunnelServiceError,
-  getActiveTunnelController: () => activeTunnelController,
-  setActiveTunnelController: (value) => { activeTunnelController = value; },
-  getRuntimeManagedRemoteTunnelHostname: () => runtimeManagedRemoteTunnelHostname,
-  setRuntimeManagedRemoteTunnelHostname: (value) => { runtimeManagedRemoteTunnelHostname = value; },
-  getRuntimeManagedRemoteTunnelToken: () => runtimeManagedRemoteTunnelToken,
-  setRuntimeManagedRemoteTunnelToken: (value) => { runtimeManagedRemoteTunnelToken = value; },
-});
-
 const startupPipelineRuntime = createStartupPipelineRuntime({
   createTerminalRuntime, createMessageStreamWsRuntime, createServerStartupRuntime,
 });
@@ -584,11 +490,7 @@ const bootstrapOpenCodeAtStartup = async (...args) => {
   if (openCodeRuntime.getProcess() && !openCodeRuntime.isExternal()) {
     openCodeRuntime.startHealthMonitoring(HEALTH_CHECK_INTERVAL);
   }
-  if (ENV_DESKTOP_NOTIFY) {
-    void ensureGlobalWatcherStarted().catch((error) => {
-      console.warn(`Global event watcher startup failed: ${error?.message || error}`);
-    });
-  }
+  await notificationRuntime.initialize();
 };
 
 // ── Shutdown runtime ──────────────────────────────────────────────
@@ -598,7 +500,8 @@ const gracefulShutdownRuntime = createGracefulShutdownRuntime({
   getIsShuttingDown: () => openCodeRuntime ? openCodeRuntime.getState().isShuttingDown : false,
   setIsShuttingDown: (value) => { if (openCodeRuntime) openCodeRuntime.setShuttingDown(value); },
   syncToHmrState,
-  openCodeWatcherRuntime, sessionRuntime,
+  openCodeWatcherRuntime: { stop: () => eventStreamRuntime.dispose() },
+  sessionRuntime,
   getHealthCheckInterval: () => openCodeRuntime ? openCodeRuntime.getState().healthCheckInterval : null,
   clearHealthCheckInterval: (value) => clearInterval(value),
   getTerminalRuntime: () => terminalRuntime,
@@ -612,9 +515,9 @@ const gracefulShutdownRuntime = createGracefulShutdownRuntime({
   getServer: () => server,
   getUiAuthController: () => uiAuthController,
   setUiAuthController: (value) => { uiAuthController = value; },
-  getActiveTunnelController: () => activeTunnelController,
-  setActiveTunnelController: (value) => { activeTunnelController = value; },
-  tunnelAuthController,
+  getActiveTunnelController: () => tunnelRuntime.getActiveTunnelController(),
+  setActiveTunnelController: () => {},
+  tunnelAuthController: tunnelRuntime.getTunnelAuthController(),
   scheduledTasksRuntime,
 });
 const gracefulShutdown = (...args) => gracefulShutdownRuntime.gracefulShutdown(...args);
@@ -653,12 +556,10 @@ async function main(options = {}) {
   const attachSignals = options.attachSignals !== false;
   const onTunnelReady = typeof options.onTunnelReady === 'function' ? options.onTunnelReady : null;
   if (typeof options.exitOnShutdown === 'boolean') exitOnShutdown = options.exitOnShutdown;
-  if (typeof options.onDesktopNotification === 'function') notificationEmitterRuntime.setOnDesktopNotification(options.onDesktopNotification);
 
   console.log(`Starting OpenChamber on port ${port === 0 ? 'auto' : port}`);
 
   const sayTTSCapability = await detectSayTtsCapability(process);
-  void validateZenModelAtStartup();
 
   const app = express();
   const serverStartedAt = new Date().toISOString();
@@ -700,13 +601,18 @@ async function main(options = {}) {
         planModeExperimentalEnabled: PLAN_MODE_EXPERIMENT_ENABLED,
       };
     },
-    uiPassword, tunnelAuthController, readSettingsFromDiskMigrated,
+    uiPassword, tunnelAuthController: tunnelRuntime.getTunnelAuthController(), readSettingsFromDiskMigrated,
     normalizeTunnelSessionTtlMs, resolveZenModel, sayTTSCapability,
-    ensurePushInitialized, ensureGlobalWatcherStarted, getOrCreateVapidKeys,
-    getUiSessionTokenFromRequest, writeSettingsToDisk, addOrUpdatePushSubscription,
-    removePushSubscription, updateUiVisibility, isUiVisible,
-    getUiNotificationClients: () => uiNotificationClients,
-    writeSseEvent, sessionRuntime, setPushInitialized,
+    ensurePushInitialized: (...args) => pushRuntime.ensurePushInitialized(...args), ensureGlobalWatcherStarted,
+    getOrCreateVapidKeys: (...args) => pushRuntime.getOrCreateVapidKeys(...args),
+    getUiSessionTokenFromRequest, writeSettingsToDisk,
+    addOrUpdatePushSubscription: (...args) => pushRuntime.addOrUpdatePushSubscription(...args),
+    removePushSubscription: (...args) => pushRuntime.removePushSubscription(...args),
+    updateUiVisibility: (...args) => pushRuntime.updateUiVisibility(...args),
+    isUiVisible: (...args) => pushRuntime.isUiVisible(...args),
+    getUiNotificationClients: () => eventStreamRuntime.getUiNotificationClients(),
+    writeSseEvent, sessionRuntime,
+    setPushInitialized: (...args) => pushRuntime.setPushInitialized(...args),
     fs, os, path, server, __dirname,
     openchamberDataDir: OPENCHAMBER_DATA_DIR,
     modelsDevApiUrl: MODELS_DEV_API_URL,
@@ -715,7 +621,7 @@ async function main(options = {}) {
   });
   uiAuthController = bootstrapResult.uiAuthController;
 
-  const tunnelRuntimeContext = tunnelWiringRuntime.initialize(app, port);
+  const tunnelRuntimeContext = tunnelRuntime.initialize(app, port);
   const { tunnelService, startTunnelWithNormalizedRequest } = tunnelRuntimeContext;
 
   const featureRoutesRuntime = createFeatureRoutesRuntime({ clientReloadDelayMs: CLIENT_RELOAD_DELAY_MS });
@@ -736,7 +642,7 @@ async function main(options = {}) {
     buildAugmentedPath,
     projectConfigRuntime: createProjectConfigRuntime({ fsPromises, path, projectsDirPath: OPENCHAMBER_PROJECTS_CONFIG_DIR }),
     scheduledTasksRuntime,
-    getOpenChamberEventClients: () => uiOpenChamberEventClients,
+    getOpenChamberEventClients: () => eventStreamRuntime.getUiOpenChamberEventClients(),
     writeSseEvent,
   });
 
@@ -753,9 +659,9 @@ async function main(options = {}) {
     buildAugmentedPath, searchPathFor, isExecutable,
     isRequestOriginAllowed, rejectWebSocketUpgrade,
     openCodeRuntime,
-    globalEventHub: globalMessageStreamHub,
+    globalEventHub: eventStreamRuntime.globalMessageStreamHub,
     processForwardedEventPayload,
-    messageStreamWsClients: uiNotificationWsClients,
+    messageStreamWsClients: eventStreamRuntime.getUiNotificationWsClients(),
     terminalHeartbeatIntervalMs: TERMINAL_INPUT_WS_HEARTBEAT_INTERVAL_MS,
     terminalRebindWindowMs: TERMINAL_INPUT_WS_REBIND_WINDOW_MS,
     terminalMaxRebindsPerWindow: TERMINAL_INPUT_WS_MAX_REBINDS_PER_WINDOW,
@@ -765,7 +671,7 @@ async function main(options = {}) {
     triggerHealthCheck: openCodeRuntime.triggerHealthCheck,
     staticRoutesRuntime, process, crypto,
     normalizeTunnelBootstrapTtlMs, readSettingsFromDiskMigrated,
-    tunnelAuthController, startTunnelWithNormalizedRequest,
+    tunnelAuthController: tunnelRuntime.getTunnelAuthController(), startTunnelWithNormalizedRequest,
     gracefulShutdown,
     getSignalsAttached: () => signalsAttachedRef.current,
     setSignalsAttached: (value) => { signalsAttachedRef.current = value; },
