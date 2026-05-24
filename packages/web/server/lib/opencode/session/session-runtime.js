@@ -1,3 +1,5 @@
+import { EVENTS } from '../../core/events.js';
+
 const SESSION_COOLDOWN_DURATION_MS = 2000;
 const SESSION_STATE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const SESSION_ATTENTION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -42,7 +44,8 @@ const deriveSessionActivityTransitions = (payload) => {
   return [];
 };
 
-export const createSessionRuntime = ({ writeSseEvent, getNotificationClients, broadcastEvent }) => {
+export const createSessionRuntime = ({ eventBus }) => {
+  const disposers = [];
   const sessionActivityPhases = new Map();
   const sessionActivityCooldowns = new Map();
   const sessionStates = new Map();
@@ -93,15 +96,7 @@ export const createSessionRuntime = ({ writeSseEvent, getNotificationClients, br
       sessionActivityCooldowns.set(sessionId, timer);
     }
 
-    if (typeof broadcastEvent === 'function') {
-      broadcastEvent({
-        type: 'openchamber:session-activity',
-        properties: {
-          sessionId,
-          phase,
-        },
-      });
-    }
+    eventBus.emit(EVENTS.SESSION_ACTIVITY_CHANGED, { sessionId, phase });
 
     return true;
   };
@@ -141,30 +136,8 @@ export const createSessionRuntime = ({ writeSseEvent, getNotificationClients, br
     updateSessionAttentionStatus(sessionId, status);
     const attentionState = sessionAttentionStates.get(sessionId);
     const attentionChanged = !!attentionState && existingAttentionState?.needsAttention !== attentionState.needsAttention;
-    const clients = getNotificationClients();
     if (!existing || existing.status !== status || attentionChanged) {
-      const state = sessionStates.get(sessionId);
-      const syntheticPayload = {
-        type: 'openchamber:session-status',
-        properties: {
-          sessionId,
-          status: state.status,
-          timestamp: state.lastUpdateAt,
-          metadata: state.metadata,
-          needsAttention: attentionState?.needsAttention ?? false,
-        },
-      };
-
-      if (typeof broadcastEvent === 'function') {
-        broadcastEvent(syntheticPayload);
-      } else if (clients.size > 0) {
-        for (const res of clients) {
-          try {
-            writeSseEvent(res, syntheticPayload);
-          } catch {
-          }
-        }
-      }
+      eventBus.emit(EVENTS.SESSION_NEEDS_ATTENTION, { sessionId, needsAttention: attentionState?.needsAttention ?? false });
     }
 
     const phase = status === 'busy' || status === 'retry' ? 'busy' : 'idle';
@@ -200,28 +173,7 @@ export const createSessionRuntime = ({ writeSseEvent, getNotificationClients, br
     if (wasNeedsAttention) {
       state.needsAttention = false;
 
-      const syntheticPayload = {
-        type: 'openchamber:session-status',
-        properties: {
-          sessionId,
-          status: state.status,
-          timestamp: Date.now(),
-          metadata: {},
-          needsAttention: false,
-        },
-      };
-
-      if (typeof broadcastEvent === 'function') {
-        broadcastEvent(syntheticPayload);
-      } else {
-        const clients = getNotificationClients();
-        for (const res of clients) {
-          try {
-            writeSseEvent(res, syntheticPayload);
-          } catch {
-          }
-        }
-      }
+      eventBus.emit(EVENTS.SESSION_NEEDS_ATTENTION, { sessionId, needsAttention: false });
     }
   };
 
@@ -301,6 +253,11 @@ export const createSessionRuntime = ({ writeSseEvent, getNotificationClients, br
 
   const cleanupInterval = setInterval(cleanupOldSessionStates, SESSION_STATE_CLEANUP_INTERVAL_MS);
 
+  disposers.push(
+    eventBus.on(EVENTS.EVENT_RECEIVED, ({ payload }) => { processOpenCodeSsePayload(payload); }),
+    eventBus.on(EVENTS.OPENCODE_READY, () => { resetAllSessionActivityToIdle(); }),
+  );
+
   const processOpenCodeSsePayload = (payload) => {
     const transitions = deriveSessionActivityTransitions(payload);
     for (const activity of transitions) {
@@ -320,10 +277,10 @@ export const createSessionRuntime = ({ writeSseEvent, getNotificationClients, br
   };
 
   const dispose = () => {
+    disposers.forEach(fn => fn());
+    disposers.length = 0;
     clearInterval(cleanupInterval);
-    for (const timer of sessionActivityCooldowns.values()) {
-      clearTimeout(timer);
-    }
+    for (const timer of sessionActivityCooldowns.values()) clearTimeout(timer);
     sessionActivityCooldowns.clear();
   };
 
