@@ -1,4 +1,13 @@
 // packages/web/server/lib/core/event-bus.js
+/** @template {Record<string, unknown>} Events
+ * @returns {{
+ *   on: <E extends keyof Events>(event: E, handler: (payload: Events[E]) => void) => () => void,
+ *   once: <E extends keyof Events>(event: E, handler: (payload: Events[E]) => void) => void,
+ *   emit: <E extends keyof Events>(event: E, payload: Events[E]) => void,
+ *   removeAllFor: <E extends keyof Events>(event: E) => void,
+ *   dispose: () => void,
+ * }}
+ */
 export function createEventBus() {
   const handlers = new Map();
 
