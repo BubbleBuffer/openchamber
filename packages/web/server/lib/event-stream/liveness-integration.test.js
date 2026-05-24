@@ -62,8 +62,10 @@ describe('liveness signal chain', () => {
       mockServer.setSignal(abortController.signal);
 
       const hub = createGlobalMessageStreamHub({
-        buildOpenCodeUrl: (path) => new URL(`http://127.0.0.1${path}`),
-        getOpenCodeAuthHeaders: () => ({}),
+        openCodeRuntime: {
+          getUrl: (path) => `http://127.0.0.1${path}`,
+          getAuthHeaders: () => ({}),
+        },
         fetchImpl: mockServer.fetch,
         upstreamStallTimeoutMs: 50,
         upstreamReconnectDelayMs: 10,

@@ -139,8 +139,10 @@ describe('message stream websocket runtime', () => {
       rejectWebSocketUpgrade() {
         throw new Error('upgrade should not be used in this test');
       },
-      buildOpenCodeUrl: (path) => `http://127.0.0.1:4096${path}`,
-      getOpenCodeAuthHeaders: () => ({}),
+      openCodeRuntime: {
+        getUrl: (path) => `http://127.0.0.1:4096${path}`,
+        getAuthHeaders: () => ({}),
+      },
       processForwardedEventPayload() {},
       wsClients,
       upstreamReconnectDelayMs: 0,
@@ -196,8 +198,10 @@ describe('message stream websocket runtime', () => {
       rejectWebSocketUpgrade() {
         throw new Error('upgrade should not be used in this test');
       },
-      buildOpenCodeUrl: (path) => `http://127.0.0.1:4096${path}`,
-      getOpenCodeAuthHeaders: () => ({}),
+      openCodeRuntime: {
+        getUrl: (path) => `http://127.0.0.1:4096${path}`,
+        getAuthHeaders: () => ({}),
+      },
       processForwardedEventPayload() {},
       wsClients,
       upstreamReconnectDelayMs: 0,
@@ -257,8 +261,10 @@ describe('message stream websocket runtime', () => {
       rejectWebSocketUpgrade() {
         throw new Error('upgrade should not be used in this test');
       },
-      buildOpenCodeUrl: (path) => `http://127.0.0.1:4096${path}`,
-      getOpenCodeAuthHeaders: () => ({}),
+      openCodeRuntime: {
+        getUrl: (path) => `http://127.0.0.1:4096${path}`,
+        getAuthHeaders: () => ({}),
+      },
       processForwardedEventPayload() {},
       wsClients,
       upstreamReconnectDelayMs: 0,
@@ -304,8 +310,10 @@ describe('message stream websocket runtime', () => {
       rejectWebSocketUpgrade() {
         throw new Error('upgrade should not be used in this test');
       },
-      buildOpenCodeUrl: (path) => `http://127.0.0.1:4096${path}`,
-      getOpenCodeAuthHeaders: () => ({}),
+      openCodeRuntime: {
+        getUrl: (path) => `http://127.0.0.1:4096${path}`,
+        getAuthHeaders: () => ({}),
+      },
       processForwardedEventPayload() {},
       wsClients,
       triggerHealthCheck: () => {
@@ -355,10 +363,10 @@ describe('message stream websocket runtime', () => {
       rejectWebSocketUpgrade() {
         throw new Error('upgrade should not be used in this test');
       },
-      buildOpenCodeUrl() {
-        throw new Error('missing OpenCode port');
+      openCodeRuntime: {
+        getUrl: () => { throw new Error('missing OpenCode port'); },
+        getAuthHeaders: () => ({}),
       },
-      getOpenCodeAuthHeaders: () => ({}),
       processForwardedEventPayload() {},
       wsClients,
       triggerHealthCheck: () => {
@@ -408,8 +416,10 @@ describe('message stream websocket runtime', () => {
       rejectWebSocketUpgrade() {
         throw new Error('upgrade should not be used in this test');
       },
-      buildOpenCodeUrl: (path) => `http://127.0.0.1:4096${path}`,
-      getOpenCodeAuthHeaders: () => ({}),
+      openCodeRuntime: {
+        getUrl: (path) => `http://127.0.0.1:4096${path}`,
+        getAuthHeaders: () => ({}),
+      },
       processForwardedEventPayload() {},
       wsClients,
       triggerHealthCheck: () => {
@@ -471,8 +481,10 @@ describe('message stream websocket runtime', () => {
       rejectWebSocketUpgrade() {
         throw new Error('upgrade should not be used in this test');
       },
-      buildOpenCodeUrl: (path) => `http://127.0.0.1:4096${path}`,
-      getOpenCodeAuthHeaders: () => ({}),
+      openCodeRuntime: {
+        getUrl: (path) => `http://127.0.0.1:4096${path}`,
+        getAuthHeaders: () => ({}),
+      },
       processForwardedEventPayload(payload, emitSynthetic) {
         if (payload.type === 'session.updated') {
           emitSynthetic({ type: 'openchamber:session-status', sessionID: 'ses_1' });

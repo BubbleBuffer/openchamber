@@ -17,17 +17,13 @@ const createRuntime = (loginShellPath) => createServerUtilsRuntime({
   process,
   openCodeReadyGraceMs: 0,
   longRequestTimeoutMs: 0,
-  getRuntime: () => ({}),
-  getOpenCodeAuthHeaders: () => ({}),
-  buildOpenCodeUrl: (route) => route,
+  openCodeRuntime: {
+    getUrl: () => '',
+    getAuthHeaders: () => ({}),
+  },
   ensureOpenCodeApiPrefix: () => {},
   getUiNotificationClients: () => new Set(),
   getOpenCodePort: () => null,
-  setOpenCodePortState: () => {},
-  syncToHmrState: () => {},
-  markOpenCodeNotReady: () => {},
-  setOpenCodeNotReadySince: () => {},
-  clearLastOpenCodeError: () => {},
   getLoginShellPath: () => loginShellPath,
 });
 

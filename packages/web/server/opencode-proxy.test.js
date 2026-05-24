@@ -56,14 +56,15 @@ describe('OpenCode proxy SSE forwarding', () => {
       os: {},
       path,
       OPEN_CODE_READY_GRACE_MS: 0,
-      getRuntime: () => ({
-        openCodePort: upstreamPort,
-        isOpenCodeReady: true,
-        openCodeNotReadySince: 0,
-        isRestartingOpenCode: false,
-      }),
-      getOpenCodeAuthHeaders: () => ({ Authorization: 'Bearer test-token' }),
-      buildOpenCodeUrl: (requestPath) => `http://127.0.0.1:${upstreamPort}${requestPath}`,
+      openCodeRuntime: {
+        getPort: () => upstreamPort,
+        isReady: () => true,
+        getNotReadySince: () => 0,
+        isRestarting: () => false,
+        getAuthHeaders: () => ({ Authorization: 'Bearer test-token' }),
+        getUrl: (requestPath) => `http://127.0.0.1:${upstreamPort}${requestPath}`,
+        getBaseUrl: () => null,
+      },
       ensureOpenCodeApiPrefix: () => {},
     });
     proxyServer = await listen(app);
@@ -118,15 +119,15 @@ describe('OpenCode proxy SSE forwarding', () => {
       os: {},
       path,
       OPEN_CODE_READY_GRACE_MS: 0,
-      getRuntime: () => ({
-        openCodePort: 3902,
-        openCodeBaseUrl: externalBaseUrl,
-        isOpenCodeReady: true,
-        openCodeNotReadySince: 0,
-        isRestartingOpenCode: false,
-      }),
-      getOpenCodeAuthHeaders: () => ({}),
-      buildOpenCodeUrl: (requestPath) => `${externalBaseUrl}${requestPath}`,
+      openCodeRuntime: {
+        getPort: () => 3902,
+        getBaseUrl: () => externalBaseUrl,
+        isReady: () => true,
+        getNotReadySince: () => 0,
+        isRestarting: () => false,
+        getAuthHeaders: () => ({}),
+        getUrl: (requestPath) => `${externalBaseUrl}${requestPath}`,
+      },
       ensureOpenCodeApiPrefix: () => {},
     });
     proxyServer = await listen(app);
@@ -156,14 +157,15 @@ describe('OpenCode proxy SSE forwarding', () => {
       os: {},
       path,
       OPEN_CODE_READY_GRACE_MS: 0,
-      getRuntime: () => ({
-        openCodePort: upstreamPort,
-        isOpenCodeReady: true,
-        openCodeNotReadySince: 0,
-        isRestartingOpenCode: false,
-      }),
-      getOpenCodeAuthHeaders: () => ({}),
-      buildOpenCodeUrl: (requestPath) => `http://127.0.0.1:${upstreamPort}${requestPath}`,
+      openCodeRuntime: {
+        getPort: () => upstreamPort,
+        isReady: () => true,
+        getNotReadySince: () => 0,
+        isRestarting: () => false,
+        getAuthHeaders: () => ({}),
+        getUrl: (requestPath) => `http://127.0.0.1:${upstreamPort}${requestPath}`,
+        getBaseUrl: () => null,
+      },
       ensureOpenCodeApiPrefix: () => {},
     });
     proxyServer = await listen(app);
