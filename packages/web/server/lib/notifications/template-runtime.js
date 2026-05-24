@@ -4,8 +4,7 @@ export const createNotificationTemplateRuntime = (deps) => {
   const {
     readSettingsFromDisk,
     persistSettings,
-    buildOpenCodeUrl,
-    getOpenCodeAuthHeaders,
+    openCodeRuntime,
     resolveGitBinaryForSpawn,
   } = deps;
 
@@ -197,12 +196,12 @@ export const createNotificationTemplateRuntime = (deps) => {
     if (!sessionId) return '';
 
     try {
-      const url = buildOpenCodeUrl(`/session/${encodeURIComponent(sessionId)}/message`, '');
+      const url = openCodeRuntime.getUrl(`/session/${encodeURIComponent(sessionId)}/message`, '');
       const response = await fetch(`${url}?limit=5`, {
         method: 'GET',
         headers: {
           Accept: 'application/json',
-          ...getOpenCodeAuthHeaders(),
+          ...openCodeRuntime.getAuthHeaders(),
         },
         signal: AbortSignal.timeout(3000),
       });
@@ -262,7 +261,7 @@ export const createNotificationTemplateRuntime = (deps) => {
     }
 
     try {
-      const url = buildOpenCodeUrl(`/session/${encodeURIComponent(sessionId)}`, '');
+      const url = openCodeRuntime.getUrl(`/session/${encodeURIComponent(sessionId)}`, '');
       const response = await fetch(url, {
         method: 'GET',
         headers: { Accept: 'application/json' },

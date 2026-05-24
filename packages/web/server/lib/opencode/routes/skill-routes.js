@@ -10,9 +10,7 @@ export const registerSkillRoutes = (app, dependencies) => {
     isUnsafeSkillRelativePath,
     refreshOpenCodeAfterConfigChange,
     clientReloadDelayMs,
-    buildOpenCodeUrl,
-    getOpenCodeAuthHeaders,
-    getOpenCodePort,
+    openCodeRuntime,
     getSkillSources,
     discoverSkills,
     createSkill,
@@ -113,12 +111,12 @@ export const registerSkillRoutes = (app, dependencies) => {
   };
 
   const fetchOpenCodeDiscoveredSkills = async (workingDirectory) => {
-    if (!getOpenCodePort()) {
+    if (!openCodeRuntime.getPort()) {
       return null;
     }
 
     try {
-      const url = new URL(buildOpenCodeUrl('/skill', ''));
+      const url = new URL(openCodeRuntime.getUrl('/skill', ''));
       if (workingDirectory) {
         url.searchParams.set('directory', workingDirectory);
       }
@@ -127,7 +125,7 @@ export const registerSkillRoutes = (app, dependencies) => {
         method: 'GET',
         headers: {
           Accept: 'application/json',
-          ...getOpenCodeAuthHeaders(),
+          ...openCodeRuntime.getAuthHeaders(),
         },
         signal: AbortSignal.timeout(8_000),
       });

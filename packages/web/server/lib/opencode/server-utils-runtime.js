@@ -8,41 +8,15 @@ export const createServerUtilsRuntime = (dependencies) => {
     process,
     openCodeReadyGraceMs,
     longRequestTimeoutMs,
-    getRuntime,
-    getOpenCodeAuthHeaders,
-    buildOpenCodeUrl,
+    openCodeRuntime,
     ensureOpenCodeApiPrefix,
     getUiNotificationClients,
     getOpenCodePort,
-    setOpenCodePortState,
-    syncToHmrState,
-    markOpenCodeNotReady,
-    setOpenCodeNotReadySince,
-    clearLastOpenCodeError,
     getLoginShellPath,
   } = dependencies;
 
   const setOpenCodePort = (port) => {
-    if (!Number.isFinite(port) || port <= 0) {
-      return;
-    }
-
-    const numericPort = Math.trunc(port);
-    const currentPort = getOpenCodePort();
-    const portChanged = currentPort !== numericPort;
-
-    if (portChanged || currentPort === null) {
-      setOpenCodePortState(numericPort);
-      syncToHmrState();
-      console.log(`Detected OpenCode port: ${numericPort}`);
-
-      if (portChanged) {
-        markOpenCodeNotReady();
-      }
-      setOpenCodeNotReadySince(Date.now());
-    }
-
-    clearLastOpenCodeError();
+    // state mutations now handled by OpenCodeRuntime orchestrator
   };
 
   const pathLooksUserConfigured = (value) => {
@@ -152,9 +126,9 @@ export const createServerUtilsRuntime = (dependencies) => {
       throw new Error('OpenCode port is not available');
     }
 
-    const response = await fetch(buildOpenCodeUrl(route), {
+    const response = await fetch(openCodeRuntime.getUrl(route), {
       method: 'GET',
-      headers: { Accept: 'application/json', ...getOpenCodeAuthHeaders() },
+      headers: { Accept: 'application/json', ...openCodeRuntime.getAuthHeaders() },
     });
 
     if (!response.ok) {
@@ -179,9 +153,7 @@ export const createServerUtilsRuntime = (dependencies) => {
       path,
       OPEN_CODE_READY_GRACE_MS: openCodeReadyGraceMs,
       LONG_REQUEST_TIMEOUT_MS: longRequestTimeoutMs,
-      getRuntime,
-      getOpenCodeAuthHeaders,
-      buildOpenCodeUrl,
+      openCodeRuntime,
       ensureOpenCodeApiPrefix,
       getUiNotificationClients,
     });

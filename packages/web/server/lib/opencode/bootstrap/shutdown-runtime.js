@@ -16,9 +16,7 @@ export const createGracefulShutdownRuntime = (dependencies) => {
     getMessageStreamRuntime,
     setMessageStreamRuntime,
     shouldSkipOpenCodeStop,
-    getOpenCodePort,
-    getOpenCodeProcess,
-    setOpenCodeProcess,
+    openCodeRuntime,
     killProcessOnPort,
     waitForPortRelease,
     getServer,
@@ -67,8 +65,8 @@ export const createGracefulShutdownRuntime = (dependencies) => {
     }
 
     if (!shouldSkipOpenCodeStop()) {
-      const portToKill = getOpenCodePort();
-      const openCodeProcess = getOpenCodeProcess();
+      const portToKill = openCodeRuntime.getPort();
+      const openCodeProcess = openCodeRuntime.getProcess();
 
       if (openCodeProcess) {
         console.log('Stopping OpenCode process...');
@@ -77,7 +75,7 @@ export const createGracefulShutdownRuntime = (dependencies) => {
         } catch (error) {
           console.warn('Error closing OpenCode process:', error);
         }
-        setOpenCodeProcess(null);
+        openCodeRuntime.getState().openCodeProcess = null;
       }
 
       killProcessOnPort(portToKill);

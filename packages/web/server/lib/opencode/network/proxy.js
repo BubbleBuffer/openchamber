@@ -49,9 +49,7 @@ export const registerOpenCodeProxy = (app, deps) => {
     os,
     path,
     OPEN_CODE_READY_GRACE_MS,
-    getRuntime,
-    getOpenCodeAuthHeaders,
-    buildOpenCodeUrl,
+    openCodeRuntime,
     ensureOpenCodeApiPrefix,
   } = deps;
 
@@ -59,9 +57,9 @@ export const registerOpenCodeProxy = (app, deps) => {
     return;
   }
 
-  const runtime = getRuntime();
-  if (runtime.openCodePort) {
-    console.log(`Setting up proxy to OpenCode on port ${runtime.openCodePort}`);
+  const port = openCodeRuntime.getPort();
+  if (port) {
+    console.log(`Setting up proxy to OpenCode on port ${port}`);
   } else {
     console.log('Setting up OpenCode API gate (OpenCode not started yet)');
   }
@@ -88,21 +86,20 @@ export const registerOpenCodeProxy = (app, deps) => {
   // succeeds against an external host but /api/* still proxies to 127.0.0.1.
   const resolveProxyTarget = () => {
     try {
-      const resolved = normalizeProxyTarget(buildOpenCodeUrl('/', ''));
+      const resolved = normalizeProxyTarget(openCodeRuntime.getUrl('/', ''));
       if (resolved) {
         return resolved;
       }
     } catch {
     }
 
-    const runtimeState = getRuntime();
-    const externalBase = normalizeProxyTarget(runtimeState.openCodeBaseUrl);
+    const externalBase = normalizeProxyTarget(openCodeRuntime.getBaseUrl());
     if (externalBase) {
       return externalBase;
     }
 
-    if (runtimeState.openCodePort) {
-      return `http://localhost:${runtimeState.openCodePort}`;
+    if (openCodeRuntime.getPort()) {
+      return `http://localhost:${openCodeRuntime.getPort()}`;
     }
 
     return FALLBACK_PROXY_TARGET;
@@ -133,11 +130,11 @@ export const registerOpenCodeProxy = (app, deps) => {
         ? req.originalUrl
         : (typeof req.url === 'string' ? req.url : '');
       const upstreamPath = requestUrl.startsWith('/api') ? requestUrl.slice(4) || '/' : requestUrl;
-      const headers = collectForwardProxyHeaders(req.headers, getOpenCodeAuthHeaders());
+      const headers = collectForwardProxyHeaders(req.headers, openCodeRuntime.getAuthHeaders());
       headers.accept ??= 'text/event-stream';
       headers['cache-control'] ??= 'no-cache';
 
-      upstream = await fetch(buildOpenCodeUrl(upstreamPath, ''), {
+      upstream = await fetch(openCodeRuntime.getUrl(upstreamPath, ''), {
         method: 'GET',
         headers,
         signal: abortController.signal,
@@ -235,12 +232,12 @@ export const registerOpenCodeProxy = (app, deps) => {
       return next();
     }
 
-    const runtimeState = getRuntime();
-    const waitElapsed = runtimeState.openCodeNotReadySince === 0 ? 0 : Date.now() - runtimeState.openCodeNotReadySince;
+    const notReadySince = openCodeRuntime.getNotReadySince();
+    const waitElapsed = notReadySince === 0 ? 0 : Date.now() - notReadySince;
     const stillWaiting =
-      (!runtimeState.isOpenCodeReady && (runtimeState.openCodeNotReadySince === 0 || waitElapsed < OPEN_CODE_READY_GRACE_MS)) ||
-      runtimeState.isRestartingOpenCode ||
-      !runtimeState.openCodePort;
+      (!openCodeRuntime.isReady() && (notReadySince === 0 || waitElapsed < OPEN_CODE_READY_GRACE_MS)) ||
+      openCodeRuntime.isRestarting() ||
+      !openCodeRuntime.getPort();
 
     if (stillWaiting) {
       return res.status(503).json({
@@ -259,13 +256,13 @@ export const registerOpenCodeProxy = (app, deps) => {
       if (rawUrl.includes('directory=')) return next();
 
       try {
-        const authHeaders = getOpenCodeAuthHeaders();
+        const authHeaders = openCodeRuntime.getAuthHeaders();
         const fetchOpts = {
           method: 'GET',
           headers: { Accept: 'application/json', ...authHeaders },
           signal: AbortSignal.timeout(10000),
         };
-        const globalRes = await fetch(buildOpenCodeUrl('/session', ''), fetchOpts);
+        const globalRes = await fetch(openCodeRuntime.getUrl('/session', ''), fetchOpts);
         const globalPayload = globalRes.ok ? await globalRes.json().catch(() => []) : [];
         const globalSessions = Array.isArray(globalPayload) ? globalPayload : [];
 
@@ -295,7 +292,7 @@ export const registerOpenCodeProxy = (app, deps) => {
           for (const candidateDir of candidates) {
             const encoded = encodeURIComponent(candidateDir);
             try {
-              const dirRes = await fetch(buildOpenCodeUrl(`/session?directory=${encoded}`, ''), fetchOpts);
+              const dirRes = await fetch(openCodeRuntime.getUrl(`/session?directory=${encoded}`, ''), fetchOpts);
               if (dirRes.ok) {
                 const dirPayload = await dirRes.json().catch(() => []);
                 const dirSessions = Array.isArray(dirPayload) ? dirPayload : [];
@@ -340,7 +337,7 @@ export const registerOpenCodeProxy = (app, deps) => {
     on: {
       proxyReq: (proxyReq) => {
         // Inject OpenCode auth headers
-        const authHeaders = getOpenCodeAuthHeaders();
+        const authHeaders = openCodeRuntime.getAuthHeaders();
         if (authHeaders.Authorization) {
           proxyReq.setHeader('Authorization', authHeaders.Authorization);
         }

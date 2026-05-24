@@ -3,8 +3,7 @@ import { createUpstreamSseReader } from '../../event-stream/upstream-reader.js';
 export const createOpenCodeWatcherRuntime = (deps) => {
   const {
     waitForOpenCodePort,
-    buildOpenCodeUrl,
-    getOpenCodeAuthHeaders,
+    openCodeRuntime,
     onPayload,
     fetchImpl = fetch,
     upstreamStallTimeoutMs,
@@ -65,8 +64,8 @@ export const createOpenCodeWatcherRuntime = (deps) => {
 
     reader = createUpstreamSseReader({
       signal,
-      buildUrl: () => buildOpenCodeUrl('/global/event', ''),
-      getHeaders: getOpenCodeAuthHeaders,
+      buildUrl: () => openCodeRuntime.getUrl('/global/event', ''),
+      getHeaders: () => openCodeRuntime.getAuthHeaders(),
       fetchImpl,
       stallTimeoutMs: upstreamStallTimeoutMs,
       reconnectDelayMs: upstreamReconnectDelayMs,
