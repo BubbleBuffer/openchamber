@@ -52,8 +52,10 @@ describe('createOpenCodeWatcherRuntime', () => {
       waitForOpenCodePort: async () => {
         await new Promise((resolve) => setTimeout(resolve, 1));
       },
-      buildOpenCodeUrl: (path) => `http://127.0.0.1:4096${path}`,
-      getOpenCodeAuthHeaders: () => ({ Authorization: 'Bearer test-token' }),
+      openCodeRuntime: {
+        getUrl: (path) => `http://127.0.0.1:4096${path}`,
+        getAuthHeaders: () => ({ Authorization: 'Bearer test-token' }),
+      },
       onPayload(payload) {
         payloads.push(payload);
         watcher.stop();
@@ -101,8 +103,10 @@ describe('createOpenCodeWatcherRuntime', () => {
 
     const watcher = createOpenCodeWatcherRuntime({
       waitForOpenCodePort: async () => {},
-      buildOpenCodeUrl: (path) => `http://127.0.0.1:4096${path}`,
-      getOpenCodeAuthHeaders: () => ({}),
+      openCodeRuntime: {
+        getUrl: (path) => `http://127.0.0.1:4096${path}`,
+        getAuthHeaders: () => ({}),
+      },
       onPayload(payload) {
         payloads.push(payload.type);
         if (payload.type === 'session.updated') {
@@ -148,8 +152,10 @@ describe('createOpenCodeWatcherRuntime', () => {
     let watcherFetchCalls = 0;
 
     const globalEventHub = createGlobalMessageStreamHub({
-      buildOpenCodeUrl: (path) => `http://127.0.0.1:4096${path}`,
-      getOpenCodeAuthHeaders: () => ({}),
+      openCodeRuntime: {
+        getUrl: (path) => `http://127.0.0.1:4096${path}`,
+        getAuthHeaders: () => ({}),
+      },
       upstreamReconnectDelayMs: 0,
       fetchImpl: async (_url, options) => {
         hubFetchCalls += 1;
@@ -165,8 +171,10 @@ describe('createOpenCodeWatcherRuntime', () => {
 
     const watcher = createOpenCodeWatcherRuntime({
       waitForOpenCodePort: async () => {},
-      buildOpenCodeUrl: (path) => `http://127.0.0.1:4096${path}`,
-      getOpenCodeAuthHeaders: () => ({}),
+      openCodeRuntime: {
+        getUrl: (path) => `http://127.0.0.1:4096${path}`,
+        getAuthHeaders: () => ({}),
+      },
       globalEventHub,
       onPayload(payload) {
         payloads.push(payload);
@@ -222,8 +230,10 @@ describe('createOpenCodeWatcherRuntime', () => {
 
     const watcher = createOpenCodeWatcherRuntime({
       waitForOpenCodePort: async () => {},
-      buildOpenCodeUrl: (path) => `http://127.0.0.1:4096${path}`,
-      getOpenCodeAuthHeaders: () => ({}),
+      openCodeRuntime: {
+        getUrl: (path) => `http://127.0.0.1:4096${path}`,
+        getAuthHeaders: () => ({}),
+      },
       globalEventHub,
       onPayload() {},
     });

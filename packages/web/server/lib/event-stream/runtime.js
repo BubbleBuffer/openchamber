@@ -55,8 +55,7 @@ export function createMessageStreamWsRuntime({
   uiAuthController,
   isRequestOriginAllowed,
   rejectWebSocketUpgrade,
-  buildOpenCodeUrl,
-  getOpenCodeAuthHeaders,
+  openCodeRuntime,
   processForwardedEventPayload,
   wsClients,
   triggerHealthCheck,
@@ -72,8 +71,7 @@ export function createMessageStreamWsRuntime({
 
   const ownsGlobalHub = !globalEventHub;
   const globalHub = globalEventHub ?? createGlobalMessageStreamHub({
-    buildOpenCodeUrl,
-    getOpenCodeAuthHeaders,
+    openCodeRuntime,
     fetchImpl,
     upstreamStallTimeoutMs,
     upstreamReconnectDelayMs,
@@ -107,8 +105,7 @@ export function createMessageStreamWsRuntime({
       socket,
       requestedLastEventId,
       requestedDirectory,
-      buildOpenCodeUrl,
-      getOpenCodeAuthHeaders,
+      openCodeRuntime,
       processForwardedEventPayload,
       wsClients,
       triggerHealthCheck,

@@ -12,8 +12,7 @@ export const createNotificationTriggerRuntime = (deps) => {
     emitDesktopNotification,
     broadcastUiNotification,
     sendPushToAllUiSessions,
-    buildOpenCodeUrl,
-    getOpenCodeAuthHeaders,
+    openCodeRuntime,
   } = deps;
 
   const PUSH_READY_COOLDOWN_MS = 5000;
@@ -70,11 +69,11 @@ export const createNotificationTriggerRuntime = (deps) => {
     if (cached !== undefined) return cached;
 
     try {
-      const response = await fetch(buildOpenCodeUrl('/session', ''), {
+      const response = await fetch(openCodeRuntime.getUrl('/session', ''), {
         method: 'GET',
         headers: {
           Accept: 'application/json',
-          ...getOpenCodeAuthHeaders(),
+          ...openCodeRuntime.getAuthHeaders(),
         },
         signal: AbortSignal.timeout(2000),
       });

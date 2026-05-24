@@ -8,41 +8,16 @@ export const createServerUtilsRuntime = (dependencies) => {
     process,
     openCodeReadyGraceMs,
     longRequestTimeoutMs,
-    getRuntime,
-    getOpenCodeAuthHeaders,
-    buildOpenCodeUrl,
-    ensureOpenCodeApiPrefix,
+    openCodeRuntime,
     getUiNotificationClients,
-    getOpenCodePort,
-    setOpenCodePortState,
-    syncToHmrState,
-    markOpenCodeNotReady,
-    setOpenCodeNotReadySince,
-    clearLastOpenCodeError,
     getLoginShellPath,
   } = dependencies;
 
   const setOpenCodePort = (port) => {
-    if (!Number.isFinite(port) || port <= 0) {
-      return;
+    // State now owned by orchestrator
+    if (Number.isFinite(port) && port > 0) {
+      console.log(`Detected OpenCode port: ${Math.trunc(port)}`);
     }
-
-    const numericPort = Math.trunc(port);
-    const currentPort = getOpenCodePort();
-    const portChanged = currentPort !== numericPort;
-
-    if (portChanged || currentPort === null) {
-      setOpenCodePortState(numericPort);
-      syncToHmrState();
-      console.log(`Detected OpenCode port: ${numericPort}`);
-
-      if (portChanged) {
-        markOpenCodeNotReady();
-      }
-      setOpenCodeNotReadySince(Date.now());
-    }
-
-    clearLastOpenCodeError();
   };
 
   const pathLooksUserConfigured = (value) => {
@@ -61,15 +36,17 @@ export const createServerUtilsRuntime = (dependencies) => {
   };
 
   const waitForOpenCodePort = async (timeoutMs = 15000) => {
-    if (getOpenCodePort() !== null) {
-      return getOpenCodePort();
+    const port = openCodeRuntime.getPort();
+    if (port !== null) {
+      return port;
     }
 
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       await new Promise((resolve) => setTimeout(resolve, 50));
-      if (getOpenCodePort() !== null) {
-        return getOpenCodePort();
+      const updatedPort = openCodeRuntime.getPort();
+      if (updatedPort !== null) {
+        return updatedPort;
       }
     }
 
@@ -148,13 +125,13 @@ export const createServerUtilsRuntime = (dependencies) => {
   };
 
   const fetchArraySnapshot = async (route, invalidMessage) => {
-    if (!getOpenCodePort()) {
+    if (!openCodeRuntime.getPort()) {
       throw new Error('OpenCode port is not available');
     }
 
-    const response = await fetch(buildOpenCodeUrl(route), {
+    const response = await fetch(openCodeRuntime.getUrl(route), {
       method: 'GET',
-      headers: { Accept: 'application/json', ...getOpenCodeAuthHeaders() },
+      headers: { Accept: 'application/json', ...openCodeRuntime.getAuthHeaders() },
     });
 
     if (!response.ok) {
@@ -179,10 +156,7 @@ export const createServerUtilsRuntime = (dependencies) => {
       path,
       OPEN_CODE_READY_GRACE_MS: openCodeReadyGraceMs,
       LONG_REQUEST_TIMEOUT_MS: longRequestTimeoutMs,
-      getRuntime,
-      getOpenCodeAuthHeaders,
-      buildOpenCodeUrl,
-      ensureOpenCodeApiPrefix,
+      openCodeRuntime,
       getUiNotificationClients,
     });
   };

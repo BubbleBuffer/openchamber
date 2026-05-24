@@ -220,8 +220,7 @@ export const createScheduledTasksRuntime = (deps) => {
   const {
     projectConfigRuntime,
     listProjects,
-    buildOpenCodeUrl,
-    getOpenCodeAuthHeaders,
+    openCodeRuntime,
     waitForOpenCodeReady,
     emitTaskRunEvent,
     logger = console,
@@ -479,8 +478,8 @@ export const createScheduledTasksRuntime = (deps) => {
       await waitForOpenCodeReady(10_000, 250);
     }
 
-    const baseUrl = buildOpenCodeUrl('/', '').replace(/\/$/, '');
-    const authHeaders = getOpenCodeAuthHeaders();
+    const baseUrl = openCodeRuntime.getUrl('/', '').replace(/\/$/, '');
+    const authHeaders = openCodeRuntime.getAuthHeaders();
     const client = createOpencodeClient({
       baseUrl,
       headers: authHeaders,
