@@ -43,8 +43,8 @@ import { createOpenCodeLifecycleRuntime } from './lib/opencode/bootstrap/lifecyc
 import { createOpenCodeEnvRuntime } from './lib/opencode/env/env-runtime.js';
 import { resolveOpenCodeEnvConfig } from './lib/opencode/env/env-config.js';
 import { createHmrStateRuntime } from './lib/opencode/network/hmr-state-runtime.js';
-import { createOpenCodeNetworkRuntime } from './lib/opencode/network/network-runtime.js';
-import { createOpenCodeAuthStateRuntime } from './lib/opencode/auth/auth-state-runtime.js';
+import { createOpenCodeNetworkRuntime } from './lib/opencode/network.js';
+import { createOpenCodeAuthStateRuntime } from './lib/opencode/auth.js';
 import { createProjectDirectoryRuntime } from './lib/opencode/resolution/project-directory-runtime.js';
 import { createSettingsNormalizationRuntime } from './lib/opencode/settings/settings-normalization-runtime.js';
 import { createSettingsHelpers } from './lib/opencode/settings/settings-helpers.js';
