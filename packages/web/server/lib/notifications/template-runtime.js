@@ -1,7 +1,9 @@
 import { summarizeText as summarizeSharedText } from '../text/summarization.js';
+import { EVENTS } from '../core/events.js';
 
 export const createNotificationTemplateRuntime = (deps) => {
   const {
+    eventBus,
     readSettingsFromDisk,
     persistSettings,
     openCodeRuntime,
@@ -126,6 +128,7 @@ export const createNotificationTemplateRuntime = (deps) => {
           await persistSettings({ zenModel: fallback });
         } else {
           console.log(`[zen] Stored model "${storedModel}" verified as available`);
+          eventBus.emit(EVENTS.NOTIFICATION_SEND_UI, { payload: { type: 'zen-model-ready' } });
         }
       } else {
         console.warn('[zen] No free models returned from API, skipping validation');

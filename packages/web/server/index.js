@@ -74,7 +74,7 @@ import { createStartupPipelineRuntime } from './lib/opencode/bootstrap/startup-p
 import { runCliEntryIfMain } from './lib/opencode/bootstrap/cli-entry-runtime.js';
 import { registerNotificationRoutes } from './lib/notifications/routes.js';
 import { createNotificationEmitterRuntime } from './lib/notifications/emitter-runtime.js';
-import { createNotificationTriggerRuntime } from './lib/notifications/runtime.js';
+import { createNotificationRuntime } from './lib/notifications/runtime.js';
 import { createPushRuntime } from './lib/notifications/push-runtime.js';
 import { createNotificationTemplateRuntime } from './lib/notifications/template-runtime.js';
 import { createGracefulShutdownRuntime } from './lib/opencode/bootstrap/shutdown-runtime.js';
@@ -479,16 +479,15 @@ const resolveZenModel = (...args) => notificationTemplateRuntime.resolveZenModel
 const validateZenModelAtStartup = (...args) => notificationTemplateRuntime.validateZenModelAtStartup(...args);
 const getCachedZenModels = (...args) => notificationTemplateRuntime.getCachedZenModels(...args);
 
-const notificationTriggerRuntime = createNotificationTriggerRuntime({
-  readSettingsFromDisk,
-  prepareNotificationLastMessage,
-  summarizeText, resolveZenModel, buildTemplateVariables, extractLastMessageText,
-  fetchLastAssistantMessageText, resolveNotificationTemplate, shouldApplyResolvedTemplateMessage,
-  emitDesktopNotification, broadcastUiNotification, sendPushToAllUiSessions,
+const notificationRuntime = createNotificationRuntime({
+  eventBus,
   openCodeRuntime,
+  readSettingsFromDisk,
+  persistSettings,
+  resolveGitBinaryForSpawn,
 });
-const maybeSendPushForTrigger = (...args) => notificationTriggerRuntime.maybeSendPushForTrigger(...args);
-const setAutoAcceptSession = (...args) => notificationTriggerRuntime.setAutoAcceptSession(...args);
+const maybeSendPushForTrigger = (...args) => notificationRuntime.maybeSendPushForTrigger(...args);
+const setAutoAcceptSession = (...args) => notificationRuntime.setAutoAcceptSession(...args);
 
 // ── Event stream (SSE/WS hub) ─────────────────────────────────────
 const globalMessageStreamHub = createGlobalMessageStreamHub({
