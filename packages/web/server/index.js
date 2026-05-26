@@ -267,30 +267,24 @@ const signalsAttachedRef = { current: false };
 
 const syncToHmrState = () => {
   if (!openCodeRuntime) return;
-  const s = openCodeRuntime.getState();
   hmrStateRuntime.syncStateFromRuntime(hmrState, {
-    openCodeProcess: s.openCodeProcess,
-    openCodePort: s.openCodePort,
-    openCodeBaseUrl: s.openCodeBaseUrl,
-    isShuttingDown: s.isShuttingDown,
+    openCodeProcess: openCodeRuntime.getProcess(),
+    openCodePort: openCodeRuntime.getPort(),
+    openCodeBaseUrl: openCodeRuntime.getBaseUrl(),
+    isShuttingDown: openCodeRuntime.getIsShuttingDown(),
     signalsAttached: signalsAttachedRef.current,
-    openCodeWorkingDirectory: s.openCodeWorkingDirectory,
-    openCodeAuthPassword: s.openCodeAuthPassword,
-    openCodeAuthSource: s.openCodeAuthSource,
+    openCodeWorkingDirectory: openCodeRuntime.getWorkingDirectory(),
+    openCodeAuthPassword: openCodeRuntime.getAuthPassword(),
+    openCodeAuthSource: openCodeRuntime.getOpenCodeAuthSource(),
   });
 };
 
 const syncFromHmrState = () => {
   if (!openCodeRuntime) return;
-  const s = openCodeRuntime.getState();
-  const restored = hmrStateRuntime.restoreRuntimeFromState({ hmrState, userProvidedOpenCodePassword });
-  s.openCodeProcess = restored.openCodeProcess;
-  s.openCodePort = restored.openCodePort;
-  s.openCodeBaseUrl = restored.openCodeBaseUrl;
-  s.isShuttingDown = restored.isShuttingDown;
-  s.openCodeWorkingDirectory = restored.openCodeWorkingDirectory;
-  s.openCodeAuthPassword = restored.openCodeAuthPassword;
-  s.openCodeAuthSource = restored.openCodeAuthSource;
+  const restored = hmrStateRuntime.restoreRuntimeFromState({
+    hmrState, userProvidedOpenCodePassword
+  });
+  openCodeRuntime.syncFromHmrState(restored);
   signalsAttachedRef.current = restored.signalsAttached;
 };
 
@@ -497,12 +491,12 @@ const bootstrapOpenCodeAtStartup = async (...args) => {
 const gracefulShutdownRuntime = createGracefulShutdownRuntime({
   process, shutdownTimeoutMs: SHUTDOWN_TIMEOUT,
   getExitOnShutdown: () => exitOnShutdown,
-  getIsShuttingDown: () => openCodeRuntime ? openCodeRuntime.getState().isShuttingDown : false,
+  getIsShuttingDown: () => openCodeRuntime ? openCodeRuntime.getIsShuttingDown() : false,
   setIsShuttingDown: (value) => { if (openCodeRuntime) openCodeRuntime.setShuttingDown(value); },
   syncToHmrState,
   openCodeWatcherRuntime: { stop: () => eventStreamRuntime.dispose() },
   sessionRuntime,
-  getHealthCheckInterval: () => openCodeRuntime ? openCodeRuntime.getState().healthCheckInterval : null,
+  getHealthCheckInterval: () => openCodeRuntime ? openCodeRuntime.getHealthCheckInterval() : null,
   clearHealthCheckInterval: (value) => clearInterval(value),
   getTerminalRuntime: () => terminalRuntime,
   setTerminalRuntime: (value) => { terminalRuntime = value; },

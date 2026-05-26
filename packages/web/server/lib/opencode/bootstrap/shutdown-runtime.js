@@ -77,7 +77,7 @@ export const createGracefulShutdownRuntime = (dependencies) => {
         } catch (error) {
           console.warn('Error closing OpenCode process:', error);
         }
-        openCodeRuntime.getState().openCodeProcess = null;
+        openCodeRuntime.clearProcess();
       }
 
       killProcessOnPort(portToKill);

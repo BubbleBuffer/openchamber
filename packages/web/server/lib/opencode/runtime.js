@@ -168,6 +168,10 @@ export function createOpenCodeRuntime({ eventBus, config }) {
     getLastError: () => state.lastOpenCodeError,
     isConnectionSecure: () => authRuntime.isOpenCodeConnectionSecure(),
     getNotReadySince: () => state.openCodeNotReadySince,
+    getIsShuttingDown: () => state.isShuttingDown,
+    getHealthCheckInterval: () => state.healthCheckInterval,
+    getWorkingDirectory: () => state.openCodeWorkingDirectory,
+    getAuthPassword: () => state.openCodeAuthPassword,
 
     // Health
     startHealthMonitoring: (intervalMs) => lifecycleRuntime.startHealthMonitoring(intervalMs),
@@ -192,9 +196,18 @@ export function createOpenCodeRuntime({ eventBus, config }) {
     setApp: (app) => { state.expressApp = app; },
     setShuttingDown: (value) => { state.isShuttingDown = value; },
     setWorkingDirectory: (dir) => { state.openCodeWorkingDirectory = dir; },
+    syncFromHmrState: (restored) => {
+      if (restored.openCodeProcess !== undefined) state.openCodeProcess = restored.openCodeProcess;
+      if (restored.openCodePort !== undefined) state.openCodePort = restored.openCodePort;
+      if (restored.openCodeBaseUrl !== undefined) state.openCodeBaseUrl = restored.openCodeBaseUrl;
+      if (restored.isShuttingDown !== undefined) state.isShuttingDown = restored.isShuttingDown;
+      if (restored.openCodeWorkingDirectory !== undefined) state.openCodeWorkingDirectory = restored.openCodeWorkingDirectory;
+      if (restored.openCodeAuthPassword !== undefined) state.openCodeAuthPassword = restored.openCodeAuthPassword;
+      if (restored.openCodeAuthSource !== undefined) state.openCodeAuthSource = restored.openCodeAuthSource;
+    },
+    clearProcess: () => { state.openCodeProcess = null; },
 
     // Internal access (needed during index.js rewrite for gradual migration)
-    getState: () => state,
     getLifecycleRuntime: () => lifecycleRuntime,
     getAuthRuntime: () => authRuntime,
     getNetworkRuntime: () => networkRuntime,
