@@ -62,7 +62,7 @@ export function createMessageStreamWsRuntime({
   rejectWebSocketUpgrade,
   openCodeRuntime,
   processForwardedEventPayload,
-  wsClients,
+  wsClients = new Set(),
   triggerHealthCheck,
   heartbeatIntervalMs = MESSAGE_STREAM_WS_HEARTBEAT_INTERVAL_MS,
   upstreamStallTimeoutMs = DEFAULT_UPSTREAM_STALL_TIMEOUT_MS,
@@ -201,20 +201,16 @@ export const createEventStreamRuntime = (deps) => {
   } = deps;
 
   const uiNotificationClients = new Set();
-  const uiNotificationWsClients = new Set();
   const uiOpenChamberEventClients = new Set();
   const DESKTOP_NOTIFY_PREFIX = '[OpenChamberDesktopNotify] ';
   const getDesktopNotifyEnabled = () => false;
-
-  let broadcastGlobalUiEventFn = null;
-  const setBroadcastGlobalUiEvent = (fn) => { broadcastGlobalUiEventFn = fn; };
 
   const notificationEmitterRuntime = createNotificationEmitterRuntime({
     process,
     getDesktopNotifyEnabled,
     desktopNotifyPrefix: DESKTOP_NOTIFY_PREFIX,
     getUiNotificationClients: () => uiNotificationClients,
-    getBroadcastGlobalUiEvent: () => broadcastGlobalUiEventFn,
+    getBroadcastGlobalUiEvent: () => null,
   });
 
   const { writeSseEvent, emitDesktopNotification, broadcastUiNotification } = notificationEmitterRuntime;
@@ -273,7 +269,6 @@ export const createEventStreamRuntime = (deps) => {
   };
 
   const broadcastToClients = (payload) => {
-    if (broadcastGlobalUiEventFn) { broadcastGlobalUiEventFn(payload); return; }
     for (const res of uiNotificationClients) {
       try { writeSseEvent(res, payload); } catch {}
     }
@@ -299,11 +294,9 @@ export const createEventStreamRuntime = (deps) => {
       eventBus.emit(EVENTS.EVENT_RECEIVED, { payload, directory: undefined });
     },
     getUiNotificationClients: () => uiNotificationClients,
-    getUiNotificationWsClients: () => uiNotificationWsClients,
     getUiOpenChamberEventClients: () => uiOpenChamberEventClients,
     pushRuntime,
     globalMessageStreamHub,
-    setBroadcastGlobalUiEvent,
     dispose: () => {
       disposers.forEach(fn => fn());
       globalWatcherStartPromise = null;

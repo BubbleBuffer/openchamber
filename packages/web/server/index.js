@@ -661,7 +661,7 @@ async function main(options = {}) {
     openCodeRuntime,
     globalEventHub: eventStreamRuntime.globalMessageStreamHub,
     processForwardedEventPayload,
-    messageStreamWsClients: eventStreamRuntime.getUiNotificationWsClients(),
+    messageStreamWsClients: new Set(),
     terminalHeartbeatIntervalMs: TERMINAL_INPUT_WS_HEARTBEAT_INTERVAL_MS,
     terminalRebindWindowMs: TERMINAL_INPUT_WS_REBIND_WINDOW_MS,
     terminalMaxRebindsPerWindow: TERMINAL_INPUT_WS_MAX_REBINDS_PER_WINDOW,

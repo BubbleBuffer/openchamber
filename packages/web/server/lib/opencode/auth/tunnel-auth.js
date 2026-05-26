@@ -271,15 +271,9 @@ export const createTunnelAuth = () => {
   };
 
   const revokeBootstrapToken = () => {
-    if (!bootstrapRecord) {
-      return 0;
-    }
-    if (bootstrapRecord.revokedAt) {
-      return 0;
-    }
-    if (!bootstrapRecord.revokedAt) {
-      bootstrapRecord.revokedAt = nowTs();
-    }
+    if (!bootstrapRecord) return 0;
+    if (bootstrapRecord.revokedAt) return 0;
+    bootstrapRecord.revokedAt = nowTs();
     return 1;
   };
 
@@ -505,7 +499,7 @@ export const createTunnelAuth = () => {
     const incomingHash = hashToken(token);
     const expected = bootstrapRecord.tokenHash;
     const validHash = incomingHash.length === expected.length
-      && crypto.timingSafeEqual(Buffer.from(incomingHash), Buffer.from(expected));
+      && crypto.timingSafeEqual(Buffer.from(incomingHash, 'hex'), Buffer.from(expected, 'hex'));
 
     if (!validHash) {
       recordConnectFailedAttempt(req);
