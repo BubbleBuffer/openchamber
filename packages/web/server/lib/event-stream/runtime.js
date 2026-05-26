@@ -19,6 +19,7 @@ import { createNotificationEmitterRuntime } from '../notifications/emitter-runti
 import { createPushRuntime } from '../notifications/push-runtime.js';
 import { createOpenCodeWatcherRuntime } from '../opencode/services/watcher.js';
 import { EVENTS } from '../core/events.js';
+import { createBoundedSet } from '../core/bounded-cache.js';
 
 export function createGlobalUiEventBroadcaster({
   sseClients,
@@ -200,8 +201,8 @@ export const createEventStreamRuntime = (deps) => {
     pushSubscriptionsFilePath,
   } = deps;
 
-  const uiNotificationClients = new Set();
-  const uiOpenChamberEventClients = new Set();
+  const uiNotificationClients = createBoundedSet({ maxSize: 200, ttlMs: 3600_000 });
+  const uiOpenChamberEventClients = createBoundedSet({ maxSize: 200, ttlMs: 3600_000 });
   const DESKTOP_NOTIFY_PREFIX = '[OpenChamberDesktopNotify] ';
   const getDesktopNotifyEnabled = () => false;
 
@@ -300,6 +301,8 @@ export const createEventStreamRuntime = (deps) => {
     dispose: () => {
       disposers.forEach(fn => fn());
       globalWatcherStartPromise = null;
+      uiNotificationClients.dispose();
+      uiOpenChamberEventClients.dispose();
     },
   };
 };

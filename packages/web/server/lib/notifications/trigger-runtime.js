@@ -1,4 +1,5 @@
 import { EVENTS } from '../core/events.js';
+import { createBoundedMap, createBoundedSet } from '../core/bounded-cache.js';
 
 export const createNotificationTriggerRuntime = (deps) => {
   const {
@@ -20,18 +21,17 @@ export const createNotificationTriggerRuntime = (deps) => {
   const PUSH_PERMISSION_DEBOUNCE_MS = 500;
   const pushQuestionDebounceTimers = new Map();
   const pushPermissionDebounceTimers = new Map();
-  const notifiedPermissionRequests = new Set();
-  const lastReadyNotificationAt = new Map();
+  const notifiedPermissionRequests = createBoundedSet({ maxSize: 1000, ttlMs: 600_000 });
+  const lastReadyNotificationAt = createBoundedMap({ maxSize: 500, ttlMs: 3600_000 });
 
-  const sessionParentIdCache = new Map();
-  const SESSION_PARENT_CACHE_TTL_MS = 60 * 1000;
+  const sessionParentIdCache = createBoundedMap({ maxSize: 500, ttlMs: 60_000 });
 
   // Sessions where the client has enabled Permission Auto-Accept. Mirrored
   // from the client-side permissionStore via POST /api/notifications/auto-accept
   // so the server can suppress permission notifications BEFORE dispatch (the
   // 500ms debounce race otherwise leaks notifications for auto-accepted
   // permissions when the replied round-trip is slower than the debounce).
-  const autoAcceptingSessions = new Set();
+  const autoAcceptingSessions = createBoundedSet({ maxSize: 100, ttlMs: 86400_000 });
   const setAutoAcceptSession = (sessionId, enabled) => {
     if (typeof sessionId !== 'string' || sessionId.length === 0) return;
     if (enabled) {
@@ -51,15 +51,11 @@ export const createNotificationTriggerRuntime = (deps) => {
   const getCachedSessionParentId = (sessionId) => {
     const entry = sessionParentIdCache.get(sessionId);
     if (!entry) return undefined;
-    if (Date.now() - entry.at > SESSION_PARENT_CACHE_TTL_MS) {
-      sessionParentIdCache.delete(sessionId);
-      return undefined;
-    }
     return entry.parentID;
   };
 
   const setCachedSessionParentId = (sessionId, parentID) => {
-    sessionParentIdCache.set(sessionId, { parentID: parentID ?? null, at: Date.now() });
+    sessionParentIdCache.set(sessionId, { parentID: parentID ?? null });
   };
 
   const fetchSessionParentId = async (sessionId) => {
@@ -498,5 +494,13 @@ export const createNotificationTriggerRuntime = (deps) => {
   return {
     maybeSendPushForTrigger,
     setAutoAcceptSession,
+    dispose: () => {
+      notifiedPermissionRequests.dispose();
+      lastReadyNotificationAt.dispose();
+      sessionParentIdCache.dispose();
+      autoAcceptingSessions.dispose();
+      pushQuestionDebounceTimers.clear();
+      pushPermissionDebounceTimers.clear();
+    },
   };
 };

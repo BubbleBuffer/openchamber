@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { createBoundedMap } from '../../core/bounded-cache.js';
 
 const BOOTSTRAP_TOKEN_COOKIE_SAFE_BYTES = 32;
 const TUNNEL_SESSION_COOKIE_NAME = 'oc_tunnel_session';
@@ -225,8 +226,8 @@ export const createTunnelAuth = () => {
   let activeTunnelPublicUrl = null;
   let bootstrapRecord = null;
 
-  const tunnelSessions = new Map();
-  const connectRateLimiter = new Map();
+  const tunnelSessions = createBoundedMap({ maxSize: 100, ttlMs: 86400_000 });
+  const connectRateLimiter = createBoundedMap({ maxSize: 500, ttlMs: 900_000 });
 
   const clearTunnelSessionCookie = (req, res) => {
     const secure = isSecureRequest(req);
@@ -581,5 +582,9 @@ export const createTunnelAuth = () => {
     getActiveTunnelId: () => activeTunnelId,
     getActiveTunnelHost: () => activeTunnelHost,
     getActiveTunnelMode: () => activeTunnelMode,
+    dispose: () => {
+      tunnelSessions.dispose();
+      connectRateLimiter.dispose();
+    },
   };
 };
