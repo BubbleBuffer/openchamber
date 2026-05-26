@@ -21,20 +21,26 @@ export const createNotificationRuntime = (deps) => {
     shouldApplyResolvedTemplateMessage: templateRuntime.shouldApplyResolvedTemplateMessage,
   });
 
-  let initialized = false;
+  let initPromise = null;
 
   const initialize = async () => {
-    if (initialized) return;
-    initialized = true;
-    await templateRuntime.validateZenModelAtStartup();
-    eventBus.on(EVENTS.EVENT_RECEIVED, ({ payload }) => {
-      triggerRuntime.maybeSendPushForTrigger(payload);
-    });
+    if (initPromise) return initPromise;
+    initPromise = (async () => {
+      await templateRuntime.validateZenModelAtStartup();
+      eventBus.on(EVENTS.EVENT_RECEIVED, ({ payload }) => {
+        triggerRuntime.maybeSendPushForTrigger(payload);
+      });
+    })();
+    return initPromise;
   };
 
   return {
     initialize,
     maybeSendPushForTrigger: triggerRuntime.maybeSendPushForTrigger,
     setAutoAcceptSession: triggerRuntime.setAutoAcceptSession,
+    dispose: () => {
+      triggerRuntime.dispose?.();
+      templateRuntime.dispose?.();
+    },
   };
 };
