@@ -1,6 +1,9 @@
 export { useChatActivity } from './useChatActivity';
+export { useChatComposerActions } from './useChatComposerActions';
+export { useChatComposerState } from './useChatComposerState';
 export { useChatInterruptions } from './useChatInterruptions';
 export { useChatMessages } from './useChatMessages';
+export { useChatSelection } from './useChatSelection';
 export { useChatSessionState } from './useChatSessionState';
 export type {
   ChatActivityState,

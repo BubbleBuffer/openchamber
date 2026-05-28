@@ -54,6 +54,7 @@ import { ComposerLinkedContextRow } from './chat-input/ComposerLinkedContextRow'
 import { ComposerAutocompleteLayer } from './chat-input/ComposerAutocompleteLayer';
 import { ComposerHighlightLayer } from './chat-input/ComposerHighlightLayer';
 import { ComposerTextarea } from './chat-input/ComposerTextarea';
+import { useChatComposerState, useChatSelection } from './state';
 import { ComposerMobileControls } from './chat-input/ComposerMobileControls';
 import { ComposerFooter } from './chat-input/ComposerFooter';
 import { appendInlineText, appendWithLineBreaks } from './chat-input/textUtils';
@@ -129,6 +130,10 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
     ).current;
     const currentSessionId = useSessionUIStore((s) => s.currentSessionId);
     const persistChatDraft = useUIStore((state) => state.persistChatDraft);
+    // Adapter hooks — these values are available; existing store reads are kept for now
+    const composerState = useChatComposerState({ sessionId: currentSessionId });
+    const selection = useChatSelection({ sessionId: currentSessionId });
+
     const handleComposerSessionChanged = React.useCallback(() => {
         setInputMode('normal');
     }, []);
