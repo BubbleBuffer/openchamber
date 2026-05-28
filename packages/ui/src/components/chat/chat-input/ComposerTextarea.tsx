@@ -11,13 +11,11 @@ interface ComposerTextareaProps {
     textareaRef: React.RefObject<HTMLTextAreaElement | null>;
     composerHighlightRef: React.RefObject<HTMLDivElement | null>;
     value: string;
-    placeholder: string;
     disabled: boolean;
     spellCheck: boolean;
     isMobile: boolean;
     isDesktopExpanded: boolean;
     inputMode: 'normal' | 'shell';
-    inputSpellcheckEnabled: boolean;
     currentSessionId: string | null;
     newSessionDraftOpen: boolean;
     highlightedComposerContent: { text: string; mentionKind: 'none' | 'file' | 'agent' }[] | null;
@@ -42,7 +40,6 @@ export const ComposerTextarea = React.memo(function ComposerTextarea({
     textareaRef,
     composerHighlightRef,
     value,
-    placeholder,
     disabled,
     spellCheck,
     isMobile,

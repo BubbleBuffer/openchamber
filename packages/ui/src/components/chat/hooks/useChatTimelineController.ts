@@ -138,11 +138,11 @@ export const useChatTimelineController = ({
         setPendingRevealWork(false);
         setActiveTurnId(null);
         previousTurnCountRef.current = turnWindowModel.turnCount;
-    }, [sessionId, turnWindowModel.turnCount]);
+    }, [sessionId, setTurnStart, turnWindowModel.turnCount]);
 
     React.useLayoutEffect(() => {
         setTurnStart((current) => clampTurnStart(current, turnWindowModel.turnCount));
-    }, [turnWindowModel.turnCount]);
+    }, [setTurnStart, turnWindowModel.turnCount]);
 
     React.useLayoutEffect(() => {
         const previousTurnCount = previousTurnCountRef.current;
@@ -161,7 +161,7 @@ export const useChatTimelineController = ({
         });
 
         previousTurnCountRef.current = nextTurnCount;
-    }, [turnWindowModel.turnCount]);
+    }, [setTurnStart, turnWindowModel.turnCount]);
 
     const resolvePendingRenderWaiters = React.useCallback(() => {
         const resolvers = pendingRenderResolversRef.current;
@@ -257,7 +257,7 @@ export const useChatTimelineController = ({
         await waitForNextRenderCommit();
         setPendingRevealWork(false);
         return true;
-    }, [waitForNextRenderCommit]);
+    }, [setTurnStart, waitForNextRenderCommit]);
 
     const fetchOlderHistory = React.useCallback(async (): Promise<boolean> => {
         if (!sessionIdRef.current || isLoadingOlderRef.current) {
@@ -350,7 +350,7 @@ export const useChatTimelineController = ({
         } finally {
             setPendingRevealWork(false);
         }
-    }, [attemptPendingScrollRequest, sessionId]);
+    }, [attemptPendingScrollRequest, sessionId, setTurnStart]);
 
     const scrollToMessage = React.useCallback(async (
         messageId: string,
@@ -398,7 +398,7 @@ export const useChatTimelineController = ({
         } finally {
             setPendingRevealWork(false);
         }
-    }, [attemptPendingScrollRequest, sessionId]);
+    }, [attemptPendingScrollRequest, sessionId, setTurnStart]);
 
     const resumeToBottomWithOptions = React.useCallback(async () => {
         const nextStart = getInitialTurnStart(turnModelRef.current.turnCount);
@@ -415,7 +415,7 @@ export const useChatTimelineController = ({
         if (container) {
             container.scrollTop = container.scrollHeight;
         }
-    }, [scrollRef, waitForNextRenderCommit]);
+    }, [scrollRef, setTurnStart, waitForNextRenderCommit]);
 
     const resumeToBottom = React.useCallback(() => resumeToBottomWithOptions(), [resumeToBottomWithOptions]);
     const resumeToBottomInstant = React.useCallback(() => resumeToBottomWithOptions(), [resumeToBottomWithOptions]);

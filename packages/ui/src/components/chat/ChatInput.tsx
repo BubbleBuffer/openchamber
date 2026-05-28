@@ -1,11 +1,7 @@
 import React from 'react';
-import { Textarea } from '@/components/ui/textarea';
 import {
     RiAttachment2,
-    RiCloseLine,
-    RiExternalLinkLine,
 } from '@remixicon/react';
-import { BrowserVoiceButton } from '@/components/voice';
 // sessionStore removed — currentSessionId comes from useSessionUIStore
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
@@ -20,16 +16,12 @@ import { useInlineCommentDraftStore } from '@/stores/useInlineCommentDraftStore'
 import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
 import { AttachedFilesList } from './FileAttachment';
 import { QueuedMessageChips } from './QueuedMessageChips';
-import { FileMentionAutocomplete, type FileMentionHandle } from './autocomplete/FileMentionAutocomplete';
-import { CommandAutocomplete, type CommandAutocompleteHandle, type CommandInfo } from './autocomplete/CommandAutocomplete';
-import { SkillAutocomplete, type SkillAutocompleteHandle } from './autocomplete/SkillAutocomplete';
+import type { FileMentionHandle } from './autocomplete/FileMentionAutocomplete';
+import type { CommandAutocompleteHandle, CommandInfo } from './autocomplete/CommandAutocomplete';
+import type { SkillAutocompleteHandle } from './autocomplete/SkillAutocomplete';
 import { cn } from '@/lib/utils';
-import { ModelControls } from './controls/ModelControls';
-import { UnifiedControlsDrawer } from './controls/UnifiedControlsDrawer';
 import { StatusRow } from './status/StatusRow';
 import { PendingChangesBar } from './diff/PendingChangesBar';
-import { MobileAgentButton } from './controls/MobileAgentButton';
-import { MobileModelButton } from './controls/MobileModelButton';
 import { MobileSessionStatusBar } from './mobile-session-status-bar/MobileSessionStatusBar';
 import { useCurrentSessionActivity } from '@/hooks/useSessionActivity';
 import { toast } from '@/components/ui';
@@ -46,15 +38,9 @@ import { useChatSearchDirectory } from '@/hooks/useChatSearchDirectory';
 import { opencodeClient } from '@/lib/opencode/client';
 import { createWorktreeDraft } from '@/lib/session/worktreeSessionCreator';
 import { usePermissionStore } from '@/stores/permissionStore';
-import { ComposerAttachmentControls } from './chat-input/ComposerAttachmentControls';
-import { PermissionAutoAcceptButton } from './chat-input/PermissionAutoAcceptButton';
-import { FocusModeButton } from './chat-input/FocusModeButton';
-import { ComposerActionButtons } from './chat-input/ComposerActionButtons';
 import { ComposerLinkedContextRow } from './chat-input/ComposerLinkedContextRow';
 import { ComposerAutocompleteLayer } from './chat-input/ComposerAutocompleteLayer';
-import { ComposerHighlightLayer } from './chat-input/ComposerHighlightLayer';
 import { ComposerTextarea } from './chat-input/ComposerTextarea';
-import { useChatComposerState, useChatSelection } from './state';
 import { ComposerMobileControls } from './chat-input/ComposerMobileControls';
 import { ComposerFooter } from './chat-input/ComposerFooter';
 import { appendInlineText, appendWithLineBreaks } from './chat-input/textUtils';
@@ -92,11 +78,6 @@ const VS_CODE_DROP_DATA_TYPES = [
     'text/plain',
 ];
 
-const MemoModelControls = React.memo(ModelControls);
-const MemoUnifiedControlsDrawer = React.memo(UnifiedControlsDrawer);
-const MemoBrowserVoiceButton = React.memo(BrowserVoiceButton);
-const MemoMobileAgentButton = React.memo(MobileAgentButton);
-const MemoMobileModelButton = React.memo(MobileModelButton);
 const MemoStatusRow = React.memo(StatusRow);
 
 interface ChatInputProps {
@@ -130,9 +111,6 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
     ).current;
     const currentSessionId = useSessionUIStore((s) => s.currentSessionId);
     const persistChatDraft = useUIStore((state) => state.persistChatDraft);
-    // Adapter hooks — available for future use; currently using direct store reads
-    // const composerState = useChatComposerState({ sessionId: currentSessionId });
-    // const selection = useChatSelection();
 
     const handleComposerSessionChanged = React.useCallback(() => {
         setInputMode('normal');
@@ -1863,17 +1841,11 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                                 textareaRef={textareaRef}
                                 composerHighlightRef={composerHighlightRef}
                                 value={message}
-                                placeholder={currentSessionId || newSessionDraftOpen
-                                    ? inputMode === 'shell'
-                                        ? "Enter shell command..."
-                                        : "@ for files/agents; / for commands; ! for shell"
-                                    : "Select or create a session to start chatting"}
                                 disabled={!currentSessionId && !newSessionDraftOpen}
                                 spellCheck={isMobile || inputSpellcheckEnabled}
                                 isMobile={isMobile}
                                 isDesktopExpanded={isDesktopExpanded}
                                 inputMode={inputMode}
-                                inputSpellcheckEnabled={inputSpellcheckEnabled}
                                 currentSessionId={currentSessionId}
                                 newSessionDraftOpen={newSessionDraftOpen}
                                 highlightedComposerContent={highlightedComposerContent}

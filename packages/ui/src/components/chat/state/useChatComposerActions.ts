@@ -14,22 +14,20 @@ export interface UseChatComposerActionsOptions {
   abort?: () => void;
 }
 
-export function useChatComposerActions({
-  sessionId,
-}: UseChatComposerActionsOptions) {
+export function useChatComposerActions() {
   // Stubs — actual submit/queue/abort logic stays in ChatInput until
   // a follow-up task extracts these implementations properly.
   const submit = React.useCallback(() => {
     // TODO: migrate handleSubmit from ChatInput
-  }, [sessionId]);
+  }, []);
 
   const queue = React.useCallback(() => {
     // TODO: migrate handleQueueMessage from ChatInput
-  }, [sessionId]);
+  }, []);
 
   const abort = React.useCallback(() => {
     // TODO: migrate handleAbort from ChatInput
-  }, [sessionId]);
+  }, []);
 
   return { submit, queue, abort };
 }
