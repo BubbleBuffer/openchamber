@@ -130,9 +130,9 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
     ).current;
     const currentSessionId = useSessionUIStore((s) => s.currentSessionId);
     const persistChatDraft = useUIStore((state) => state.persistChatDraft);
-    // Adapter hooks — these values are available; existing store reads are kept for now
-    const composerState = useChatComposerState({ sessionId: currentSessionId });
-    const selection = useChatSelection({ sessionId: currentSessionId });
+    // Adapter hooks — available for future use; currently using direct store reads
+    // const composerState = useChatComposerState({ sessionId: currentSessionId });
+    // const selection = useChatSelection();
 
     const handleComposerSessionChanged = React.useCallback(() => {
         setInputMode('normal');

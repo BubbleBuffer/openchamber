@@ -48,7 +48,6 @@ export const ComposerTextarea = React.memo(function ComposerTextarea({
     isMobile,
     isDesktopExpanded,
     inputMode,
-    inputSpellcheckEnabled,
     currentSessionId,
     newSessionDraftOpen,
     highlightedComposerContent,

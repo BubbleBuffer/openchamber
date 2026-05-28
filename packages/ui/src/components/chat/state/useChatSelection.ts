@@ -2,11 +2,12 @@ import React from 'react';
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 
-interface UseChatSelectionOptions {
-  sessionId: string | null;
-}
-
-export function useChatSelection({ sessionId }: UseChatSelectionOptions) {
+/**
+ * Returns the current agent/model selection for the composer.
+ * Agents come from agentConfigStore, models from providerConfigStore.
+ * The sessionId parameter is reserved for future per-session overrides.
+ */
+export function useChatSelection() {
   const getEffectiveModel = useProviderConfigStore((state) => state.getEffectiveModel);
   const effectiveModel = getEffectiveModel();
 

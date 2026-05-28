@@ -1,5 +1,4 @@
 import React from 'react';
-import { cn } from '@/lib/utils';
 import { RiExternalLinkLine, RiCloseLine } from '@remixicon/react';
 
 interface LinkedIssue {

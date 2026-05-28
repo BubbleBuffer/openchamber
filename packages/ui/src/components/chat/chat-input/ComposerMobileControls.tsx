@@ -85,7 +85,6 @@ export const ComposerMobileControls = React.memo(function ComposerMobileControls
   mobileControlsOpen,
   onCloseMobileControls,
   handleOpenMobilePanel,
-  handleReturnToUnifiedControls,
 }: ComposerMobileControlsProps) {
   return (
     <>
