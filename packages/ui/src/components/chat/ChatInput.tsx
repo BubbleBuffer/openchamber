@@ -56,6 +56,8 @@ import { ComposerLinkedContextRow } from './chat-input/ComposerLinkedContextRow'
 import { ComposerAutocompleteLayer } from './chat-input/ComposerAutocompleteLayer';
 import { ComposerHighlightLayer } from './chat-input/ComposerHighlightLayer';
 import { ComposerTextarea } from './chat-input/ComposerTextarea';
+import { ComposerMobileControls } from './chat-input/ComposerMobileControls';
+import { ComposerFooter } from './chat-input/ComposerFooter';
 import { appendInlineText, appendWithLineBreaks } from './chat-input/textUtils';
 import {
     collectDroppedFileUris as collectDroppedFileUrisFromTransfer,
@@ -2055,122 +2057,71 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                             data-chat-input-footer="true"
                         >
                             {isMobile ? (
-                                <>
-                                    <div className="flex w-full items-center justify-between gap-x-1.5">
-                                        <div className="flex items-center gap-x-1.5">
-                                            <ComposerAttachmentControls
-                                                isMobile={isMobile}
-                                                isVSCode={isVSCode}
-                                                footerIconButtonClass={footerIconButtonClass}
-                                                iconSizeClass={iconSizeClass}
-                                                fileInputRef={fileInputRef}
-                                                handleLocalFileSelect={handleLocalFileSelect}
-                                                handlePickLocalFiles={handlePickLocalFiles}
-                                                handleOpenCommandMenu={handleOpenCommandMenu}
-                                                openIssuePicker={openIssuePicker}
-                                                openPrPicker={openPrPicker}
-                                                onOpenSettings={onOpenSettings}
-                                            />
-                                            <PermissionAutoAcceptButton
-                                                footerIconButtonClass={footerIconButtonClass}
-                                                iconSizeClass={iconSizeClass}
-                                                permissionScopeSessionId={permissionScopeSessionId}
-                                                permissionAutoAcceptEnabled={permissionAutoAcceptEnabled}
-                                                handlePermissionAutoAcceptToggle={handlePermissionAutoAcceptToggle}
-                                            />
-                                        </div>
-                                        <div className="flex items-center min-w-0 gap-x-1 justify-end">
-                                            <div className="flex items-center gap-x-1 min-w-0 max-w-[60vw] flex-shrink">
-                                                <MemoMobileModelButton onOpenModel={handleOpenMobileControls} className="min-w-0 flex-shrink" />
-                                                <MemoMobileAgentButton
-                                                    onOpenAgentPanel={handleOpenAgentPanel}
-                                                    onCycleAgent={handleCycleAgent}
-                                                    className="min-w-0 flex-shrink"
-                                                />
-                                            </div>
-                                            <div className="flex items-center gap-x-1 flex-shrink-0">
-                                                <MemoBrowserVoiceButton />
-                                                <ComposerActionButtons
-                                                    isMobile={isMobile}
-                                                    footerIconButtonClass={footerIconButtonClass}
-                                                    sendIconSizeClass={sendIconSizeClass}
-                                                    stopIconSizeClass={stopIconSizeClass}
-                                                    canSend={canSend}
-                                                    canAbort={canAbort}
-                                                    hasContent={!!hasContent}
-                                                    currentSessionId={currentSessionId}
-                                                    newSessionDraftOpen={newSessionDraftOpen}
-                                                    onPrimaryAction={handlePrimaryAction}
-                                                    onQueueMessage={handleQueueMessage}
-                                                    onAbort={handleAbort}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <MemoModelControls
-                                        className="hidden"
-                                        mobilePanel={mobileControlsPanel}
-                                        onMobilePanelChange={setMobileControlsPanel}
-                                        onMobilePanelSelection={handleReturnToUnifiedControls}
-                                        onAgentPanelSelection={() => setMobileControlsPanel(null)}
-                                    />
-                                    <MemoUnifiedControlsDrawer
-                                        open={mobileControlsOpen}
-                                        onClose={handleCloseMobileControls}
-                                        onOpenModel={() => handleOpenMobilePanel('model')}
-                                        onOpenEffort={() => handleOpenMobilePanel('variant')}
-                                    />
-                                </>
+                                <ComposerMobileControls
+                                    isVSCode={isVSCode}
+                                    footerIconButtonClass={footerIconButtonClass}
+                                    iconSizeClass={iconSizeClass}
+                                    sendIconSizeClass={sendIconSizeClass}
+                                    stopIconSizeClass={stopIconSizeClass}
+                                    canSend={canSend}
+                                    canAbort={canAbort}
+                                    hasContent={!!hasContent}
+                                    currentSessionId={currentSessionId}
+                                    newSessionDraftOpen={newSessionDraftOpen}
+                                    mobileControlsPanel={mobileControlsPanel}
+                                    onOpenSettings={onOpenSettings}
+                                    fileInputRef={fileInputRef}
+                                    handleLocalFileSelect={handleLocalFileSelect}
+                                    handlePickLocalFiles={handlePickLocalFiles}
+                                    handleOpenCommandMenu={handleOpenCommandMenu}
+                                    openIssuePicker={openIssuePicker}
+                                    openPrPicker={openPrPicker}
+                                    permissionScopeSessionId={permissionScopeSessionId}
+                                    permissionAutoAcceptEnabled={permissionAutoAcceptEnabled}
+                                    handlePermissionAutoAcceptToggle={handlePermissionAutoAcceptToggle}
+                                    onPrimaryAction={handlePrimaryAction}
+                                    onQueueMessage={handleQueueMessage}
+                                    onAbort={handleAbort}
+                                    onOpenMobileControls={handleOpenMobileControls}
+                                    onOpenAgentPanel={handleOpenAgentPanel}
+                                    onCycleAgent={handleCycleAgent}
+                                    onMobilePanelChange={setMobileControlsPanel}
+                                    onMobilePanelSelection={handleReturnToUnifiedControls}
+                                    onAgentPanelSelection={() => setMobileControlsPanel(null)}
+                                    mobileControlsOpen={mobileControlsOpen}
+                                    onCloseMobileControls={handleCloseMobileControls}
+                                    handleOpenMobilePanel={handleOpenMobilePanel}
+                                    handleReturnToUnifiedControls={handleReturnToUnifiedControls}
+                                />
                             ) : (
-                                <>
-                                    <div className={cn("flex items-center flex-shrink-0", footerGapClass)}>
-                                        <ComposerAttachmentControls
-                                            isMobile={isMobile}
-                                            isVSCode={isVSCode}
-                                            footerIconButtonClass={footerIconButtonClass}
-                                            iconSizeClass={iconSizeClass}
-                                            fileInputRef={fileInputRef}
-                                            handleLocalFileSelect={handleLocalFileSelect}
-                                            handlePickLocalFiles={handlePickLocalFiles}
-                                            handleOpenCommandMenu={handleOpenCommandMenu}
-                                            openIssuePicker={openIssuePicker}
-                                            openPrPicker={openPrPicker}
-                                            onOpenSettings={onOpenSettings}
-                                        />
-                                        <FocusModeButton
-                                            footerIconButtonClass={footerIconButtonClass}
-                                            iconSizeClass={iconSizeClass}
-                                            isExpandedInput={isExpandedInput}
-                                            onToggle={handleToggleExpandedInput}
-                                        />
-                                        <PermissionAutoAcceptButton
-                                            footerIconButtonClass={footerIconButtonClass}
-                                            iconSizeClass={iconSizeClass}
-                                            permissionScopeSessionId={permissionScopeSessionId}
-                                            permissionAutoAcceptEnabled={permissionAutoAcceptEnabled}
-                                            handlePermissionAutoAcceptToggle={handlePermissionAutoAcceptToggle}
-                                            withTooltip
-                                        />
-                                    </div>
-                                    <div className={cn('flex items-center flex-1 justify-end', footerGapClass, 'md:gap-x-3')}>
-                                        <MemoModelControls className={cn('flex-1 min-w-0 justify-end')} />
-                                        <MemoBrowserVoiceButton />
-                                        <ComposerActionButtons
-                                            isMobile={isMobile}
-                                            footerIconButtonClass={footerIconButtonClass}
-                                            sendIconSizeClass={sendIconSizeClass}
-                                            stopIconSizeClass={stopIconSizeClass}
-                                            canSend={canSend}
-                                            canAbort={canAbort}
-                                            hasContent={!!hasContent}
-                                            currentSessionId={currentSessionId}
-                                            newSessionDraftOpen={newSessionDraftOpen}
-                                            onPrimaryAction={handlePrimaryAction}
-                                            onQueueMessage={handleQueueMessage}
-                                            onAbort={handleAbort}
-                                        />
-                                    </div>
-                                </>
+                                <ComposerFooter
+                                    isVSCode={isVSCode}
+                                    footerIconButtonClass={footerIconButtonClass}
+                                    footerGapClass={footerGapClass}
+                                    iconSizeClass={iconSizeClass}
+                                    sendIconSizeClass={sendIconSizeClass}
+                                    stopIconSizeClass={stopIconSizeClass}
+                                    canSend={canSend}
+                                    canAbort={canAbort}
+                                    hasContent={!!hasContent}
+                                    currentSessionId={currentSessionId}
+                                    newSessionDraftOpen={newSessionDraftOpen}
+                                    isExpandedInput={isExpandedInput}
+                                    onOpenSettings={onOpenSettings}
+                                    fileInputRef={fileInputRef}
+                                    handleLocalFileSelect={handleLocalFileSelect}
+                                    handlePickLocalFiles={handlePickLocalFiles}
+                                    handleOpenCommandMenu={handleOpenCommandMenu}
+                                    openIssuePicker={openIssuePicker}
+                                    openPrPicker={openPrPicker}
+                                    permissionScopeSessionId={permissionScopeSessionId}
+                                    permissionAutoAcceptEnabled={permissionAutoAcceptEnabled}
+                                    handlePermissionAutoAcceptToggle={handlePermissionAutoAcceptToggle}
+                                    onPrimaryAction={handlePrimaryAction}
+                                    onQueueMessage={handleQueueMessage}
+                                    onAbort={handleAbort}
+                                    onToggleExpandedInput={handleToggleExpandedInput}
+                                />
                             )}
                         </div>
 
