@@ -1,27 +1,37 @@
 import React from 'react';
 import type { ChatActivityState } from './types';
 
+// Machine hooks for state that was migrated
+import {
+    useIsWorking as useMachineIsWorking,
+    useIsStreaming as useMachineIsStreaming,
+    useNeedsAttention as useMachineNeedsAttention,
+} from './machine/selectors';
+
 interface UseChatActivityOptions {
-  isWorking: boolean;
-  streamingMessageId: string | undefined;
+  directory: string;
+  sessionId: string;
   showAbortStatus: boolean;
-  hasBlockingRequest: boolean;
 }
 
 export function useChatActivity({
-  isWorking,
-  streamingMessageId,
+  directory,
+  sessionId,
   showAbortStatus,
-  hasBlockingRequest,
 }: UseChatActivityOptions): ChatActivityState {
+  // Get machine state
+  const isWorking = useMachineIsWorking(directory, sessionId);
+  const isStreaming = useMachineIsStreaming(directory, sessionId);
+  const needsAttention = useMachineNeedsAttention(directory, sessionId);
+
   return React.useMemo(
     () => ({
       isWorking,
-      isStreaming: Boolean(streamingMessageId),
+      isStreaming,
       isAborting: showAbortStatus,
       showAbortStatus,
-      needsAttention: hasBlockingRequest,
+      needsAttention,
     }),
-    [hasBlockingRequest, isWorking, showAbortStatus, streamingMessageId],
+    [isWorking, isStreaming, needsAttention, showAbortStatus],
   );
 }

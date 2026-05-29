@@ -1,5 +1,4 @@
 import React from 'react';
-import type { Message } from '@/lib/opencode/client';
 import type { PermissionRequest } from '@/types/permission';
 import type { QuestionRequest } from '@/types/question';
 import type { StreamPhase } from '../message/types';
@@ -8,21 +7,29 @@ import {
     collectVisibleSessionIdsForBlockingRequests,
     flattenBlockingRequests,
 } from '../lib/blockingRequests';
-import { useStreamingStore } from '@/sync/streaming';
 import {
     useDirectoryStore,
-    useDirectorySync,
     useSessionMessageRecords,
     useSessions,
     useSessionStatus,
+    useSyncDirectory,
 } from '@/sync/sync-context';
-import { useSync } from '@/sync/use-sync';
 import { usePlanDetection } from '@/hooks/usePlanDetection';
+
+// Machine hooks - Phase 3.2 migration
+import {
+    useLoaded,
+    useStreamingMessageId as useMachineStreamingMessageId,
+    useIsWorking as useMachineIsWorking,
+    usePermissions as useMachinePermissions,
+    useQuestions as useMachineQuestions,
+    useRetryState as useMachineRetryState,
+    useHistoryState as useMachineHistoryState,
+} from '../state/machine/selectors';
 
 const EMPTY_PERMISSIONS: PermissionRequest[] = [];
 const EMPTY_QUESTIONS: QuestionRequest[] = [];
 const IDLE_SESSION_STATUS = { type: 'idle' as const };
-const DEFAULT_RETRY_MESSAGE = 'Quota limit reached. Retrying automatically.';
 
 type BlockingRequestsSnapshot = {
     permissions: PermissionRequest[];
@@ -50,130 +57,116 @@ export type ChatSessionData = {
     };
 };
 
-const sameRequestList = <T extends { id: string }>(a: T[], b: T[]): boolean => {
-    if (a === b) return true;
-    if (a.length !== b.length) return false;
-    for (let index = 0; index < a.length; index += 1) {
-        if (a[index] !== b[index]) return false;
-    }
-    return true;
-};
-
-const useScopedBlockingRequests = (sessionIds: string[]): BlockingRequestsSnapshot => {
-    const store = useDirectoryStore();
-    const snapshotRef = React.useRef<BlockingRequestsSnapshot>({
-        permissions: EMPTY_PERMISSIONS,
-        questions: EMPTY_QUESTIONS,
-    });
-
-    const getSnapshot = React.useCallback(() => {
-        if (sessionIds.length === 0) {
-            snapshotRef.current = {
-                permissions: EMPTY_PERMISSIONS,
-                questions: EMPTY_QUESTIONS,
-            };
-            return snapshotRef.current;
-        }
-
-        const state = store.getState();
-        const permissionsMap = new Map<string, PermissionRequest[]>();
-        const questionsMap = new Map<string, QuestionRequest[]>();
-        for (const sessionId of sessionIds) {
-            permissionsMap.set(sessionId, state.permission[sessionId] ?? EMPTY_PERMISSIONS);
-            questionsMap.set(sessionId, state.question[sessionId] ?? EMPTY_QUESTIONS);
-        }
-
-        const permissions = flattenBlockingRequests(permissionsMap, sessionIds);
-        const questions = flattenBlockingRequests(questionsMap, sessionIds);
-        const previous = snapshotRef.current;
-        if (sameRequestList(previous.permissions, permissions) && sameRequestList(previous.questions, questions)) {
-            return previous;
-        }
-
-        snapshotRef.current = { permissions, questions };
-        return snapshotRef.current;
-    }, [sessionIds, store]);
-
-    return React.useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
-};
-
+/**
+ * useChatSessionData — Phase 3.2 Migration
+ *
+ * Machine-owned fields now come from machine hooks.
+ * Sync store still provides: messages, status (for now - Phase 3.3)
+ */
 export const useChatSessionData = (sessionId: string): ChatSessionData => {
-    const sync = useSync();
-    const streamingMessageId = useStreamingStore(
-        React.useCallback(
-            (s) => s.streamingMessageIds.get(sessionId) ?? null,
-            [sessionId],
-        ),
-    );
-    const streamingPhase = useStreamingStore(
-        React.useCallback(
-            (s) => {
-                if (!streamingMessageId) return null;
-                return s.messageStreamStates.get(streamingMessageId)?.phase ?? null;
-            },
-            [streamingMessageId],
-        ),
-    );
+    const directory = useSyncDirectory();
 
-    const loaded = useDirectorySync(
-        React.useCallback(
-            (state) => state.message[sessionId] !== undefined,
-            [sessionId],
-        ),
-    );
+    // Machine hooks for machine-owned fields (Phase 3.2)
+    const machineLoaded = useLoaded(directory, sessionId);
+    const machineStreamingMessageId = useMachineStreamingMessageId(directory, sessionId);
+    const machineIsWorking = useMachineIsWorking(directory, sessionId);
+    const machinePermissions = useMachinePermissions(directory, sessionId);
+    const machineQuestions = useMachineQuestions(directory, sessionId);
+    const machineRetryState = useMachineRetryState(directory, sessionId);
+    const machineHistoryState = useMachineHistoryState(directory, sessionId);
+
+    // Sync store fields (messages still from sync - Phase 3.3)
     const messages = useSessionMessageRecords(sessionId);
     const sessions = useSessions();
     const status = useSessionStatus(sessionId) ?? IDLE_SESSION_STATUS;
 
     usePlanDetection(sessionId);
 
-    const scopedSessionIds = React.useMemo(
-        () => collectVisibleSessionIdsForBlockingRequests(
+    // Store reference for multi-session blocking request aggregation
+    const directoryStore = useDirectoryStore();
+
+    // Machine-derived fields (Phase 3.2 migration)
+    const loaded = machineLoaded;
+    const streamingMessageId = machineStreamingMessageId;
+
+    // Derive streamingPhase from machine state
+    // streaming: when streamingMessageId is non-null and not in cooldown
+    // cooldown: when in retry cooldown
+    // null: when neither active
+    const streamingPhase = React.useMemo<StreamPhase | null>(() => {
+        if (machineStreamingMessageId) {
+            // Active streaming
+            if (machineRetryState.retryCooldownUntil !== null) {
+                return 'cooldown';
+            }
+            return 'streaming';
+        }
+        // Check if in cooldown without active streaming
+        if (machineRetryState.retryCooldownUntil !== null) {
+            return 'cooldown';
+        }
+        return null;
+    }, [machineStreamingMessageId, machineRetryState.retryCooldownUntil]);
+
+    // isWorking from machine hook
+    const isWorking = machineIsWorking;
+
+    // blockingRequests from machine hooks
+    const blockingRequests = React.useMemo<BlockingRequestsSnapshot>(() => {
+        // Collect visible session IDs for hierarchical blocking requests
+        const scopedSessionIds = collectVisibleSessionIdsForBlockingRequests(
             sessions.map((session) => ({ id: session.id, parentID: session.parentID })),
             sessionId,
-        ),
-        [sessions, sessionId],
-    );
-    const blockingRequests = useScopedBlockingRequests(scopedSessionIds);
-    const { permissions, questions } = blockingRequests;
-
-    const isWorking = React.useMemo(() => {
-        if (!sessionId || permissions.length > 0 || questions.length > 0) {
-            return false;
-        }
-
-        if (streamingMessageId || streamingPhase) {
-            return true;
-        }
-
-        const statusType = status.type ?? 'idle';
-        if (statusType === 'busy' || statusType === 'retry') {
-            return true;
-        }
-
-        const lastMessage = messages[messages.length - 1]?.info as Message | undefined;
-        return Boolean(
-            lastMessage
-            && lastMessage.role === 'assistant'
-            && typeof (lastMessage as { time?: { completed?: number } }).time?.completed !== 'number',
         );
-    }, [messages, permissions.length, questions.length, sessionId, status.type, streamingMessageId, streamingPhase]);
 
+        // For the primary session, use machine permissions/questions directly
+        // For child sessions, aggregate them (same as before but now machine provides the data)
+        if (scopedSessionIds.length <= 1) {
+            return {
+                permissions: machinePermissions,
+                questions: machineQuestions,
+            };
+        }
+
+        // Multiple sessions - aggregate from sync store for now (Phase 3.2)
+        // Machine hooks only return data for the specific sessionId
+        const syncState = directoryStore.getState();
+        const permissionsMap = new Map<string, PermissionRequest[]>();
+        const questionsMap = new Map<string, QuestionRequest[]>();
+
+        for (const sid of scopedSessionIds) {
+            if (sid === sessionId) {
+                permissionsMap.set(sid, machinePermissions);
+                questionsMap.set(sid, machineQuestions);
+            } else {
+                permissionsMap.set(sid, syncState.permission[sid] ?? EMPTY_PERMISSIONS);
+                questionsMap.set(sid, syncState.question[sid] ?? EMPTY_QUESTIONS);
+            }
+        }
+
+        return {
+            permissions: flattenBlockingRequests(permissionsMap, scopedSessionIds),
+            questions: flattenBlockingRequests(questionsMap, scopedSessionIds),
+        };
+    }, [machinePermissions, machineQuestions, sessionId, sessions, directoryStore]);
+
+    // Retry overlay from machine retry state
     const activeRetryStatus = React.useMemo(() => {
-        if (!sessionId || status.type !== 'retry') {
+        if (!sessionId || !machineRetryState.retryMessage) {
             return null;
         }
 
-        const rawMessage = typeof (status as { message?: string }).message === 'string'
-            ? (((status as { message?: string }).message) ?? '').trim()
-            : '';
+        // retryCooldownUntil non-null means we're in cooldown - no overlay
+        if (machineRetryState.retryCooldownUntil !== null) {
+            return null;
+        }
 
         return {
             sessionId,
-            message: rawMessage || DEFAULT_RETRY_MESSAGE,
-            confirmedAt: (status as { confirmedAt?: number }).confirmedAt,
+            message: machineRetryState.retryMessage,
+            confirmedAt: undefined,
         };
-    }, [sessionId, status]);
+    }, [machineRetryState.retryMessage, machineRetryState.retryCooldownUntil, sessionId]);
 
     const [retryFallbackTimestamp, setRetryFallbackTimestamp] = React.useState<number>(0);
     const retryFallbackSessionRef = React.useRef<string | null>(null);
@@ -202,11 +195,14 @@ export const useChatSessionData = (sessionId: string): ChatSessionData => {
         };
     }, [activeRetryStatus, retryFallbackTimestamp]);
 
+    // historyMeta from machine useHistoryState hook
     const historyMeta = React.useMemo(() => ({
         limit: messages.length,
-        complete: !sync.hasMore(sessionId),
-        loading: sync.isLoading(sessionId),
-    }), [messages.length, sessionId, sync]);
+        // Machine's hasMoreAbove indicates if there are more messages to load
+        complete: !machineHistoryState.hasMoreAbove,
+        // Machine's isLoadingOlder indicates history is being loaded
+        loading: machineHistoryState.isLoadingOlder,
+    }), [machineHistoryState.hasMoreAbove, machineHistoryState.isLoadingOlder, messages.length]);
 
     return {
         messages,

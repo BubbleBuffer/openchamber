@@ -1,32 +1,42 @@
 import React from 'react';
-import type { Session } from '@/lib/opencode/client';
 import { useSessionUIStore } from '@/sync/session-ui-store';
-import { useSessions } from '@/sync/sync-context';
+import { useSyncDirectory } from '@/sync/sync-context';
 import type { ChatSessionState } from './types';
 
+// Machine hooks for state that was migrated
+import {
+    useLoaded,
+    useSessionExists,
+    useParentSessionId,
+} from './machine/selectors';
+
 interface UseChatSessionStateOptions {
+  directory?: string; // Optional - will use sync context if not provided
   sessionId: string | null;
   isActive: boolean;
-  loaded: boolean;
 }
 
-export function useChatSessionState({ sessionId, isActive, loaded }: UseChatSessionStateOptions): ChatSessionState {
+export function useChatSessionState({ directory: providedDirectory, sessionId, isActive }: UseChatSessionStateOptions): ChatSessionState {
+  const syncDirectory = useSyncDirectory();
+  const directory = providedDirectory ?? syncDirectory;
+
   const activeSessionId = useSessionUIStore((state) => state.currentSessionId);
   const isDraftOpen = useSessionUIStore((state) => state.newSessionDraft.open);
-  const sessions = useSessions();
+
+  // Machine hooks for machine-owned fields
+  const loaded = useLoaded(directory, sessionId ?? '');
+  const exists = useSessionExists(directory, sessionId ?? '');
+  const parentSessionId = useParentSessionId(directory, sessionId ?? '');
 
   return React.useMemo(() => {
-    const session = sessionId ? sessions.find((candidate: Session) => candidate.id === sessionId) : undefined;
-    const parentSessionId = session?.parentID ?? null;
-
     return {
       sessionId,
       activeSessionId,
       isActive,
       loaded,
-      exists: Boolean(session),
+      exists,
       isDraftOpen,
       parentSessionId,
     };
-  }, [activeSessionId, isActive, isDraftOpen, loaded, sessionId, sessions]);
+  }, [activeSessionId, isActive, isDraftOpen, loaded, exists, parentSessionId, sessionId]);
 }

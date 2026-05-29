@@ -10,6 +10,7 @@ import { useChatTurnNavigation } from './hooks/useChatTurnNavigation';
 import { useDeviceInfo } from '@/lib/device';
 import { useUIStore } from '@/stores/useUIStore';
 import { useSync } from '@/sync/use-sync';
+import { useSyncDirectory } from '@/sync/sync-context';
 import { useChatActivity, useChatInterruptions, useChatMessages, useChatSessionState } from './state';
 
 export type SessionMountProps = {
@@ -23,6 +24,7 @@ export const SessionMount = React.memo(({
     isActive,
     onScrollStateChange,
 }: SessionMountProps) => {
+    const directory = useSyncDirectory();
     const isExpandedInput = useUIStore((state) => state.isExpandedInput);
     const stickyUserHeader = useUIStore((state) => state.stickyUserHeader);
     const { isMobile } = useDeviceInfo();
@@ -53,8 +55,8 @@ export const SessionMount = React.memo(({
     });
 
     const interruptions = useChatInterruptions({
-        permissions: data.blockingRequests.permissions,
-        questions: data.blockingRequests.questions,
+        directory,
+        sessionId,
     });
 
     const messagesState = useChatMessages({
@@ -66,16 +68,15 @@ export const SessionMount = React.memo(({
     });
 
     const activity = useChatActivity({
-        isWorking: data.isWorking,
-        streamingMessageId: data.streamingMessageId ?? undefined,
+        directory,
+        sessionId,
         showAbortStatus: false,
-        hasBlockingRequest: interruptions.hasBlockingRequest,
     });
 
     const sessionState = useChatSessionState({
-        sessionId: sessionId,
+        directory,
+        sessionId,
         isActive,
-        loaded: data.loaded,
     });
 
     const resumeToLatestInstant = React.useCallback(() => {
