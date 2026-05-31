@@ -8,6 +8,19 @@
 
 **Tech Stack:** TypeScript, Vitest, ws, bun-pty (Bun runtime), node-pty (Node runtime)
 
+## Review
+
+- **Status:** PASS
+- **Reviewer:** superpawers-reviewer
+- **Date:** 2026-06-01
+- **Findings:**
+  - Dead references: Task 6 `ws-server.ts` used undeclared `terminalSessions` variable — fixed by replacing with `getTerminalSessions()` calls
+  - Spec coverage: All Stage 2 requirements mapped to tasks
+  - Placeholders: None found
+  - Type consistency: All signatures consistent across tasks
+  - Structural flow: All task dependencies satisfied
+  - Goal clarity: All steps are specific and actionable
+
 ---
 
 ## File Map
@@ -1139,7 +1152,7 @@ export const createTerminalWsServer = (
         }
 
         const nextSessionId = controlMessage.s.trim() as string;
-        const targetSession = terminalSessions.get(nextSessionId);
+        const targetSession = getTerminalSessions().get(nextSessionId);
         if (!targetSession) {
           connectionState.boundSessionId = null;
           sendControl(socket, {
@@ -1197,7 +1210,7 @@ export const createTerminalWsServer = (
         return;
       }
 
-      const session = terminalSessions.get(connectionState.boundSessionId);
+      const session = getTerminalSessions().get(connectionState.boundSessionId);
       if (!session) {
         connectionState.boundSessionId = null;
         sendControl(socket, {
@@ -1798,7 +1811,7 @@ export const registerTerminalRoutes = (
           } catch {
             // ignore
           }
-          terminalSessions.delete(sessionId);
+      getTerminalSessions().delete(sessionId);
           killedCount++;
         }
       } else if (cwd) {
@@ -2058,12 +2071,3 @@ Expected: PASS (type-check clean, lint 0 errors)
 git status
 # If dirty, commit fixups; if clean, verification is complete
 ```
-
----
-
-## Review
-
-- **Status:** PENDING
-- **Reviewer:** (to be dispatched)
-- **Date:** 2026-06-01
-- **Findings:** (to be populated by reviewer)
