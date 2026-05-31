@@ -122,10 +122,10 @@ describe('useChatSessionData migration to machine hooks', () => {
     })
   })
 
-  describe('messages - still from sync store (Phase 3.3)', () => {
-    test('messages should still come from useSessionMessageRecords', () => {
-      // Phase 3.3 - messages remain from sync store
-      // This test documents the expected behavior
+  describe('messages - from machine useMachineMessages (Phase 3.3)', () => {
+    test('messages should come from useMachineMessages via useChatSessionData', () => {
+      // Phase 3.3 - messages now come from machine state via useMachineMessages
+      // The machine normalizes and owns the authoritative message state
       type MessagesType = unknown[]
       const _check: MessagesType = []
       void _check

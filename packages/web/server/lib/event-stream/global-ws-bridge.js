@@ -102,17 +102,11 @@ export function createGlobalMessageStreamWsBridge({
       }
     }
 
-    processForwardedEventPayload(payload, (syntheticPayload) => {
-      for (const socket of Array.from(clients)) {
-        if (!readyClients.has(socket)) {
-          continue;
-        }
-        const sent = sendMessageStreamWsEvent(socket, syntheticPayload, { directory: 'global' });
-        if (!sent) {
-          removeClient(socket);
-        }
-      }
-    });
+    // Phase 3.5: processForwardedEventPayload is a no-op.
+    // Session snapshot publication is handled by sessionSnapshotPublisher
+    // wired directly to globalMessageStreamHub.emitSynthetic in runtime.js.
+    // processForwardedEventPayload no longer emits any legacy synthetic events.
+    void processForwardedEventPayload;
   });
 
   const unsubscribeStatus = globalHub.subscribeStatus((status) => {

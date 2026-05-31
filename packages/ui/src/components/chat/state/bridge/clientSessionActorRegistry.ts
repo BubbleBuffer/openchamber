@@ -34,6 +34,16 @@ export class ClientSessionActorRegistry {
   }
 
   /**
+   * Returns the revision of the actor's current snapshot, or undefined if
+   * no actor exists for this key.
+   */
+  getActorRevision(key: SessionActorKey): number | undefined {
+    const actor = this.actors.get(key)
+    if (!actor) return undefined
+    return actor.getSnapshot()?.context?.revision
+  }
+
+  /**
    * Returns true if an actor exists for this key.
    */
   has(key: SessionActorKey): boolean {

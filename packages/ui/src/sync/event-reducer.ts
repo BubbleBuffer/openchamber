@@ -9,6 +9,8 @@ import type {
   SessionStatus,
   Todo,
 } from "@/lib/opencode/client"
+import type { SessionSnapshotV1 } from "@openchamber/session-state"
+import { validateSessionSnapshotV1 } from "@openchamber/session-state"
 import { Binary } from "./binary"
 import type { FileDiff, GlobalState, State } from "./types"
 import { dropSessionCaches } from "./session-cache"
@@ -99,6 +101,9 @@ export type GlobalEventResult = {
 } | {
   type: "project"
   project: Project
+} | {
+  type: "session-snapshot"
+  snapshot: SessionSnapshotV1
 } | null
 
 export function reduceGlobalEvent(event: Event): GlobalEventResult {
@@ -107,6 +112,20 @@ export function reduceGlobalEvent(event: Event): GlobalEventResult {
   }
   if (event.type === "project.updated") {
     return { type: "project", project: event.properties as Project }
+  }
+  // Phase 3.5: openchamber:session-snapshot carries raw payload that must be
+  // validated before any actor restoration. Use validateSessionSnapshotV1 so
+  // malformed snapshots are rejected safely without corrupting the actor
+  // registry or throwing uncaught pipeline errors.
+  const eventType = event.type as string
+  if (eventType === "openchamber:session-snapshot") {
+    try {
+      const snapshot = validateSessionSnapshotV1(event.properties)
+      return { type: "session-snapshot", snapshot }
+    } catch {
+      // Malformed snapshot silently rejected — actor registry stays intact.
+      return null
+    }
   }
   return null
 }

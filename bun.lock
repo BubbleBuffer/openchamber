@@ -199,6 +199,7 @@
         "sonner": "^2.0.7",
         "strip-json-comments": "^5.0.3",
         "tailwind-merge": "^3.5.0",
+        "xstate": "^5.19.2",
         "yaml": "^2.8.4",
         "zod": "^4.4.3",
         "zustand": "^5.0.13",
@@ -283,6 +284,7 @@
         "simple-git": "^3.36.0",
         "web-push": "^3.6.7",
         "ws": "^8.20.0",
+        "xstate": "^5.19.2",
         "yaml": "^2.8.4",
       },
       "devDependencies": {

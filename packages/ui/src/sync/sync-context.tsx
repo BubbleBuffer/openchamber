@@ -25,6 +25,7 @@ import { syncDebug } from "./debug"
 import { getReconnectCandidateSessionIds } from "./reconnect-recovery"
 import { opencodeClient } from "@/lib/opencode/client"
 import { reportError } from "@/lib/errors/reportError"
+import { deprecationWarning } from "@/lib/deprecation"
 import { usePermissionStore } from "@/stores/permissionStore"
 import { useProviderConfigStore } from "@/stores/config/useProviderConfigStore"
 import { useAgentConfigStore } from "@/stores/agents/useAgentConfigStore"
@@ -38,6 +39,8 @@ import type { PermissionRequest } from "@/types/permission"
 import type { QuestionRequest } from "@/types/question"
 import * as sessionActions from "./session-actions"
 import { useSessionUIStore } from "./session-ui-store"
+import { __triggerSessionSnapshotRestoration } from "@/components/chat/state/bridge/__sessionSnapshotCallbackBridge"
+import { validateSessionSnapshotV1 } from "@openchamber/session-state"
 
 // ---------------------------------------------------------------------------
 // Context
@@ -1002,11 +1005,17 @@ export async function resyncDirectoryAfterReconnect(
 }
 
 /** @internal Exported for unit testing */
+export type HandleEventCallbacks = {
+  onSessionSnapshot?: (snapshot: unknown) => void
+}
+
+/** @internal Exported for unit testing */
 export function handleEvent(
   rawDirectory: string,
   payload: Event,
   childStores: ChildStoreManager,
   routingIndex: EventRoutingIndex,
+  callbacks?: HandleEventCallbacks,
 ) {
   const directory = resolveDirectoryFromRoutingIndex(routingIndex, rawDirectory, payload, childStores)
 
@@ -1025,6 +1034,16 @@ export function handleEvent(
       useGlobalSyncStore.setState({
         projects: applyGlobalProject(current, result.project).projects,
       })
+    } else if (result.type === "session-snapshot") {
+      // Phase 3.5: Restore the session machine actor from the canonical snapshot.
+      // The snapshot carries validated SessionSnapshotV1 for the target session.
+      // __triggerSessionSnapshotRestoration delegates to the registered callback
+      // in ClientSessionMachineBridge, which calls getOrRestoreActor with the
+      // snapshot to restore/evict/create the actor.
+      const { directory: sessionDir, sessionId } = result.snapshot.key
+      __triggerSessionSnapshotRestoration(sessionDir, sessionId, result.snapshot)
+      // Also call the callbacks.onSessionSnapshot for direct consumers (tests)
+      callbacks?.onSessionSnapshot?.(result.snapshot)
     }
     // On server.connected / global.disposed, re-bootstrap all directories
     // but only if not during recent boot
@@ -1071,6 +1090,28 @@ export function handleEvent(
       useGlobalSyncStore.setState({
         projects: applyGlobalProject(current, result.project).projects,
       })
+    } else if (result?.type === "session-snapshot") {
+      // Phase 3.5: The reduceGlobalEvent already validated the snapshot, pass it through.
+      const { directory: sessionDir, sessionId } = result.snapshot.key
+      __triggerSessionSnapshotRestoration(sessionDir, sessionId, result.snapshot)
+      callbacks?.onSessionSnapshot?.(result.snapshot)
+    }
+    return
+  }
+
+  // Directory event: check for openchamber:session-snapshot and restore actor.
+  // The event may arrive with a directory context even though it's a global
+  // synthetic event. Handle it here before the directory event switch.
+  // Phase 3.5: Validate the snapshot before restoration to prevent malformed
+  // payloads from corrupting the actor registry.
+  if ((payload.type as string) === "openchamber:session-snapshot") {
+    try {
+      const snapshot = validateSessionSnapshotV1(payload.properties)
+      const { directory: sessionDir, sessionId } = snapshot.key
+      __triggerSessionSnapshotRestoration(sessionDir, sessionId, snapshot)
+      callbacks?.onSessionSnapshot?.(snapshot)
+    } catch {
+      // Malformed snapshot silently rejected.
     }
     return
   }
@@ -1951,12 +1992,20 @@ export function useUserMessageHistory(sessionID: string, directory?: string): st
  *
  * Uses a ref-stable parts lookup that only triggers re-renders when
  * a part array for one of our displayed messages actually changes.
+ *
+ * @deprecated Use `useMachineMessages` or machine selectors for chat render
+ *   messages after Phase 3.3. This function exists for legacy sync-store
+ *   message access only.
  */
 export function useSessionMessageRecords(
   sessionID: string,
   directory?: string,
   options?: { suspendPartUpdates?: boolean },
 ) {
+  deprecationWarning(
+    "useSessionMessageRecords",
+    "useMachineMessages or machine selectors",
+  )
   const store = useDirectoryStore(directory)
   const snapshotRef = useRef<SessionMessageRecordsSnapshot>({
     sessionID,

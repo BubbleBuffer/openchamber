@@ -138,5 +138,31 @@ export function createGlobalMessageStreamHub({
       const index = replay.findIndex((entry) => entry.eventId === eventId);
       return index === -1 ? [] : replay.slice(index + 1);
     },
+    /**
+     * Phase 3.5: Inject a synthetic event directly into the subscriber fan-out.
+     * Used by sessionSnapshotPublisher to publish canonical openchamber:session-snapshot
+     * events to all connected clients (WS and SSE) through the same transport.
+     * @param {{ type: string; properties?: unknown }} syntheticPayload
+     * @param {{ eventId?: string; directory?: string }} [options]
+     */
+    emitSynthetic(syntheticPayload, options = {}) {
+      const directory =
+        typeof options?.directory === 'string' && options.directory.length > 0
+          ? options.directory
+          : 'global';
+      const eventId =
+        typeof options?.eventId === 'string' && options.eventId.length > 0
+          ? options.eventId
+          : ` synthetic-${Date.now()}`;
+      const normalized = {
+        envelope: { eventId, directory },
+        payload: syntheticPayload,
+        directory,
+        eventId,
+      };
+      for (const subscriber of Array.from(eventSubscribers)) {
+        subscriber(normalized);
+      }
+    },
   };
 }

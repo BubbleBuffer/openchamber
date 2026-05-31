@@ -192,6 +192,7 @@ export function createMessageStreamWsRuntime({
  * @param {Function} deps.readSettingsFromDiskMigrated
  * @param {Function} deps.writeSettingsToDisk
  * @param {string} deps.pushSubscriptionsFilePath
+ * @param {import('../session-state/server-session-snapshot-publisher.js').SnapshotPublisher | null} [deps.sessionSnapshotPublisher]
  */
 export const createEventStreamRuntime = (deps) => {
   const {
@@ -199,6 +200,7 @@ export const createEventStreamRuntime = (deps) => {
     fsPromises, path,
     readSettingsFromDiskMigrated, writeSettingsToDisk,
     pushSubscriptionsFilePath,
+    sessionSnapshotPublisher = null,
   } = deps;
 
   const uiNotificationClients = createBoundedSet({ maxSize: 200, ttlMs: 3600_000 });
@@ -225,22 +227,36 @@ export const createEventStreamRuntime = (deps) => {
 
   const globalMessageStreamHub = createGlobalMessageStreamHub({ openCodeRuntime });
 
+  // Phase 3.5: Wire sessionSnapshotPublisher transport to global hub.
+  // This enables canonical openchamber:session-snapshot events to flow through
+  // the same transport as all other events (WS fan-out + SSE via global-ws-bridge).
+  if (sessionSnapshotPublisher) {
+    sessionSnapshotPublisher.setTransport({
+      writeSseEvent: (snapshot, options = {}) => {
+        globalMessageStreamHub.emitSynthetic(
+          {
+            type: 'openchamber:session-snapshot',
+            properties: snapshot,
+          },
+          {
+            eventId: snapshot.meta?.sourceEventId ?? undefined,
+            directory: typeof options.directory === 'string' && options.directory.length > 0
+              ? options.directory
+              : (snapshot.key?.directory ?? 'global'),
+          },
+        );
+      },
+    });
+  }
+
   const processForwardedEventPayload = (payload, emitSyntheticEvent) => {
-    if (!payload || typeof payload !== 'object' || typeof emitSyntheticEvent !== 'function') return;
-    if (payload.type !== 'session.status') return;
-    const properties = payload.properties && typeof payload.properties === 'object' ? payload.properties : {};
-    const info = properties.info && typeof properties.info === 'object' ? properties.info : {};
-    const sessionId = typeof properties.sessionID === 'string' ? properties.sessionID.trim() : '';
-    const status = typeof info.type === 'string' ? info.type.trim() : '';
-    if (!sessionId || !status) return;
-    emitSyntheticEvent({
-      type: 'openchamber:session-status',
-      properties: { sessionId, status, timestamp: Date.now(), metadata: { attempt: info.attempt, message: info.message, next: info.next }, needsAttention: false },
-    });
-    emitSyntheticEvent({
-      type: 'openchamber:session-activity',
-      properties: { sessionId, phase: status === 'busy' || status === 'retry' ? 'busy' : 'idle' },
-    });
+    // Phase 3.5: session.status no longer emits dual synthetic events.
+    // Snapshot publication is handled by the server-session-machine-bridge
+    // through sessionSnapshotPublisher, wired directly to the event stream
+    // transport. No legacy openchamber:session-status or openchamber:session-activity
+    // events are emitted here.
+    void payload;
+    void emitSyntheticEvent;
   };
 
   let globalWatcherStartPromise = null;

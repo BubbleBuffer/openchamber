@@ -71,7 +71,7 @@ describe('clientSessionEventNormalizer', () => {
       })
 
       const retryEvent = events.find((e) => e.type === 'RETRY_STARTED')
-      expect(retryEvent).toBeDefined()
+      expect(retryEvent !== undefined).toBe(true)
       expect((retryEvent as { retryMessage: string | null }).retryMessage).toBe('Quota limit')
       expect((retryEvent as { retryCount: number }).retryCount).toBe(2)
     })
@@ -141,7 +141,7 @@ describe('clientSessionEventNormalizer', () => {
         timestamp: 1000,
       })
 
-      expect(events.length).toBeGreaterThanOrEqual(3)
+      expect(events.length >= 3).toBe(true)
       expect(events.map((e) => e.type)).toContain('SESSION_LOADED')
       expect(events.map((e) => e.type)).toContain('STREAM_STARTED')
       expect(events.map((e) => e.type)).toContain('PERMISSION_REQUESTED')

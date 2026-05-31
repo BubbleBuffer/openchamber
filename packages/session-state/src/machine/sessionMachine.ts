@@ -935,10 +935,14 @@ export function createSessionMachine(input: CreateInitialSessionContextInput) {
         states: {
           idle: {
             on: {
-              LOAD_OLDER_REQUESTED: {
-                target: 'loading_older',
-                actions: [handleLoadOlderRequestedAction, emitLoadOlder] as Actions,
-              },
+              LOAD_OLDER_REQUESTED: [
+                {
+                  guard: 'identityMatches',
+                  target: 'loading_older',
+                  actions: [handleLoadOlderRequestedAction, emitLoadOlder] as Actions,
+                },
+                {},
+              ],
             },
           },
           loading_older: {

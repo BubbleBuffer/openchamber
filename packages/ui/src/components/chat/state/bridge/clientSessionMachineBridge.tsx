@@ -1,10 +1,14 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { createActor } from 'xstate'
 import type { Snapshot } from 'xstate'
 import { ClientSessionActorRegistry } from './clientSessionActorRegistry'
 import { ClientSessionBridgeContext } from './clientSessionBridgeContext'
 import { createSessionActorKey, createSessionMachine, restoreSessionMachineSnapshot } from '@openchamber/session-state'
 import type { SessionSnapshotV1 } from '@openchamber/session-state'
+import {
+  __registerSessionSnapshotCallback,
+  __unregisterSessionSnapshotCallback,
+} from './__sessionSnapshotCallbackBridge'
 
 // ---------------------------------------------------------------------------
 // Provider component
@@ -30,14 +34,22 @@ export function ClientSessionMachineBridge({ children }: ClientSessionMachineBri
       const key = createSessionActorKey(directory, sessionId)
 
       if (snapshot) {
-        // Restore from snapshot
-        const machine = createSessionMachine({ directory, sessionId, timestamp: snapshot.meta.updatedAt })
-        const restored = restoreSessionMachineSnapshot(machine, snapshot)
-        // Evict existing actor if present
+        // Phase 3.5: newer-or-idempotent revision dedupe. Reject older snapshots
+        // that would clobber newer state; ignore exact same revision if already
+        // applied; accept strictly newer revisions.
+        const existingRevision = registry.getActorRevision(key)
+        if (existingRevision !== undefined && existingRevision >= snapshot.meta.revision) {
+          // Existing actor has same or newer revision — return existing without
+          // evicting to avoid unnecessary actor churn.
+          return registry.getOrCreate(key, { directory, sessionId, timestamp: snapshot.meta.updatedAt })
+        }
+
+        // Strictly newer: evict existing actor if present, then restore.
         if (registry.has(key)) {
           registry.evict(key)
         }
-        // Create actor with the restored snapshot
+        const machine = createSessionMachine({ directory, sessionId, timestamp: snapshot.meta.updatedAt })
+        const restored = restoreSessionMachineSnapshot(machine, snapshot)
         const actor = createActor(machine, { snapshot: restored as Snapshot<unknown> }).start()
         registry['actors'].set(key, actor)
         return actor
@@ -48,6 +60,17 @@ export function ClientSessionMachineBridge({ children }: ClientSessionMachineBri
     },
     [],
   )
+
+  // Register the snapshot restoration callback so the non-React event
+  // pipeline can restore actors. Unregister on unmount.
+  useEffect(() => {
+    const generation = __registerSessionSnapshotCallback((directory, sessionId, snapshot) => {
+      getOrRestoreActor(directory, sessionId, snapshot)
+    })
+    return () => {
+      __unregisterSessionSnapshotCallback(generation)
+    }
+  }, [getOrRestoreActor])
 
   const value = {
     registry: registryRef.current,

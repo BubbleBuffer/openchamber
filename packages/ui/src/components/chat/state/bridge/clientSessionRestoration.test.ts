@@ -71,7 +71,7 @@ describe('createSessionSnapshotFromSyncState', () => {
     const snapshot = createSessionSnapshotFromSyncState(input)
 
     expect(snapshot.regions.interruptions).toBe('has_permission')
-    expect(snapshot.domain.permissionsById.perm1).toBeDefined()
+    expect(snapshot.domain.permissionsById.perm1 !== undefined).toBe(true)
     expect(snapshot.domain.permissionsById.perm1.permission).toBe('file:read')
   })
 
@@ -91,7 +91,7 @@ describe('createSessionSnapshotFromSyncState', () => {
     const snapshot = createSessionSnapshotFromSyncState(input)
 
     expect(snapshot.regions.interruptions).toBe('has_question')
-    expect(snapshot.domain.questionsById.q1).toBeDefined()
+    expect(snapshot.domain.questionsById.q1 !== undefined).toBe(true)
     expect(snapshot.domain.questionsById.q1.questions).toEqual(['Continue?'])
   })
 
@@ -143,7 +143,7 @@ describe('createSessionSnapshotFromSyncState', () => {
     const snapshot = createSessionSnapshotFromSyncState(input)
 
     expect(snapshot.regions.retry).toBe('cooldown')
-    expect(snapshot.domain.retry.retryCooldownUntil).toBeDefined()
+    expect(snapshot.domain.retry.retryCooldownUntil !== null).toBe(true)
   })
 
   test('sets error region to fatal when fatalError is present', () => {
@@ -162,7 +162,7 @@ describe('createSessionSnapshotFromSyncState', () => {
 
     expect(snapshot.regions.error).toBe('fatal')
     expect(snapshot.domain.error.errorType).toBe('fatal_invariant')
-    expect(snapshot.domain.error.fatalError).toBeDefined()
+    expect(snapshot.domain.error.fatalError !== null).toBe(true)
   })
 
   test('sets error region to recoverable_error for stream_failed', () => {

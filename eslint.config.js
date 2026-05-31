@@ -3,9 +3,9 @@ import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
-import { globalIgnores } from 'eslint/config'
+import { defineConfig, globalIgnores } from 'eslint/config'
 
-export default tseslint.config([
+export default defineConfig([
   globalIgnores(['dist', '.openchamber']),
   {
     files: ['**/*.{ts,tsx}'],
@@ -15,6 +15,10 @@ export default tseslint.config([
       reactHooks.configs['recommended-latest'],
       reactRefresh.configs.vite,
     ],
+    rules: {
+      complexity: ["warn", 10],
+      "max-lines": ["warn", { max: 600, skipBlankLines: true, skipComments: true }],
+    },
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,

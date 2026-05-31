@@ -26,6 +26,9 @@ export const createGracefulShutdownRuntime = (dependencies) => {
     getActiveTunnelController,
     setActiveTunnelController,
     tunnelAuthController,
+    serverSessionMachineBridge,
+    sessionActorRegistry,
+    sessionEffectExecutor,
   } = dependencies;
 
   const gracefulShutdown = async (options = {}) => {
@@ -38,6 +41,18 @@ export const createGracefulShutdownRuntime = (dependencies) => {
 
     openCodeWatcherRuntime.stop();
     sessionRuntime.dispose();
+
+    // Stop the server session machine bridge and dispose its resources
+    if (serverSessionMachineBridge) {
+      serverSessionMachineBridge.stop();
+    }
+    if (sessionActorRegistry) {
+      sessionActorRegistry.dispose();
+    }
+    if (sessionEffectExecutor) {
+      sessionEffectExecutor.dispose();
+    }
+
     notificationRuntime?.dispose?.();
     scheduledTasksRuntime?.stop?.();
 

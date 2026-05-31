@@ -1,4 +1,5 @@
 import React from 'react';
+import type { SessionPermissionRecord, SessionQuestionRecord } from '@openchamber/session-state';
 import type { PermissionRequest } from '@/types/permission';
 import type { QuestionRequest } from '@/types/question';
 import type { StreamPhase } from '../message/types';
@@ -9,14 +10,13 @@ import {
 } from '../lib/blockingRequests';
 import {
     useDirectoryStore,
-    useSessionMessageRecords,
     useSessions,
     useSessionStatus,
     useSyncDirectory,
 } from '@/sync/sync-context';
 import { usePlanDetection } from '@/hooks/usePlanDetection';
 
-// Machine hooks - Phase 3.2 migration
+// Machine hooks - Phase 3.2/3.3 migration
 import {
     useLoaded,
     useStreamingMessageId as useMachineStreamingMessageId,
@@ -25,7 +25,8 @@ import {
     useQuestions as useMachineQuestions,
     useRetryState as useMachineRetryState,
     useHistoryState as useMachineHistoryState,
-} from '../state/machine/selectors';
+} from '../state/machine/selectors'
+import { useMachineMessages } from '../state/machine/useMachineMessages';
 
 const EMPTY_PERMISSIONS: PermissionRequest[] = [];
 const EMPTY_QUESTIONS: QuestionRequest[] = [];
@@ -35,6 +36,37 @@ type BlockingRequestsSnapshot = {
     permissions: PermissionRequest[];
     questions: QuestionRequest[];
 };
+
+function metadataStringArray(metadata: Record<string, unknown>, key: string): string[] {
+    const value = metadata[key];
+    return Array.isArray(value) && value.every((item) => typeof item === 'string') ? value : [];
+}
+
+function machinePermissionToRequest(permission: SessionPermissionRecord): PermissionRequest {
+    return {
+        id: permission.id,
+        sessionID: permission.sessionId,
+        permission: permission.permission,
+        patterns: permission.patterns,
+        metadata: permission.metadata,
+        always: metadataStringArray(permission.metadata, 'always'),
+    };
+}
+
+function machineQuestionToRequest(question: SessionQuestionRecord): QuestionRequest {
+    const [messageID, callID] = question.tool?.split(':') ?? [];
+
+    return {
+        id: question.id,
+        sessionID: question.sessionId,
+        questions: question.questions.map((text) => ({
+            question: text,
+            header: '',
+            options: [],
+        })),
+        tool: messageID && callID ? { messageID, callID } : undefined,
+    };
+}
 
 export type ChatSessionData = {
     messages: ChatMessageEntry[];
@@ -58,15 +90,15 @@ export type ChatSessionData = {
 };
 
 /**
- * useChatSessionData — Phase 3.2 Migration
+ * useChatSessionData — Phase 3.3 Migration
  *
- * Machine-owned fields now come from machine hooks.
- * Sync store still provides: messages, status (for now - Phase 3.3)
+ * All fields now sourced from machine hooks.
+ * useMachineMessages provides ChatMessageEntry[] derived from normalized machine state.
  */
 export const useChatSessionData = (sessionId: string): ChatSessionData => {
     const directory = useSyncDirectory();
 
-    // Machine hooks for machine-owned fields (Phase 3.2)
+    // Machine hooks for machine-owned fields (Phase 3.2/3.3)
     const machineLoaded = useLoaded(directory, sessionId);
     const machineStreamingMessageId = useMachineStreamingMessageId(directory, sessionId);
     const machineIsWorking = useMachineIsWorking(directory, sessionId);
@@ -75,8 +107,9 @@ export const useChatSessionData = (sessionId: string): ChatSessionData => {
     const machineRetryState = useMachineRetryState(directory, sessionId);
     const machineHistoryState = useMachineHistoryState(directory, sessionId);
 
-    // Sync store fields (messages still from sync - Phase 3.3)
-    const messages = useSessionMessageRecords(sessionId);
+    // Machine-derived messages (Phase 3.3 - replaces useSessionMessageRecords)
+    const { messages } = useMachineMessages({ directory, sessionId });
+
     const sessions = useSessions();
     const status = useSessionStatus(sessionId) ?? IDLE_SESSION_STATUS;
 
@@ -123,8 +156,8 @@ export const useChatSessionData = (sessionId: string): ChatSessionData => {
         // For child sessions, aggregate them (same as before but now machine provides the data)
         if (scopedSessionIds.length <= 1) {
             return {
-                permissions: machinePermissions,
-                questions: machineQuestions,
+                permissions: machinePermissions.map(machinePermissionToRequest),
+                questions: machineQuestions.map(machineQuestionToRequest),
             };
         }
 
@@ -136,8 +169,8 @@ export const useChatSessionData = (sessionId: string): ChatSessionData => {
 
         for (const sid of scopedSessionIds) {
             if (sid === sessionId) {
-                permissionsMap.set(sid, machinePermissions);
-                questionsMap.set(sid, machineQuestions);
+                permissionsMap.set(sid, machinePermissions.map(machinePermissionToRequest));
+                questionsMap.set(sid, machineQuestions.map(machineQuestionToRequest));
             } else {
                 permissionsMap.set(sid, syncState.permission[sid] ?? EMPTY_PERMISSIONS);
                 questionsMap.set(sid, syncState.question[sid] ?? EMPTY_QUESTIONS);

@@ -58,3 +58,4 @@ export {
 } from './machine/selectors'
 
 export { createSessionMachine } from './machine/sessionMachine'
+export { createActor } from 'xstate'

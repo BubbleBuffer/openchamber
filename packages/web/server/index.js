@@ -70,7 +70,12 @@ import { createNotificationTemplateRuntime } from './lib/notifications/template-
 import { createEventStreamRuntime } from './lib/event-stream/runtime.js';
 import { createTunnelRuntime } from './lib/tunnels/tunnel-runtime.js';
 import { createGracefulShutdownRuntime } from './lib/opencode/bootstrap/shutdown-runtime.js';
+import { createServerSessionMachineBridge } from './lib/session-state/server-session-machine-bridge.js';
+import { createSessionActorRegistry } from './lib/session-state/server-session-actor-registry.js';
+import { createEffectExecutor } from './lib/session-state/server-session-effect-executor.js';
+import { createSnapshotPublisher } from './lib/session-state/server-session-snapshot-publisher.js';
 import { createProjectConfigRuntime } from './lib/projects/project-config.js';
+import { createSessionMachine } from '@openchamber/session-state';
 
 // ── Constants ────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -422,9 +427,75 @@ const resolveZenModel = (...args) => notificationTemplateRuntime.resolveZenModel
 const fetchFreeZenModels = (...args) => notificationTemplateRuntime.fetchFreeZenModels(...args);
 const getCachedZenModels = (...args) => notificationTemplateRuntime.getCachedZenModels(...args);
 
+// ── Session actor registry (created before sessionRuntime so runtime derives snapshots from machine actors) ───
+const sessionActorRegistry = createSessionActorRegistry({
+  createSessionMachine,
+});
+
 // ── Session runtime ───────────────────────────────────────────────
-const sessionRuntime = createSessionRuntime({ eventBus });
+const sessionRuntime = createSessionRuntime({ eventBus, actorRegistry: sessionActorRegistry });
 sessionRuntime.resetAllSessionActivityToIdle();
+
+// ── Server session machine bridge ──────────────────────────────────
+const sessionEffectExecutor = createEffectExecutor({
+  callbacks: {
+    sendPrompt: (directory, sessionId, prompt, provider, model, agent) => {
+      // Handled by OpenCode runtime via normal event flow; no-op here
+    },
+    abort: (directory, sessionId, signal) => {
+      // Abort is handled by opencode runtime
+    },
+    retry: (directory, sessionId, retryCount, retryMessage) => {
+      // Retries are driven by machine state
+    },
+    loadOlder: (directory, sessionId) => {
+      // Load older is driven by machine state
+    },
+    reportFatalInvariant: (directory, sessionId, invariantName, actorKey, revision, eventType) => {
+      console.error(`[SessionMachine] Fatal invariant failed: ${invariantName} for ${actorKey} at rev ${revision} event ${eventType}`);
+    },
+  },
+});
+
+// Wire sessionSnapshotPublisher to the active SSE/WS event stream transport.
+  // Phase 3.5: The canonical openchamber:session-snapshot event is published
+  // through globalMessageStreamHub.emitSynthetic → all WS clients and replay.
+  // SSE clients receive it via the global-bridge → writeSseEvent path.
+  // Transport is set after eventStreamRuntime is created to avoid ordering issues.
+  let sessionSnapshotPublisher = null;
+  const getSessionSnapshotPublisher = () => sessionSnapshotPublisher;
+
+  sessionSnapshotPublisher = createSnapshotPublisher({
+    transport: null, // Will be set once eventStreamRuntime is available
+  });
+
+  // Wire the transport after eventStreamRuntime is constructed
+  sessionSnapshotPublisher.setTransport({
+    writeSseEvent: (snapshot, options = {}) => {
+      eventStreamRuntime.globalMessageStreamHub.emitSynthetic(
+        {
+          type: 'openchamber:session-snapshot',
+          properties: snapshot,
+        },
+        {
+          eventId: snapshot.meta?.sourceEventId ?? undefined,
+          directory: typeof options.directory === 'string' && options.directory.length > 0
+            ? options.directory
+            : (snapshot.key?.directory ?? 'global'),
+        },
+      );
+    },
+  });
+
+  // Alias for backward compatibility with notification routes
+  const snapshotPublisher = sessionSnapshotPublisher;
+const serverSessionMachineBridge = createServerSessionMachineBridge({
+  eventBus,
+  registry: sessionActorRegistry,
+  executor: sessionEffectExecutor,
+  publisher: sessionSnapshotPublisher,
+});
+serverSessionMachineBridge.start();
 
 // ── Tunnel runtime ────────────────────────────────────────────────
 const tunnelRuntime = createTunnelRuntime({
@@ -440,21 +511,11 @@ const tunnelRuntime = createTunnelRuntime({
 
 // ── Synthetic event forwarding ────────────────────────────────────
 const processForwardedEventPayload = (payload, emitSyntheticEvent) => {
-  if (!payload || typeof payload !== 'object' || typeof emitSyntheticEvent !== 'function') return;
-  if (payload.type !== 'session.status') return;
-  const properties = payload.properties && typeof payload.properties === 'object' ? payload.properties : {};
-  const info = properties.info && typeof properties.info === 'object' ? properties.info : {};
-  const sessionId = typeof properties.sessionID === 'string' ? properties.sessionID.trim() : '';
-  const status = typeof info.type === 'string' ? info.type.trim() : '';
-  if (!sessionId || !status) return;
-  emitSyntheticEvent({
-    type: 'openchamber:session-status',
-    properties: { sessionId, status, timestamp: Date.now(), metadata: { attempt: typeof info.attempt === 'number' ? info.attempt : undefined, message: typeof info.message === 'string' ? info.message : undefined, next: typeof info.next === 'number' ? info.next : undefined }, needsAttention: false },
-  });
-  emitSyntheticEvent({
-    type: 'openchamber:session-activity',
-    properties: { sessionId, phase: status === 'busy' || status === 'retry' ? 'busy' : 'idle' },
-  });
+  // Phase 3.5: Old dual global transport removed. session.status no longer emits
+  // openchamber:session-status or openchamber:session-activity. Canonical snapshots
+  // are published through the sessionSnapshotPublisher → eventStreamRuntime chain.
+  void payload;
+  void emitSyntheticEvent;
 };
 
 // ── Bootstrap, tunnel, startup pipeline, scheduled tasks ──────────
@@ -513,6 +574,9 @@ const gracefulShutdownRuntime = createGracefulShutdownRuntime({
   setActiveTunnelController: () => {},
   tunnelAuthController: tunnelRuntime.getTunnelAuthController(),
   scheduledTasksRuntime,
+  serverSessionMachineBridge,
+  sessionActorRegistry,
+  sessionEffectExecutor,
 });
 const gracefulShutdown = (...args) => gracefulShutdownRuntime.gracefulShutdown(...args);
 
