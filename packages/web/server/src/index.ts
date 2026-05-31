@@ -1,10 +1,8 @@
 import type { StartWebUiServerOptions, WebUiServerController } from "./shared/types.js";
 import { buildServerConfig } from "./runtime/config.js";
 import { createRuntimeDependencies, createServerRuntime } from "./runtime/dependencies.js";
-import { startListening, type ServerInstance } from "./runtime/server.js";
+import { startListening } from "./runtime/server.js";
 import { createShutdownHandler } from "./runtime/shutdown.js";
-import type http from "node:http";
-import type { Express } from "express";
 
 // Legacy module augmentation for the old JS server entry
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -12,16 +10,14 @@ type LegacyModule = any;
 
 let oldRuntime: LegacyModule | null = null;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function dynamicImport(path: string): Promise<any> {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return Promise.resolve(require(path));
+async function dynamicImport(path: string): Promise<LegacyModule> {
+  const module = await import(path);
+  return module as LegacyModule;
 }
 
 async function getOldRuntime(): Promise<LegacyModule> {
   if (oldRuntime) return oldRuntime;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (oldRuntime as any) = await dynamicImport("../index.js") as any;
+  oldRuntime = await dynamicImport("../index.js");
   return oldRuntime;
 }
 
@@ -30,9 +26,9 @@ export async function startWebUiServer(
 ): Promise<WebUiServerController> {
   const config = buildServerConfig(options);
   const { lifecycle } = createRuntimeDependencies(config);
-  const { app, httpServer } = createServerRuntime(config, lifecycle);
+  const { httpServer } = createServerRuntime(config, lifecycle);
 
-  let serverInstance: ServerInstance | null = null;
+  let serverInstance: Awaited<ReturnType<typeof startListening>> | null = null;
   let oldController: WebUiServerController | null = null;
 
   try {
@@ -67,6 +63,9 @@ export async function startWebUiServer(
   }
 
   const shutdownHandler = createShutdownHandler({ lifecycle, config, httpServer });
+
+  // Use serverInstance to avoid unused variable warning
+  void serverInstance;
 
   return {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

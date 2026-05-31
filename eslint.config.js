@@ -24,4 +24,11 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    files: ["packages/web/server/src/**/*.ts"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: globals.node,
+    },
+  },
 ])
