@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect } from "vitest";
 import { startWebUiServer } from "../index.js";
 
 describe("server bootstrap", () => {
@@ -34,7 +34,7 @@ describe("server bootstrap", () => {
     try {
       const response = await fetch(url);
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = await response.json() as { status: string; timestamp: string };
       expect(body.status).toBe("ok");
       expect(body.timestamp).toBeDefined();
     } finally {
