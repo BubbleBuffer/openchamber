@@ -4,6 +4,60 @@
 
 This document covers the current client-side session/data architecture in `packages/ui/src/sync` and the rules for updating stores safely.
 
+## Phase 3 — UI/Store-Owned Boundaries
+
+After Phase 3 migration, the session machine is the authoritative source for
+session lifecycle, streaming, retry, blocking interruptions, and history
+loading. The following UI/presentation domains remain **store-owned** and are
+NOT migrated to the machine:
+
+| Domain | Owner | Location |
+|--------|-------|----------|
+| Composer draft text | `input-store.ts` | Draft input text pending submission |
+| Attached files | `input-store.ts` | Files attached to draft before send |
+| Local queue state | `messageQueueStore` | Queued messages before submission |
+| Provider/model/agent/variant selection | `selection-store.ts`, `providerConfigStore`, `agentConfigStore` | Model picker, agent picker |
+| Selection state (active session, active turn) | `session-ui-store.ts` | Current session/turn selection |
+| Viewport scroll position, anchors | `viewport-store.ts` | Scroll position, session memory |
+| Reveal state (turn reveal animation) | `session-ui-store.ts` | `turnStart`, `pendingRevealWork` |
+| Mobile drawer/layout state | `ui-store.ts` | `isMobile`, `isKeyboardOpen`, `isExpandedInput`, drawer open/closed |
+| Theme/layout preferences | `ui-store.ts` | `isDark`, `fontSize`, density, etc. |
+
+These domains are never written by the machine and must not be derived from
+machine state. They are owned by their respective stores and mutated by
+user action or UI logic only.
+
+## Phase 3 — Deprecated Legacy Surfaces
+
+The following exports in `streaming.ts` are **deprecated** and will be removed
+in a future phase. Use the machine selectors instead:
+
+| Deprecated | Replacement |
+|-----------|-------------|
+| `selectStreamingMessageId` | `useStreamingMessageId(directory, sessionId)` from `@/components/chat/state/machine/selectors` |
+| `selectMessageStreamState` | Machine state via `useActorSelector` |
+| `selectIsStreaming` | `useIsStreaming(directory, sessionId)` from `@/components/chat/state/machine/selectors` |
+| `updateStreamingState` | Machine session actor state |
+
+These deprecated exports emit development/test-only warnings identifying the
+replacement. They do not fire in production builds.
+
+## Phase 3 — Session Machine Authority
+
+The session machine (via `ClientSessionMachineBridge` and the actor registry)
+is the **sole authoritative source** for:
+
+- `streamingMessageId` — which message is currently streaming
+- `isWorking` — whether session is in a working state (streaming or retry cooldown)
+- `lifecycle phase` — `idle`, `streaming`, `error`, `fatal`, `not_found`
+- `retry` — `retryMessage`, `retryCount`, `retryCooldownUntil`
+- `permissions` / `questions` — active blocking requests
+- `history loading` — `isLoadingOlder`, `hasMoreAbove`
+- `fatalError` — fatal error state
+
+All UI components must read these from machine selectors, not from legacy
+sync-store-derived state.
+
 There are **two distinct session data scopes** in the UI:
 
 1. **Directory-scoped sync stores**

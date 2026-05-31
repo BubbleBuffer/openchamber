@@ -84,18 +84,19 @@ describe('event stream broadcaster', () => {
       },
     });
 
-    broadcast({ type: 'openchamber:session-status' }, { eventId: 'evt-1', directory: '/tmp/project' });
+    // Phase 3.5: canonical snapshot event type
+    broadcast({ type: 'openchamber:session-snapshot' }, { eventId: 'evt-1', directory: '/tmp/project' });
 
     expect(sseEvents).toEqual([
       {
         res: sseClient,
-        payload: { type: 'openchamber:session-status' },
+        payload: { type: 'openchamber:session-snapshot' },
       },
     ]);
     expect(wsPayloads).toEqual([
       {
         type: 'event',
-        payload: { type: 'openchamber:session-status' },
+        payload: { type: 'openchamber:session-snapshot' },
         eventId: 'evt-1',
         directory: '/tmp/project',
       },
@@ -364,7 +365,9 @@ describe('message stream websocket runtime', () => {
         throw new Error('upgrade should not be used in this test');
       },
       openCodeRuntime: {
-        getUrl: () => { throw new Error('missing OpenCode port'); },
+        getUrl() {
+          throw new Error('missing OpenCode port');
+        },
         getAuthHeaders: () => ({}),
       },
       processForwardedEventPayload() {},
@@ -470,9 +473,10 @@ describe('message stream websocket runtime', () => {
     await runtime.close();
   });
 
-  it('keeps synthetic event processing on forwarded upstream events', async () => {
+  it('forwards session.status without legacy synthetic session events', async () => {
     const server = new EventEmitter();
     const wsClients = new Set();
+    const sseEvents = [];
 
     const runtime = createMessageStreamWsRuntime({
       server,
@@ -485,10 +489,8 @@ describe('message stream websocket runtime', () => {
         getUrl: (path) => `http://127.0.0.1:4096${path}`,
         getAuthHeaders: () => ({}),
       },
-      processForwardedEventPayload(payload, emitSynthetic) {
-        if (payload.type === 'session.updated') {
-          emitSynthetic({ type: 'openchamber:session-status', sessionID: 'ses_1' });
-        }
+      processForwardedEventPayload(_payload, _emitSynthetic) {
+        throw new Error('legacy forwarded event processor should not be used');
       },
       wsClients,
       upstreamReconnectDelayMs: 0,
@@ -496,7 +498,7 @@ describe('message stream websocket runtime', () => {
         signal: options.signal,
         holdOpen: true,
         blocks: [
-          'id: evt-1\ndata: {"type":"session.updated","properties":{"directory":"/tmp/project"}}\n\n',
+          'id: evt-1\ndata: {"type":"session.status","properties":{"sessionID":"ses_1","info":{"type":"busy"}}}\n\n',
         ],
       }),
     });
@@ -506,17 +508,20 @@ describe('message stream websocket runtime', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 5));
 
-    expect(socket.sent).toContainEqual({
-      type: 'event',
-      payload: { type: 'session.updated', properties: { directory: '/tmp/project' } },
-      eventId: 'evt-1',
-      directory: '/tmp/project',
-    });
-    expect(socket.sent).toContainEqual({
-      type: 'event',
-      payload: { type: 'openchamber:session-status', sessionID: 'ses_1' },
-      directory: 'global',
-    });
+    // Phase 3.5: session.status is still forwarded as a normal event. Canonical
+    // snapshots are published by the session machine bridge, not this runtime's
+    // legacy forwarded-event processor.
+    const sessionStatusFrames = socket.sent.filter(
+      (frame) => frame.type === 'event' && frame.payload?.type === 'session.status',
+    );
+    const legacyFrames = socket.sent.filter(
+      (frame) => frame.type === 'event' && (
+        frame.payload?.type === 'openchamber:session-status' ||
+        frame.payload?.type === 'openchamber:session-activity'
+      ),
+    );
+    expect(sessionStatusFrames.length).toBeGreaterThan(0);
+    expect(legacyFrames).toHaveLength(0);
 
     socket.close();
     await runtime.close();

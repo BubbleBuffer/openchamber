@@ -11,6 +11,7 @@ export const registerSkillRoutes = (app, dependencies) => {
     refreshOpenCodeAfterConfigChange,
     clientReloadDelayMs,
     openCodeRuntime,
+    getOpenCodePort,
     getSkillSources,
     discoverSkills,
     createSkill,
@@ -111,7 +112,7 @@ export const registerSkillRoutes = (app, dependencies) => {
   };
 
   const fetchOpenCodeDiscoveredSkills = async (workingDirectory) => {
-    if (!openCodeRuntime.getPort()) {
+    if (!getOpenCodePort()) {
       return null;
     }
 

@@ -78,6 +78,11 @@ import { createPushRuntime } from './lib/notifications/push-runtime.js';
 import { createNotificationTemplateRuntime } from './lib/notifications/template-runtime.js';
 import { createGracefulShutdownRuntime } from './lib/opencode/bootstrap/shutdown-runtime.js';
 import { createProjectConfigRuntime } from './lib/projects/project-config.js';
+import { createSessionMachine } from '@openchamber/session-state';
+import { createSessionActorRegistry as createSessionActorRegistryFactory } from './lib/session-state/server-session-actor-registry.js';
+import { createEffectExecutor as createEffectExecutorFactory } from './lib/session-state/server-session-effect-executor.js';
+import { createSnapshotPublisher as createSnapshotPublisherFactory } from './lib/session-state/server-session-snapshot-publisher.js';
+import { createServerSessionMachineBridge } from './lib/session-state/server-session-machine-bridge.js';
 
 // ── Constants ────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -429,11 +434,17 @@ const broadcastGlobalUiEvent = createGlobalUiEventBroadcaster({
 });
 const broadcastUiNotification = (...args) => notificationEmitterRuntime.broadcastUiNotification(...args);
 
+// ── Session actor registry (created before sessionRuntime so runtime derives snapshots from machine actors) ───
+const sessionActorRegistry = createSessionActorRegistryFactory({
+  createSessionMachine,
+});
+
 // ── Session runtime ───────────────────────────────────────────────
 const sessionRuntime = createSessionRuntime({
   writeSseEvent,
   getNotificationClients: () => uiNotificationClients,
   broadcastEvent: broadcastGlobalUiEvent,
+  actorRegistry: sessionActorRegistry,
 });
 sessionRuntime.resetAllSessionActivityToIdle();
 
@@ -527,24 +538,34 @@ const ensureGlobalWatcherStarted = async () => {
 };
 
 // ── Synthetic event forwarding ────────────────────────────────────
+// Phase 3.5: processForwardedEventPayload is a no-op. Session snapshot
+// publication is handled by sessionSnapshotPublisher wired directly to
+// globalMessageStreamHub.emitSynthetic. No legacy openchamber:session-status
+// or openchamber:session-activity events are emitted here.
 const processForwardedEventPayload = (payload, emitSyntheticEvent) => {
-  if (!payload || typeof payload !== 'object' || typeof emitSyntheticEvent !== 'function') return;
-  maybeCacheSessionInfoFromEvent(payload);
-  if (payload.type !== 'session.status') return;
-  const properties = payload.properties && typeof payload.properties === 'object' ? payload.properties : {};
-  const info = properties.info && typeof properties.info === 'object' ? properties.info : {};
-  const sessionId = typeof properties.sessionID === 'string' ? properties.sessionID.trim() : '';
-  const status = typeof info.type === 'string' ? info.type.trim() : '';
-  if (!sessionId || !status) return;
-  emitSyntheticEvent({
-    type: 'openchamber:session-status',
-    properties: { sessionId, status, timestamp: Date.now(), metadata: { attempt: typeof info.attempt === 'number' ? info.attempt : undefined, message: typeof info.message === 'string' ? info.message : undefined, next: typeof info.next === 'number' ? info.next : undefined }, needsAttention: false },
-  });
-  emitSyntheticEvent({
-    type: 'openchamber:session-activity',
-    properties: { sessionId, phase: status === 'busy' || status === 'retry' ? 'busy' : 'idle' },
-  });
+  void payload;
+  void emitSyntheticEvent;
 };
+
+// ── Session state bridge (Phase 3.5 canonical snapshot transport) ──
+const sessionEffectExecutor = createEffectExecutorFactory();
+const sessionSnapshotPublisher = createSnapshotPublisherFactory({
+  transport: {
+    writeSseEvent: (snapshot) => {
+      globalMessageStreamHub.emitSynthetic({
+        type: 'openchamber:session-snapshot',
+        properties: snapshot,
+      });
+    },
+  },
+});
+const serverSessionMachineBridge = createServerSessionMachineBridge({
+  registry: sessionActorRegistry,
+  executor: sessionEffectExecutor,
+  publisher: sessionSnapshotPublisher,
+  eventBus,
+});
+serverSessionMachineBridge.start();
 
 // ── Bootstrap, tunnel, startup pipeline, scheduled tasks ──────────
 const bootstrapRuntime = createBootstrapRuntime({
@@ -642,6 +663,9 @@ const gracefulShutdownRuntime = createGracefulShutdownRuntime({
   setActiveTunnelController: (value) => { activeTunnelController = value; },
   tunnelAuthController,
   scheduledTasksRuntime,
+  serverSessionMachineBridge,
+  sessionActorRegistry,
+  sessionEffectExecutor,
 });
 const gracefulShutdown = (...args) => gracefulShutdownRuntime.gracefulShutdown(...args);
 

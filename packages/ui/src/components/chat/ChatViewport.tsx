@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Message, Part } from '@/lib/opencode/client';
+import type { ChatActivityState, ChatInterruptionsState, ChatMessagesState } from './state';
 
 import VirtualizedMessageList, { type MessageListHandle } from './VirtualizedMessageList';
 import { PermissionCard } from './permissions/PermissionCard';
@@ -7,60 +7,47 @@ import { QuestionCard } from './permissions/QuestionCard';
 import { StatusRowContainer } from './status/StatusRowContainer';
 import { ScrollShadow } from '@/components/ui/ScrollShadow';
 import { OverlayScrollbar } from '@/components/ui/OverlayScrollbar';
-import type { PermissionRequest } from '@/types/permission';
-import type { QuestionRequest } from '@/types/question';
 import { cn } from '@/lib/utils';
 import { useDeviceInfo } from '@/lib/device';
 import type { AnimationHandlers, ContentChangeReason } from '@/components/chat/timeline/types';
 
 export type ChatViewportProps = {
+    messages: ChatMessagesState;
+    activity: ChatActivityState;
+    interruptions: ChatInterruptionsState;
     currentSessionId: string;
     isDesktopExpandedInput: boolean;
     stickyUserHeader: boolean;
+    activeStreamingPhase: import('./message/types').StreamPhase | null;
     scrollRef: React.RefObject<HTMLDivElement | null>;
     messageListRef: React.RefObject<MessageListHandle | null>;
     turnStart: number;
     pendingRevealWork: boolean;
-    renderedMessages: Array<{ info: Message; parts: Part[] }>;
     hasMoreAboveTurns: boolean;
     isLoadingOlder: boolean;
-    sessionIsWorking: boolean;
-    streamingMessageId: string | null;
-    activeStreamingPhase: import('./message/types').StreamPhase | null;
-    retryOverlay: {
-        sessionId: string;
-        message: string;
-        confirmedAt?: number;
-        fallbackTimestamp?: number;
-    } | null;
     handleMessageContentChange: (reason?: ContentChangeReason) => void;
     getAnimationHandlers: (messageId: string) => AnimationHandlers;
     handleLoadOlder: () => void;
-    sessionQuestions: QuestionRequest[];
-    sessionPermissions: PermissionRequest[];
     onScrollStateChange?: (state: { userScrolledUp: boolean; scrollToBottom: () => void }) => void;
 };
 
 export const ChatViewport = React.memo(({
+    messages,
+    activity,
+    interruptions,
     currentSessionId,
     isDesktopExpandedInput,
     stickyUserHeader,
+    activeStreamingPhase,
     scrollRef,
     messageListRef,
     turnStart,
     pendingRevealWork,
-    renderedMessages,
     hasMoreAboveTurns,
     isLoadingOlder,
-    sessionIsWorking,
-    streamingMessageId,
-    activeStreamingPhase,
-    retryOverlay,
     handleMessageContentChange,
     getAnimationHandlers,
     handleLoadOlder,
-    sessionQuestions,
-    sessionPermissions,
     onScrollStateChange,
 }: ChatViewportProps) => {
     const { isMobile } = useDeviceInfo();
@@ -94,11 +81,11 @@ export const ChatViewport = React.memo(({
                         sessionKey={currentSessionId}
                         turnStart={turnStart}
                         disableStaging={pendingRevealWork}
-                        messages={renderedMessages}
-                        sessionIsWorking={sessionIsWorking}
-                        activeStreamingMessageId={streamingMessageId}
+                        messages={messages.renderedMessages}
+                        sessionIsWorking={activity.isWorking}
+                        activeStreamingMessageId={messages.streamingMessageId ?? null}
                         activeStreamingPhase={activeStreamingPhase}
-                        retryOverlay={retryOverlay}
+                        retryOverlay={messages.retryOverlay}
                         onMessageContentChange={handleMessageContentChange}
                         getAnimationHandlers={getAnimationHandlers}
                         hasMoreAbove={hasMoreAboveTurns}
@@ -108,12 +95,12 @@ export const ChatViewport = React.memo(({
                         onScrollStateChange={onScrollStateChange}
                         onAtBottomChange={handleAtBottomChange}
                     />
-                    {(sessionQuestions.length > 0 || sessionPermissions.length > 0) && (
+                    {(interruptions.questions.length > 0 || interruptions.permissions.length > 0) && (
                         <div>
-                            {sessionQuestions.map((question) => (
+                            {interruptions.questions.map((question) => (
                                 <QuestionCard key={question.id} question={question} />
                             ))}
-                            {sessionPermissions.map((permission) => (
+                            {interruptions.permissions.map((permission) => (
                                 <PermissionCard key={permission.id} permission={permission} />
                             ))}
                         </div>
@@ -130,23 +117,19 @@ export const ChatViewport = React.memo(({
         </div>
     );
 }, (prev, next) => {
-    return prev.currentSessionId === next.currentSessionId
+    return prev.messages === next.messages
+        && prev.activity === next.activity
+        && prev.interruptions === next.interruptions
+        && prev.currentSessionId === next.currentSessionId
         && prev.isDesktopExpandedInput === next.isDesktopExpandedInput
         && prev.stickyUserHeader === next.stickyUserHeader
         && prev.scrollRef === next.scrollRef
         && prev.messageListRef === next.messageListRef
         && prev.turnStart === next.turnStart
         && prev.pendingRevealWork === next.pendingRevealWork
-        && prev.renderedMessages === next.renderedMessages
         && prev.hasMoreAboveTurns === next.hasMoreAboveTurns
         && prev.isLoadingOlder === next.isLoadingOlder
-        && prev.sessionIsWorking === next.sessionIsWorking
-        && prev.streamingMessageId === next.streamingMessageId
-        && prev.activeStreamingPhase === next.activeStreamingPhase
-        && prev.retryOverlay === next.retryOverlay
         && prev.handleMessageContentChange === next.handleMessageContentChange
         && prev.getAnimationHandlers === next.getAnimationHandlers
-        && prev.handleLoadOlder === next.handleLoadOlder
-        && prev.sessionQuestions === next.sessionQuestions
-        && prev.sessionPermissions === next.sessionPermissions;
+        && prev.handleLoadOlder === next.handleLoadOlder;
 });

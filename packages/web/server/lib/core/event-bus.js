@@ -1,46 +1,60 @@
 // packages/web/server/lib/core/event-bus.js
-// Minimal publish/subscribe event bus for orchestrator-level communication.
-
+/** @template {Record<string, unknown>} Events
+ * @returns {{
+ *   on: <E extends keyof Events>(event: E, handler: (payload: Events[E]) => void) => () => void,
+ *   once: <E extends keyof Events>(event: E, handler: (payload: Events[E]) => void) => void,
+ *   emit: <E extends keyof Events>(event: E, payload: Events[E]) => void,
+ *   removeAllFor: <E extends keyof Events>(event: E) => void,
+ *   dispose: () => void,
+ * }}
+ */
 export function createEventBus() {
   const handlers = new Map();
 
   const on = (event, handler) => {
-    if (typeof event !== 'string' || !event) return () => {};
-    if (typeof handler !== 'function') return () => {};
-
     if (!handlers.has(event)) {
-      handlers.set(event, new Set());
+      handlers.set(event, []);
     }
-    handlers.get(event).add(handler);
-
+    handlers.get(event).push(handler);
     return () => {
-      const set = handlers.get(event);
-      if (set) {
-        set.delete(handler);
-        if (set.size === 0) handlers.delete(event);
+      const arr = handlers.get(event);
+      if (arr) {
+        const idx = arr.indexOf(handler);
+        if (idx !== -1) {
+          arr.splice(idx, 1);
+          if (arr.length === 0) handlers.delete(event);
+        }
       }
     };
   };
 
-  const off = (event, handler) => {
-    const set = handlers.get(event);
-    if (set) {
-      set.delete(handler);
-      if (set.size === 0) handlers.delete(event);
-    }
+  const once = (event, handler) => {
+    const wrapped = (payload) => {
+      off();
+      handler(payload);
+    };
+    const off = on(event, wrapped);
   };
 
-  const emit = (event, ...args) => {
-    const set = handlers.get(event);
-    if (!set || set.size === 0) return;
-    for (const handler of Array.from(set)) {
+  const emit = (event, payload) => {
+    const arr = handlers.get(event);
+    if (!arr) return;
+    for (const handler of arr) {
       try {
-        handler(...args);
+        handler(payload);
       } catch (error) {
-        console.error(`[event-bus] Error in handler for "${event}":`, error);
+        console.error(`[EventBus] handler for "${event}" threw:`, error);
       }
     }
   };
 
-  return { on, off, emit };
+  const removeAllFor = (event) => {
+    handlers.delete(event);
+  };
+
+  const dispose = () => {
+    handlers.clear();
+  };
+
+  return { on, once, emit, removeAllFor, dispose };
 }

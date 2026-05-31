@@ -1,15 +1,26 @@
 /**
- * Streaming lifecycle tracking.
+ * Streaming lifecycle tracking (DEPRECATED — Phase 3 migration).
  *
- * Derives streaming state from the sync child store's session_status and
- * message/part updates. Components read this to know which messages are
- * currently streaming and their lifecycle phase.
+ * This module derives streaming state from the sync child store's
+ * session_status and message/part updates. It was the authoritative source
+ * before Phase 3 machine migration.
+ *
+ * DEPRECATED: The session machine is now the authoritative source for
+ * streaming message IDs, lifecycle phase, and stuck session detection.
+ * Replace usage with machine selectors:
+ *   - useStreamingMessageId(directory, sessionId) from @/components/chat/state/machine/selectors
+ *   - useIsStreaming(directory, sessionId) from @/components/chat/state/machine/selectors
+ *   - useMessageStreamState / useActorSelector for stream phase details
+ *
+ * This module is retained for backward compatibility and will be removed
+ * in a future phase once all callers migrate.
  */
 
 import { create } from "zustand"
 import type { Message, SessionStatus } from "@/lib/opencode/client"
 import { STUCK_SESSION_TIMEOUT_MS } from "@/stores/types/sessionTypes"
 import type { State } from "./types"
+import { deprecationWarning } from "@/lib/deprecation"
 
 export type StreamPhase = "streaming" | "cooldown" | "completed"
 
@@ -42,6 +53,10 @@ export const useStreamingStore = create<StreamingStore>()(() => ({
 /**
  * Called from the SyncBridge/flush handler when child store state changes.
  * Derives streaming state from session_status + messages.
+ *
+ * @deprecated Use machine session actor state instead. The machine owns
+ * streamingMessageId, isWorking, and lifecycle phase. This function
+ * populates a legacy UI-only store and will be removed in a future phase.
  */
 /** Only update lastUpdateAt every this many ms to avoid 60Hz store churn */
 const STREAMING_HEARTBEAT_MS = 1000
@@ -50,6 +65,10 @@ export function updateStreamingState(
   state: State,
   options?: { onStuckSession?: (sessionID: string) => void }
 ) {
+  deprecationWarning(
+    'updateStreamingState',
+    'machine session actor state (useStreamingMessageId, useIsStreaming, etc.)',
+  )
   const now = Date.now()
   const currentStore = useStreamingStore.getState()
   const currentStreamingIds = currentStore.streamingMessageIds
@@ -184,12 +203,32 @@ export function updateStreamingState(
   }
 }
 
-// Selectors
-export const selectStreamingMessageId = (sessionID: string) =>
-  (state: StreamingStore) => state.streamingMessageIds.get(sessionID) ?? null
+// Selectors — DEPRECATED: use machine selectors instead
+// Machine replacement: useStreamingMessageId(directory, sessionId) from @/components/chat/state/machine/selectors
 
-export const selectMessageStreamState = (messageID: string) =>
-  (state: StreamingStore) => state.messageStreamStates.get(messageID) ?? null
+/** @deprecated Use useStreamingMessageId(directory, sessionId) from @/components/chat/state/machine/selectors instead */
+export const selectStreamingMessageId = (sessionID: string) => {
+  deprecationWarning(
+    'selectStreamingMessageId',
+    'useStreamingMessageId(directory, sessionId) from @/components/chat/state/machine/selectors',
+  )
+  return (state: StreamingStore) => state.streamingMessageIds.get(sessionID) ?? null
+}
 
-export const selectIsStreaming = (sessionID: string) =>
-  (state: StreamingStore) => state.streamingMessageIds.get(sessionID) != null
+/** @deprecated Use machine state via useMessageStreamState — machine owns streaming phase authority */
+export const selectMessageStreamState = (messageID: string) => {
+  deprecationWarning(
+    'selectMessageStreamState',
+    'derive from machine state via useMessageStreamState or useActorSelector',
+  )
+  return (state: StreamingStore) => state.messageStreamStates.get(messageID) ?? null
+}
+
+/** @deprecated Use useIsStreaming(directory, sessionId) from @/components/chat/state/machine/selectors instead */
+export const selectIsStreaming = (sessionID: string) => {
+  deprecationWarning(
+    'selectIsStreaming',
+    'useIsStreaming(directory, sessionId) from @/components/chat/state/machine/selectors',
+  )
+  return (state: StreamingStore) => state.streamingMessageIds.get(sessionID) != null
+}

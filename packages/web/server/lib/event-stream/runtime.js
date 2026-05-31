@@ -1,4 +1,5 @@
 import { WebSocketServer } from 'ws';
+import webPush from 'web-push';
 
 import { parseRequestPathname } from '../terminal/index.js';
 import {
@@ -14,6 +15,11 @@ import {
   DEFAULT_UPSTREAM_RECONNECT_DELAY_MS,
   DEFAULT_UPSTREAM_STALL_TIMEOUT_MS,
 } from './upstream-reader.js';
+import { createNotificationEmitterRuntime } from '../notifications/emitter-runtime.js';
+import { createPushRuntime } from '../notifications/push-runtime.js';
+import { createOpenCodeWatcherRuntime } from '../opencode/services/watcher.js';
+import { EVENTS } from '../core/events.js';
+import { createBoundedSet } from '../core/bounded-cache.js';
 
 export function createGlobalUiEventBroadcaster({
   sseClients,
@@ -57,7 +63,7 @@ export function createMessageStreamWsRuntime({
   rejectWebSocketUpgrade,
   openCodeRuntime,
   processForwardedEventPayload,
-  wsClients,
+  wsClients = new Set(),
   triggerHealthCheck,
   heartbeatIntervalMs = MESSAGE_STREAM_WS_HEARTBEAT_INTERVAL_MS,
   upstreamStallTimeoutMs = DEFAULT_UPSTREAM_STALL_TIMEOUT_MS,
@@ -175,3 +181,144 @@ export function createMessageStreamWsRuntime({
     },
   };
 }
+
+/**
+ * @param {object} deps
+ * @param {import('../core/event-bus.js').EventBus<import('../core/events.js').ServerEvents>} deps.eventBus
+ * @param {object} deps.openCodeRuntime
+ * @param {NodeJS.Process} deps.process
+ * @param {import('fs').promises|null} deps.fsPromises
+ * @param {typeof import('path')|null} deps.path
+ * @param {Function} deps.readSettingsFromDiskMigrated
+ * @param {Function} deps.writeSettingsToDisk
+ * @param {string} deps.pushSubscriptionsFilePath
+ * @param {import('../session-state/server-session-snapshot-publisher.js').SnapshotPublisher | null} [deps.sessionSnapshotPublisher]
+ */
+export const createEventStreamRuntime = (deps) => {
+  const {
+    eventBus, openCodeRuntime, process,
+    fsPromises, path,
+    readSettingsFromDiskMigrated, writeSettingsToDisk,
+    pushSubscriptionsFilePath,
+    sessionSnapshotPublisher = null,
+  } = deps;
+
+  const uiNotificationClients = createBoundedSet({ maxSize: 200, ttlMs: 3600_000 });
+  const uiOpenChamberEventClients = createBoundedSet({ maxSize: 200, ttlMs: 3600_000 });
+  const DESKTOP_NOTIFY_PREFIX = '[OpenChamberDesktopNotify] ';
+  const getDesktopNotifyEnabled = () => false;
+
+  const notificationEmitterRuntime = createNotificationEmitterRuntime({
+    process,
+    getDesktopNotifyEnabled,
+    desktopNotifyPrefix: DESKTOP_NOTIFY_PREFIX,
+    getUiNotificationClients: () => uiNotificationClients,
+    getBroadcastGlobalUiEvent: () => null,
+  });
+
+  const { writeSseEvent, emitDesktopNotification, broadcastUiNotification } = notificationEmitterRuntime;
+
+  const pushRuntime = createPushRuntime({
+    fsPromises, path, webPush,
+    PUSH_SUBSCRIPTIONS_FILE_PATH: pushSubscriptionsFilePath,
+    readSettingsFromDiskMigrated,
+    writeSettingsToDisk,
+  });
+
+  const globalMessageStreamHub = createGlobalMessageStreamHub({ openCodeRuntime });
+
+  // Phase 3.5: Wire sessionSnapshotPublisher transport to global hub.
+  // This enables canonical openchamber:session-snapshot events to flow through
+  // the same transport as all other events (WS fan-out + SSE via global-ws-bridge).
+  if (sessionSnapshotPublisher) {
+    sessionSnapshotPublisher.setTransport({
+      writeSseEvent: (snapshot, options = {}) => {
+        globalMessageStreamHub.emitSynthetic(
+          {
+            type: 'openchamber:session-snapshot',
+            properties: snapshot,
+          },
+          {
+            eventId: snapshot.meta?.sourceEventId ?? undefined,
+            directory: typeof options.directory === 'string' && options.directory.length > 0
+              ? options.directory
+              : (snapshot.key?.directory ?? 'global'),
+          },
+        );
+      },
+    });
+  }
+
+  const processForwardedEventPayload = (payload, emitSyntheticEvent) => {
+    // Phase 3.5: session.status no longer emits dual synthetic events.
+    // Snapshot publication is handled by the server-session-machine-bridge
+    // through sessionSnapshotPublisher, wired directly to the event stream
+    // transport. No legacy openchamber:session-status or openchamber:session-activity
+    // events are emitted here.
+    void payload;
+    void emitSyntheticEvent;
+  };
+
+  let globalWatcherStartPromise = null;
+
+  const ensureGlobalWatcherStarted = async () => {
+    if (globalWatcherStartPromise) return globalWatcherStartPromise;
+    globalWatcherStartPromise = (async () => {
+      const watcher = createOpenCodeWatcherRuntime({
+        waitForOpenCodePort: null,
+        openCodeRuntime,
+        globalEventHub: globalMessageStreamHub,
+        onPayload: (payload) => {
+          processForwardedEventPayload(payload, (syntheticPayload) => {
+            for (const res of uiNotificationClients) {
+              try { writeSseEvent(res, syntheticPayload); } catch {}
+            }
+          });
+          eventBus.emit(EVENTS.EVENT_RECEIVED, { payload, directory: undefined });
+        },
+      });
+      await watcher.start();
+    })().catch((error) => {
+      globalWatcherStartPromise = null;
+      throw error;
+    });
+    return globalWatcherStartPromise;
+  };
+
+  const broadcastToClients = (payload) => {
+    for (const res of uiNotificationClients) {
+      try { writeSseEvent(res, payload); } catch {}
+    }
+  };
+
+  const disposers = [
+    eventBus.on(EVENTS.NOTIFICATION_SEND_UI, ({ payload }) => broadcastToClients(payload)),
+    eventBus.on(EVENTS.NOTIFICATION_SEND_DESKTOP, ({ payload }) => emitDesktopNotification(payload)),
+    eventBus.on(EVENTS.NOTIFICATION_SEND_PUSH, ({ payload, options }) => {
+      void pushRuntime.sendPushToAllUiSessions?.(payload, options);
+    }),
+    eventBus.on(EVENTS.OPENCODE_READY, () => { void ensureGlobalWatcherStarted(); }),
+  ];
+
+  return {
+    writeSseEvent,
+    broadcastUiNotification,
+    emitDesktopNotification,
+    ensureGlobalWatcherStarted,
+    addUiNotificationClient: (res) => { uiNotificationClients.add(res); },
+    removeUiNotificationClient: (res) => { uiNotificationClients.delete(res); },
+    processUpstreamPayload: (payload) => {
+      eventBus.emit(EVENTS.EVENT_RECEIVED, { payload, directory: undefined });
+    },
+    getUiNotificationClients: () => uiNotificationClients,
+    getUiOpenChamberEventClients: () => uiOpenChamberEventClients,
+    pushRuntime,
+    globalMessageStreamHub,
+    dispose: () => {
+      disposers.forEach(fn => fn());
+      globalWatcherStartPromise = null;
+      uiNotificationClients.dispose();
+      uiOpenChamberEventClients.dispose();
+    },
+  };
+};

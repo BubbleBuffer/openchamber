@@ -747,10 +747,10 @@ export const createSettingsRuntime = (deps) => {
 
   const persistSettings = async (changes) => {
     persistSettingsLock = persistSettingsLock.then(async () => {
-      console.log('[persistSettings] Called with changes:', JSON.stringify(changes, null, 2));
       const current = await readSettingsFromDisk();
       console.log('[persistSettings] Current projects count:', Array.isArray(current.projects) ? current.projects.length : 'N/A');
       const sanitized = sanitizeSettingsUpdate(changes);
+      console.log('[persistSettings] Persisting with changes count:', Object.keys(changes).length);
       let next = mergePersistedSettings(current, sanitized);
 
       const normalizedState = normalizeSettingsPaths(next);

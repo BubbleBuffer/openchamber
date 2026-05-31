@@ -1,3 +1,5 @@
+import { createBoundedMap } from '../core/bounded-cache.js';
+
 const PUSH_SUBSCRIPTIONS_VERSION = 1;
 
 const isLoopbackHttpOrigin = (value) => {
@@ -23,7 +25,7 @@ export const createPushRuntime = (deps) => {
   let persistPushSubscriptionsLock = Promise.resolve();
   let pushInitialized = false;
 
-  const uiVisibilityByToken = new Map();
+  const uiVisibilityByToken = createBoundedMap({ maxSize: 200, ttlMs: 86400_000 });
   let globalVisibilityState = false;
 
   const readPushSubscriptionsFromDisk = async () => {
@@ -300,5 +302,8 @@ export const createPushRuntime = (deps) => {
     isUiVisible,
     ensurePushInitialized,
     setPushInitialized,
+    dispose: () => {
+      uiVisibilityByToken.dispose();
+    },
   };
 };

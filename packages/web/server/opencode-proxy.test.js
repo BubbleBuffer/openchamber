@@ -61,11 +61,10 @@ describe('OpenCode proxy SSE forwarding', () => {
         isReady: () => true,
         getNotReadySince: () => 0,
         isRestarting: () => false,
-        getAuthHeaders: () => ({ Authorization: 'Bearer test-token' }),
         getUrl: (requestPath) => `http://127.0.0.1:${upstreamPort}${requestPath}`,
+        getAuthHeaders: () => ({ Authorization: 'Bearer test-token' }),
         getBaseUrl: () => null,
       },
-      ensureOpenCodeApiPrefix: () => {},
     });
     proxyServer = await listen(app);
     const proxyPort = proxyServer.address().port;
@@ -120,15 +119,14 @@ describe('OpenCode proxy SSE forwarding', () => {
       path,
       OPEN_CODE_READY_GRACE_MS: 0,
       openCodeRuntime: {
-        getPort: () => 3902,
+        getUrl: (requestPath) => `${externalBaseUrl}${requestPath}`,
+        getAuthHeaders: () => ({}),
         getBaseUrl: () => externalBaseUrl,
+        getPort: () => 3902,
         isReady: () => true,
         getNotReadySince: () => 0,
         isRestarting: () => false,
-        getAuthHeaders: () => ({}),
-        getUrl: (requestPath) => `${externalBaseUrl}${requestPath}`,
       },
-      ensureOpenCodeApiPrefix: () => {},
     });
     proxyServer = await listen(app);
     const proxyPort = proxyServer.address().port;
@@ -162,11 +160,10 @@ describe('OpenCode proxy SSE forwarding', () => {
         isReady: () => true,
         getNotReadySince: () => 0,
         isRestarting: () => false,
-        getAuthHeaders: () => ({}),
         getUrl: (requestPath) => `http://127.0.0.1:${upstreamPort}${requestPath}`,
+        getAuthHeaders: () => ({}),
         getBaseUrl: () => null,
       },
-      ensureOpenCodeApiPrefix: () => {},
     });
     proxyServer = await listen(app);
     const proxyPort = proxyServer.address().port;

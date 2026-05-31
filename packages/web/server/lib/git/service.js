@@ -4,12 +4,13 @@ import path from 'path';
 import os from 'os';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { createBoundedMap } from '../core/bounded-cache.js';
 
 const fsp = fs.promises;
 const execFileAsync = promisify(execFile);
 const gpgconfCandidates = ['gpgconf', '/opt/homebrew/bin/gpgconf', '/usr/local/bin/gpgconf'];
 let resolvedGitBinary = null;
-const worktreeBootstrapState = new Map();
+const worktreeBootstrapState = createBoundedMap({ maxSize: 50, ttlMs: 3600_000 });
 
 async function resolveDefaultBranch(git) {
   const candidates = [];

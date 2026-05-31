@@ -1,7 +1,10 @@
 import { summarizeText as summarizeSharedText } from '../text/summarization.js';
+import { EVENTS } from '../core/events.js';
+import { createBoundedMap } from '../core/bounded-cache.js';
 
 export const createNotificationTemplateRuntime = (deps) => {
   const {
+    eventBus,
     readSettingsFromDisk,
     persistSettings,
     openCodeRuntime,
@@ -11,14 +14,13 @@ export const createNotificationTemplateRuntime = (deps) => {
   const NOTIFICATION_BODY_MAX_CHARS = 1000;
   const ZEN_DEFAULT_MODEL = 'gpt-5-nano';
   const ZEN_MODELS_CACHE_TTL = 5 * 60 * 1000;
-  const SESSION_INFO_CACHE_TTL_MS = 60 * 1000;
 
   let validatedZenFallback = null;
   let cachedZenModels = null;
   let cachedZenModelsTimestamp = 0;
 
-  const sessionTitleCache = new Map();
-  const sessionInfoCache = new Map();
+  const sessionTitleCache = createBoundedMap({ maxSize: 500, ttlMs: 3600_000 });
+  const sessionInfoCache = createBoundedMap({ maxSize: 500, ttlMs: 60_000 });
 
   const createTimeoutSignal = (timeoutMs) => {
     const controller = new AbortController();
@@ -126,6 +128,7 @@ export const createNotificationTemplateRuntime = (deps) => {
           await persistSettings({ zenModel: fallback });
         } else {
           console.log(`[zen] Stored model "${storedModel}" verified as available`);
+          eventBus.emit(EVENTS.NOTIFICATION_SEND_UI, { payload: { type: 'zen-model-ready' } });
         }
       } else {
         console.warn('[zen] No free models returned from API, skipping validation');
@@ -256,9 +259,7 @@ export const createNotificationTemplateRuntime = (deps) => {
     if (!sessionId) return null;
 
     const cached = sessionInfoCache.get(sessionId);
-    if (cached && Date.now() - cached.at < SESSION_INFO_CACHE_TTL_MS) {
-      return cached.data;
-    }
+    if (cached) return cached.data;
 
     try {
       const url = openCodeRuntime.getUrl(`/session/${encodeURIComponent(sessionId)}`, '');
@@ -273,7 +274,7 @@ export const createNotificationTemplateRuntime = (deps) => {
       }
       const data = await response.json().catch(() => null);
       if (data && typeof data === 'object') {
-        sessionInfoCache.set(sessionId, { data, at: Date.now() });
+        sessionInfoCache.set(sessionId, { data });
         return data;
       }
       return null;
@@ -410,5 +411,9 @@ export const createNotificationTemplateRuntime = (deps) => {
     maybeCacheSessionInfoFromEvent,
     buildTemplateVariables,
     getCachedZenModels,
+    dispose: () => {
+      sessionTitleCache.dispose();
+      sessionInfoCache.dispose();
+    },
   };
 };

@@ -1,12 +1,7 @@
 import React from 'react';
-import { Textarea } from '@/components/ui/textarea';
 import {
     RiAttachment2,
-    RiCloseLine,
-    RiExternalLinkLine,
-    RiFolderLine,
 } from '@remixicon/react';
-import { BrowserVoiceButton } from '@/components/voice';
 // sessionStore removed — currentSessionId comes from useSessionUIStore
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
@@ -17,29 +12,21 @@ import { useSelectionStore } from '@/sync/selection-store';
 import { useInputStore } from '@/sync/input-store';
 import type { AttachedFile } from '@/stores/types/sessionTypes';
 import * as sessionActions from '@/sync/session-actions';
-import { useUserMessageHistory } from '@/sync/sync-context';
-import { useInlineCommentDraftStore, type InlineCommentDraft } from '@/stores/useInlineCommentDraftStore';
-import { appendInlineComments } from '@/lib/messages/inlineComments';
+import { useInlineCommentDraftStore } from '@/stores/useInlineCommentDraftStore';
 import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
 import { AttachedFilesList } from './FileAttachment';
 import { QueuedMessageChips } from './QueuedMessageChips';
-import { FileMentionAutocomplete, type FileMentionHandle } from './autocomplete/FileMentionAutocomplete';
-import { CommandAutocomplete, type CommandAutocompleteHandle, type CommandInfo } from './autocomplete/CommandAutocomplete';
-import { SkillAutocomplete, type SkillAutocompleteHandle } from './autocomplete/SkillAutocomplete';
-import { cn, formatDirectoryName } from '@/lib/utils';
-import { ModelControls } from './controls/ModelControls';
-import { UnifiedControlsDrawer } from './controls/UnifiedControlsDrawer';
-import { parseAgentMentions } from '@/lib/messages/agentMentions';
+import type { FileMentionHandle } from './autocomplete/FileMentionAutocomplete';
+import type { CommandAutocompleteHandle, CommandInfo } from './autocomplete/CommandAutocomplete';
+import type { SkillAutocompleteHandle } from './autocomplete/SkillAutocomplete';
+import { cn } from '@/lib/utils';
 import { StatusRow } from './status/StatusRow';
 import { PendingChangesBar } from './diff/PendingChangesBar';
-import { MobileAgentButton } from './controls/MobileAgentButton';
-import { MobileModelButton } from './controls/MobileModelButton';
 import { MobileSessionStatusBar } from './mobile-session-status-bar/MobileSessionStatusBar';
 import { useCurrentSessionActivity } from '@/hooks/useSessionActivity';
 import { toast } from '@/components/ui';
 // useMessageStore removed — messages now come from sync system
 import { isTauriShell, isVSCodeRuntime } from '@/lib/desktop/desktop';
-import { isIMECompositionEvent } from '@/lib/ime';
 import type { MobileControlsPanel } from './controls/mobileControlsUtils';
 import {
     Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue,
@@ -49,26 +36,39 @@ import { GitHubIssuePickerDialog } from '@/components/session/GitHubIssuePickerD
 import { GitHubPrPickerDialog } from '@/components/session/GitHubPrPickerDialog';
 import { useChatSearchDirectory } from '@/hooks/useChatSearchDirectory';
 import { opencodeClient } from '@/lib/opencode/client';
-import { useProjectsStore } from '@/stores/projects/useProjectsStore';
-import { PROJECT_ICON_MAP, getProjectIconImageUrl } from '@/lib/project/projectMeta';
-import { useGitBranches, useGitStore, useIsGitRepo } from '@/stores/git/useGitStore';
-import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
-import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { createWorktreeDraft } from '@/lib/session/worktreeSessionCreator';
-import { buildSessionTargetOptions } from '@/sync/session-worktree-contract';
 import { usePermissionStore } from '@/stores/permissionStore';
-import { extractGitChangedFiles } from './diff/changedFiles';
-import { ComposerAttachmentControls } from './chat-input/ComposerAttachmentControls';
-import { PermissionAutoAcceptButton } from './chat-input/PermissionAutoAcceptButton';
-import { FocusModeButton } from './chat-input/FocusModeButton';
-import { ComposerActionButtons } from './chat-input/ComposerActionButtons';
+import { ComposerLinkedContextRow } from './chat-input/ComposerLinkedContextRow';
+import { ComposerAutocompleteLayer } from './chat-input/ComposerAutocompleteLayer';
+import { ComposerTextarea } from './chat-input/ComposerTextarea';
+import { ComposerMobileControls } from './chat-input/ComposerMobileControls';
+import { ComposerFooter } from './chat-input/ComposerFooter';
 import { appendInlineText, appendWithLineBreaks } from './chat-input/textUtils';
-import { getProjectDisplayLabel, getProjectIconColor, normalizePath } from './chat-input/projectHelpers';
+import {
+    collectDroppedFileUris as collectDroppedFileUrisFromTransfer,
+    collectDroppedFiles as collectDroppedFilesFromTransfer,
+    hasDraggedFiles as hasDraggedFilesInTransfer,
+    normalizeDroppedPath,
+    toProjectRelativeMentionPath,
+    toServerFileUrl,
+} from './chat-input/fileDropUtils';
+import {
+    buildComposerSubmitPayload,
+    buildQueuedMessageContent,
+    getLocalSlashCommandName,
+    isPayloadTooLargeError,
+    isSoftNetworkSendError,
+} from './chat-input/composerSubmit';
+import { ProjectSelectLabel } from './chat-input/ProjectSelectLabel';
+import { useDraftTargetSelector } from './chat-input/useDraftTargetSelector';
+import { useComposerDraft } from './chat-input/useComposerDraft';
+import { useComposerAutocomplete } from './chat-input/useComposerAutocomplete';
+import { useComposerTextareaAutosize } from './chat-input/useComposerTextareaAutosize';
+import { useComposerAutocompleteOverlay } from './chat-input/useComposerAutocompleteOverlay';
+import { useComposerHistory } from './chat-input/useComposerHistory';
+import { useComposerKeyboard } from './chat-input/useComposerKeyboard';
 
-const MAX_VISIBLE_TEXTAREA_LINES = 8;
 const EMPTY_QUEUE: QueuedMessage[] = [];
-const FILE_MENTION_TOKEN = /^@[^\s]+$/;
-const CHAT_DRAFT_PERSIST_DEBOUNCE_MS = 500;
 const VS_CODE_DROP_DATA_TYPES = [
     'CodeFiles',
     'codefiles',
@@ -78,122 +78,6 @@ const VS_CODE_DROP_DATA_TYPES = [
     'text/plain',
 ];
 
-const FILE_URI_PREFIX = 'file://';
-
-const encodeFilePath = (filepath: string): string => {
-    let normalized = filepath.replace(/\\/g, '/');
-    if (/^[A-Za-z]:/.test(normalized)) {
-        normalized = `/${normalized}`;
-    }
-    return normalized
-        .split('/')
-        .map((segment, index) => {
-            if (index === 1 && /^[A-Za-z]:$/.test(segment)) return segment;
-            return encodeURIComponent(segment);
-        })
-        .join('/');
-};
-
-const toServerFileUrl = (filepath: string): string => {
-    const normalized = filepath.replace(/\\/g, '/').trim();
-    if (normalized.toLowerCase().startsWith(FILE_URI_PREFIX)) {
-        return normalized;
-    }
-    return `file://${encodeFilePath(normalized)}`;
-};
-
-const isLikelyAbsolutePath = (value: string): boolean => (
-    value.startsWith('/')
-    || value.startsWith('\\\\')
-    || /^[A-Za-z]:[\\/]/.test(value)
-);
-
-const toLikelyFileDropReference = (value: string): string | null => {
-    const trimmed = value.trim().replace(/^['"]+|['"]+$/g, '');
-    if (!trimmed) {
-        return null;
-    }
-
-    if (/[\r\n]/.test(trimmed)) {
-        return null;
-    }
-
-    if (trimmed.toLowerCase().startsWith(FILE_URI_PREFIX)) {
-        return trimmed;
-    }
-
-    if (isLikelyAbsolutePath(trimmed)) {
-        return trimmed;
-    }
-
-    return null;
-};
-
-const collectStringLeaves = (input: unknown, output: Set<string>, depth = 0): void => {
-    if (depth > 6 || input == null) {
-        return;
-    }
-
-    if (typeof input === 'string') {
-        output.add(input);
-        return;
-    }
-
-    if (Array.isArray(input)) {
-        for (const item of input) {
-            collectStringLeaves(item, output, depth + 1);
-        }
-        return;
-    }
-
-    if (typeof input !== 'object') {
-        return;
-    }
-
-    for (const value of Object.values(input)) {
-        collectStringLeaves(value, output, depth + 1);
-    }
-};
-
-const parseDroppedFileReferences = (rawPayload: string): string[] => {
-    const extracted = new Set<string>();
-
-    const addCandidatesFromText = (value: string): void => {
-        const direct = toLikelyFileDropReference(value);
-        if (direct) {
-            extracted.add(direct);
-            return;
-        }
-
-        for (const line of value.split(/\r?\n/)) {
-            const candidate = toLikelyFileDropReference(line);
-            if (candidate) {
-                extracted.add(candidate);
-            }
-        }
-    };
-
-    addCandidatesFromText(rawPayload);
-
-    try {
-        const parsed = JSON.parse(rawPayload) as unknown;
-        const leaves = new Set<string>();
-        collectStringLeaves(parsed, leaves);
-        for (const leaf of leaves) {
-            addCandidatesFromText(leaf);
-        }
-    } catch {
-        // Ignore non-JSON payloads.
-    }
-
-    return Array.from(extracted);
-};
-
-const MemoModelControls = React.memo(ModelControls);
-const MemoUnifiedControlsDrawer = React.memo(UnifiedControlsDrawer);
-const MemoBrowserVoiceButton = React.memo(BrowserVoiceButton);
-const MemoMobileAgentButton = React.memo(MobileAgentButton);
-const MemoMobileModelButton = React.memo(MobileModelButton);
 const MemoStatusRow = React.memo(StatusRow);
 
 interface ChatInputProps {
@@ -201,109 +85,14 @@ interface ChatInputProps {
     scrollToBottom?: (options?: { instant?: boolean; force?: boolean }) => void;
 }
 
-type AutocompleteOverlayPosition = {
-    top: number;
-    left: number;
-    place: 'above' | 'below';
-    maxHeight: number;
-};
-
-// Per-session draft key — preserves in-progress messages across project switches
-const getDraftKey = (sessionId: string | null): string =>
-    `openchamber_chat_input_draft_${sessionId ?? 'new'}`;
-
-// Helper to safely read from localStorage for a given session
-const getStoredDraft = (sessionId: string | null): string => {
-    try {
-        return localStorage.getItem(getDraftKey(sessionId)) ?? '';
-    } catch {
-        return '';
-    }
-};
-
-// Helper to safely write/clear a per-session draft
-const saveStoredDraft = (sessionId: string | null, draft: string): void => {
-    try {
-        if (draft) {
-            localStorage.setItem(getDraftKey(sessionId), draft);
-        } else {
-            localStorage.removeItem(getDraftKey(sessionId));
-        }
-    } catch {
-        // Ignore localStorage errors
-    }
-};
-
-// Per-session confirmed mentions key — tracks which @mentions are confirmed (blue) vs plain text
-const getConfirmedMentionsKey = (sessionId: string | null): string =>
-    `openchamber_chat_confirmed_mentions_${sessionId ?? 'new'}`;
-
-const saveConfirmedMentions = (sessionId: string | null, mentions: Set<string>): void => {
-    try {
-        if (mentions.size > 0) {
-            localStorage.setItem(getConfirmedMentionsKey(sessionId), JSON.stringify([...mentions]));
-        } else {
-            localStorage.removeItem(getConfirmedMentionsKey(sessionId));
-        }
-    } catch {
-        // Ignore localStorage errors
-    }
-};
-
-const loadConfirmedMentions = (sessionId: string | null): Set<string> => {
-    try {
-        const raw = localStorage.getItem(getConfirmedMentionsKey(sessionId));
-        if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-                return new Set(parsed.filter((v): v is string => typeof v === 'string'));
-            }
-        }
-    } catch {
-        // Ignore localStorage errors
-    }
-    return new Set();
-};
-
 const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollToBottom }) => {
-    // Track if we restored a draft on mount (for text selection)
-    const initialDraftRef = React.useRef<string | null>(null);
-    // Track initial session ID (captured at mount time for draft restoration)
-    const initialSessionIdRef = React.useRef<string | null>(null);
-    const [message, setMessage] = React.useState(() => {
-        // Read per-session draft at mount time using the current session from the store
-        const sessionId = useSessionUIStore.getState().currentSessionId;
-        initialSessionIdRef.current = sessionId;
-        const draft = getStoredDraft(sessionId);
-        if (draft) {
-            initialDraftRef.current = draft;
-        }
-        return draft;
-    });
-    // Restore confirmed mentions from localStorage on mount
-    const confirmedMentionsRef = React.useRef<Set<string>>(loadConfirmedMentions(initialSessionIdRef.current));
-    // Helper: check if a mention path looks like a file/folder (has path separators, extension, or was explicitly confirmed)
-    const isConfirmedFilePath = (text: string): boolean =>
-        text.includes('/') || text.includes('\\') || text.includes('.') || confirmedMentionsRef.current.has(text);
     const [inputMode, setInputMode] = React.useState<'normal' | 'shell'>('normal');
     const [isDragging, setIsDragging] = React.useState(false);
     const [isInternalDrag, setIsInternalDrag] = React.useState(false);
-    const [showFileMention, setShowFileMention] = React.useState(false);
-    const [mentionQuery, setMentionQuery] = React.useState('');
-    const [showCommandAutocomplete, setShowCommandAutocomplete] = React.useState(false);
-    const [commandQuery, setCommandQuery] = React.useState('');
-    const [autocompleteTab, setAutocompleteTab] = React.useState<'commands' | 'agents' | 'files'>('commands');
-    const [showSkillAutocomplete, setShowSkillAutocomplete] = React.useState(false);
-    const [skillQuery, setSkillQuery] = React.useState('');
-    const [textareaSize, setTextareaSize] = React.useState<{ height: number; maxHeight: number } | null>(null);
     const [mobileControlsOpen, setMobileControlsOpen] = React.useState(false);
     const [mobileControlsPanel, setMobileControlsPanel] = React.useState<MobileControlsPanel>(null);
-    // Message history navigation state (up/down arrow to recall previous messages)
-    const [historyIndex, setHistoryIndex] = React.useState(-1); // -1 = not browsing, 0+ = index from most recent
-    const [draftMessage, setDraftMessage] = React.useState(''); // Preserves input when entering history mode
     const textareaRef = React.useRef<HTMLTextAreaElement>(null);
     const cursorPosRef = React.useRef(0);
-    const previousMessageLengthRef = React.useRef(message.length);
     const dropZoneRef = React.useRef<HTMLDivElement>(null);
     const dragEnterCountRef = React.useRef(0);
     const suppressNextFileDropTextInsertRef = React.useRef(false);
@@ -314,12 +103,6 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
     const mentionRef = React.useRef<FileMentionHandle>(null);
     const commandRef = React.useRef<CommandAutocompleteHandle>(null);
     const skillRef = React.useRef<SkillAutocompleteHandle>(null);
-    // Ref to track current message value without triggering re-renders in effects
-    const messageRef = React.useRef(message);
-    const draftPersistTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-    const skipNextDraftPersistRef = React.useRef(false);
-    const lastPersistedDraftRef = React.useRef<Map<string, string>>(new Map());
-    const currentSessionIdForDraftRef = React.useRef<string | null>(null);
 
     // TODO: port sendMessage to session-actions (complex — creates sessions, handles attachments, etc.)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -327,11 +110,26 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
         Promise.resolve((useSessionUIStore.getState().sendMessage as (...a: unknown[]) => unknown)(...args)),
     ).current;
     const currentSessionId = useSessionUIStore((s) => s.currentSessionId);
-    const currentDirectory = useDirectoryStore((s) => s.currentDirectory);
+    const persistChatDraft = useUIStore((state) => state.persistChatDraft);
+
+    const handleComposerSessionChanged = React.useCallback(() => {
+        setInputMode('normal');
+    }, []);
+    const {
+        message,
+        setMessage,
+        messageRef,
+        confirmedMentionsRef,
+        isConfirmedFilePath,
+        clearSubmittedDraft,
+    } = useComposerDraft({
+        currentSessionId,
+        persistChatDraft,
+        textareaRef,
+        onSessionChanged: handleComposerSessionChanged,
+    });
     const newSessionDraft = useSessionUIStore((s) => s.newSessionDraft);
     const newSessionDraftOpen = Boolean(newSessionDraft?.open);
-    const setNewSessionDraftTarget = useSessionUIStore((s) => s.setNewSessionDraftTarget);
-    const availableWorktreesByProject = useSessionUIStore((s) => s.availableWorktreesByProject);
     const abortPromptSessionId = useSessionUIStore((s) => s.abortPromptSessionId);
     const clearAbortPrompt = useSessionUIStore((s) => s.clearAbortPrompt);
     const attachedFiles = useInputStore((s) => s.attachedFiles);
@@ -348,10 +146,6 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
         [currentSessionId],
     );
     const currentManagementSessionId = currentSessionId;
-    const projects = useProjectsStore((state) => state.projects);
-    const activeProjectId = useProjectsStore((state) => state.activeProjectId);
-    const setActiveProjectIdOnly = useProjectsStore((state) => state.setActiveProjectIdOnly);
-
     const getEffectiveModel = useProviderConfigStore((state) => state.getEffectiveModel);
     const currentVariant = useProviderConfigStore((state) => state.currentVariant);
     const currentAgentName = useAgentConfigStore((state) => state.currentAgentName);
@@ -362,17 +156,11 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
     const isMobile = useUIStore((state) => state.isMobile);
     const isKeyboardOpen = useUIStore((state) => state.isKeyboardOpen);
     const inputBarOffset = useUIStore((state) => state.inputBarOffset);
-    const persistChatDraft = useUIStore((state) => state.persistChatDraft);
     const inputSpellcheckEnabled = useUIStore((state) => state.inputSpellcheckEnabled);
     const isExpandedInput = useUIStore((state) => state.isExpandedInput);
     const setExpandedInput = useUIStore((state) => state.setExpandedInput);
-    const { git: runtimeGit } = useRuntimeAPIs();
     const { currentTheme } = useThemeSystem();
     const chatSearchDirectory = useChatSearchDirectory();
-    const isGitRepo = useIsGitRepo(currentDirectory);
-    const currentGitStatus = useGitStore((state) =>
-        currentDirectory ? state.directories.get(currentDirectory)?.status ?? null : null,
-    );
     const [showAbortStatus, setShowAbortStatus] = React.useState(false);
     const setSessionAutoAccept = usePermissionStore((state) => state.setSessionAutoAccept);
     const composerHighlightRef = React.useRef<HTMLDivElement | null>(null);
@@ -407,7 +195,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
             }
         }
         return false;
-    }, [agents, inputMode, message]);
+    }, [agents, inputMode, isConfirmedFilePath, message]);
 
     const highlightedComposerContent = React.useMemo(() => {
         if (!hasInlineMentionForHighlight) {
@@ -448,7 +236,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
         }
 
         return parts;
-    }, [agents, hasInlineMentionForHighlight, message]);
+    }, [agents, hasInlineMentionForHighlight, isConfirmedFilePath, message]);
 
     const sanitizeAttachmentsForSend = React.useCallback(
         (files: AttachedFile[] | undefined): AttachedFile[] => (files ?? [])
@@ -538,8 +326,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
             sanitizedText: rawText,
             attachments,
         };
-    }, [agents, chatSearchDirectory]);
-    const [autocompleteOverlayPosition, setAutocompleteOverlayPosition] = React.useState<AutocompleteOverlayPosition | null>(null);
+    }, [agents, chatSearchDirectory, isConfirmedFilePath]);
     const abortTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const prevWasAbortedRef = React.useRef(false);
 
@@ -593,101 +380,12 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
     const consumeDrafts = useInlineCommentDraftStore((state) => state.consumeDrafts);
     const hasDrafts = draftCount > 0;
 
-    // User message history for up/down arrow navigation.
-    // Keep this on a narrow hook instead of full session message records.
-    const userMessageHistory = useUserMessageHistory(currentSessionId ?? "");
-
-    // Keep messageRef in sync with message state
-    React.useEffect(() => {
-        messageRef.current = message;
-    }, [message]);
-
-    React.useEffect(() => {
-        currentSessionIdForDraftRef.current = currentSessionId;
-    }, [currentSessionId]);
-
-    const persistDraftImmediately = React.useCallback((sessionId: string | null, draft: string) => {
-        const key = getDraftKey(sessionId);
-        const lastPersisted = lastPersistedDraftRef.current.get(key);
-        if (lastPersisted === draft) {
-            return;
-        }
-
-        saveStoredDraft(sessionId, draft);
-        // Only persist confirmed mentions that are actually present in the draft text
-        const activeMentions = new Set<string>();
-        for (const mention of confirmedMentionsRef.current) {
-            if (draft.includes(`@${mention}`)) {
-                activeMentions.add(mention);
-            }
-        }
-        confirmedMentionsRef.current = activeMentions;
-        saveConfirmedMentions(sessionId, activeMentions);
-        lastPersistedDraftRef.current.set(key, draft);
-    }, []);
-
-    const clearPendingDraftPersist = React.useCallback(() => {
-        if (!draftPersistTimerRef.current) {
-            return;
-        }
-        clearTimeout(draftPersistTimerRef.current);
-        draftPersistTimerRef.current = null;
-    }, []);
-
-    // Handle initial draft restoration and text selection
-    const hasHandledInitialDraftRef = React.useRef(false);
-    React.useEffect(() => {
-        if (hasHandledInitialDraftRef.current) return;
-        hasHandledInitialDraftRef.current = true;
-
-        const draft = initialDraftRef.current;
-        if (!draft) return;
-
-        if (!persistChatDraft) {
-            // Setting disabled - clear the restored draft
-            setMessage('');
-            try {
-                localStorage.removeItem(getDraftKey(initialSessionIdRef.current));
-            } catch {
-                // Ignore
-            }
-        } else {
-            // Setting enabled - select all text
-            requestAnimationFrame(() => {
-                textareaRef.current?.select();
-            });
-        }
-    }, [persistChatDraft]);
-
-    // Handle session switching: save draft for old session, restore draft for new session
-    const prevSessionIdRef = React.useRef(currentSessionId);
-    React.useEffect(() => {
-        if (prevSessionIdRef.current !== currentSessionId) {
-            const oldSessionId = prevSessionIdRef.current;
-            prevSessionIdRef.current = currentSessionId;
-            setInputMode('normal');
-            clearPendingDraftPersist();
-            skipNextDraftPersistRef.current = true;
-
-            if (persistChatDraft) {
-                // Save current draft for the session we're leaving
-                persistDraftImmediately(oldSessionId, messageRef.current);
-                // Restore draft for the session we're entering
-                const newDraft = getStoredDraft(currentSessionId);
-                setMessage(newDraft);
-                confirmedMentionsRef.current = loadConfirmedMentions(currentSessionId);
-                if (newDraft) {
-                    requestAnimationFrame(() => {
-                        textareaRef.current?.select();
-                    });
-                }
-            } else {
-                // Persist disabled: clear input without saving
-                setMessage('');
-                confirmedMentionsRef.current = new Set();
-            }
-        }
-    }, [clearPendingDraftPersist, currentSessionId, persistChatDraft, persistDraftImmediately]);
+    // Message history navigation state (up/down arrow to recall previous messages)
+    const history = useComposerHistory({
+        sessionId: currentSessionId,
+        message,
+        setMessage,
+    });
 
     // Focus textarea when new session draft is opened
     const prevNewSessionDraftOpenRef = React.useRef(newSessionDraftOpen);
@@ -705,41 +403,6 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
         }
         prevNewSessionDraftOpenRef.current = newSessionDraftOpen;
     }, [newSessionDraftOpen, isMobile]);
-
-    // Persist chat input draft to localStorage per session (only if setting enabled)
-    React.useEffect(() => {
-        if (!persistChatDraft) {
-            clearPendingDraftPersist();
-            persistDraftImmediately(currentSessionId, '');
-            return;
-        }
-
-        if (skipNextDraftPersistRef.current) {
-            skipNextDraftPersistRef.current = false;
-            return;
-        }
-
-        clearPendingDraftPersist();
-        const draftSnapshot = message;
-        const sessionSnapshot = currentSessionId;
-        draftPersistTimerRef.current = setTimeout(() => {
-            draftPersistTimerRef.current = null;
-            persistDraftImmediately(sessionSnapshot, draftSnapshot);
-        }, CHAT_DRAFT_PERSIST_DEBOUNCE_MS);
-
-        return () => {
-            clearPendingDraftPersist();
-        };
-    }, [clearPendingDraftPersist, currentSessionId, message, persistChatDraft, persistDraftImmediately]);
-
-    React.useEffect(() => {
-        return () => {
-            clearPendingDraftPersist();
-            if (persistChatDraft) {
-                persistDraftImmediately(currentSessionIdForDraftRef.current, messageRef.current);
-            }
-        };
-    }, [clearPendingDraftPersist, persistChatDraft, persistDraftImmediately]);
 
     // Session activity for queue availability and controls
     const { phase: sessionPhase } = useCurrentSessionActivity();
@@ -810,7 +473,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                 }, 0);
             }
         }
-    }, [pendingInputText, consumePendingInputText]);
+    }, [pendingInputText, consumePendingInputText, setMessage]);
 
     const hasContent = message.trim().length > 0 || sendableAttachedFiles.length > 0 || hasDrafts;
     const hasQueuedMessages = queuedMessages.length > 0;
@@ -830,10 +493,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
 
         const drafts = consumeDrafts(currentSessionId);
 
-        let messageToQueue = message.replace(/^\n+|\n+$/g, '');
-        if (drafts.length > 0) {
-            messageToQueue = appendInlineComments(messageToQueue, drafts);
-        }
+        const messageToQueue = buildQueuedMessageContent(message, drafts);
         const attachmentsToQueue = sanitizeAttachmentsForSend(sendableAttachedFiles);
         const queueEffectiveModel = getEffectiveModel();
 
@@ -860,14 +520,14 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
         if (!isMobile) {
             textareaRef.current?.focus();
         }
-    }, [hasContent, currentSessionId, message, sendableAttachedFiles, sanitizeAttachmentsForSend, addToQueue, clearAttachedFiles, isMobile, consumeDrafts, getEffectiveModel, currentAgentName, currentVariant]);
+    }, [hasContent, currentSessionId, message, sendableAttachedFiles, sanitizeAttachmentsForSend, addToQueue, clearAttachedFiles, isMobile, consumeDrafts, getEffectiveModel, currentAgentName, currentVariant, setMessage]);
 
     const handleQueuedMessageEdit = React.useCallback((content: string) => {
         setMessage(content);
         setTimeout(() => {
             textareaRef.current?.focus();
         }, 0);
-    }, []);
+    }, [setMessage]);
 
     const handleOpenAgentPanel = React.useCallback(() => {
         setMobileControlsPanel('agent');
@@ -900,115 +560,35 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
             return;
         }
 
-        // Build the primary message (first part) and additional parts
-        let primaryText = '';
-        let primaryAttachments: AttachedFile[] = [];
-        let agentMentionName: string | undefined;
-        const additionalParts: Array<{ text: string; attachments?: AttachedFile[]; synthetic?: boolean }> = [];
-
-        // Consume any pending synthetic parts (from conflict resolution, etc.)
         const syntheticParts = consumePendingSyntheticParts();
-
-        // Process queued messages first
-        for (let i = 0; i < queuedMessages.length; i++) {
-            const queuedMsg = queuedMessages[i];
-            const { sanitizedText, mention } = parseAgentMentions(queuedMsg.content, agents);
-            const { sanitizedText: queuedText, attachments: mentionAttachments } = extractInlineFileMentions(sanitizedText);
-
-            // Use agent mention from first message that has one
-            if (!agentMentionName && mention?.name) {
-                agentMentionName = mention.name;
-            }
-
-            if (i === 0) {
-                // First queued message becomes primary
-                primaryText = queuedText;
-                primaryAttachments = [
-                    ...sanitizeAttachmentsForSend(queuedMsg.attachments),
-                    ...mentionAttachments,
-                ];
-            } else {
-                // Subsequent queued messages become additional parts
-                const queuedAttachments = sanitizeAttachmentsForSend(queuedMsg.attachments);
-                additionalParts.push({
-                    text: queuedText,
-                    attachments: [...queuedAttachments, ...mentionAttachments],
-                });
-            }
-        }
-
-        // Add current input (skip for queued-only auto-send)
-        if (!queuedOnly && hasContent) {
-            const messageToSend = message.replace(/^\n+|\n+$/g, '');
-            const { sanitizedText, mention } = parseAgentMentions(messageToSend, agents);
-            const { sanitizedText: messageText, attachments: mentionAttachments } = extractInlineFileMentions(sanitizedText);
-            const attachmentsToSend = sanitizeAttachmentsForSend(sendableAttachedFiles);
-
-            if (!agentMentionName && mention?.name) {
-                agentMentionName = mention.name;
-            }
-
-            if (queuedMessages.length === 0) {
-                // No queue - current input is primary
-                primaryText = messageText;
-                primaryAttachments = [...attachmentsToSend, ...mentionAttachments];
-            } else {
-                // Has queue - current input is additional part
-                additionalParts.push({
-                    text: messageText,
-                    attachments: [...attachmentsToSend, ...mentionAttachments],
-                });
-            }
-        }
-
         const sessionKey = currentSessionId ?? (newSessionDraftOpen ? 'draft' : null);
-        let drafts: InlineCommentDraft[] = [];
-        if (!queuedOnly && sessionKey) {
-            drafts = consumeDrafts(sessionKey);
-        }
+        const drafts = (!queuedOnly && sessionKey) ? consumeDrafts(sessionKey) : [];
+        const submitPayload = buildComposerSubmitPayload({
+            queuedOnly,
+            hasContent,
+            currentSessionId,
+            newSessionDraftOpen,
+            message,
+            queuedMessages,
+            agents,
+            sendableAttachedFiles,
+            inlineDrafts: drafts,
+            syntheticParts,
+            linkedIssue,
+            linkedPr,
+            sanitizeAttachmentsForSend,
+            extractInlineFileMentions,
+        });
 
-        if (drafts.length > 0) {
-            if (queuedMessages.length === 0) {
-                primaryText = appendInlineComments(primaryText, drafts);
-            } else if (additionalParts.length > 0) {
-                const lastPart = additionalParts[additionalParts.length - 1];
-                lastPart.text = appendInlineComments(lastPart.text, drafts);
-            } else {
-                primaryText = appendInlineComments(primaryText, drafts);
-            }
-        }
+        if (!submitPayload) return;
 
-        // Add synthetic parts (from conflict resolution, etc.)
-        if (syntheticParts && syntheticParts.length > 0) {
-            for (const part of syntheticParts) {
-                additionalParts.push({
-                    text: part.text,
-                    synthetic: true,
-                });
-            }
-        }
-
-        // Add linked issue as synthetic part (only the parts with synthetic: true)
-        // The text part (synthetic: false) is completely dropped per requirements
-        if (linkedIssue) {
-            additionalParts.push({
-                text: linkedIssue.contextText,
-                synthetic: true,
-            });
-        }
-
-        if (linkedPr) {
-            additionalParts.push({
-                text: linkedPr.instructionsText,
-                synthetic: true,
-            });
-            additionalParts.push({
-                text: linkedPr.contextText,
-                synthetic: true,
-            });
-        }
-
-        if (!primaryText && additionalParts.length === 0) return;
+        const {
+            primaryText,
+            primaryAttachments,
+            agentMentionName,
+            additionalParts,
+            allAttachments,
+        } = submitPayload;
 
         // Clear queue and input
         if (currentSessionId && hasQueuedMessages) {
@@ -1016,13 +596,9 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
         }
         if (!queuedOnly) {
             setMessage('');
-            confirmedMentionsRef.current.clear();
-            // Clear per-session draft on submit
-            saveStoredDraft(currentSessionId, '');
-            saveConfirmedMentions(currentSessionId, confirmedMentionsRef.current);
+            clearSubmittedDraft(currentSessionId);
             // Reset message history navigation state
-            setHistoryIndex(-1);
-            setDraftMessage('');
+            history.resetHistory();
             if (attachedFiles.length > 0) {
                 clearAttachedFiles();
             }
@@ -1035,14 +611,8 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
         }
 
         // Handle local slash commands only in normal mode
-        const normalizedCommand = primaryText.trimStart();
-        if (inputMode === 'normal' && normalizedCommand.startsWith('/')) {
-            const commandName = normalizedCommand
-                .slice(1)
-                .trim()
-                .split(/\s+/)[0]
-                ?.toLowerCase();
-
+        const commandName = getLocalSlashCommandName(inputMode, primaryText);
+        if (commandName) {
             if (commandName === 'undo' && currentSessionId) {
                 await useSessionUIStore.getState().handleSlashUndo(currentSessionId);
                 scrollToBottom?.({ instant: true, force: true });
@@ -1075,6 +645,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                     await sessionActions.waitForConnectionOrThrow();
                     // Everything after `/summary ` is an optional topic hint
                     // the user wants the summary focused on.
+                    const normalizedCommand = primaryText.trimStart();
                     const topic = normalizedCommand.replace(/^\/summary\b/i, '').trim();
                     const topicLine = topic ? ` focused on: ${topic}` : '';
                     const topicBlock = topic
@@ -1123,12 +694,6 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
             }
         }
 
-        // Collect all attachments for error recovery
-        const allAttachments = [
-            ...primaryAttachments,
-            ...additionalParts.flatMap(p => p.attachments ?? []),
-        ];
-
         const sendPromise = sendMessage(
             primaryText,
             effectiveModel.providerId,
@@ -1164,22 +729,9 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                     : typeof error === 'string'
                         ? error
                         : String(error ?? '');
-            const normalized = rawMessage.toLowerCase();
-
             console.error('Message send failed:', rawMessage || error);
 
-            const isSoftNetworkError =
-                normalized.includes('timeout') ||
-                normalized.includes('timed out') ||
-                normalized.includes('may still be processing') ||
-                normalized.includes('being processed') ||
-                normalized.includes('failed to fetch') ||
-                normalized.includes('networkerror') ||
-                normalized.includes('network error') ||
-                normalized.includes('gateway timeout') ||
-                normalized === 'failed to send message';
-
-            if (normalized.includes('payload too large') || normalized.includes('413') || normalized.includes('entity too large')) {
+            if (isPayloadTooLargeError(rawMessage)) {
                 toast.error('Attachments are too large to send. Please try reducing the number or size of images.');
                 if (allAttachments.length > 0) {
                     useInputStore.setState({ attachedFiles: allAttachments });
@@ -1187,7 +739,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                 return;
             }
 
-            if (isSoftNetworkError) {
+            if (isSoftNetworkSendError(rawMessage)) {
                 if (allAttachments.length > 0) {
                     useInputStore.setState({ attachedFiles: allAttachments });
                     toast.error('Failed to send attachments. Try fewer files or smaller images.');
@@ -1219,303 +771,54 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
         }
     }, [inputMode, hasContent, currentSessionId, sessionPhase, queueModeEnabled, handleQueueMessage]);
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        // Early return during IME composition to prevent interference with autocomplete.
-        // Uses keyCode === 229 fallback for WebKit where compositionend fires before keydown.
-        if (isIMECompositionEvent(e)) return;
-
-        if (inputMode === 'shell' && e.key === 'Escape') {
-            e.preventDefault();
-            setInputMode('normal');
-            return;
-        }
-
-        if (inputMode === 'shell' && e.key === 'Backspace' && message.length === 0) {
-            e.preventDefault();
-            setInputMode('normal');
-            return;
-        }
-
-        if ((e.key === 'Backspace' || e.key === 'Delete') && !e.metaKey && !e.ctrlKey && !e.altKey) {
-            const textarea = textareaRef.current;
-            const selectionStart = textarea?.selectionStart ?? message.length;
-            const selectionEnd = textarea?.selectionEnd ?? message.length;
-            const hasCollapsedSelection = selectionStart === selectionEnd;
-            const knownAgentNames = new Set(agents.map((agent) => agent.name.toLowerCase()));
-
-            if (hasCollapsedSelection) {
-                const probeIndex = e.key === 'Backspace' ? selectionStart - 1 : selectionStart;
-                if (probeIndex >= 0 && probeIndex < message.length) {
-                    let tokenStart = probeIndex;
-                    while (tokenStart > 0 && !/\s/.test(message[tokenStart - 1])) {
-                        tokenStart -= 1;
-                    }
-
-                    let tokenEnd = probeIndex + 1;
-                    while (tokenEnd < message.length && !/\s/.test(message[tokenEnd])) {
-                        tokenEnd += 1;
-                    }
-
-                    const token = message.slice(tokenStart, tokenEnd);
-                    const mentionContent = token.slice(1);
-                    const looksLikeFileMention = FILE_MENTION_TOKEN.test(token)
-                        && !knownAgentNames.has(mentionContent.toLowerCase())
-                        && isConfirmedFilePath(mentionContent);
-
-                    if (looksLikeFileMention) {
-                        confirmedMentionsRef.current.delete(mentionContent);
-                        const removeUntil = message[tokenEnd] === ' ' ? tokenEnd + 1 : tokenEnd;
-                        const nextMessage = `${message.slice(0, tokenStart)}${message.slice(removeUntil)}`;
-                        e.preventDefault();
-                        setMessage(nextMessage);
-                        requestAnimationFrame(() => {
-                            if (textareaRef.current) {
-                                textareaRef.current.selectionStart = tokenStart;
-                                textareaRef.current.selectionEnd = tokenStart;
-                            }
-                            adjustTextareaHeight();
-                        });
-                        updateAutocompleteState(nextMessage, tokenStart);
-                        return;
-                    }
-                }
-            }
-        }
-
-        if (showCommandAutocomplete && commandRef.current) {
-            if (e.key === 'Enter' || e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Escape' || e.key === 'Tab') {
-                e.preventDefault();
-                commandRef.current.handleKeyDown(e.key);
-                return;
-            }
-        }
-
-        if (showSkillAutocomplete && skillRef.current) {
-            if (e.key === 'Enter' || e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Escape' || e.key === 'Tab') {
-                e.preventDefault();
-                skillRef.current.handleKeyDown(e.key);
-                return;
-            }
-        }
-
-        if (showFileMention && mentionRef.current) {
-            if (e.key === 'Enter' || e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Escape' || e.key === 'Tab') {
-                e.preventDefault();
-                mentionRef.current.handleKeyDown(e.key);
-                return;
-            }
-        }
-
-        if (isDesktopExpanded && e.key === 'Escape') {
-            e.preventDefault();
-            setExpandedInput(false);
-            return;
-        }
-
-        if (e.key === 'Tab' && !showCommandAutocomplete && !showFileMention) {
-            e.preventDefault();
-            handleCycleAgent();
-            return;
-        }
-
-        // Handle ArrowUp/ArrowDown for message history navigation
-        // ArrowUp: only when cursor at start (position 0) or input is empty
-        // ArrowDown: also works when cursor at end (to cycle forward through history)
-        const isAnyAutocompleteOpen = showCommandAutocomplete || showSkillAutocomplete || showFileMention;
-        const cursorAtStart = textareaRef.current?.selectionStart === 0 && textareaRef.current?.selectionEnd === 0;
-        const cursorAtEnd = textareaRef.current?.selectionStart === message.length && textareaRef.current?.selectionEnd === message.length;
-        const canNavigateHistoryUp = !isAnyAutocompleteOpen && (message.length === 0 || cursorAtStart);
-        const canNavigateHistoryDown = !isAnyAutocompleteOpen && (message.length === 0 || cursorAtEnd);
-
-        if (e.key === 'ArrowUp' && canNavigateHistoryUp && userMessageHistory.length > 0) {
-            e.preventDefault();
-            if (historyIndex === -1) {
-                // Entering history mode - save current input as draft
-                setDraftMessage(message);
-                setHistoryIndex(0);
-                setMessage(userMessageHistory[0]);
-            } else if (historyIndex < userMessageHistory.length - 1) {
-                // Navigate to older message
-                const newIndex = historyIndex + 1;
-                setHistoryIndex(newIndex);
-                setMessage(userMessageHistory[newIndex]);
-            }
-            // Move cursor to start after history navigation
-            requestAnimationFrame(() => {
-                textareaRef.current?.setSelectionRange(0, 0);
-            });
-            // If at oldest message, do nothing
-            return;
-        }
-
-        if (e.key === 'ArrowDown' && canNavigateHistoryDown && historyIndex >= 0) {
-            e.preventDefault();
-            if (historyIndex === 0) {
-                // Exit history mode - restore draft
-                setHistoryIndex(-1);
-                setMessage(draftMessage);
-                setDraftMessage('');
-            } else {
-                // Navigate to newer message
-                const newIndex = historyIndex - 1;
-                setHistoryIndex(newIndex);
-                setMessage(userMessageHistory[newIndex]);
-            }
-            return;
-        }
-
-        // Handle Enter/Ctrl+Enter based on queue mode
-        if (e.key === 'Enter' && !e.shiftKey && (!isMobile || e.ctrlKey || e.metaKey)) {
-            e.preventDefault();
-
-            const isCtrlEnter = e.ctrlKey || e.metaKey;
-
-            // Queue mode: Enter queues, Ctrl+Enter sends
-            // Normal mode: Enter sends, Ctrl+Enter queues
-            // Note: Queueing only works when there's an existing session (currentSessionId)
-            // For new sessions (draft), always send immediately
-            const canQueue = inputMode === 'normal' && hasContent && currentSessionId && sessionPhase !== 'idle';
-
-            if (queueModeEnabled) {
-                if (isCtrlEnter || !canQueue) {
-                    // Ctrl+Enter sends, or Enter when can't queue (new session)
-                    handleSubmit();
-                } else {
-                    // Enter queues when we have a session
-                    handleQueueMessage();
-                }
-            } else {
-                if (isCtrlEnter && canQueue) {
-                    // Ctrl+Enter queues when we have a session
-                    handleQueueMessage();
-                } else {
-                    // Enter sends
-                    handleSubmit();
-                }
-            }
-        }
-    };
-
-    const measureCaretInTextarea = React.useCallback((textarea: HTMLTextAreaElement, cursorPosition: number) => {
-        const doc = textarea.ownerDocument;
-        const win = doc.defaultView;
-        if (!win) return null;
-
-        const style = win.getComputedStyle(textarea);
-        const mirror = doc.createElement('div');
-        const mirrorStyle = mirror.style;
-
-        mirrorStyle.position = 'absolute';
-        mirrorStyle.visibility = 'hidden';
-        mirrorStyle.pointerEvents = 'none';
-        mirrorStyle.whiteSpace = 'pre-wrap';
-        mirrorStyle.wordWrap = 'break-word';
-        mirrorStyle.overflow = 'hidden';
-        mirrorStyle.left = '-9999px';
-        mirrorStyle.top = '0';
-
-        mirrorStyle.width = `${textarea.clientWidth}px`;
-        mirrorStyle.font = style.font;
-        mirrorStyle.fontSize = style.fontSize;
-        mirrorStyle.fontFamily = style.fontFamily;
-        mirrorStyle.fontWeight = style.fontWeight;
-        mirrorStyle.fontStyle = style.fontStyle;
-        mirrorStyle.fontVariant = style.fontVariant;
-        mirrorStyle.letterSpacing = style.letterSpacing;
-        mirrorStyle.textTransform = style.textTransform;
-        mirrorStyle.textIndent = style.textIndent;
-        mirrorStyle.padding = style.padding;
-        mirrorStyle.border = style.border;
-        mirrorStyle.boxSizing = style.boxSizing;
-        mirrorStyle.lineHeight = style.lineHeight;
-        mirrorStyle.tabSize = style.tabSize;
-
-        mirror.textContent = textarea.value.slice(0, cursorPosition);
-        const marker = doc.createElement('span');
-        marker.textContent = textarea.value.slice(cursorPosition, cursorPosition + 1) || ' ';
-        mirror.appendChild(marker);
-
-        doc.body.appendChild(mirror);
-        const top = marker.offsetTop;
-        const left = marker.offsetLeft;
-        doc.body.removeChild(mirror);
-
-        return { top, left };
-    }, []);
-
-    const updateAutocompleteOverlayPosition = React.useCallback(() => {
-        if (!isDesktopExpanded) {
-            setAutocompleteOverlayPosition(null);
-            return;
-        }
-
-        if (!showCommandAutocomplete && !showSkillAutocomplete && !showFileMention) {
-            setAutocompleteOverlayPosition(null);
-            return;
-        }
-
-        const textarea = textareaRef.current;
-        const container = dropZoneRef.current;
-        if (!textarea || !container) return;
-
-        const cursor = textarea.selectionStart ?? message.length;
-        const caret = measureCaretInTextarea(textarea, cursor);
-        if (!caret) return;
-
-        const textareaRect = textarea.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-
-        const caretY = textareaRect.top - containerRect.top + (caret.top - textarea.scrollTop);
-        const caretX = textareaRect.left - containerRect.left + (caret.left - textarea.scrollLeft);
-
-        const popupMargin = 8;
-        const estimatedPopupHeight = 260;
-        const spaceAbove = caretY - popupMargin;
-        const spaceBelow = containerRect.height - caretY - popupMargin;
-        const place: 'above' | 'below' = spaceBelow >= estimatedPopupHeight || spaceBelow >= spaceAbove ? 'below' : 'above';
-
-        const desiredWidth = showFileMention ? 520 : showCommandAutocomplete ? 450 : 360;
-        const clampedLeft = Math.max(
-            popupMargin,
-            Math.min(caretX - 24, containerRect.width - desiredWidth - popupMargin)
-        );
-
-        const maxHeight = Math.max(120, Math.min(estimatedPopupHeight, place === 'below' ? spaceBelow : spaceAbove));
-
-        setAutocompleteOverlayPosition({
-            top: place === 'below' ? caretY + 22 : caretY - 6,
-            left: clampedLeft,
-            place,
-            maxHeight,
-        });
-    }, [
-        isDesktopExpanded,
-        measureCaretInTextarea,
-        message.length,
-        showCommandAutocomplete,
-        showFileMention,
-        showSkillAutocomplete,
-    ]);
-
-    React.useLayoutEffect(() => {
-        updateAutocompleteOverlayPosition();
-    }, [
-        updateAutocompleteOverlayPosition,
+    const {
+        textareaSize,
+        adjustTextareaHeight,
+    } = useComposerTextareaAutosize({
         message,
+        isDesktopExpanded,
+        viewportSignal: isMobile,
+        textareaRef,
+    });
+
+    const {
+        showFileMention,
+        mentionQuery,
+        showCommandAutocomplete,
+        commandQuery,
+        autocompleteTab,
+        showSkillAutocomplete,
+        skillQuery,
+        setShowFileMention,
+        setMentionQuery,
+        setShowCommandAutocomplete,
+        setCommandQuery,
+        setShowSkillAutocomplete,
+        setSkillQuery,
+        updateAutocompleteState,
+        handleAutocompleteTabSelect,
+        handleOpenCommandMenu,
+    } = useComposerAutocomplete({
+        message,
+        setMessage,
+        inputMode,
+        isMobile,
+        textareaRef,
+        adjustTextareaHeight,
+    });
+
+    const {
+        autocompleteOverlayPosition,
+        updateAutocompleteOverlayPosition,
+    } = useComposerAutocompleteOverlay({
+        isDesktopExpanded,
+        messageLength: message.length,
         showCommandAutocomplete,
         showSkillAutocomplete,
         showFileMention,
-        isDesktopExpanded,
-    ]);
-
-    React.useEffect(() => {
-        if (!isDesktopExpanded) return;
-        const onResize = () => updateAutocompleteOverlayPosition();
-        window.addEventListener('resize', onResize);
-        return () => {
-            window.removeEventListener('resize', onResize);
-        };
-    }, [isDesktopExpanded, updateAutocompleteOverlayPosition]);
+        textareaRef,
+        dropZoneRef,
+    });
 
     const startAbortIndicator = React.useCallback(() => {
         if (abortTimeoutRef.current) {
@@ -1552,213 +855,38 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
         }
     }, [primaryAgents, currentAgentName, currentSessionId, setAgent, saveSessionAgentSelection]);
 
-    const adjustTextareaHeight = React.useCallback((options?: { allowShrink?: boolean }) => {
-        const textarea = textareaRef.current;
-        if (!textarea) {
-            return;
-        }
-
-        const previousScrollTop = textarea.scrollTop;
-
-        if (isDesktopExpanded) {
-            textarea.style.height = '100%';
-            textarea.style.maxHeight = 'none';
-            setTextareaSize(null);
-            if (textarea.scrollTop !== previousScrollTop) {
-                textarea.scrollTop = previousScrollTop;
-            }
-            return;
-        }
-
-        if (options?.allowShrink ?? true) {
-            textarea.style.height = 'auto';
-        }
-
-        const view = textarea.ownerDocument?.defaultView;
-        const computedStyle = view ? view.getComputedStyle(textarea) : null;
-        const lineHeight = computedStyle ? parseFloat(computedStyle.lineHeight) : NaN;
-        const paddingTop = computedStyle ? parseFloat(computedStyle.paddingTop) : NaN;
-        const paddingBottom = computedStyle ? parseFloat(computedStyle.paddingBottom) : NaN;
-        const fallbackLineHeight = 22;
-        const fallbackPadding = 16;
-        const paddingTotal = Number.isNaN(paddingTop) || Number.isNaN(paddingBottom)
-            ? fallbackPadding
-            : paddingTop + paddingBottom;
-        const targetLineHeight = Number.isNaN(lineHeight) ? fallbackLineHeight : lineHeight;
-        const maxHeight = targetLineHeight * MAX_VISIBLE_TEXTAREA_LINES + paddingTotal;
-        const scrollHeight = textarea.scrollHeight || textarea.offsetHeight;
-        const nextHeight = Math.min(scrollHeight, maxHeight);
-
-        textarea.style.height = `${nextHeight}px`;
-        textarea.style.maxHeight = `${maxHeight}px`;
-        if (textarea.scrollTop !== previousScrollTop) {
-            textarea.scrollTop = previousScrollTop;
-        }
-
-        setTextareaSize((prev) => {
-            if (prev && prev.height === nextHeight && prev.maxHeight === maxHeight) {
-                return prev;
-            }
-            return { height: nextHeight, maxHeight };
-        });
-    }, [isDesktopExpanded]);
-
-    React.useLayoutEffect(() => {
-        const allowShrink = message.length < previousMessageLengthRef.current;
-        previousMessageLengthRef.current = message.length;
-        adjustTextareaHeight({ allowShrink });
-    }, [adjustTextareaHeight, message, isMobile]);
-
-    const updateAutocompleteState = React.useCallback((value: string, cursorPosition: number) => {
-        if (inputMode === 'shell') {
-            setShowCommandAutocomplete(false);
-            setShowFileMention(false);
-            setShowSkillAutocomplete(false);
-            return;
-        }
-
-        if (value.startsWith('/')) {
-            const firstSpace = value.indexOf(' ');
-            const firstNewline = value.indexOf('\n');
-            const commandEnd = Math.min(
-                firstSpace === -1 ? value.length : firstSpace,
-                firstNewline === -1 ? value.length : firstNewline
-            );
-
-            if (cursorPosition <= commandEnd && firstSpace === -1) {
-                const commandText = value.substring(1, commandEnd);
-                setCommandQuery(commandText);
-                setAutocompleteTab('commands');
-                setShowCommandAutocomplete(true);
-                setShowFileMention(false);
-                setShowSkillAutocomplete(false);
-                return;
-            }
-        }
-
-        setShowCommandAutocomplete(false);
-
-        const textBeforeCursor = value.substring(0, cursorPosition);
-
-        const lastSlashSymbol = textBeforeCursor.lastIndexOf('/');
-        if (lastSlashSymbol !== -1) {
-            const charBefore = lastSlashSymbol > 0 ? textBeforeCursor[lastSlashSymbol - 1] : null;
-            const textAfterSlash = textBeforeCursor.substring(lastSlashSymbol + 1);
-            const hasSeparator = textAfterSlash.includes(' ') || textAfterSlash.includes('\n');
-            const isWordBoundary = !charBefore || /\s/.test(charBefore);
-
-            if (isWordBoundary && !hasSeparator) {
-                setSkillQuery(textAfterSlash);
-                setShowSkillAutocomplete(true);
-                setShowFileMention(false);
-                return;
-            }
-        }
-
-        setShowSkillAutocomplete(false);
-        setSkillQuery('');
-
-        const lastAtSymbol = textBeforeCursor.lastIndexOf('@');
-        if (lastAtSymbol !== -1) {
-            const charBefore = lastAtSymbol > 0 ? textBeforeCursor[lastAtSymbol - 1] : null;
-            const textAfterAt = textBeforeCursor.substring(lastAtSymbol + 1);
-            const isWordBoundary = !charBefore || /\s/.test(charBefore);
-            if (isWordBoundary && !textAfterAt.includes(' ') && !textAfterAt.includes('\n')) {
-                setMentionQuery(textAfterAt);
-                setAutocompleteTab((current) => current === 'files' ? 'files' : 'agents');
-                setShowFileMention(true);
-            } else {
-                setShowFileMention(false);
-            }
-        } else {
-            setShowFileMention(false);
-        }
-    }, [inputMode, setAutocompleteTab, setCommandQuery, setMentionQuery, setShowCommandAutocomplete, setShowFileMention, setShowSkillAutocomplete, setSkillQuery]);
-
-    const applyAutocompletePrefix = React.useCallback((prefix: '/' | '@') => {
-        const nextMessage = message.length === 0
-            ? prefix
-            : (message[0] === '/' || message[0] === '@')
-                ? `${prefix}${message.slice(1)}`
-                : `${prefix}${message}`;
-        setMessage(nextMessage);
-        requestAnimationFrame(() => {
-            if (textareaRef.current) {
-                const nextCursor = Math.min(nextMessage.length, textareaRef.current.value.length);
-                textareaRef.current.selectionStart = nextCursor;
-                textareaRef.current.selectionEnd = nextCursor;
-            }
-            adjustTextareaHeight();
-            updateAutocompleteState(nextMessage, nextMessage.length);
-        });
-    }, [adjustTextareaHeight, message, setMessage, updateAutocompleteState]);
-
-    const handleAutocompleteTabSelect = React.useCallback((tab: 'commands' | 'agents' | 'files') => {
-        const textarea = textareaRef.current;
-        if (isMobile && textarea) {
-            try {
-                textarea.focus({ preventScroll: true });
-            } catch {
-                textarea.focus();
-            }
-            const len = textarea.value.length;
-            try {
-                textarea.setSelectionRange(len, len);
-            } catch {
-                // ignored
-            }
-        }
-        const cursorPosition = textarea?.selectionStart ?? message.length;
-        const textBeforeCursor = message.substring(0, cursorPosition);
-        const lastAtSymbol = textBeforeCursor.lastIndexOf('@');
-        const nextMentionQuery = lastAtSymbol !== -1
-            ? textBeforeCursor.substring(lastAtSymbol + 1).replace(/[\s\n].*$/, '')
-            : '';
-
-        setAutocompleteTab(tab);
-        setCommandQuery('');
-        if (tab === 'commands') {
-            setMentionQuery('');
-            applyAutocompletePrefix('/');
-        }
-        if (tab === 'agents') {
-            setMentionQuery(nextMentionQuery);
-            applyAutocompletePrefix('@');
-        }
-        if (tab === 'files') {
-            setMentionQuery(nextMentionQuery);
-            applyAutocompletePrefix('@');
-        }
-        setShowSkillAutocomplete(false);
-        setShowCommandAutocomplete(tab === 'commands');
-        setShowFileMention(tab === 'agents' || tab === 'files');
-    }, [applyAutocompletePrefix, isMobile, message, setAutocompleteTab, setCommandQuery, setMentionQuery, setShowCommandAutocomplete, setShowFileMention, setShowSkillAutocomplete]);
-
-    const handleOpenCommandMenu = React.useCallback(() => {
-        if (!isMobile) {
-            return;
-        }
-        const textarea = textareaRef.current;
-        if (textarea) {
-            try {
-                textarea.focus({ preventScroll: true });
-            } catch {
-                textarea.focus();
-            }
-            const len = textarea.value.length;
-            try {
-                textarea.setSelectionRange(len, len);
-            } catch {
-                // ignored
-            }
-        }
-        applyAutocompletePrefix('/');
-        setCommandQuery('');
-        setAutocompleteTab('commands');
-        setShowCommandAutocomplete(true);
-        setShowFileMention(false);
-        setShowSkillAutocomplete(false);
-    }, [applyAutocompletePrefix, isMobile, setAutocompleteTab, setCommandQuery, setShowCommandAutocomplete, setShowFileMention, setShowSkillAutocomplete]);
+    const { handleKeyDown } = useComposerKeyboard({
+        message,
+        inputMode,
+        textareaRef,
+        agents,
+        confirmedMentionsRef,
+        isConfirmedFilePath,
+        showCommandAutocomplete,
+        showSkillAutocomplete,
+        showFileMention,
+        commandRef,
+        skillRef,
+        mentionRef,
+        isDesktopExpanded,
+        isMobile,
+        queueModeEnabled,
+        sessionPhase,
+        currentSessionId,
+        hasContent,
+        navigateHistoryUp: history.navigateHistoryUp,
+        navigateHistoryDown: history.navigateHistoryDown,
+        historyIndex: history.historyIndex,
+        userMessageHistoryLength: history.userMessageHistory.length,
+        updateAutocompleteState,
+        setMessage,
+        adjustTextareaHeight,
+        setInputMode,
+        setExpandedInput,
+        handleCycleAgent,
+        handleSubmit,
+        handleQueueMessage,
+    });
 
     const insertTextAtSelection = React.useCallback((text: string) => {
         if (!text) {
@@ -1790,7 +918,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
         });
 
         updateAutocompleteState(nextValue, cursorPosition);
-    }, [adjustTextareaHeight, message, updateAutocompleteState]);
+    }, [adjustTextareaHeight, message, setMessage, updateAutocompleteState]);
 
     const clearDropTextSuppression = React.useCallback(() => {
         suppressNextFileDropTextInsertRef.current = false;
@@ -1919,7 +1047,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
 
         const mentionPath = (file.relativePath && file.relativePath.trim().length > 0)
             ? file.relativePath.trim()
-            : (toProjectRelativeMentionPath(file.path) || file.name);
+            : (toProjectRelativeMentionPath(file.path, chatSearchDirectory) || file.name);
 
         confirmedMentionsRef.current.add(mentionPath);
 
@@ -2092,117 +1220,23 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
     }, [currentSessionId, newSessionDraftOpen]);
 
     const hasDraggedFiles = React.useCallback((dataTransfer: DataTransfer | null | undefined): boolean => {
-        if (!dataTransfer) return false;
-        if (dataTransfer.files && dataTransfer.files.length > 0) return true;
-        if (dataTransfer.types) {
-            const types = Array.from(dataTransfer.types);
-            const lowerTypes = types.map((type) => type.toLowerCase());
-            if (lowerTypes.includes('files')) return true;
-            if (lowerTypes.includes('text/uri-list')) return true;
-            if (lowerTypes.includes('codefiles')) return true;
-            if (lowerTypes.includes('application/x-openchamber-file-path')) return true;
-            if (lowerTypes.some((type) => type.includes('vnd.code.tree'))) return true;
-        }
-
-        for (const dataType of VS_CODE_DROP_DATA_TYPES) {
-            let payload = '';
-            try {
-                payload = dataTransfer.getData(dataType);
-            } catch {
-                continue;
-            }
-            if (payload && parseDroppedFileReferences(payload).length > 0) {
-                return true;
-            }
-        }
-
-        return false;
+        return hasDraggedFilesInTransfer(dataTransfer, VS_CODE_DROP_DATA_TYPES);
     }, []);
 
     const collectDroppedFiles = React.useCallback((dataTransfer: DataTransfer | null | undefined): File[] => {
-        if (!dataTransfer) return [];
-
-        const directFiles = Array.from(dataTransfer.files || []);
-        if (directFiles.length > 0) {
-            return directFiles;
-        }
-
-        const fromItems = Array.from(dataTransfer.items || [])
-            .filter((item) => item.kind === 'file')
-            .map((item) => item.getAsFile())
-            .filter((file): file is File => Boolean(file));
-
-        return fromItems;
+        return collectDroppedFilesFromTransfer(dataTransfer);
     }, []);
 
     const collectDroppedFileUris = React.useCallback((dataTransfer: DataTransfer | null | undefined): string[] => {
-        if (!dataTransfer || typeof dataTransfer.getData !== 'function') return [];
-
-        const extracted = new Set<string>();
-
-        for (const dataType of VS_CODE_DROP_DATA_TYPES) {
-            let rawPayload = '';
-            try {
-                rawPayload = dataTransfer.getData(dataType);
-            } catch {
-                continue;
-            }
-            if (!rawPayload) {
-                continue;
-            }
-
-            for (const candidate of parseDroppedFileReferences(rawPayload)) {
-                extracted.add(candidate);
-            }
-        }
-
-        return Array.from(extracted);
+        return collectDroppedFileUrisFromTransfer(dataTransfer, VS_CODE_DROP_DATA_TYPES);
     }, []);
-
-    const normalizeDroppedPath = React.useCallback((rawPath: string): string => {
-        const input = rawPath.trim();
-        if (!input.toLowerCase().startsWith('file://')) {
-            return input;
-        }
-
-        try {
-            let pathname = decodeURIComponent(new URL(input).pathname || '');
-            if (/^\/[A-Za-z]:\//.test(pathname)) {
-                pathname = pathname.slice(1);
-            }
-            return pathname || input;
-        } catch {
-            const stripped = input.replace(/^file:\/\//i, '');
-            try {
-                return decodeURIComponent(stripped);
-            } catch {
-                return stripped;
-            }
-        }
-    }, []);
-
-    const toProjectRelativeMentionPath = React.useCallback((absolutePath: string): string => {
-        const normalizedAbsolutePath = absolutePath.replace(/\\/g, '/').trim();
-        const normalizedRoot = (chatSearchDirectory || '').replace(/\\/g, '/').replace(/\/+$/, '');
-        if (!normalizedRoot) {
-            return normalizedAbsolutePath;
-        }
-        if (normalizedAbsolutePath === normalizedRoot) {
-            return normalizedAbsolutePath;
-        }
-        const rootWithSlash = `${normalizedRoot}/`;
-        if (normalizedAbsolutePath.startsWith(rootWithSlash)) {
-            return normalizedAbsolutePath.slice(rootWithSlash.length);
-        }
-        return normalizedAbsolutePath;
-    }, [chatSearchDirectory]);
 
     const addVSCodeDroppedUrisAsMentions = React.useCallback((uris: string[]) => {
         if (uris.length === 0) return;
 
         const paths = uris
             .map((entry) => normalizeDroppedPath(entry))
-            .map((entry) => toProjectRelativeMentionPath(entry))
+            .map((entry) => toProjectRelativeMentionPath(entry, chatSearchDirectory))
             .map((entry) => entry.trim().replace(/^\.\//, ''))
             .filter((entry) => entry.length > 0);
 
@@ -2218,7 +1252,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
 
         setPendingInputText(mentions.join(' '), 'append-inline');
         toast.success(`Added ${mentions.length} file mention${mentions.length > 1 ? 's' : ''}`);
-    }, [normalizeDroppedPath, setPendingInputText, toProjectRelativeMentionPath]);
+    }, [chatSearchDirectory, confirmedMentionsRef, setPendingInputText]);
 
     const handleDragEnter = (e: React.DragEvent) => {
         if (!hasDraggedFiles(e.dataTransfer)) {
@@ -2463,7 +1497,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
             cancelled = true;
             if (unlisten) unlisten();
         };
-    }, [addAttachedFile, normalizeDroppedPath]);
+    }, [addAttachedFile]);
 
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -2541,272 +1575,24 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
 
     const footerGapClass = 'gap-x-1.5 gap-y-0';
     const isVSCode = isVSCodeRuntime();
-    const showDraftTargetSelectors = newSessionDraftOpen && !isVSCode;
-
-    const selectedDraftProject = React.useMemo(() => {
-        const explicit = newSessionDraft?.selectedProjectId
-            ? projects.find((project) => project.id === newSessionDraft.selectedProjectId) ?? null
-            : null;
-        if (explicit) {
-            return explicit;
-        }
-
-        const active = activeProjectId
-            ? projects.find((project) => project.id === activeProjectId) ?? null
-            : null;
-        if (active) {
-            return active;
-        }
-
-        return projects[0] ?? null;
-    }, [activeProjectId, newSessionDraft?.selectedProjectId, projects]);
-
-    const selectedDraftProjectPath = React.useMemo(
-        () => normalizePath(selectedDraftProject?.path ?? null),
-        [selectedDraftProject?.path],
-    );
-
-    const selectedDraftProjectBranches = useGitBranches(selectedDraftProjectPath);
-    const fetchBranches = useGitStore((state) => state.fetchBranches);
-    const [isDiscoveringDraftBranches, setIsDiscoveringDraftBranches] = React.useState(false);
-
-    React.useEffect(() => {
-        if (!showDraftTargetSelectors || !selectedDraftProjectPath || !selectedDraftProject || !runtimeGit) {
-            setIsDiscoveringDraftBranches(false);
-            return;
-        }
-
-        if (selectedDraftProjectBranches?.all) {
-            setIsDiscoveringDraftBranches(false);
-            return;
-        }
-
-        let cancelled = false;
-        setIsDiscoveringDraftBranches(true);
-
-        void fetchBranches(selectedDraftProjectPath, runtimeGit)
-            .finally(() => {
-                if (!cancelled) {
-                    setIsDiscoveringDraftBranches(false);
-                }
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [fetchBranches, runtimeGit, selectedDraftProject, selectedDraftProjectBranches?.all, selectedDraftProjectPath, showDraftTargetSelectors]);
-
-    const selectedDraftProjectCurrentBranch = selectedDraftProjectBranches?.current?.trim() ?? '';
-
-    const projectRootBranchOption = React.useMemo(() => {
-        if (!selectedDraftProject) {
-            return null;
-        }
-        const value = normalizePath(selectedDraftProject.path);
-        if (!value) {
-            return null;
-        }
-        if (!selectedDraftProjectCurrentBranch) {
-            return null;
-        }
-        return {
-            value,
-            label: selectedDraftProjectCurrentBranch,
-        };
-    }, [selectedDraftProject, selectedDraftProjectCurrentBranch]);
-
-    const worktreeBranchOptions = React.useMemo(() => {
-        if (!selectedDraftProject) {
-            return [];
-        }
-
-        const worktrees = (() => {
-            if (!selectedDraftProjectPath) {
-                return [];
-            }
-            return availableWorktreesByProject.get(selectedDraftProjectPath)
-                ?? availableWorktreesByProject.get(selectedDraftProject.path)
-                ?? [];
-        })();
-
-        return buildSessionTargetOptions({
-            projectRoot: normalizePath(selectedDraftProject.path) ?? '',
-            rootBranch: selectedDraftProjectCurrentBranch,
-            worktrees,
-            pendingBootstrapDirectory: newSessionDraft?.bootstrapPendingDirectory ?? null,
-        });
-    }, [availableWorktreesByProject, newSessionDraft?.bootstrapPendingDirectory, selectedDraftProject, selectedDraftProjectCurrentBranch, selectedDraftProjectPath]);
-
-    const selectedDraftDirectory = React.useMemo(
-        () => normalizePath(newSessionDraft?.bootstrapPendingDirectory ?? null)
-            ?? normalizePath(newSessionDraft?.directoryOverride ?? null)
-            ?? selectedDraftProjectPath,
-        [newSessionDraft?.bootstrapPendingDirectory, newSessionDraft?.directoryOverride, selectedDraftProjectPath],
-    );
-
-    const shouldKeepMissingSelectedDraftDirectory = React.useMemo(() => {
-        const pendingDirectory = normalizePath(newSessionDraft?.bootstrapPendingDirectory ?? null);
-        return Boolean(
-            newSessionDraft?.preserveDirectoryOverride
-            ||
-            newSessionDraft?.pendingWorktreeRequestId
-            || (pendingDirectory && pendingDirectory === selectedDraftDirectory)
-        );
-    }, [newSessionDraft?.bootstrapPendingDirectory, newSessionDraft?.pendingWorktreeRequestId, newSessionDraft?.preserveDirectoryOverride, selectedDraftDirectory]);
-
-    const draftBranchItems = React.useMemo(() => {
-        const baseItems: Array<{ value: string; label: string }> = [];
-        if (projectRootBranchOption) {
-            baseItems.push(projectRootBranchOption);
-        }
-        baseItems.push(...worktreeBranchOptions);
-
-        if (!selectedDraftDirectory) {
-            return baseItems;
-        }
-        if (baseItems.some((option) => option.value === selectedDraftDirectory)) {
-            return baseItems;
-        }
-        if (!shouldKeepMissingSelectedDraftDirectory) {
-            return baseItems;
-        }
-        return [
-            ...baseItems,
-            { value: selectedDraftDirectory, label: formatDirectoryName(selectedDraftDirectory) },
-        ];
-    }, [projectRootBranchOption, selectedDraftDirectory, shouldKeepMissingSelectedDraftDirectory, worktreeBranchOptions]);
-
-    const selectedDraftBranchLabel = React.useMemo(() => {
-        const selectedValue = selectedDraftDirectory ?? draftBranchItems[0]?.value ?? null;
-        if (!selectedValue) {
-            return null;
-        }
-        return draftBranchItems.find((item) => item.value === selectedValue)?.label ?? formatDirectoryName(selectedValue);
-    }, [draftBranchItems, selectedDraftDirectory]);
-
-    const hasPendingChanges = React.useMemo(() => {
-        if (isGitRepo !== true || !currentGitStatus || currentGitStatus.isClean) {
-            return false;
-        }
-        return extractGitChangedFiles(currentGitStatus.files, currentGitStatus.diffStats, currentDirectory).length > 0;
-    }, [currentDirectory, currentGitStatus, isGitRepo]);
-
-    const selectedDraftBranchIsKnown = React.useMemo(() => {
-        if (!selectedDraftDirectory) {
-            return true;
-        }
-        if (projectRootBranchOption?.value === selectedDraftDirectory) {
-            return true;
-        }
-        return worktreeBranchOptions.some((option) => option.value === selectedDraftDirectory);
-    }, [projectRootBranchOption?.value, selectedDraftDirectory, worktreeBranchOptions]);
-
-    React.useEffect(() => {
-        if (!newSessionDraft?.open || !newSessionDraft?.preserveDirectoryOverride) {
-            return;
-        }
-        if (!selectedDraftDirectory || !selectedDraftBranchIsKnown) {
-            return;
-        }
-        useSessionUIStore.getState().setDraftPreserveDirectoryOverride(false);
-    }, [newSessionDraft?.open, newSessionDraft?.preserveDirectoryOverride, selectedDraftBranchIsKnown, selectedDraftDirectory]);
-
-    const shouldShowDraftBranchSelector = React.useMemo(() => {
-        if (isDiscoveringDraftBranches) {
-            return false;
-        }
-        if (projectRootBranchOption) {
-            return true;
-        }
-        return worktreeBranchOptions.length > 0;
-    }, [isDiscoveringDraftBranches, projectRootBranchOption, worktreeBranchOptions.length]);
-
-    const handleDraftProjectChange = React.useCallback((projectId: string) => {
-        const draft = useSessionUIStore.getState().newSessionDraft;
-        if (draft?.pendingWorktreeRequestId || draft?.bootstrapPendingDirectory || draft?.preserveDirectoryOverride) {
-            return;
-        }
-        const project = projects.find((entry) => entry.id === projectId);
-        if (!project) {
-            return;
-        }
-        if (activeProjectId !== projectId) {
-            setActiveProjectIdOnly(projectId);
-        }
-        setNewSessionDraftTarget({
-            projectId,
-            directoryOverride: project.path,
-        }, { force: true });
-    }, [activeProjectId, projects, setActiveProjectIdOnly, setNewSessionDraftTarget]);
-
-    const handleDraftDirectoryChange = React.useCallback((directory: string) => {
-        const draft = useSessionUIStore.getState().newSessionDraft;
-        if (draft?.pendingWorktreeRequestId || draft?.bootstrapPendingDirectory || draft?.preserveDirectoryOverride) {
-            return;
-        }
-        if (!selectedDraftProject) {
-            return;
-        }
-        setNewSessionDraftTarget({
-            projectId: selectedDraftProject.id,
-            directoryOverride: directory,
-        }, { force: true });
-    }, [selectedDraftProject, setNewSessionDraftTarget]);
-
-    const renderProjectLabelWithIcon = React.useCallback((project: {
-        id: string;
-        path: string;
-        label?: string;
-        icon?: string | null;
-        color?: string | null;
-        iconImage?: { mime: string; updatedAt: number; source: 'custom' | 'auto' } | null;
-        iconBackground?: string | null;
-    }) => {
-        const imageUrl = getProjectIconImageUrl(
-            { id: project.id, iconImage: project.iconImage ?? null },
-            {
-                themeVariant: currentTheme.metadata.variant,
-                iconColor: currentTheme.colors.surface.foreground,
-            },
-        );
-        const ProjectIcon = project.icon ? PROJECT_ICON_MAP[project.icon] : null;
-        const iconColor = getProjectIconColor(project.color);
-
-        return (
-            <span className="inline-flex min-w-0 items-center gap-1.5">
-                {imageUrl ? (
-                    <span
-                        className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center overflow-hidden rounded-[3px]"
-                        style={project.iconBackground ? { backgroundColor: project.iconBackground } : undefined}
-                    >
-                        <img src={imageUrl} alt="" className="h-full w-full object-contain" draggable={false} />
-                    </span>
-                ) : ProjectIcon ? (
-                    <ProjectIcon className="h-3.5 w-3.5 shrink-0" style={iconColor ? { color: iconColor } : undefined} />
-                ) : (
-                    <RiFolderLine className="h-3.5 w-3.5 shrink-0 text-muted-foreground/80" style={iconColor ? { color: iconColor } : undefined} />
-                )}
-                <span className="truncate">{getProjectDisplayLabel(project)}</span>
-            </span>
-        );
-    }, [currentTheme.colors.surface.foreground, currentTheme.metadata.variant]);
-
-    React.useEffect(() => {
-        if (!showDraftTargetSelectors || !selectedDraftProject || !selectedDraftDirectory) {
-            return;
-        }
-        if (newSessionDraft?.pendingWorktreeRequestId || newSessionDraft?.bootstrapPendingDirectory || newSessionDraft?.preserveDirectoryOverride) {
-            return;
-        }
-        const valid = draftBranchItems.some((option) => option.value === selectedDraftDirectory);
-        if (valid) {
-            return;
-        }
-        setNewSessionDraftTarget({
-            projectId: selectedDraftProject.id,
-            directoryOverride: selectedDraftProject.path,
-        });
-    }, [draftBranchItems, newSessionDraft?.bootstrapPendingDirectory, newSessionDraft?.pendingWorktreeRequestId, newSessionDraft?.preserveDirectoryOverride, selectedDraftDirectory, selectedDraftProject, setNewSessionDraftTarget, showDraftTargetSelectors]);
+    const {
+        projects,
+        selectedDraftProject,
+        selectedDraftDirectory,
+        selectedDraftBranchLabel,
+        selectedDraftBranchIsKnown,
+        projectRootBranchOption,
+        worktreeBranchOptions,
+        shouldShowDraftBranchSelector,
+        showDraftTargetSelectors,
+        hasPendingChanges,
+        fallbackSelectedDirectory,
+        handleDraftProjectChange,
+        handleDraftDirectoryChange,
+    } = useDraftTargetSelector({
+        newSessionDraftOpen,
+        isVSCode,
+    });
 
     const footerPaddingClass = isMobile ? 'px-1.5 py-1.5' : (isVSCode ? 'px-1.5 py-1' : 'px-2.5 py-1.5');
     const buttonSizeClass = isMobile ? 'h-11 w-11' : (isVSCode ? 'h-5 w-5' : 'h-6 w-6');
@@ -2897,105 +1683,15 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                     )}
 
                     {/* Linked Issue row */}
-                    {linkedIssue && !isVSCode && (
-                        <div className="pb-2 w-full px-1">
-                            <button
-                                type="button"
-                                onClick={() => setIssuePickerOpen(true)}
-                                className="flex w-full items-center gap-1.5 text-sm hover:opacity-80 transition-opacity text-left h-5 px-1"
-                            >
-                                {linkedIssue.author?.avatarUrl && (
-                                    <img
-                                        src={linkedIssue.author.avatarUrl}
-                                        alt={linkedIssue.author.login}
-                                        className="h-5 w-5 rounded-full flex-shrink-0"
-                                    />
-                                )}
-                                <span className="text-muted-foreground flex-shrink-0">
-                                    #{linkedIssue.number}
-                                    {linkedIssue.author && (
-                                        <span className="ml-1">by {linkedIssue.author.login}</span>
-                                    )}
-                                </span>
-                                <span className="text-foreground truncate">
-                                    {linkedIssue.title}
-                                </span>
-                                <span className="flex items-center gap-0.5 flex-shrink-0">
-                                    <a
-                                        href={linkedIssue.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="flex items-center justify-center h-6 w-6 hover:bg-[var(--interactive-hover)] rounded-full transition-colors"
-                                        aria-label="Open issue in browser"
-                                    >
-                                        <RiExternalLinkLine className="h-4 w-4 text-muted-foreground" />
-                                    </a>
-                                    <span
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setLinkedIssue(null);
-                                        }}
-                                        className="flex items-center justify-center h-6 w-6 hover:bg-[var(--interactive-hover)] rounded-full transition-colors cursor-pointer"
-                                        aria-label="Remove linked issue"
-                                    >
-                                        <RiCloseLine className="h-4 w-4 text-muted-foreground" />
-                                    </span>
-                                </span>
-                            </button>
-                        </div>
-                    )}
-                    {linkedPr && !isVSCode && (
-                        <div className="pb-2 w-full px-1">
-                            <button
-                                type="button"
-                                onClick={() => setPrPickerOpen(true)}
-                                className="flex w-full items-center gap-1.5 text-sm hover:opacity-80 transition-opacity text-left h-5 px-1"
-                            >
-                                {linkedPr.author?.avatarUrl && (
-                                    <img
-                                        src={linkedPr.author.avatarUrl}
-                                        alt={linkedPr.author.login}
-                                        className="h-5 w-5 rounded-full flex-shrink-0"
-                                    />
-                                )}
-                                <span className="text-muted-foreground flex-shrink-0">
-                                    PR #{linkedPr.number}
-                                    {linkedPr.author && (
-                                        <span className="ml-1">by {linkedPr.author.login}</span>
-                                    )}
-                                </span>
-                                <span className="text-foreground truncate">
-                                    {linkedPr.title}
-                                </span>
-                                <span className="text-muted-foreground flex-shrink-0 typography-meta">
-                                    {linkedPr.head} → {linkedPr.base}
-                                </span>
-                                <span className="flex items-center gap-0.5 flex-shrink-0">
-                                    <a
-                                        href={linkedPr.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="flex items-center justify-center h-6 w-6 hover:bg-[var(--interactive-hover)] rounded-full transition-colors"
-                                        aria-label="Open pull request in browser"
-                                    >
-                                        <RiExternalLinkLine className="h-4 w-4 text-muted-foreground" />
-                                    </a>
-                                    <span
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setLinkedPr(null);
-                                        }}
-                                        className="flex items-center justify-center h-6 w-6 hover:bg-[var(--interactive-hover)] rounded-full transition-colors cursor-pointer"
-                                        aria-label="Remove linked pull request"
-                                    >
-                                        <RiCloseLine className="h-4 w-4 text-muted-foreground" />
-                                    </span>
-                                </span>
-                            </button>
-                        </div>
-                    )}
+                    <ComposerLinkedContextRow
+                        linkedIssue={linkedIssue}
+                        linkedPr={linkedPr}
+                        isVSCode={isVSCode}
+                        onOpenIssuePicker={() => setIssuePickerOpen(true)}
+                        onOpenPrPicker={() => setPrPickerOpen(true)}
+                        onClearIssue={() => setLinkedIssue(null)}
+                        onClearPr={() => setLinkedPr(null)}
+                    />
                     <MemoStatusRow
                         showAbortStatus={showAbortStatus}
                         showAssistantStatus={false}
@@ -3013,13 +1709,13 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                                     className="h-7 min-w-0 w-fit max-w-[42vw] sm:max-w-[18rem] border-transparent bg-transparent px-1.5 hover:bg-transparent data-[popup-open]:bg-transparent"
                                 >
                                     <SelectValue>
-                                        {renderProjectLabelWithIcon(selectedDraftProject)}
+                                        <ProjectSelectLabel project={selectedDraftProject} />
                                     </SelectValue>
                                 </SelectTrigger>
                                 <SelectContent fitContent>
                                     {projects.map((project) => (
                                         <SelectItem key={project.id} value={project.id} className="max-w-[24rem] truncate">
-                                            {renderProjectLabelWithIcon(project)}
+                                            <ProjectSelectLabel project={project} />
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -3027,7 +1723,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
 
                             {shouldShowDraftBranchSelector ? (
                                 <Select
-                                    value={selectedDraftDirectory ?? draftBranchItems[0]?.value ?? normalizePath(selectedDraftProject.path) ?? ''}
+                                    value={fallbackSelectedDirectory}
                                     onValueChange={handleDraftDirectoryChange}
                                 >
                                     <SelectTrigger
@@ -3118,106 +1814,43 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                             </div>
                         )}
 
-                        {showCommandAutocomplete && (
-                            <CommandAutocomplete
-                                ref={commandRef}
-                                searchQuery={commandQuery}
+                        <ComposerAutocompleteLayer
+                                showCommandAutocomplete={showCommandAutocomplete}
+                                showSkillAutocomplete={showSkillAutocomplete}
+                                showFileMention={showFileMention}
+                                commandRef={commandRef}
+                                skillRef={skillRef}
+                                mentionRef={mentionRef}
+                                commandQuery={commandQuery}
+                                skillQuery={skillQuery}
+                                mentionQuery={mentionQuery}
+                                isMobile={isMobile}
+                                autocompleteTab={autocompleteTab}
+                                isDesktopExpanded={isDesktopExpanded}
+                                autocompleteOverlayPosition={autocompleteOverlayPosition}
                                 onCommandSelect={handleCommandSelect}
-                                showTabs={isMobile}
-                                activeTab={autocompleteTab}
-                                onTabSelect={handleAutocompleteTabSelect}
-                                onClose={() => setShowCommandAutocomplete(false)}
-                                style={isDesktopExpanded && autocompleteOverlayPosition
-                                    ? {
-                                        left: `${autocompleteOverlayPosition.left}px`,
-                                        top: `${autocompleteOverlayPosition.top}px`,
-                                        bottom: 'auto',
-                                        width: `min(450px, calc(100% - ${autocompleteOverlayPosition.left + 8}px))`,
-                                        maxHeight: `${autocompleteOverlayPosition.maxHeight}px`,
-                                        transform: autocompleteOverlayPosition.place === 'above' ? 'translateY(-100%)' : undefined,
-                                    }
-                                    : undefined}
-                            />
-                        )}
-                        { }
-                        {showSkillAutocomplete && (
-                            <SkillAutocomplete
-                                ref={skillRef}
-                                searchQuery={skillQuery}
                                 onSkillSelect={handleSkillSelect}
-                                onClose={() => setShowSkillAutocomplete(false)}
-                                style={isDesktopExpanded && autocompleteOverlayPosition
-                                    ? {
-                                        left: `${autocompleteOverlayPosition.left}px`,
-                                        top: `${autocompleteOverlayPosition.top}px`,
-                                        bottom: 'auto',
-                                        width: `min(360px, calc(100% - ${autocompleteOverlayPosition.left + 8}px))`,
-                                        maxHeight: `${autocompleteOverlayPosition.maxHeight}px`,
-                                        transform: autocompleteOverlayPosition.place === 'above' ? 'translateY(-100%)' : undefined,
-                                    }
-                                    : undefined}
-                            />
-                        )}
-
-                        {showFileMention && (
-
-                            <FileMentionAutocomplete
-                                ref={mentionRef}
-                                searchQuery={mentionQuery}
                                 onFileSelect={handleFileSelect}
                                 onAgentSelect={handleAgentSelect}
-                                showTabs={isMobile}
-                                activeTab={autocompleteTab}
-                                onTabSelect={handleAutocompleteTabSelect}
-                                onClose={() => setShowFileMention(false)}
-                                style={isDesktopExpanded && autocompleteOverlayPosition
-                                    ? {
-                                        left: `${autocompleteOverlayPosition.left}px`,
-                                        top: `${autocompleteOverlayPosition.top}px`,
-                                        bottom: 'auto',
-                                        width: `min(520px, calc(100% - ${autocompleteOverlayPosition.left + 8}px))`,
-                                        maxHeight: `${autocompleteOverlayPosition.maxHeight}px`,
-                                        transform: autocompleteOverlayPosition.place === 'above' ? 'translateY(-100%)' : undefined,
-                                    }
-                                    : undefined}
+                                onAutocompleteTabSelect={handleAutocompleteTabSelect}
+                                onCloseCommandAutocomplete={() => setShowCommandAutocomplete(false)}
+                                onCloseSkillAutocomplete={() => setShowSkillAutocomplete(false)}
+                                onCloseFileMention={() => setShowFileMention(false)}
                             />
-                        )}
-                        <div className={cn("relative overflow-hidden", isDesktopExpanded && 'flex flex-1 min-h-0 flex-col')}>
-                            {highlightedComposerContent && (
-                                <div
-                                    aria-hidden
-                                    className={cn(
-                                        'pointer-events-none absolute inset-0 z-0 whitespace-pre-wrap break-words px-3 rounded-b-none',
-                                        isDesktopExpanded
-                                            ? 'h-full min-h-0 py-4'
-                                            : isMobile
-                                                ? 'py-2.5'
-                                                : 'pt-4 pb-2',
-                                        inputMode === 'shell' ? 'font-mono' : 'typography-markdown md:typography-ui-label',
-                                    )}
-                                    ref={composerHighlightRef}
-                                >
-                                    {highlightedComposerContent.map((part, index) => (
-                                        <span
-                                            key={`${index}-${part.text.length}`}
-                                            className={
-                                                part.mentionKind === 'file'
-                                                    ? 'text-[var(--status-info)]'
-                                                    : part.mentionKind === 'agent'
-                                                        ? 'text-[var(--status-success)]'
-                                                        : 'text-foreground'
-                                            }
-                                        >
-                                            {part.text}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
-                            <Textarea
-                                simple
-                                ref={textareaRef}
-                                data-chat-input="true"
+                            <ComposerTextarea
+                                textareaRef={textareaRef}
+                                composerHighlightRef={composerHighlightRef}
                                 value={message}
+                                disabled={!currentSessionId && !newSessionDraftOpen}
+                                spellCheck={isMobile || inputSpellcheckEnabled}
+                                isMobile={isMobile}
+                                isDesktopExpanded={isDesktopExpanded}
+                                inputMode={inputMode}
+                                currentSessionId={currentSessionId}
+                                newSessionDraftOpen={newSessionDraftOpen}
+                                highlightedComposerContent={highlightedComposerContent}
+                                textareaSize={textareaSize}
+                                chatInputRadius={chatInputRadius}
                                 onChange={handleTextChange}
                                 onBeforeInput={handleBeforeInput}
                                 onKeyDown={handleKeyDown}
@@ -3241,37 +1874,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                                     cursorPosRef.current = ta.selectionStart ?? 0;
                                     updateAutocompleteOverlayPosition();
                                 }}
-                                placeholder={currentSessionId || newSessionDraftOpen
-                                    ? inputMode === 'shell'
-                                        ? "Enter shell command..."
-                                        : "@ for files/agents; / for commands; ! for shell"
-                                    : "Select or create a session to start chatting"}
-                                disabled={!currentSessionId && !newSessionDraftOpen}
-                                autoCorrect={isMobile ? "on" : "off"}
-                                autoCapitalize={isMobile ? "sentences" : "off"}
-                                spellCheck={isMobile || inputSpellcheckEnabled}
-                                fillContainer={isDesktopExpanded}
-                                outerClassName={cn('ring-0 bg-transparent shadow-none hover:bg-transparent focus-within:ring-0', isDesktopExpanded && 'flex-1 min-h-0')}
-                                className={cn(
-                                    'min-h-[52px] resize-none border-0 px-3 rounded-b-none appearance-none hover:border-transparent bg-transparent relative z-10',
-                                    isDesktopExpanded
-                                        ? 'h-full min-h-0 py-4'
-                                        : isMobile
-                                            ? 'py-2.5'
-                                            : 'pt-4 pb-2',
-                                    inputMode === 'shell' && 'font-mono',
-                                    highlightedComposerContent && 'text-transparent caret-[var(--surface-foreground)]',
-                                )}
-                                style={{
-                                    flex: isDesktopExpanded ? '1 1 auto' : 'none',
-                                    height: !isDesktopExpanded && textareaSize ? `${textareaSize.height}px` : undefined,
-                                    maxHeight: !isDesktopExpanded && textareaSize ? `${textareaSize.maxHeight}px` : undefined,
-                                    borderTopLeftRadius: chatInputRadius,
-                                    borderTopRightRadius: chatInputRadius,
-                                }}
-                                rows={1}
                             />
-                        </div>
                         <div
                             className={cn(
                                 'bg-transparent flex-shrink-0',
@@ -3285,122 +1888,71 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                             data-chat-input-footer="true"
                         >
                             {isMobile ? (
-                                <>
-                                    <div className="flex w-full items-center justify-between gap-x-1.5">
-                                        <div className="flex items-center gap-x-1.5">
-                                            <ComposerAttachmentControls
-                                                isMobile={isMobile}
-                                                isVSCode={isVSCode}
-                                                footerIconButtonClass={footerIconButtonClass}
-                                                iconSizeClass={iconSizeClass}
-                                                fileInputRef={fileInputRef}
-                                                handleLocalFileSelect={handleLocalFileSelect}
-                                                handlePickLocalFiles={handlePickLocalFiles}
-                                                handleOpenCommandMenu={handleOpenCommandMenu}
-                                                openIssuePicker={openIssuePicker}
-                                                openPrPicker={openPrPicker}
-                                                onOpenSettings={onOpenSettings}
-                                            />
-                                            <PermissionAutoAcceptButton
-                                                footerIconButtonClass={footerIconButtonClass}
-                                                iconSizeClass={iconSizeClass}
-                                                permissionScopeSessionId={permissionScopeSessionId}
-                                                permissionAutoAcceptEnabled={permissionAutoAcceptEnabled}
-                                                handlePermissionAutoAcceptToggle={handlePermissionAutoAcceptToggle}
-                                            />
-                                        </div>
-                                        <div className="flex items-center min-w-0 gap-x-1 justify-end">
-                                            <div className="flex items-center gap-x-1 min-w-0 max-w-[60vw] flex-shrink">
-                                                <MemoMobileModelButton onOpenModel={handleOpenMobileControls} className="min-w-0 flex-shrink" />
-                                                <MemoMobileAgentButton
-                                                    onOpenAgentPanel={handleOpenAgentPanel}
-                                                    onCycleAgent={handleCycleAgent}
-                                                    className="min-w-0 flex-shrink"
-                                                />
-                                            </div>
-                                            <div className="flex items-center gap-x-1 flex-shrink-0">
-                                                <MemoBrowserVoiceButton />
-                                                <ComposerActionButtons
-                                                    isMobile={isMobile}
-                                                    footerIconButtonClass={footerIconButtonClass}
-                                                    sendIconSizeClass={sendIconSizeClass}
-                                                    stopIconSizeClass={stopIconSizeClass}
-                                                    canSend={canSend}
-                                                    canAbort={canAbort}
-                                                    hasContent={!!hasContent}
-                                                    currentSessionId={currentSessionId}
-                                                    newSessionDraftOpen={newSessionDraftOpen}
-                                                    onPrimaryAction={handlePrimaryAction}
-                                                    onQueueMessage={handleQueueMessage}
-                                                    onAbort={handleAbort}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <MemoModelControls
-                                        className="hidden"
-                                        mobilePanel={mobileControlsPanel}
-                                        onMobilePanelChange={setMobileControlsPanel}
-                                        onMobilePanelSelection={handleReturnToUnifiedControls}
-                                        onAgentPanelSelection={() => setMobileControlsPanel(null)}
-                                    />
-                                    <MemoUnifiedControlsDrawer
-                                        open={mobileControlsOpen}
-                                        onClose={handleCloseMobileControls}
-                                        onOpenModel={() => handleOpenMobilePanel('model')}
-                                        onOpenEffort={() => handleOpenMobilePanel('variant')}
-                                    />
-                                </>
+                                <ComposerMobileControls
+                                    isVSCode={isVSCode}
+                                    footerIconButtonClass={footerIconButtonClass}
+                                    iconSizeClass={iconSizeClass}
+                                    sendIconSizeClass={sendIconSizeClass}
+                                    stopIconSizeClass={stopIconSizeClass}
+                                    canSend={canSend}
+                                    canAbort={canAbort}
+                                    hasContent={!!hasContent}
+                                    currentSessionId={currentSessionId}
+                                    newSessionDraftOpen={newSessionDraftOpen}
+                                    mobileControlsPanel={mobileControlsPanel}
+                                    onOpenSettings={onOpenSettings}
+                                    fileInputRef={fileInputRef}
+                                    handleLocalFileSelect={handleLocalFileSelect}
+                                    handlePickLocalFiles={handlePickLocalFiles}
+                                    handleOpenCommandMenu={handleOpenCommandMenu}
+                                    openIssuePicker={openIssuePicker}
+                                    openPrPicker={openPrPicker}
+                                    permissionScopeSessionId={permissionScopeSessionId}
+                                    permissionAutoAcceptEnabled={permissionAutoAcceptEnabled}
+                                    handlePermissionAutoAcceptToggle={handlePermissionAutoAcceptToggle}
+                                    onPrimaryAction={handlePrimaryAction}
+                                    onQueueMessage={handleQueueMessage}
+                                    onAbort={handleAbort}
+                                    onOpenMobileControls={handleOpenMobileControls}
+                                    onOpenAgentPanel={handleOpenAgentPanel}
+                                    onCycleAgent={handleCycleAgent}
+                                    onMobilePanelChange={setMobileControlsPanel}
+                                    onMobilePanelSelection={handleReturnToUnifiedControls}
+                                    onAgentPanelSelection={() => setMobileControlsPanel(null)}
+                                    mobileControlsOpen={mobileControlsOpen}
+                                    onCloseMobileControls={handleCloseMobileControls}
+                                    handleOpenMobilePanel={handleOpenMobilePanel}
+                                    handleReturnToUnifiedControls={handleReturnToUnifiedControls}
+                                />
                             ) : (
-                                <>
-                                    <div className={cn("flex items-center flex-shrink-0", footerGapClass)}>
-                                        <ComposerAttachmentControls
-                                            isMobile={isMobile}
-                                            isVSCode={isVSCode}
-                                            footerIconButtonClass={footerIconButtonClass}
-                                            iconSizeClass={iconSizeClass}
-                                            fileInputRef={fileInputRef}
-                                            handleLocalFileSelect={handleLocalFileSelect}
-                                            handlePickLocalFiles={handlePickLocalFiles}
-                                            handleOpenCommandMenu={handleOpenCommandMenu}
-                                            openIssuePicker={openIssuePicker}
-                                            openPrPicker={openPrPicker}
-                                            onOpenSettings={onOpenSettings}
-                                        />
-                                        <FocusModeButton
-                                            footerIconButtonClass={footerIconButtonClass}
-                                            iconSizeClass={iconSizeClass}
-                                            isExpandedInput={isExpandedInput}
-                                            onToggle={handleToggleExpandedInput}
-                                        />
-                                        <PermissionAutoAcceptButton
-                                            footerIconButtonClass={footerIconButtonClass}
-                                            iconSizeClass={iconSizeClass}
-                                            permissionScopeSessionId={permissionScopeSessionId}
-                                            permissionAutoAcceptEnabled={permissionAutoAcceptEnabled}
-                                            handlePermissionAutoAcceptToggle={handlePermissionAutoAcceptToggle}
-                                            withTooltip
-                                        />
-                                    </div>
-                                    <div className={cn('flex items-center flex-1 justify-end', footerGapClass, 'md:gap-x-3')}>
-                                        <MemoModelControls className={cn('flex-1 min-w-0 justify-end')} />
-                                        <MemoBrowserVoiceButton />
-                                        <ComposerActionButtons
-                                            isMobile={isMobile}
-                                            footerIconButtonClass={footerIconButtonClass}
-                                            sendIconSizeClass={sendIconSizeClass}
-                                            stopIconSizeClass={stopIconSizeClass}
-                                            canSend={canSend}
-                                            canAbort={canAbort}
-                                            hasContent={!!hasContent}
-                                            currentSessionId={currentSessionId}
-                                            newSessionDraftOpen={newSessionDraftOpen}
-                                            onPrimaryAction={handlePrimaryAction}
-                                            onQueueMessage={handleQueueMessage}
-                                            onAbort={handleAbort}
-                                        />
-                                    </div>
-                                </>
+                                <ComposerFooter
+                                    isVSCode={isVSCode}
+                                    footerIconButtonClass={footerIconButtonClass}
+                                    footerGapClass={footerGapClass}
+                                    iconSizeClass={iconSizeClass}
+                                    sendIconSizeClass={sendIconSizeClass}
+                                    stopIconSizeClass={stopIconSizeClass}
+                                    canSend={canSend}
+                                    canAbort={canAbort}
+                                    hasContent={!!hasContent}
+                                    currentSessionId={currentSessionId}
+                                    newSessionDraftOpen={newSessionDraftOpen}
+                                    isExpandedInput={isExpandedInput}
+                                    onOpenSettings={onOpenSettings}
+                                    fileInputRef={fileInputRef}
+                                    handleLocalFileSelect={handleLocalFileSelect}
+                                    handlePickLocalFiles={handlePickLocalFiles}
+                                    handleOpenCommandMenu={handleOpenCommandMenu}
+                                    openIssuePicker={openIssuePicker}
+                                    openPrPicker={openPrPicker}
+                                    permissionScopeSessionId={permissionScopeSessionId}
+                                    permissionAutoAcceptEnabled={permissionAutoAcceptEnabled}
+                                    handlePermissionAutoAcceptToggle={handlePermissionAutoAcceptToggle}
+                                    onPrimaryAction={handlePrimaryAction}
+                                    onQueueMessage={handleQueueMessage}
+                                    onAbort={handleAbort}
+                                    onToggleExpandedInput={handleToggleExpandedInput}
+                                />
                             )}
                         </div>
 

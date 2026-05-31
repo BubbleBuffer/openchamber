@@ -1,3 +1,5 @@
+import { createBoundedMap } from '../../core/bounded-cache.js';
+
 const DEFAULT_PWA_APP_NAME = 'OpenChamber - AI Coding Assistant';
 const mapPwaOrientationToManifest = (value) => {
   if (value === 'portrait') {
@@ -19,7 +21,7 @@ export const registerPwaManifestRoute = (app, dependencies) => {
     normalizePwaOrientation,
   } = dependencies;
 
-  const recentPwaSessionsCache = new Map();
+  const recentPwaSessionsCache = createBoundedMap({ maxSize: 50, ttlMs: 300_000 });
 
   const getRecentPwaSessionShortcuts = async (req) => {
     const now = Date.now();

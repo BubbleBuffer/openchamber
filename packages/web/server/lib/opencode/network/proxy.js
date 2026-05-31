@@ -50,7 +50,6 @@ export const registerOpenCodeProxy = (app, deps) => {
     path,
     OPEN_CODE_READY_GRACE_MS,
     openCodeRuntime,
-    ensureOpenCodeApiPrefix,
   } = deps;
 
   if (app.get('opencodeProxyConfigured')) {
@@ -98,8 +97,9 @@ export const registerOpenCodeProxy = (app, deps) => {
       return externalBase;
     }
 
-    if (openCodeRuntime.getPort()) {
-      return `http://localhost:${openCodeRuntime.getPort()}`;
+    const port = openCodeRuntime.getPort();
+    if (port) {
+      return `http://localhost:${port}`;
     }
 
     return FALLBACK_PROXY_TARGET;
@@ -211,9 +211,8 @@ export const registerOpenCodeProxy = (app, deps) => {
     }
   };
 
-  // Ensure API prefix is detected before proxying
+  // API prefix detection is now handled by the lifecycle runtime
   app.use('/api', (_req, _res, next) => {
-    ensureOpenCodeApiPrefix();
     next();
   });
 

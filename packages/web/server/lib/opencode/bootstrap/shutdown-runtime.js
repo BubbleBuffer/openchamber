@@ -8,6 +8,7 @@ export const createGracefulShutdownRuntime = (dependencies) => {
     syncToHmrState,
     openCodeWatcherRuntime,
     sessionRuntime,
+    notificationRuntime,
     scheduledTasksRuntime,
     getHealthCheckInterval,
     clearHealthCheckInterval,
@@ -25,6 +26,9 @@ export const createGracefulShutdownRuntime = (dependencies) => {
     getActiveTunnelController,
     setActiveTunnelController,
     tunnelAuthController,
+    serverSessionMachineBridge,
+    sessionActorRegistry,
+    sessionEffectExecutor,
   } = dependencies;
 
   const gracefulShutdown = async (options = {}) => {
@@ -37,6 +41,19 @@ export const createGracefulShutdownRuntime = (dependencies) => {
 
     openCodeWatcherRuntime.stop();
     sessionRuntime.dispose();
+
+    // Stop the server session machine bridge and dispose its resources
+    if (serverSessionMachineBridge) {
+      serverSessionMachineBridge.stop();
+    }
+    if (sessionActorRegistry) {
+      sessionActorRegistry.dispose();
+    }
+    if (sessionEffectExecutor) {
+      sessionEffectExecutor.dispose();
+    }
+
+    notificationRuntime?.dispose?.();
     scheduledTasksRuntime?.stop?.();
 
     const healthCheckInterval = getHealthCheckInterval();
@@ -75,7 +92,7 @@ export const createGracefulShutdownRuntime = (dependencies) => {
         } catch (error) {
           console.warn('Error closing OpenCode process:', error);
         }
-        openCodeRuntime.getState().openCodeProcess = null;
+        openCodeRuntime.clearProcess();
       }
 
       killProcessOnPort(portToKill);

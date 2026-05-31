@@ -140,8 +140,9 @@ Validation and safety gates MUST live in core command logic, not in the Clack pr
 | `bun run desktop:build`       | Desktop build (Tauri — legacy)       |
 | `bun run vscode:build`        | VS Code extension                    |
 | `bun run release:test`        | Release smoke (`scripts/test-release-build.sh`) |
+| `scripts/verify.sh`           | Full verification (type-check + lint + build)  |
 
-Run `bun run type-check` and `bun run lint` before finalising any change.
+Run `scripts/verify.sh` before finalising any change. At minimum, run `bun run type-check` and `bun run lint`.
 
 ## Verification expectations
 
