@@ -3,8 +3,8 @@
   "version": "1.9.11",
   "private": false,
   "type": "module",
-  "main": "./server/index.js",
-  "types": "./server/index.d.ts",
+  "main": "./server/dist/index.js",
+  "types": "./server/dist/index.d.ts",
   "bin": {
     "openchamber": "./bin/cli.js"
   },
@@ -18,6 +18,9 @@
     "build": "cross-env NODE_ENV=production NODE_OPTIONS=--max-old-space-size=8192 vite build",
     "build:watch": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build --watch",
     "type-check": "tsc --noEmit",
+    "type-check:server": "tsc --noEmit -p tsconfig.server.json",
+    "build:server": "tsc -p tsconfig.server.json",
+    "dev:server:ts": "bun server/src/main.ts --port ${OPENCHAMBER_PORT:-3001}",
     "lint": "eslint \"./src/**/*.{ts,tsx}\" --config ../../eslint.config.js",
     "test": "vitest run",
     "start": "node bin/cli.js serve"
