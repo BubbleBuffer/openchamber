@@ -1,0 +1,680 @@
+import crypto from 'node:crypto';
+import type { Request, Response } from 'express';
+import { createRequire } from 'node:module';
+
+const { createBoundedMap }: { createBoundedMap: (opts: { maxSize: number; ttlMs: number }) => BoundedMap } =
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  require('../../../lib/core/bounded-cache.js');
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type UnknownRecord = Record<string, any>;
+
+interface BoundedMap {
+  get(key: unknown): unknown;
+  set(key: unknown, value: unknown): void;
+  delete(key: unknown): void;
+  values(): IterableIterator<unknown>;
+  dispose(): void;
+}
+
+interface BootstrapRecord {
+  id: string;
+  tunnelId: string | null;
+  tokenHash: string;
+  issuedAt: number;
+  expiresAt: number | null;
+  usedAt: number | null;
+  revokedAt: number | null;
+}
+
+interface TunnelSessionRecord {
+  sessionId: string;
+  tunnelId: string | null;
+  mode: string | null;
+  publicUrl: string | null;
+  createdAt: number;
+  lastSeenAt: number;
+  expiresAt: number;
+  revokedAt: number | null;
+  revokedReason: string | null;
+  expiredAt: number | null;
+}
+
+const BOOTSTRAP_TOKEN_COOKIE_SAFE_BYTES = 32;
+const TUNNEL_SESSION_COOKIE_NAME = 'oc_tunnel_session';
+
+const CONNECT_RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
+const CONNECT_RATE_LIMIT_LOCK_MS = 10 * 60 * 1000;
+const CONNECT_RATE_LIMIT_MAX_ATTEMPTS = 20;
+const CONNECT_RATE_LIMIT_NO_IP_MAX_ATTEMPTS = 5;
+
+const parseCookies = (cookieHeader: string | undefined): Record<string, string> => {
+  if (!cookieHeader || typeof cookieHeader !== 'string') {
+    return {};
+  }
+
+  return cookieHeader.split(';').reduce((acc, segment) => {
+    const [name, ...rest] = segment.split('=');
+    if (!name) {
+      return acc;
+    }
+    const key = name.trim();
+    if (!key) {
+      return acc;
+    }
+    const value = rest.join('=').trim();
+    acc[key] = decodeURIComponent(value || '');
+    return acc;
+  }, {} as Record<string, string>);
+};
+
+const isSecureRequest = (req: Request): boolean => {
+  if (req.secure) {
+    return true;
+  }
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  if (typeof forwardedProto === 'string') {
+    const firstProto = forwardedProto.split(',')[0]?.trim().toLowerCase();
+    return firstProto === 'https';
+  }
+  return false;
+};
+
+const buildCookie = ({ name, value, maxAge, secure }: {
+  name: string;
+  value: string;
+  maxAge: number;
+  secure: boolean;
+}): string => {
+  const attributes = [
+    `${name}=${value}`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
+  ];
+
+  if (typeof maxAge === 'number') {
+    attributes.push(`Max-Age=${Math.max(0, Math.floor(maxAge))}`);
+  }
+
+  const expires = maxAge === 0
+    ? 'Thu, 01 Jan 1970 00:00:00 GMT'
+    : new Date(Date.now() + maxAge * 1000).toUTCString();
+
+  attributes.push(`Expires=${expires}`);
+
+  if (secure) {
+    attributes.push('Secure');
+  }
+
+  return attributes.join('; ');
+};
+
+const nowTs = (): number => Date.now();
+
+const hashToken = (token: string): string =>
+  crypto.createHash('sha256').update(token).digest('hex');
+
+const normalizeHost = (candidate: string | null | undefined): string | null => {
+  if (typeof candidate !== 'string') {
+    return null;
+  }
+  const trimmed = candidate.trim().toLowerCase();
+  if (!trimmed) {
+    return null;
+  }
+  return trimmed.replace(/:\d+$/, '');
+};
+
+const normalizeIpCandidate = (candidate: string | null | undefined): string | null => {
+  if (typeof candidate !== 'string') {
+    return null;
+  }
+
+  const trimmed = candidate.trim().toLowerCase();
+  if (!trimmed) {
+    return null;
+  }
+
+  const withoutBrackets = trimmed.startsWith('[') && trimmed.endsWith(']')
+    ? trimmed.slice(1, -1)
+    : trimmed;
+
+  const withoutZone = withoutBrackets.split('%')[0];
+  if (!withoutZone) {
+    return null;
+  }
+
+  if (withoutZone.startsWith('::ffff:')) {
+    const mappedIpv4 = withoutZone.slice('::ffff:'.length);
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(mappedIpv4)) {
+      return mappedIpv4;
+    }
+  }
+
+  return withoutZone;
+};
+
+const getSocketRemoteIp = (req: Request): string | null => {
+  const remoteAddress = req?.socket?.remoteAddress || req?.connection?.remoteAddress;
+  return normalizeIpCandidate(remoteAddress);
+};
+
+const isPrivateOrLoopbackIpv4 = (candidate: string): boolean => {
+  const octets = candidate.split('.').map((part) => Number(part));
+  if (octets.length !== 4 || octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
+    return false;
+  }
+
+  const [first, second] = octets;
+  if (first === 127) {
+    return true;
+  }
+  if (first === 10) {
+    return true;
+  }
+  if (first === 172 && second >= 16 && second <= 31) {
+    return true;
+  }
+  if (first === 192 && second === 168) {
+    return true;
+  }
+  if (first === 169 && second === 254) {
+    return true;
+  }
+  return false;
+};
+
+const isPrivateOrLoopbackIpv6 = (candidate: string): boolean => {
+  if (candidate === '::1') {
+    return true;
+  }
+
+  if (candidate.startsWith('fc') || candidate.startsWith('fd')) {
+    return true;
+  }
+
+  return candidate.startsWith('fe8')
+    || candidate.startsWith('fe9')
+    || candidate.startsWith('fea')
+    || candidate.startsWith('feb');
+};
+
+const isPrivateOrLoopbackIp = (candidate: string | null): boolean => {
+  const normalized = normalizeIpCandidate(candidate);
+  if (!normalized) {
+    return false;
+  }
+
+  if (normalized.includes(':')) {
+    return isPrivateOrLoopbackIpv6(normalized);
+  }
+
+  return isPrivateOrLoopbackIpv4(normalized);
+};
+
+const isLocalHost = (host: string | null | undefined, req: Request): boolean => {
+  if (!host) {
+    return false;
+  }
+
+  if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]') {
+    return true;
+  }
+
+  if (host === 'host.docker.internal') {
+    return isPrivateOrLoopbackIp(getSocketRemoteIp(req));
+  }
+
+  return false;
+};
+
+const getClientIp = (req: Request): string | null => {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string') {
+    const ip = forwarded.split(',')[0].trim();
+    if (ip.startsWith('::ffff:')) {
+      return ip.substring(7);
+    }
+    return ip;
+  }
+
+  const ip = req.ip || req.connection?.remoteAddress;
+  if (ip) {
+    if (ip.startsWith('::ffff:')) {
+      return ip.substring(7);
+    }
+    return ip;
+  }
+  return null;
+};
+
+const getRateLimitKey = (req: Request): string => {
+  const ip = getClientIp(req);
+  if (ip) {
+    return ip;
+  }
+  return 'connect-rate-limit:no-ip';
+};
+
+const rateLimitMaxForKey = (key: string): number => {
+  if (key === 'connect-rate-limit:no-ip') {
+    return CONNECT_RATE_LIMIT_NO_IP_MAX_ATTEMPTS;
+  }
+  return CONNECT_RATE_LIMIT_MAX_ATTEMPTS;
+};
+
+interface ConnectRateLimitRecord {
+  count: number;
+  lastAttempt: number;
+  lockedUntil: number | null;
+}
+
+export const createTunnelAuth = () => {
+  let activeTunnelId: string | null = null;
+  let activeTunnelHost: string | null = null;
+  let activeTunnelMode: string | null = null;
+  let activeTunnelPublicUrl: string | null = null;
+  let bootstrapRecord: BootstrapRecord | null = null;
+
+  const tunnelSessions = createBoundedMap({ maxSize: 100, ttlMs: 86400_000 });
+  const connectRateLimiter = createBoundedMap({ maxSize: 500, ttlMs: 900_000 });
+
+  const clearTunnelSessionCookie = (req: Request, res: Response): void => {
+    const secure = isSecureRequest(req);
+    const header = buildCookie({
+      name: TUNNEL_SESSION_COOKIE_NAME,
+      value: '',
+      maxAge: 0,
+      secure,
+    });
+    res.setHeader('Set-Cookie', header);
+  };
+
+  const setTunnelSessionCookie = (req: Request, res: Response, sessionId: string, ttlMs: number): void => {
+    const secure = isSecureRequest(req);
+    const maxAge = Math.max(0, Math.floor(ttlMs / 1000));
+    const header = buildCookie({
+      name: TUNNEL_SESSION_COOKIE_NAME,
+      value: encodeURIComponent(sessionId),
+      maxAge,
+      secure,
+    });
+    res.setHeader('Set-Cookie', header);
+  };
+
+  const classifyRequestScope = (req: Request): string => {
+    const hostHeader = normalizeHost(typeof req.headers.host === 'string' ? req.headers.host : '');
+    const reqHost = normalizeHost(typeof req.hostname === 'string' ? req.hostname : '') || hostHeader;
+
+    if (activeTunnelHost && reqHost === activeTunnelHost) {
+      return 'tunnel';
+    }
+
+    if (isLocalHost(reqHost, req)) {
+      return 'local';
+    }
+
+    if (!activeTunnelId) {
+      return 'local';
+    }
+
+    return 'unknown-public';
+  };
+
+  const revokeBootstrapToken = (): number => {
+    if (!bootstrapRecord) return 0;
+    if (bootstrapRecord.revokedAt) return 0;
+    bootstrapRecord.revokedAt = nowTs();
+    return 1;
+  };
+
+  const invalidateTunnelSessions = (tunnelId: string, reason = 'tunnel-stopped'): number => {
+    const revokedAt = nowTs();
+    let count = 0;
+    for (const record of tunnelSessions.values()) {
+      const rec = record as TunnelSessionRecord;
+      if (rec.tunnelId === tunnelId && !rec.revokedAt) {
+        rec.revokedAt = revokedAt;
+        rec.revokedReason = reason;
+        count += 1;
+      }
+    }
+    return count;
+  };
+
+  const revokeTunnelArtifacts = (_tunnelId?: string): { revokedBootstrapCount: number; invalidatedSessionCount: number } => {
+    const revokedBootstrapCount = bootstrapRecord && bootstrapRecord.tunnelId === _tunnelId
+      ? revokeBootstrapToken()
+      : 0;
+    const invalidatedSessionCount = invalidateTunnelSessions(_tunnelId || activeTunnelId || '', 'tunnel-revoked');
+    return { revokedBootstrapCount, invalidatedSessionCount };
+  };
+
+  const setActiveTunnel = ({ tunnelId, publicUrl, mode = null }: {
+    tunnelId: string;
+    publicUrl: string;
+    mode?: string | null;
+  }): void => {
+    activeTunnelId = tunnelId;
+    activeTunnelMode = mode;
+    activeTunnelPublicUrl = publicUrl || null;
+    try {
+      activeTunnelHost = normalizeHost(new URL(publicUrl).host);
+    } catch {
+      activeTunnelHost = null;
+    }
+  };
+
+  const clearActiveTunnel = (): void => {
+    if (activeTunnelId) {
+      revokeTunnelArtifacts(activeTunnelId);
+    }
+    activeTunnelId = null;
+    activeTunnelHost = null;
+    activeTunnelMode = null;
+    activeTunnelPublicUrl = null;
+    bootstrapRecord = null;
+  };
+
+  const isBootstrapRecordUsable = (record: BootstrapRecord | null): boolean => {
+    if (!record || record.revokedAt || record.usedAt) {
+      return false;
+    }
+    if (typeof record.expiresAt === 'number' && nowTs() >= record.expiresAt) {
+      return false;
+    }
+    return true;
+  };
+
+  const issueBootstrapToken = ({ ttlMs }: { ttlMs: number }): { token: string; expiresAt: number | null } => {
+    if (!activeTunnelId) {
+      throw new Error('Tunnel is not active');
+    }
+
+    revokeBootstrapToken();
+
+    const token = crypto.randomBytes(BOOTSTRAP_TOKEN_COOKIE_SAFE_BYTES).toString('base64url');
+    const issuedAt = nowTs();
+    const expiresAt = Number.isFinite(ttlMs) && ttlMs > 0 ? issuedAt + ttlMs : null;
+
+    bootstrapRecord = {
+      id: crypto.randomUUID(),
+      tunnelId: activeTunnelId,
+      tokenHash: hashToken(token),
+      issuedAt,
+      expiresAt,
+      usedAt: null,
+      revokedAt: null,
+    };
+
+    return {
+      token,
+      expiresAt,
+    };
+  };
+
+  const getBootstrapStatus = (): { hasBootstrapToken: boolean; bootstrapExpiresAt: number | null } => {
+    if (!isBootstrapRecordUsable(bootstrapRecord)) {
+      return {
+        hasBootstrapToken: false,
+        bootstrapExpiresAt: null,
+      };
+    }
+
+    return {
+      hasBootstrapToken: true,
+      bootstrapExpiresAt: bootstrapRecord!.expiresAt,
+    };
+  };
+
+  const checkConnectRateLimit = (req: Request): { allowed: boolean; retryAfter: number } => {
+    const key = getRateLimitKey(req);
+    const now = nowTs();
+    const maxAttempts = rateLimitMaxForKey(key);
+    const record = connectRateLimiter.get(key) as ConnectRateLimitRecord | undefined;
+
+    if (record?.lockedUntil && now < record.lockedUntil) {
+      return {
+        allowed: false,
+        retryAfter: Math.ceil((record.lockedUntil - now) / 1000),
+      };
+    }
+
+    if (!record || now - record.lastAttempt > CONNECT_RATE_LIMIT_WINDOW_MS) {
+      return { allowed: true, retryAfter: 0 };
+    }
+
+    if (record.count >= maxAttempts) {
+      const lockedUntil = now + CONNECT_RATE_LIMIT_LOCK_MS;
+      connectRateLimiter.set(key, {
+        count: record.count + 1,
+        lastAttempt: now,
+        lockedUntil,
+      });
+      return {
+        allowed: false,
+        retryAfter: Math.ceil(CONNECT_RATE_LIMIT_LOCK_MS / 1000),
+      };
+    }
+
+    return { allowed: true, retryAfter: 0 };
+  };
+
+  const recordConnectFailedAttempt = (req: Request): void => {
+    const key = getRateLimitKey(req);
+    const now = nowTs();
+    const record = connectRateLimiter.get(key) as ConnectRateLimitRecord | undefined;
+
+    if (!record || now - record.lastAttempt > CONNECT_RATE_LIMIT_WINDOW_MS) {
+      connectRateLimiter.set(key, { count: 1, lastAttempt: now, lockedUntil: null });
+      return;
+    }
+
+    connectRateLimiter.set(key, {
+      count: record.count + 1,
+      lastAttempt: now,
+      lockedUntil: record.lockedUntil || null,
+    });
+  };
+
+  const clearConnectRateLimit = (req: Request): void => {
+    const key = getRateLimitKey(req);
+    connectRateLimiter.delete(key);
+  };
+
+  const getTunnelSessionFromRequest = (req: Request): TunnelSessionRecord | null => {
+    const cookies = parseCookies(req.headers.cookie);
+    const token = cookies[TUNNEL_SESSION_COOKIE_NAME];
+    if (!token) {
+      return null;
+    }
+    const session = tunnelSessions.get(token) as TunnelSessionRecord | undefined;
+    if (!session) {
+      return null;
+    }
+    if (session.revokedAt) {
+      return null;
+    }
+    if (session.expiresAt <= nowTs()) {
+      if (!session.expiredAt) {
+        session.expiredAt = nowTs();
+      }
+      return null;
+    }
+    if (session.tunnelId !== activeTunnelId) {
+      return null;
+    }
+    session.lastSeenAt = nowTs();
+    return session;
+  };
+
+  const requireTunnelSession = (req: Request, res: Response, next: () => void): void => {
+    const session = getTunnelSessionFromRequest(req);
+    if (session) {
+      return next();
+    }
+
+    clearTunnelSessionCookie(req, res);
+    res.status(401).json({
+      error: 'Tunnel authentication required',
+      locked: true,
+      tunnelLocked: true,
+    });
+  };
+
+  const exchangeBootstrapToken = ({
+    req,
+    res,
+    token,
+    sessionTtlMs,
+  }: {
+    req: Request;
+    res: Response;
+    token: string | null;
+    sessionTtlMs: number;
+  }): { ok: boolean; reason?: string; retryAfter?: number; sessionExpiresAt?: number } => {
+    const rateLimit = checkConnectRateLimit(req);
+    if (!rateLimit.allowed) {
+      return {
+        ok: false,
+        reason: 'rate-limited',
+        retryAfter: rateLimit.retryAfter,
+      };
+    }
+
+    if (!activeTunnelId || !bootstrapRecord) {
+      recordConnectFailedAttempt(req);
+      return { ok: false, reason: 'inactive' };
+    }
+
+    if (!token || typeof token !== 'string') {
+      recordConnectFailedAttempt(req);
+      return { ok: false, reason: 'missing-token' };
+    }
+
+    if (!isBootstrapRecordUsable(bootstrapRecord)) {
+      recordConnectFailedAttempt(req);
+      return { ok: false, reason: 'expired' };
+    }
+
+    if (bootstrapRecord.tunnelId !== activeTunnelId) {
+      recordConnectFailedAttempt(req);
+      return { ok: false, reason: 'tunnel-mismatch' };
+    }
+
+    const incomingHash = hashToken(token);
+    const expected = bootstrapRecord.tokenHash;
+    const validHash = incomingHash.length === expected.length
+      && crypto.timingSafeEqual(Buffer.from(incomingHash, 'hex'), Buffer.from(expected, 'hex'));
+
+    if (!validHash) {
+      recordConnectFailedAttempt(req);
+      return { ok: false, reason: 'invalid-token' };
+    }
+
+    bootstrapRecord.usedAt = nowTs();
+    clearConnectRateLimit(req);
+
+    const sessionId = crypto.randomBytes(32).toString('base64url');
+    const createdAt = nowTs();
+    const expiresAt = createdAt + sessionTtlMs;
+
+    tunnelSessions.set(sessionId, {
+      sessionId,
+      tunnelId: activeTunnelId,
+      mode: activeTunnelMode,
+      publicUrl: activeTunnelPublicUrl,
+      createdAt,
+      lastSeenAt: createdAt,
+      expiresAt,
+      revokedAt: null,
+      revokedReason: null,
+      expiredAt: null,
+    });
+
+    setTunnelSessionCookie(req, res, sessionId, sessionTtlMs);
+
+    return {
+      ok: true,
+      sessionExpiresAt: expiresAt,
+    };
+  };
+
+  const listTunnelSessions = (): Array<{
+    sessionId: string;
+    tunnelId: string | null;
+    mode: string | null;
+    publicUrl: string | null;
+    createdAt: number;
+    lastSeenAt: number;
+    expiresAt: number;
+    revokedAt: number | null;
+    status: string;
+    inactiveReason: string | null;
+  }> => {
+    const now = nowTs();
+
+    const sessions: Array<{
+      sessionId: string;
+      tunnelId: string | null;
+      mode: string | null;
+      publicUrl: string | null;
+      createdAt: number;
+      lastSeenAt: number;
+      expiresAt: number;
+      revokedAt: number | null;
+      status: string;
+      inactiveReason: string | null;
+    }> = [];
+
+    for (const record of tunnelSessions.values()) {
+      const rec = record as TunnelSessionRecord;
+      const isExpired = rec.expiresAt <= now;
+      if (isExpired && !rec.expiredAt) {
+        rec.expiredAt = now;
+      }
+
+      const active = !rec.revokedAt && !isExpired && rec.tunnelId === activeTunnelId;
+      const status = active ? 'active' : 'inactive';
+      const inactiveReason = rec.revokedAt ? (rec.revokedReason || 'revoked') : (isExpired ? 'expired' : 'inactive');
+
+      sessions.push({
+        sessionId: rec.sessionId,
+        tunnelId: rec.tunnelId,
+        mode: rec.mode,
+        publicUrl: rec.publicUrl,
+        createdAt: rec.createdAt,
+        lastSeenAt: rec.lastSeenAt,
+        expiresAt: rec.expiresAt,
+        revokedAt: rec.revokedAt,
+        status,
+        inactiveReason: status === 'inactive' ? inactiveReason : null,
+      });
+    }
+
+    sessions.sort((a, b) => b.createdAt - a.createdAt);
+    return sessions;
+  };
+
+  return {
+    classifyRequestScope,
+    setActiveTunnel,
+    clearActiveTunnel,
+    revokeTunnelArtifacts,
+    issueBootstrapToken,
+    getBootstrapStatus,
+    requireTunnelSession,
+    getTunnelSessionFromRequest,
+    exchangeBootstrapToken,
+    listTunnelSessions,
+    clearTunnelSessionCookie,
+    getActiveTunnelId: () => activeTunnelId,
+    getActiveTunnelHost: () => activeTunnelHost,
+    getActiveTunnelMode: () => activeTunnelMode,
+    dispose: () => {
+      tunnelSessions.dispose();
+      connectRateLimiter.dispose();
+    },
+  };
+};
