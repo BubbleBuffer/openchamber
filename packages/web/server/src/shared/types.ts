@@ -80,3 +80,7 @@ export const SSE_PATH_PREFIXES = [
   "/api/notifications/stream",
   "/api/openchamber/events",
 ] as const;
+
+export const TERMINAL_INPUT_WS_HEARTBEAT_INTERVAL_MS = 15_000;
+export const TERMINAL_INPUT_WS_REBIND_WINDOW_MS = 60_000;
+export const TERMINAL_INPUT_WS_MAX_REBINDS_PER_WINDOW = 128;
