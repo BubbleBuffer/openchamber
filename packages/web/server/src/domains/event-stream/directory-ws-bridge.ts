@@ -1,5 +1,3 @@
-import type { WebSocket } from "ws";
-
 import { sendMessageStreamWsEvent, sendMessageStreamWsFrame } from "./protocol.js";
 import { createUpstreamSseReader } from "./upstream-reader.js";
 import type { DirectoryWsConnectionDeps } from "./types.js";
@@ -23,16 +21,16 @@ export function acceptDirectoryMessageStreamWsConnection({
   socket,
   requestedLastEventId,
   requestedDirectory,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   openCodeRuntime,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   processForwardedEventPayload,
   wsClients,
   triggerHealthCheck,
   heartbeatIntervalMs,
   upstreamStallTimeoutMs,
   upstreamReconnectDelayMs,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   fetchImpl,
 }: DirectoryWsConnectionDeps): void {
   const controller = new AbortController();

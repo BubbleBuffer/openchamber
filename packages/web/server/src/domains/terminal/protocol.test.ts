@@ -13,7 +13,6 @@ import {
   pruneRebindTimestamps,
   readTerminalWsControlFrame,
 } from "./protocol.js";
-import { TERMINAL_WS_PATH as TERMINAL_WS_PATH_CONST, TERMINAL_WS_CONTROL_TAG_JSON as TERMINAL_WS_CONTROL_TAG_JSON_CONST } from "./types.js";
 
 describe("terminal websocket protocol", () => {
   it("uses fixed websocket paths", () => {

@@ -23,7 +23,7 @@ export const getPtyProvider = async (
           spawn: bunPty.spawn as PtyProvider["spawn"],
           backend: "bun-pty",
         };
-      } catch (error) {
+      } catch {
         console.warn("bun-pty unavailable, falling back to node-pty");
       }
     }

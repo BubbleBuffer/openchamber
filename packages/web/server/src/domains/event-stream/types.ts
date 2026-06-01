@@ -108,6 +108,7 @@ export interface DirectoryWsConnectionDeps {
   requestedDirectory: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   openCodeRuntime: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   processForwardedEventPayload: any;
   wsClients: Set<WebSocket>;
   triggerHealthCheck?: () => void;

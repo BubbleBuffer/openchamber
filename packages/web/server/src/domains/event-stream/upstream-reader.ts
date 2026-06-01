@@ -2,7 +2,6 @@ import { parseSseEventEnvelope } from "./protocol.js";
 import {
   DEFAULT_UPSTREAM_RECONNECT_DELAY_MS,
   DEFAULT_UPSTREAM_STALL_TIMEOUT_MS,
-  type SseEventEnvelope,
   type UpstreamSseReader,
   type UpstreamSseReaderDeps,
 } from "./types.js";
