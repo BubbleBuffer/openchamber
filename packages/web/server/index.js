@@ -14,7 +14,7 @@ import crypto from 'crypto';
 import webPush from 'web-push';
 
 import { createEventBus } from './lib/core/event-bus.js';
-import { createOpenCodeRuntime } from './lib/opencode/runtime.js';
+import { createOpenCodeDomain } from './dist/domains/opencode/index.js';
 
 import { createUiAuth } from './lib/ui-auth/ui-auth.js';
 import { createTunnelAuth } from './lib/opencode/auth/tunnel-auth.js';
@@ -383,12 +383,14 @@ const tunnelAuthController = createTunnelAuth();
 // ── EventBus ──────────────────────────────────────────────────────
 const eventBus = createEventBus();
 
-// ── OpenCodeRuntime (owns all OpenCode state) ─────────────────────
+// ── OpenCodeDomain (typed wrapper around OpenCode runtime) ────────
 let openCodeRuntime = null;
+let openCodeDomain = null;
 
-openCodeRuntime = createOpenCodeRuntime({
-  eventBus,
-  config: {
+async function ensureOpenCodeDomain() {
+  if (openCodeDomain) return openCodeDomain;
+  openCodeDomain = await createOpenCodeDomain({
+    eventBus,
     env: {
       ENV_CONFIGURED_OPENCODE_PORT,
       ENV_CONFIGURED_OPENCODE_HOST,
@@ -403,18 +405,20 @@ openCodeRuntime = createOpenCodeRuntime({
     buildWslExecArgs,
     resolveWslExecutablePath,
     resolveManagedOpenCodeLaunchSpec,
-    buildAugmentedPath: () => serverUtilsRuntime ? serverUtilsRuntime.buildAugmentedPath() : '',
-    buildManagedOpenCodePath: () => serverUtilsRuntime ? serverUtilsRuntime.buildManagedOpenCodePath() : '',
+    getBuildAugmentedPath: () => serverUtilsRuntime ? serverUtilsRuntime.buildAugmentedPath() : '',
+    getBuildManagedOpenCodePath: () => serverUtilsRuntime ? serverUtilsRuntime.buildManagedOpenCodePath() : '',
     clearResolvedOpenCodeBinary,
     normalizeApiPrefix: (p) => { const trimmed = (p || '').trim(); return trimmed.endsWith('/') ? trimmed.slice(0, -1) : trimmed; },
     userProvidedPassword: userProvidedOpenCodePassword,
-    setupProxy: (app) => {
-      if (app && serverUtilsRuntime) {
-        serverUtilsRuntime.setupProxy(app);
-      }
-    },
-  },
-});
+    getServerUtilsRuntime: () => serverUtilsRuntime,
+  });
+  openCodeRuntime = openCodeDomain;
+  return openCodeDomain;
+}
+
+function getOpenCodeRuntime() {
+  return openCodeRuntime;
+}
 
 // ── SSE notification clients ──────────────────────────────────────
 const notificationEmitterRuntime = createNotificationEmitterRuntime({
@@ -714,6 +718,7 @@ async function main(options = {}) {
   expressApp = app;
   server = http.createServer(app);
 
+  await ensureOpenCodeDomain();
   openCodeRuntime.setApp(app);
 
   const uiPassword = typeof options.uiPassword === 'string' ? options.uiPassword : null;

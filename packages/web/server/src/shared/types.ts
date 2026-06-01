@@ -45,6 +45,7 @@ export interface ServerRuntime {
     terminal?: any;
     eventStream?: any;
     sessions?: any;
+    opencode?: any;
   };
 }
 
