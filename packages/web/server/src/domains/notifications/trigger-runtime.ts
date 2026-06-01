@@ -1,0 +1,540 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { EventBus } from "../core/event-bus.js";
+import { EVENTS } from "../core/events.js";
+
+// Pre-existing JS dependency — keep old import path
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { createBoundedMap, createBoundedSet }: {
+  createBoundedMap: (opts: { maxSize: number; ttlMs: number }) => Map<unknown, unknown>;
+  createBoundedSet: (opts: { maxSize: number; ttlMs: number }) => Set<unknown>;
+} = require("../../../lib/core/bounded-cache.js") as any;
+
+interface BoundedMap<V> {
+  get(key: unknown): V | undefined;
+  set(key: unknown, value: V): void;
+  dispose(): void;
+}
+
+interface BoundedSet {
+  add(value: unknown): void;
+  delete(value: unknown): boolean;
+  has(value: unknown): boolean;
+  get size(): number;
+  dispose(): void;
+}
+
+export const createNotificationTriggerRuntime = (deps: {
+  eventBus: EventBus;
+  readSettingsFromDisk: () => Promise<any>;
+  prepareNotificationLastMessage: (args: { message: string; settings?: any; summarize?: (text: string, len: number) => Promise<string> }) => Promise<string>;
+  summarizeText: (text: string, length: number, zenModel?: string) => Promise<string>;
+  resolveZenModel: (override?: string) => Promise<string>;
+  buildTemplateVariables: (payload: any, sessionId?: string) => Promise<Record<string, string>>;
+  extractLastMessageText: (payload: any, maxLength?: number) => string;
+  fetchLastAssistantMessageText: (sessionId: string, messageId: string, maxLength?: number) => Promise<string>;
+  resolveNotificationTemplate: (template: string, variables: Record<string, string>) => string;
+  shouldApplyResolvedTemplateMessage: (template: string, resolved: string, variables: any) => boolean;
+  openCodeRuntime: any;
+}) => {
+  const {
+    eventBus,
+    readSettingsFromDisk,
+    prepareNotificationLastMessage,
+    summarizeText,
+    resolveZenModel,
+    buildTemplateVariables,
+    extractLastMessageText,
+    fetchLastAssistantMessageText,
+    resolveNotificationTemplate,
+    shouldApplyResolvedTemplateMessage,
+    openCodeRuntime,
+  } = deps;
+
+  const PUSH_READY_COOLDOWN_MS = 5000;
+  const PUSH_QUESTION_DEBOUNCE_MS = 500;
+  const PUSH_PERMISSION_DEBOUNCE_MS = 500;
+  const pushQuestionDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  const pushPermissionDebounceTimers = new Map<string, { timer: ReturnType<typeof setTimeout>; requestKey: string | null }>();
+  const notifiedPermissionRequests = createBoundedSet({ maxSize: 1000, ttlMs: 600_000 }) as unknown as BoundedSet;
+  const lastReadyNotificationAt = createBoundedMap({ maxSize: 500, ttlMs: 3600_000 }) as unknown as BoundedMap<number>;
+
+  const sessionParentIdCache = createBoundedMap({ maxSize: 500, ttlMs: 60_000 }) as unknown as BoundedMap<{ parentID: string | null }>;
+
+  // Sessions where the client has enabled Permission Auto-Accept. Mirrored
+  // from the client-side permissionStore via POST /api/notifications/auto-accept
+  // so the server can suppress permission notifications BEFORE dispatch (the
+  // 500ms debounce race otherwise leaks notifications for auto-accepted
+  // permissions when the replied round-trip is slower than the debounce).
+  const autoAcceptingSessions = createBoundedSet({ maxSize: 100, ttlMs: 86400_000 }) as unknown as BoundedSet;
+  const setAutoAcceptSession = (sessionId: string, enabled: boolean): void => {
+    if (typeof sessionId !== "string" || sessionId.length === 0) return;
+    if (enabled) {
+      autoAcceptingSessions.add(sessionId);
+    } else {
+      autoAcceptingSessions.delete(sessionId);
+    }
+  };
+
+  const buildSessionDeepLinkUrl = (sessionId: string): string => {
+    if (!sessionId || typeof sessionId !== "string") {
+      return "/";
+    }
+    return `/?session=${encodeURIComponent(sessionId)}`;
+  };
+
+  const getCachedSessionParentId = (sessionId: string): string | null | undefined => {
+    const entry = sessionParentIdCache.get(sessionId);
+    if (!entry) return undefined;
+    return entry.parentID ?? undefined;
+  };
+
+  const setCachedSessionParentId = (sessionId: string, parentID: string | null): void => {
+    sessionParentIdCache.set(sessionId, { parentID: parentID ?? null });
+  };
+
+  const fetchSessionParentId = async (sessionId: string): Promise<string | null> => {
+    if (!sessionId) return undefined as any;
+
+    const cached = getCachedSessionParentId(sessionId);
+    if (cached !== undefined) return cached;
+
+    try {
+      const response = await fetch(openCodeRuntime.getUrl("/session", ""), {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          ...openCodeRuntime.getAuthHeaders(),
+        },
+        signal: AbortSignal.timeout(2000),
+      });
+      if (!response.ok) {
+        return undefined as any;
+      }
+      const data = await response.json().catch(() => null) as any[];
+      if (!Array.isArray(data)) {
+        return undefined as any;
+      }
+
+      const match = data.find((session: any) => session && typeof session === "object" && session.id === sessionId);
+      const parentID = match?.parentID ? match.parentID : null;
+      setCachedSessionParentId(sessionId, parentID);
+      return parentID;
+    } catch {
+      return undefined as any;
+    }
+  };
+
+  // Mirrors client-side autoRespondsPermission: a session auto-accepts if it
+  // OR any ancestor is flagged. Walks the parent chain via fetchSessionParentId.
+  const isSessionAutoAccepting = async (sessionId: string): Promise<boolean> => {
+    if (!sessionId || autoAcceptingSessions.size === 0) return false;
+    let current = sessionId;
+    const seen = new Set<string>();
+    while (current && !seen.has(current)) {
+      if (autoAcceptingSessions.has(current)) return true;
+      seen.add(current);
+      const parent = await fetchSessionParentId(current);
+      if (!parent) return false;
+      current = parent;
+    }
+    return false;
+  };
+
+  const extractSessionIdFromPayload = (payload: any): string | null => {
+    if (!payload || typeof payload !== "object") return null;
+    const props = payload.properties;
+    const info = props?.info;
+    const sessionId =
+      info?.sessionID ??
+      info?.sessionId ??
+      props?.sessionID ??
+      props?.sessionId ??
+      props?.session ??
+      null;
+    return typeof sessionId === "string" && sessionId.length > 0 ? sessionId : null;
+  };
+
+  const formatMode = (raw: string): string => {
+    const value = typeof raw === "string" ? raw.trim() : "";
+    const normalized = value.length > 0 ? value : "agent";
+    return normalized
+      .split(/[-_\s]+/)
+      .filter(Boolean)
+      .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+      .join(" ");
+  };
+
+  const formatModelId = (raw: string): string => {
+    const value = typeof raw === "string" ? raw.trim() : "";
+    if (!value) {
+      return "Assistant";
+    }
+
+    const tokens = value.split(/[-_]+/).filter(Boolean);
+    const result: string[] = [];
+    for (let i = 0; i < tokens.length; i += 1) {
+      const current = tokens[i];
+      const next = tokens[i + 1];
+      if (/^\d+$/.test(current) && next && /^\d+$/.test(next)) {
+        result.push(`${current}.${next}`);
+        i += 1;
+        continue;
+      }
+      result.push(current);
+    }
+
+    return result
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  };
+
+  const maybeSendPushForTrigger = async (payload: any): Promise<void> => {
+    if (!payload || typeof payload !== "object") {
+      return;
+    }
+
+    const sessionId = extractSessionIdFromPayload(payload);
+    if (payload.type === "message.updated") {
+      const info = payload.properties?.info;
+      if (info?.role === "assistant" && info?.finish === "stop" && sessionId) {
+        const settings = await readSettingsFromDisk();
+
+        if (settings.notifyOnSubtasks === false) {
+          const sessionInfo = payload.properties?.session;
+          const parentIDFromPayload = sessionInfo?.parentID ?? payload.properties?.parentID;
+          const parentID = parentIDFromPayload
+            ? parentIDFromPayload
+            : await fetchSessionParentId(sessionId);
+
+          if (parentID) {
+            return;
+          }
+        }
+
+        if (settings.notifyOnCompletion === false) {
+          return;
+        }
+
+        const now = Date.now();
+        const lastAt = lastReadyNotificationAt.get(sessionId) ?? 0;
+        if (now - lastAt < PUSH_READY_COOLDOWN_MS) {
+          return;
+        }
+        lastReadyNotificationAt.set(sessionId, now);
+
+        let title = `${formatMode(info?.mode)} agent is ready`;
+        let body = `${formatModelId(info?.modelID)} completed the task`;
+
+        try {
+          const templates = settings.notificationTemplates || {};
+          const isSubtask = await fetchSessionParentId(sessionId);
+          const completionTemplate = isSubtask && settings.notifyOnSubtasks !== false
+            ? (templates.subtask || templates.completion || { title: "{agent_name} is ready", message: "{model_name} completed the task" })
+            : (templates.completion || { title: "{agent_name} is ready", message: "{model_name} completed the task" });
+
+          const variables = await buildTemplateVariables(payload, sessionId);
+
+          const messageId = info?.id;
+          let lastMessage = extractLastMessageText(payload);
+          if (!lastMessage) {
+            lastMessage = await fetchLastAssistantMessageText(sessionId, messageId);
+          }
+
+          const notifZenModel = await resolveZenModel(settings?.zenModel);
+          variables.last_message = await prepareNotificationLastMessage({
+            message: lastMessage,
+            settings,
+            summarize: (text: string, len: number) => summarizeText(text, len, notifZenModel),
+          });
+
+          const resolvedTitle = resolveNotificationTemplate(completionTemplate.title, variables);
+          const resolvedBody = resolveNotificationTemplate(completionTemplate.message, variables);
+          if (resolvedTitle) title = resolvedTitle;
+          if (shouldApplyResolvedTemplateMessage(completionTemplate.message, resolvedBody, variables)) body = resolvedBody;
+        } catch (error) {
+          console.warn("[Notification] Template resolution failed, using defaults:", (error as any)?.message || error);
+        }
+
+        if (settings.nativeNotificationsEnabled) {
+          const notificationPayload = {
+            title,
+            body,
+            tag: `ready-${sessionId}`,
+            kind: "ready",
+            sessionId,
+            requireHidden: settings.notificationMode !== "always",
+          };
+          eventBus.emit(EVENTS.NOTIFICATION_SEND_DESKTOP, { payload: notificationPayload });
+          eventBus.emit(EVENTS.NOTIFICATION_SEND_UI, { payload: notificationPayload });
+        }
+
+        eventBus.emit(EVENTS.NOTIFICATION_SEND_PUSH, {
+          payload: {
+            title,
+            body,
+            tag: `ready-${sessionId}`,
+            data: {
+              url: buildSessionDeepLinkUrl(sessionId),
+              sessionId,
+              type: "ready",
+            },
+          },
+          options: { requireNoSse: true },
+        });
+      }
+
+      if (info?.role === "assistant" && info?.finish === "error" && sessionId) {
+        const settings = await readSettingsFromDisk();
+        if (settings.notifyOnError === false) return;
+
+        let title = "Tool error";
+        let body = "An error occurred";
+
+        try {
+          const variables = await buildTemplateVariables(payload, sessionId);
+          const errorMessageId = info?.id;
+          let lastMessage = extractLastMessageText(payload);
+          if (!lastMessage) {
+            lastMessage = await fetchLastAssistantMessageText(sessionId, errorMessageId);
+          }
+
+          const errZenModel = await resolveZenModel(settings?.zenModel);
+          variables.last_message = await prepareNotificationLastMessage({
+            message: lastMessage,
+            settings,
+            summarize: (text: string, len: number) => summarizeText(text, len, errZenModel),
+          });
+
+          const errorTemplate = (settings.notificationTemplates || {}).error || { title: "Tool error", message: "{last_message}" };
+          const resolvedTitle = resolveNotificationTemplate(errorTemplate.title, variables);
+          const resolvedBody = resolveNotificationTemplate(errorTemplate.message, variables);
+          if (resolvedTitle) title = resolvedTitle;
+          if (shouldApplyResolvedTemplateMessage(errorTemplate.message, resolvedBody, variables)) body = resolvedBody;
+        } catch (error) {
+          console.warn("[Notification] Error template resolution failed, using defaults:", (error as any)?.message || error);
+        }
+
+        if (settings.nativeNotificationsEnabled) {
+          const notificationPayload = {
+            title,
+            body,
+            tag: `error-${sessionId}`,
+            kind: "error",
+            sessionId,
+            requireHidden: settings.notificationMode !== "always",
+          };
+          eventBus.emit(EVENTS.NOTIFICATION_SEND_DESKTOP, { payload: notificationPayload });
+          eventBus.emit(EVENTS.NOTIFICATION_SEND_UI, { payload: notificationPayload });
+        }
+
+        eventBus.emit(EVENTS.NOTIFICATION_SEND_PUSH, {
+          payload: {
+            title,
+            body,
+            tag: `error-${sessionId}`,
+            data: {
+              url: buildSessionDeepLinkUrl(sessionId),
+              sessionId,
+              type: "error",
+            },
+          },
+          options: { requireNoSse: true },
+        });
+      }
+
+      return;
+    }
+
+    if (payload.type === "question.asked" && sessionId) {
+      const existingTimer = pushQuestionDebounceTimers.get(sessionId);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+      }
+
+      const timer = setTimeout(async () => {
+        pushQuestionDebounceTimers.delete(sessionId);
+
+        const settings = await readSettingsFromDisk();
+        if (settings.notifyOnQuestion === false) {
+          return;
+        }
+
+        const firstQuestion = payload.properties?.questions?.[0];
+        const header = typeof firstQuestion?.header === "string" ? firstQuestion.header.trim() : "";
+        const questionText = typeof firstQuestion?.question === "string" ? firstQuestion.question.trim() : "";
+
+        let title = /plan\s*mode/i.test(header)
+          ? "Switch to plan mode"
+          : /build\s*agent/i.test(header)
+            ? "Switch to build mode"
+            : header || "Input needed";
+        let body = questionText || "Agent is waiting for your response";
+
+        try {
+          const variables = await buildTemplateVariables(payload, sessionId);
+          variables.last_message = questionText || header || "";
+
+          const templates = settings.notificationTemplates || {};
+          const questionTemplate = templates.question || { title: "Input needed", message: "{last_message}" };
+
+          const resolvedTitle = resolveNotificationTemplate(questionTemplate.title, variables);
+          const resolvedBody = resolveNotificationTemplate(questionTemplate.message, variables);
+          if (resolvedTitle) title = resolvedTitle;
+          if (shouldApplyResolvedTemplateMessage(questionTemplate.message, resolvedBody, variables)) body = resolvedBody;
+        } catch (error) {
+          console.warn("[Notification] Question template resolution failed, using defaults:", (error as any)?.message || error);
+        }
+
+        if (settings.nativeNotificationsEnabled) {
+          const notificationPayload = {
+            kind: "question",
+            title,
+            body,
+            tag: `question-${sessionId}`,
+            sessionId,
+            requireHidden: settings.notificationMode !== "always",
+          };
+          eventBus.emit(EVENTS.NOTIFICATION_SEND_DESKTOP, { payload: notificationPayload });
+          eventBus.emit(EVENTS.NOTIFICATION_SEND_UI, { payload: notificationPayload });
+        }
+
+        eventBus.emit(EVENTS.NOTIFICATION_SEND_PUSH, {
+          payload: {
+            title,
+            body,
+            tag: `question-${sessionId}`,
+            data: {
+              url: buildSessionDeepLinkUrl(sessionId),
+              sessionId,
+              type: "question",
+            },
+          },
+          options: { requireNoSse: true },
+        });
+      }, PUSH_QUESTION_DEBOUNCE_MS);
+
+      pushQuestionDebounceTimers.set(sessionId, timer);
+      return;
+    }
+
+    if (payload.type === "permission.replied" && sessionId) {
+      const requestId = payload.properties?.requestID ?? payload.properties?.requestId ?? payload.properties?.id;
+      const requestKey = typeof requestId === "string" ? `${sessionId}:${requestId}` : null;
+      const pendingNotification = pushPermissionDebounceTimers.get(sessionId);
+      if (!pendingNotification) {
+        return;
+      }
+
+      // Some runtimes may omit requestID on permission.replied.
+      // When request ID is missing, clear session debounce to avoid
+      // showing stale permission notifications for auto-approved prompts.
+      if (!requestKey || !pendingNotification.requestKey || pendingNotification.requestKey === requestKey) {
+        clearTimeout(pendingNotification.timer);
+        pushPermissionDebounceTimers.delete(sessionId);
+      }
+      return;
+    }
+
+    if (payload.type === "permission.asked" && sessionId) {
+      const requestId = payload.properties?.id ?? payload.properties?.requestID ?? payload.properties?.requestId;
+      const permission = payload.properties?.permission;
+      const requestKey = typeof requestId === "string" ? `${sessionId}:${requestId}` : null;
+      if (requestKey && notifiedPermissionRequests.has(requestKey)) {
+        return;
+      }
+
+      // Client may be in Permission Auto-Accept for this session (or any
+      // ancestor). Skip the whole notification path — the client responds
+      // directly and the user has opted out of approval prompts.
+      if (await isSessionAutoAccepting(sessionId)) {
+        if (requestKey) notifiedPermissionRequests.add(requestKey);
+        return;
+      }
+
+      const existingTimer = pushPermissionDebounceTimers.get(sessionId);
+      if (existingTimer) {
+        clearTimeout(existingTimer.timer);
+      }
+
+      const timer = setTimeout(async () => {
+        pushPermissionDebounceTimers.delete(sessionId);
+
+        const settings = await readSettingsFromDisk();
+
+        if (settings.notifyOnQuestion === false) {
+          return;
+        }
+
+        const sessionTitle = payload.properties?.sessionTitle;
+        const permissionText = typeof permission === "string" && permission.length > 0 ? permission : "";
+        const fallbackMessage = typeof sessionTitle === "string" && sessionTitle.trim().length > 0
+          ? sessionTitle.trim()
+          : permissionText || "Agent is waiting for your approval";
+
+        let title = "Permission required";
+        let body = fallbackMessage;
+
+        try {
+          const variables = await buildTemplateVariables(payload, sessionId);
+          variables.last_message = fallbackMessage;
+
+          const templates = settings.notificationTemplates || {};
+          const questionTemplate = templates.question || { title: "Permission required", message: "{last_message}" };
+
+          const resolvedTitle = resolveNotificationTemplate(questionTemplate.title, variables);
+          const resolvedBody = resolveNotificationTemplate(questionTemplate.message, variables);
+          if (resolvedTitle) title = resolvedTitle;
+          if (shouldApplyResolvedTemplateMessage(questionTemplate.message, resolvedBody, variables)) body = resolvedBody;
+        } catch (error) {
+          console.warn("[Notification] Permission template resolution failed, using defaults:", (error as any)?.message || error);
+        }
+
+        if (settings.nativeNotificationsEnabled) {
+          const notificationPayload = {
+            kind: "permission",
+            title,
+            body,
+            tag: requestKey ? `permission-${requestKey}` : `permission-${sessionId}`,
+            sessionId,
+            requireHidden: settings.notificationMode !== "always",
+          };
+          eventBus.emit(EVENTS.NOTIFICATION_SEND_DESKTOP, { payload: notificationPayload });
+          eventBus.emit(EVENTS.NOTIFICATION_SEND_UI, { payload: notificationPayload });
+        }
+
+        if (requestKey) {
+          notifiedPermissionRequests.add(requestKey);
+        }
+
+        eventBus.emit(EVENTS.NOTIFICATION_SEND_PUSH, {
+          payload: {
+            title,
+            body,
+            tag: `permission-${sessionId}`,
+            data: {
+              url: buildSessionDeepLinkUrl(sessionId),
+              sessionId,
+              type: "permission",
+            },
+          },
+          options: { requireNoSse: true },
+        });
+      }, PUSH_PERMISSION_DEBOUNCE_MS);
+
+      pushPermissionDebounceTimers.set(sessionId, { timer, requestKey });
+    }
+  };
+
+  return {
+    maybeSendPushForTrigger,
+    setAutoAcceptSession,
+    dispose: () => {
+      notifiedPermissionRequests.dispose();
+      lastReadyNotificationAt.dispose();
+      sessionParentIdCache.dispose();
+      autoAcceptingSessions.dispose();
+      pushQuestionDebounceTimers.clear();
+      pushPermissionDebounceTimers.clear();
+    },
+  };
+};
