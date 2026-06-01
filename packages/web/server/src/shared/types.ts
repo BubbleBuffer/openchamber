@@ -48,6 +48,12 @@ export interface ServerRuntime {
     eventStream?: any;
     sessions?: any;
     opencode?: any;
+    core?: { eventBus?: any };
+    settings?: any;
+    serverUtils?: any;
+    bootstrap?: any;
+    routes?: any;
+    opencodeSupport?: any;
   };
   /* eslint-enable @typescript-eslint/no-explicit-any */
 }

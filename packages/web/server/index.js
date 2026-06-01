@@ -13,7 +13,7 @@ import os from 'os';
 import crypto from 'crypto';
 import webPush from 'web-push';
 
-import { createEventBus } from './lib/core/event-bus.js';
+import { createEventBus, EVENTS } from './dist/domains/core/index.js';
 import { createOpenCodeDomain } from './dist/domains/opencode/index.js';
 
 import { createUiAuth } from './lib/ui-auth/ui-auth.js';
@@ -45,38 +45,38 @@ import {
 } from './dist/domains/event-stream/index.js';
 import { createFsSearchRuntime as createFsSearchRuntimeFactory } from './lib/fs/search.js';
 import { createOpenCodeEnvRuntime } from './lib/opencode/env/env-runtime.js';
-import { resolveOpenCodeEnvConfig } from './lib/opencode/env/env-config.js';
-import { createHmrStateRuntime } from './lib/opencode/network/hmr-state-runtime.js';
-import { createProjectDirectoryRuntime } from './lib/opencode/resolution/project-directory-runtime.js';
-import { createSettingsNormalizationRuntime } from './lib/opencode/settings/settings-normalization-runtime.js';
-import { createSettingsHelpers } from './lib/opencode/settings/settings-helpers.js';
-import { createThemeRuntime } from './lib/opencode/services/theme-runtime.js';
-import { createFeatureRoutesRuntime } from './lib/opencode/routes/feature-routes-runtime.js';
-import { parseServeCliOptions } from './lib/opencode/bootstrap/cli-options.js';
+import { resolveOpenCodeEnvConfig } from './dist/domains/opencode-support/index.js';
+import { createHmrStateRuntime } from './dist/domains/opencode-support/index.js';
+import { createProjectDirectoryRuntime } from './dist/domains/opencode-support/index.js';
+import { createSettingsNormalizationRuntime } from './dist/domains/settings/index.js';
+import { createSettingsHelpers } from './dist/domains/settings/index.js';
+import { createThemeRuntime } from './dist/domains/settings/index.js';
+import { createFeatureRoutesRuntime } from './dist/domains/routes/index.js';
+import { parseServeCliOptions } from './dist/domains/bootstrap/index.js';
 import {
   registerAuthAndAccessRoutes,
   registerCommonRequestMiddleware,
   registerServerStatusRoutes,
-} from './lib/opencode/routes/core-routes.js';
-import { registerOpenChamberRoutes } from './lib/opencode/routes/openchamber-routes.js';
-import { createServerUtilsRuntime } from './lib/opencode/server-utils-runtime.js';
-import { createStaticRoutesRuntime } from './lib/opencode/routes/static-routes-runtime.js';
-import { createSettingsRuntime } from './lib/opencode/settings/settings-runtime.js';
-import { createOpenCodeResolutionRuntime } from './lib/opencode/resolution/opencode-resolution-runtime.js';
-import { createBootstrapRuntime } from './lib/opencode/bootstrap/bootstrap-runtime.js';
+} from './dist/domains/routes/index.js';
+import { registerOpenChamberRoutes } from './dist/domains/routes/index.js';
+import { createServerUtilsRuntime } from './dist/domains/server-utils/index.js';
+import { createStaticRoutesRuntime } from './dist/domains/routes/index.js';
+import { createSettingsRuntime } from './dist/domains/settings/index.js';
+import { createOpenCodeResolutionRuntime } from './dist/domains/opencode-support/index.js';
+import { createBootstrapRuntime } from './dist/domains/bootstrap/index.js';
 
 import { createOpenCodeWatcherRuntime } from './lib/opencode/services/watcher.js';
 import { createScheduledTasksRuntime } from './lib/scheduled-tasks/runtime.js';
-import { createServerStartupRuntime } from './lib/opencode/bootstrap/server-startup-runtime.js';
-import { createTunnelWiringRuntime } from './lib/opencode/network/tunnel-wiring-runtime.js';
-import { createStartupPipelineRuntime } from './lib/opencode/bootstrap/startup-pipeline-runtime.js';
-import { runCliEntryIfMain } from './lib/opencode/bootstrap/cli-entry-runtime.js';
+import { createServerStartupRuntime } from './dist/domains/bootstrap/index.js';
+import { createTunnelWiringRuntime } from './dist/domains/bootstrap/index.js';
+import { createStartupPipelineRuntime } from './dist/domains/bootstrap/index.js';
+import { runCliEntryIfMain } from './dist/domains/bootstrap/index.js';
 import { registerNotificationRoutes } from './lib/notifications/routes.js';
 import { createNotificationEmitterRuntime } from './lib/notifications/emitter-runtime.js';
 import { createNotificationTriggerRuntime } from './lib/notifications/runtime.js';
 import { createPushRuntime } from './lib/notifications/push-runtime.js';
 import { createNotificationTemplateRuntime } from './lib/notifications/template-runtime.js';
-import { createGracefulShutdownRuntime } from './lib/opencode/bootstrap/shutdown-runtime.js';
+import { createGracefulShutdownRuntime } from './dist/domains/bootstrap/index.js';
 import { createProjectConfigRuntime } from './lib/projects/project-config.js';
 import { createSessionMachine } from '@openchamber/session-state';
 import { createSessionRuntime, createSessionActorRegistry as createSessionActorRegistryFactory, createEffectExecutor as createEffectExecutorFactory, createSnapshotPublisher as createSnapshotPublisherFactory, createServerSessionMachineBridge } from './dist/domains/sessions/index.js';
