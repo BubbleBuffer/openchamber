@@ -37,7 +37,7 @@ import {
 import { prepareNotificationLastMessage } from './lib/notifications/index.js';
 import { registerTtsRoutes } from './lib/tts/routes.js';
 import { detectSayTtsCapability } from './lib/tts/capability-runtime.js';
-import { createTerminalRuntime } from './lib/terminal/runtime.js';
+import { createTerminalRuntime } from './dist/domains/terminal/runtime.js';
 import {
   createGlobalUiEventBroadcaster,
   createGlobalMessageStreamHub,
