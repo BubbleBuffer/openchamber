@@ -1,9 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-require-imports */
 import type { EventBus } from "../core/event-bus.js";
 import { EVENTS } from "../core/events.js";
 
 // Pre-existing JS dependency — keep old import path
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { createBoundedMap, createBoundedSet }: {
   createBoundedMap: (opts: { maxSize: number; ttlMs: number }) => Map<unknown, unknown>;
   createBoundedSet: (opts: { maxSize: number; ttlMs: number }) => Set<unknown>;

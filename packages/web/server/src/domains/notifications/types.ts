@@ -50,7 +50,7 @@ export interface NotificationTemplateDeps {
 }
 
 export interface NotificationTemplateRuntime {
-  createTimeoutSignal: (timeoutMs: number) => { signal: AbortSignal; cleanup: () => void };
+  createTimeoutSignal: (timeoutMs: number) => { signal: globalThis.AbortSignal; cleanup: () => void };
   formatProjectLabel: (label: string) => string;
   resolveNotificationTemplate: (template: string, variables: Record<string, string>) => string;
   shouldApplyResolvedTemplateMessage: (template: string, resolved: string, variables: any) => boolean;

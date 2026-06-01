@@ -54,6 +54,8 @@ export interface ServerRuntime {
     bootstrap?: any;
     routes?: any;
     opencodeSupport?: any;
+    auth?: any;
+    notifications?: any;
   };
   /* eslint-enable @typescript-eslint/no-explicit-any */
 }

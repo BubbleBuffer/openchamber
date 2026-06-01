@@ -1,13 +1,9 @@
 import crypto from 'node:crypto';
 import type { Request, Response } from 'express';
-import { createRequire } from 'node:module';
 
 const { createBoundedMap }: { createBoundedMap: (opts: { maxSize: number; ttlMs: number }) => BoundedMap } =
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('../../../lib/core/bounded-cache.js');
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type UnknownRecord = Record<string, any>;
 
 interface BoundedMap {
   get(key: unknown): unknown;

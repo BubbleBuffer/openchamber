@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, no-empty */
 import type { Express } from "express";
 
 interface PushSubscribeBody {

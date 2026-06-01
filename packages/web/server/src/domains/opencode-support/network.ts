@@ -36,7 +36,7 @@ export const createOpenCodeNetworkRuntime = (deps: NetworkRuntimeDeps): OpenCode
           const body = (await response.json().catch(() => null)) as { healthy?: boolean } | null;
           if (body?.healthy === true) return true;
         }
-      } catch {}
+      } catch { /* empty */ }
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     return false;

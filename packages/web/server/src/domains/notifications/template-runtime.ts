@@ -1,17 +1,13 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, no-empty, @typescript-eslint/no-require-imports */
 import type { EventBus } from "../core/event-bus.js";
 import { EVENTS } from "../core/events.js";
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 declare const AbortSignal: { timeout(ms: number): AbortSignal };
 
-// Pre-existing JS dependency — keep old import path
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+
 const { createBoundedMap }: { createBoundedMap: (opts: { maxSize: number; ttlMs: number }) => Map<unknown, unknown> } =
   require("../../../lib/core/bounded-cache.js") as any;
 
-// Pre-existing JS dependency — keep old import path
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { summarizeText }: { summarizeText: any } = require("../../../lib/text/summarization.js") as any;
 
 interface BoundedMap<V> {

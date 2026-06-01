@@ -1,7 +1,7 @@
 // packages/web/server/lib/opencode/runtime.js
 import { createOpenCodeLifecycleRuntime } from './bootstrap/lifecycle.js';
-import { createOpenCodeAuthStateRuntime } from './auth.js';
-import { createOpenCodeNetworkRuntime } from './network.js';
+import { createOpenCodeAuthStateRuntime } from '../../dist/domains/opencode-support/index.js';
+import { createOpenCodeNetworkRuntime } from '../../dist/domains/opencode-support/index.js';
 import crypto from 'node:crypto';
 
 export function createOpenCodeRuntime({ eventBus, config }) {

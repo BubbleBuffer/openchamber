@@ -17,7 +17,7 @@ import { createEventBus, EVENTS } from './dist/domains/core/index.js';
 import { createOpenCodeDomain } from './dist/domains/opencode/index.js';
 
 import { createUiAuth } from './lib/ui-auth/ui-auth.js';
-import { createTunnelAuth } from './lib/opencode/auth/tunnel-auth.js';
+import { createTunnelAuth } from './dist/domains/auth/index.js';
 import { createManagedTunnelConfigRuntime } from './lib/tunnels/managed-config.js';
 import { createTunnelProviderRegistry } from './lib/tunnels/registry.js';
 import { createCloudflareTunnelProvider } from './lib/tunnels/providers/cloudflare.js';
@@ -34,7 +34,7 @@ import {
   normalizeTunnelMode,
   normalizeTunnelProvider,
 } from './lib/tunnels/types.js';
-import { prepareNotificationLastMessage } from './lib/notifications/index.js';
+import { prepareNotificationLastMessage } from './dist/domains/notifications/index.js';
 import { registerTtsRoutes } from './lib/tts/routes.js';
 import { detectSayTtsCapability } from './lib/tts/capability-runtime.js';
 import { createTerminalRuntime } from './dist/domains/terminal/runtime.js';
@@ -71,11 +71,7 @@ import { createServerStartupRuntime } from './dist/domains/bootstrap/index.js';
 import { createTunnelWiringRuntime } from './dist/domains/bootstrap/index.js';
 import { createStartupPipelineRuntime } from './dist/domains/bootstrap/index.js';
 import { runCliEntryIfMain } from './dist/domains/bootstrap/index.js';
-import { registerNotificationRoutes } from './lib/notifications/routes.js';
-import { createNotificationEmitterRuntime } from './lib/notifications/emitter-runtime.js';
-import { createNotificationTriggerRuntime } from './lib/notifications/runtime.js';
-import { createPushRuntime } from './lib/notifications/push-runtime.js';
-import { createNotificationTemplateRuntime } from './lib/notifications/template-runtime.js';
+import { registerNotificationRoutes, createNotificationEmitterRuntime, createNotificationTriggerRuntime, createPushRuntime, createNotificationTemplateRuntime } from './dist/domains/notifications/index.js';
 import { createGracefulShutdownRuntime } from './dist/domains/bootstrap/index.js';
 import { createProjectConfigRuntime } from './lib/projects/project-config.js';
 import { createSessionMachine } from '@openchamber/session-state';

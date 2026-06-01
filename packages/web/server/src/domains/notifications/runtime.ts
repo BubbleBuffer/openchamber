@@ -1,15 +1,16 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { EventBus } from "../core/event-bus.js";
 import { EVENTS } from "../core/events.js";
-// @ts-expect-error — resolves once template-runtime.ts exists (Task 9)
 import { createNotificationTemplateRuntime } from "./template-runtime.js";
-// @ts-expect-error — resolves once trigger-runtime.ts exists (Task 9)
 import { createNotificationTriggerRuntime } from "./trigger-runtime.js";
+import { prepareNotificationLastMessage } from "./message.js";
 
 export const createNotificationRuntime = (deps: {
   eventBus: EventBus;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   openCodeRuntime: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   readSettingsFromDisk: () => Promise<any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   persistSettings: (settings: any) => Promise<void>;
   resolveGitBinaryForSpawn: () => string;
 }) => {
@@ -27,7 +28,7 @@ export const createNotificationRuntime = (deps: {
     eventBus,
     readSettingsFromDisk,
     openCodeRuntime,
-    prepareNotificationLastMessage: templateRuntime.prepareNotificationLastMessage,
+    prepareNotificationLastMessage,
     summarizeText: templateRuntime.summarizeText,
     resolveZenModel: templateRuntime.resolveZenModel,
     buildTemplateVariables: templateRuntime.buildTemplateVariables,
@@ -43,6 +44,7 @@ export const createNotificationRuntime = (deps: {
     if (initPromise) return initPromise;
     initPromise = (async () => {
       await templateRuntime.validateZenModelAtStartup();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       eventBus.on(EVENTS.EVENT_RECEIVED, ({ payload }: { payload: any }) => {
         triggerRuntime.maybeSendPushForTrigger(payload);
       });
