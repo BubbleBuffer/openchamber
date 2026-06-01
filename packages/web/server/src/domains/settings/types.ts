@@ -13,7 +13,7 @@ export interface SettingsNormalizationDeps {
 export interface SettingsNormalizationRuntime {
   normalizeDirectoryPath(value: unknown): string | unknown;
   normalizePathForPersistence(value: unknown): string | unknown;
-  normalizeSettingsPaths(input: object): { settings: object; changed: boolean };
+  normalizeSettingsPaths(input: any): { settings: any; changed: boolean };
   normalizeTunnelBootstrapTtlMs(value: number | null): number | null;
   normalizeTunnelSessionTtlMs(value: number): number;
   normalizeManagedRemoteTunnelHostname(value: unknown): string | undefined;
@@ -48,9 +48,9 @@ export interface SettingsHelpersDeps {
 export interface SettingsHelpers {
   normalizePwaAppName(value: unknown, fallback?: string): string;
   normalizePwaOrientation(value: unknown, fallback?: string): string;
-  sanitizeSettingsUpdate(payload: object): object;
-  mergePersistedSettings(current: object, changes: object): object;
-  formatSettingsResponse(settings: object): object;
+  sanitizeSettingsUpdate(payload: object): any;
+  mergePersistedSettings(current: any, changes: any): any;
+  formatSettingsResponse(settings: any): any;
 }
 
 export interface SettingsRuntimeDeps {
@@ -69,14 +69,14 @@ export interface SettingsRuntimeDeps {
   normalizeManagedRemoteTunnelPresets: SettingsNormalizationRuntime["normalizeManagedRemoteTunnelPresets"];
   normalizeManagedRemoteTunnelPresetTokens: SettingsNormalizationRuntime["normalizeManagedRemoteTunnelPresetTokens"];
   syncManagedRemoteTunnelConfigWithPresets: (settings: object) => object;
-  upsertManagedRemoteTunnelToken: (token: string) => void;
+  upsertManagedRemoteTunnelToken: (token: { id: string; name: string; hostname: string; token: string }) => void;
 }
 
 export interface SettingsRuntime {
-  readSettingsFromDisk(): Promise<object>;
-  readSettingsFromDiskMigrated(): Promise<object>;
-  writeSettingsToDisk(settings: object): Promise<void>;
-  persistSettings(changes: object): Promise<object>;
+  readSettingsFromDisk(): Promise<any>;
+  readSettingsFromDiskMigrated(): Promise<any>;
+  writeSettingsToDisk(settings: any): Promise<void>;
+  persistSettings(changes: any): Promise<any>;
 }
 
 export interface ThemeRuntimeDeps {
