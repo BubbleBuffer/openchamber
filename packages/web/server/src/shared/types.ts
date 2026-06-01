@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import type { Server as HttpServer } from "http";
 import type { LifecycleRegistry } from "./lifecycle.js";
+import type { EventBus } from "../domains/core/event-bus.js";
 
 export interface ServerConfig {
   port: number;
