@@ -41,12 +41,14 @@ export interface ServerRuntime {
   httpServer: HttpServer;
   config: ServerConfig;
   lifecycle: LifecycleRegistry;
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   domains: {
     terminal?: any;
     eventStream?: any;
     sessions?: any;
     opencode?: any;
   };
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 }
 
 export interface StartWebUiServerOptions {

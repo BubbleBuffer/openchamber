@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { createSessionActorKey } from "@openchamber/session-state";
 import { normalizeOpenCodePayload } from "./event-normalizer.js";
 import type { MachineBridgeDeps, ServerSessionMachineBridge } from "./types.js";

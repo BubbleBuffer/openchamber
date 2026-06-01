@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import type { Express } from "express";
 
 export interface OpenCodeDomainDeps {

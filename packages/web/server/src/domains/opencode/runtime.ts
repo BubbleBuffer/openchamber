@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import type { OpenCodeDomainDeps, OpenCodeDomain } from "./types.js";
 
 export async function createOpenCodeDomain(deps: OpenCodeDomainDeps): Promise<OpenCodeDomain> {

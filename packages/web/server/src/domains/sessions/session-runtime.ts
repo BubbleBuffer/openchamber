@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { selectNeedsAttention } from "@openchamber/session-state";
 import type { SessionActorKey, SessionRuntimeDeps, SessionRuntime } from "./types.js";
 

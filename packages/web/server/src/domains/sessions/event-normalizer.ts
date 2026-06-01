@@ -1,4 +1,4 @@
-import type { SessionDomainEvent, SessionMessageRecord, SessionPartRecord } from "@openchamber/session-state";
+import type { SessionMessageRecord, SessionPartRecord } from "@openchamber/session-state";
 import type { NormalizedPayloadResult } from "./types.js";
 
 // ---------------------------------------------------------------------------
