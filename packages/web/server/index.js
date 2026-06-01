@@ -42,7 +42,7 @@ import {
   createGlobalUiEventBroadcaster,
   createGlobalMessageStreamHub,
   createMessageStreamWsRuntime,
-} from './lib/event-stream/index.js';
+} from './dist/domains/event-stream/index.js';
 import { createFsSearchRuntime as createFsSearchRuntimeFactory } from './lib/fs/search.js';
 import { createOpenCodeEnvRuntime } from './lib/opencode/env/env-runtime.js';
 import { resolveOpenCodeEnvConfig } from './lib/opencode/env/env-config.js';
@@ -64,7 +64,7 @@ import { createStaticRoutesRuntime } from './lib/opencode/routes/static-routes-r
 import { createSettingsRuntime } from './lib/opencode/settings/settings-runtime.js';
 import { createOpenCodeResolutionRuntime } from './lib/opencode/resolution/opencode-resolution-runtime.js';
 import { createBootstrapRuntime } from './lib/opencode/bootstrap/bootstrap-runtime.js';
-import { createSessionRuntime } from './lib/opencode/session/session-runtime.js';
+
 import { createOpenCodeWatcherRuntime } from './lib/opencode/services/watcher.js';
 import { createScheduledTasksRuntime } from './lib/scheduled-tasks/runtime.js';
 import { createServerStartupRuntime } from './lib/opencode/bootstrap/server-startup-runtime.js';
@@ -79,10 +79,7 @@ import { createNotificationTemplateRuntime } from './lib/notifications/template-
 import { createGracefulShutdownRuntime } from './lib/opencode/bootstrap/shutdown-runtime.js';
 import { createProjectConfigRuntime } from './lib/projects/project-config.js';
 import { createSessionMachine } from '@openchamber/session-state';
-import { createSessionActorRegistry as createSessionActorRegistryFactory } from './lib/session-state/server-session-actor-registry.js';
-import { createEffectExecutor as createEffectExecutorFactory } from './lib/session-state/server-session-effect-executor.js';
-import { createSnapshotPublisher as createSnapshotPublisherFactory } from './lib/session-state/server-session-snapshot-publisher.js';
-import { createServerSessionMachineBridge } from './lib/session-state/server-session-machine-bridge.js';
+import { createSessionRuntime, createSessionActorRegistry as createSessionActorRegistryFactory, createEffectExecutor as createEffectExecutorFactory, createSnapshotPublisher as createSnapshotPublisherFactory, createServerSessionMachineBridge } from './dist/domains/sessions/index.js';
 
 // ── Constants ────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);

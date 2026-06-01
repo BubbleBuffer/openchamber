@@ -3,14 +3,11 @@ import type {
   TerminalSession,
 } from "./types.js";
 import {
-  MAX_TERMINAL_SESSIONS,
   TERMINAL_IDLE_TIMEOUT,
-  TERMINAL_OUTPUT_REPLAY_MAX_BYTES,
   TERMINAL_WS_PATH,
 } from "./types.js";
 import {
   createTerminalOutputReplayBuffer,
-  appendTerminalOutputReplayChunk,
 } from "./replay-buffer.js";
 import type { TerminalCapabilities } from "./types.js";
 

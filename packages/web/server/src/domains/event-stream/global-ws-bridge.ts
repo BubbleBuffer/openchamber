@@ -22,7 +22,7 @@ export function createGlobalMessageStreamWsBridge({
   globalHub,
   ownsGlobalHub,
   wsClients,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   processForwardedEventPayload,
   triggerHealthCheck,
   heartbeatIntervalMs,

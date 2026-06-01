@@ -23,20 +23,15 @@ import { createGlobalMessageStreamWsBridge } from "./global-ws-bridge.js";
 import { acceptDirectoryMessageStreamWsConnection } from "./directory-ws-bridge.js";
 
 // Old JS module imports (lib/ not in tsconfig.server.json include)
-// @ts-ignore — lib/ path resolution in TS
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// @ts-expect-error — lib/ path resolution in TS
 import { createNotificationEmitterRuntime } from "../../lib/notifications/emitter-runtime.js";
-// @ts-ignore — lib/ path resolution in TS
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// @ts-expect-error — lib/ path resolution in TS
 import { createPushRuntime } from "../../lib/notifications/push-runtime.js";
-// @ts-ignore — lib/ path resolution in TS
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// @ts-expect-error — lib/ path resolution in TS
 import { createOpenCodeWatcherRuntime } from "../../lib/opencode/services/watcher.js";
-// @ts-ignore — lib/ path resolution in TS
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// @ts-expect-error — lib/ path resolution in TS
 import { EVENTS } from "../../lib/core/events.js";
-// @ts-ignore — lib/ path resolution in TS
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// @ts-expect-error — lib/ path resolution in TS
 import { createBoundedSet } from "../../lib/core/bounded-cache.js";
 
 // web-push is an old JS module — use createRequire to avoid top-level await
@@ -55,7 +50,9 @@ export function createGlobalUiEventBroadcaster({
 
     if (hasSseClients) {
       for (const res of sseClients) {
-        try { writeSseEvent(res, payload); } catch {}
+        try { writeSseEvent(res, payload); }
+        // eslint-disable-next-line no-empty
+        catch {}
       }
     }
 
@@ -203,12 +200,16 @@ export function createMessageStreamWsRuntime(
       globalBridge.close();
       try {
         for (const client of wsServer.clients) {
-          try { client.terminate(); } catch {}
+          try { client.terminate(); }
+          // eslint-disable-next-line no-empty
+          catch {}
         }
         await new Promise<void>((resolve) => {
           wsServer.close(() => resolve());
         });
-      } catch {} finally {
+      }
+      // eslint-disable-next-line no-empty
+      catch {} finally {
         wsClients.clear();
       }
     },
@@ -303,7 +304,9 @@ export const createEventStreamRuntime = (deps: any) => {
         onPayload: (payload: any) => {
           processForwardedEventPayload(payload, (syntheticPayload: unknown) => {
             for (const res of uiNotificationClients) {
-              try { writeSseEvent(res, syntheticPayload); } catch {}
+              try { writeSseEvent(res, syntheticPayload); }
+              // eslint-disable-next-line no-empty
+              catch {}
             }
           });
           eventBus.emit(EVENTS.EVENT_RECEIVED, { payload, directory: undefined });
@@ -320,11 +323,13 @@ export const createEventStreamRuntime = (deps: any) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const broadcastToClients = (payload: any) => {
     for (const res of uiNotificationClients) {
-      try { writeSseEvent(res, payload); } catch {}
+      try { writeSseEvent(res, payload); }
+      // eslint-disable-next-line no-empty
+      catch {}
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   const disposers: Array<() => void> = [
     eventBus.on(EVENTS.NOTIFICATION_SEND_UI, ({ payload }: any) => broadcastToClients(payload)),
     eventBus.on(EVENTS.NOTIFICATION_SEND_DESKTOP, ({ payload }: any) =>
@@ -337,6 +342,7 @@ export const createEventStreamRuntime = (deps: any) => {
       void ensureGlobalWatcherStarted();
     }),
   ];
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 
   return {
     writeSseEvent,

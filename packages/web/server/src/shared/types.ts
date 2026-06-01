@@ -41,6 +41,11 @@ export interface ServerRuntime {
   httpServer: HttpServer;
   config: ServerConfig;
   lifecycle: LifecycleRegistry;
+  domains: {
+    terminal?: any;
+    eventStream?: any;
+    sessions?: any;
+  };
 }
 
 export interface StartWebUiServerOptions {

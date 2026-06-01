@@ -14,7 +14,7 @@ export function createGlobalMessageStreamHub({
   const statusSubscribers = new Set<(status: import("./types.js").HubStatus) => void>();
   const replay: NormalizedEvent[] = [];
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   let controller: AbortController | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let reader: any = null;

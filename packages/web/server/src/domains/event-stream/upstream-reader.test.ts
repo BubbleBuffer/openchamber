@@ -58,9 +58,8 @@ function createSseResponse({
 describe("createUpstreamSseReader", () => {
   it("emits parsed events and tracks the latest event id", async () => {
     const events: TestEvent[] = [];
-    let reader: ReturnType<typeof createUpstreamSseReader>;
-
-    reader = createUpstreamSseReader({
+    // eslint-disable-next-line prefer-const
+    const reader = createUpstreamSseReader({
       buildUrl: () => new URL("http://127.0.0.1:4096/global/event"),
       reconnectDelayMs: 0,
       fetchImpl: async (
@@ -75,7 +74,7 @@ describe("createUpstreamSseReader", () => {
         }),
       onEvent(event: TestEvent) {
         events.push(event);
-        reader!.stop();
+        reader.stop();
       },
     });
 
@@ -97,9 +96,8 @@ describe("createUpstreamSseReader", () => {
     const fetchLastEventIds: (string | null)[] = [];
     const events: (string | null)[] = [];
     let attempt = 0;
-    let reader: ReturnType<typeof createUpstreamSseReader>;
-
-    reader = createUpstreamSseReader({
+    // eslint-disable-next-line prefer-const
+    const reader = createUpstreamSseReader({
       buildUrl: () => new URL("http://127.0.0.1:4096/global/event"),
       stallTimeoutMs: 10,
       reconnectDelayMs: 0,
@@ -130,7 +128,7 @@ describe("createUpstreamSseReader", () => {
       onEvent(event: TestEvent) {
         events.push(event.eventId);
         if (event.eventId === "evt-2") {
-          reader!.stop();
+          reader.stop();
         }
       },
     });
@@ -145,9 +143,8 @@ describe("createUpstreamSseReader", () => {
   it("reports unavailable upstream responses and continues reconnecting until stopped", async () => {
     const errors: { type: string; status?: number }[] = [];
     let attempt = 0;
-    let reader: ReturnType<typeof createUpstreamSseReader>;
-
-    reader = createUpstreamSseReader({
+    // eslint-disable-next-line prefer-const
+    const reader = createUpstreamSseReader({
       buildUrl: () => new URL("http://127.0.0.1:4096/global/event"),
       reconnectDelayMs: 0,
       fetchImpl: async (
@@ -170,7 +167,7 @@ describe("createUpstreamSseReader", () => {
         errors.push(error);
       },
       onEvent() {
-        reader!.stop();
+        reader.stop();
       },
     });
 
