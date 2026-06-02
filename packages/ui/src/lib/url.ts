@@ -1,8 +1,8 @@
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 
 /**
- * Utility for opening external URLs with Tauri shell support.
- * In desktop runtime, uses tauri.shell.open() for proper system browser handling.
+ * Utility for opening external URLs with desktop shell support.
+ * In desktop runtime, uses shell.open() for proper system browser handling.
  * Falls back to window.open() for web runtime.
  */
 
@@ -30,7 +30,7 @@ export const isExternalHttpUrl = (url: string): boolean => {
 
 /**
  * Opens an external URL in the system browser.
- * In Tauri desktop runtime, uses tauri.shell.open() for proper handling.
+ * In desktop runtime, uses shell.open() for proper handling.
  * Falls back to window.open() for web runtime.
  *
  * @param url - The URL to open

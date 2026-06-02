@@ -9,7 +9,6 @@ OpenChamber is a mobile-first UI for an OpenCode server. The UI talks to OpenCod
 | Shared UI        | `packages/ui`       | Active. Mobile-first.                                                                 |
 | Web app + server | `packages/web`      | Active. All backend logic lives here.                                                 |
 | Desktop (Electron) | `packages/electron` | **Active — all new desktop work goes here.** Boots the web server in-process.       |
-| Desktop (Tauri)  | `packages/desktop`  | **Legacy, maintenance-only.** Do not add features. |
 | VS Code          | `packages/vscode`   | Active. Extension + webview.                                                          |
 
 Electron imports the web server via `@openchamber/web/server/index.js` and calls `startWebUiServer({...})`. The native shell is for menu, dialogs, notifications, updater, deep-links, and quit only — never feature logic. `packages/electron/preload.mjs` exposes a `__TAURI__` IPC shim so renderer code stays shell-agnostic.
@@ -51,7 +50,7 @@ Skills live in `.opencode/skills/<name>/SKILL.md`. Load the matching skill befor
 - State: Zustand (`packages/ui/src/stores/` and sync child stores in `packages/ui/src/sync/`)
 - UI primitives: **Base UI** (`@base-ui/react`) — wrappers in `packages/ui/src/components/ui/`. Radix UI and HeroUI are legacy; do not use for new code. Icons: Remixicon.
 - Server: Express
-- Desktop: Electron 41 (forward), Tauri v2 (legacy)
+- Desktop: Electron 41 (forward)
 - PWA: `vite-plugin-pwa`
 
 ## Entry points
@@ -60,7 +59,6 @@ Skills live in `.opencode/skills/<name>/SKILL.md`. Load the matching skill befor
 - Web server: `packages/web/server/index.js`
 - Web CLI: `packages/web/bin/cli.js`
 - Electron main: `packages/electron/main.mjs` (preload: `packages/electron/preload.mjs`)
-- Tauri main (legacy): `packages/desktop/src-tauri/src/main.rs`
 - VS Code extension host: `packages/vscode/src/extension.ts`
 - VS Code webview bootstrap: `packages/vscode/webview/main.tsx`
 
@@ -113,7 +111,6 @@ Validation and safety gates MUST live in core command logic, not in prompts. The
 | `bun run build`               | Build all packages                   |
 | `bun run electron:dev`        | Desktop dev (Electron — primary)     |
 | `bun run electron:build`      | Desktop build (Electron — primary)   |
-| `bun run desktop:build`       | Desktop build (Tauri — legacy)       |
 | `bun run vscode:build`        | VS Code extension                    |
 | `bun run release:test`        | Release smoke (`scripts/test-release-build.sh`) |
 | `scripts/verify.sh`           | Full verification (type-check + lint + build)  |

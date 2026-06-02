@@ -30,7 +30,7 @@ export const getRevealLabel = (): string => {
 /**
  * Checks if the platform-appropriate modifier key is pressed.
  * On macOS desktop app: Cmd (metaKey), on other platforms or web: Ctrl (ctrlKey).
- * Browser intercepts Cmd shortcuts, so we only use Cmd in Tauri desktop app.
+ * Browser intercepts Cmd shortcuts, so we only use Cmd in desktop shell.
  */
 export const hasModifier = (e: KeyboardEvent | React.KeyboardEvent): boolean => {
   return isMacOS() && isTauriShell() ? e.metaKey : e.ctrlKey;
@@ -39,7 +39,7 @@ export const hasModifier = (e: KeyboardEvent | React.KeyboardEvent): boolean => 
 /**
  * Returns the platform-appropriate modifier key label.
  * On macOS desktop app: "⌘", on other platforms or web: "Ctrl"
- * Browser intercepts Cmd shortcuts, so we only show Cmd in Tauri desktop app.
+ * Browser intercepts Cmd shortcuts, so we only show Cmd in desktop shell.
  */
 export const getModifierLabel = (): string => {
   return isMacOS() && isTauriShell() ? '⌘' : 'Ctrl';

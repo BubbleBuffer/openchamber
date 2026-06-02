@@ -1087,9 +1087,7 @@ const createBrowserWindow = ({ label, restoreGeometry, url }) => {
     minHeight: MIN_WINDOW_HEIGHT,
     show: false,
     backgroundColor: '#151313',
-    // Tauri used an overlay title bar with explicit traffic-light placement.
-    // Electron's hiddenInset adds its own extra inset, which leaves the controls
-    // visibly lower than the app header. Use a plain hidden title bar instead.
+    // Use a plain hidden title bar with explicit traffic-light placement.
     titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
     trafficLightPosition: process.platform === 'darwin' ? { x: 16, y: 17 } : undefined,
     webPreferences: {
@@ -1890,9 +1888,8 @@ const handleInvoke = async (browserWindow, command, args = {}) => {
     }
 
     case 'desktop_set_vibrancy': {
-      // Vibrancy (macOS blur) is not supported in the Electron shell — the
-      // Tauri build used NSVisualEffectView via Tauri plugin, Electron has
-      // no equivalent for our titleBarStyle:'hidden' setup. Persist the
+      // Vibrancy (macOS blur) is not supported — there is no equivalent for
+      // our titleBarStyle:'hidden' setup. Persist the
       // disabled state so settings UI reflects it; args.enabled is ignored.
       await mutateSettingsRoot((root) => {
         root.desktopVibrancy = false;

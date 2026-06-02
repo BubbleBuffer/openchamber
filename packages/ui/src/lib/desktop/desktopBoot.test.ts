@@ -195,7 +195,7 @@ describe('shouldRestartDesktopBootFlow', () => {
     ).toBe(false);
   });
 
-  test('does not restart outside the tauri shell', () => {
+  test('does not restart outside the desktop shell', () => {
     expect(
       shouldRestartDesktopBootFlow({
         isTauriShell: false,

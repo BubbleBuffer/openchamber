@@ -1386,7 +1386,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
         }
     };
 
-    // Tauri desktop: handle native file drops via onDragDropEvent
+    // Desktop: handle native file drops via onDragDropEvent
     React.useEffect(() => {
         if (!isTauriShell()) return;
         let cancelled = false;
@@ -1450,7 +1450,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                                 const fileName = normalizedPath.split(/[\\/]/).pop() || normalizedPath;
                                 let file: File;
 
-                                // In Tauri shell, dropped paths are local machine paths.
+                                // In desktop shell, dropped paths are local machine paths.
                                 // Read bytes via native command to avoid workspace-bound /api/fs/raw restrictions.
                                 if (isTauriShell()) {
                                     const { invoke } = await import('@tauri-apps/api/core');
