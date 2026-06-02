@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import crypto from "node:crypto";
 
-// @ts-ignore - lifecycle.js has no types
-import { createOpenCodeLifecycleRuntime } from "../../../lib/opencode/bootstrap/lifecycle.js";
+import { createOpenCodeLifecycleRuntime } from "./lifecycle.js";
 import { createOpenCodeAuthStateRuntime } from "../opencode-support/index.js";
 import { createOpenCodeNetworkRuntime } from "../opencode-support/index.js";
 

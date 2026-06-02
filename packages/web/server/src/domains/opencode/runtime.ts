@@ -25,8 +25,8 @@ export async function createOpenCodeDomain(deps: OpenCodeDomainDeps): Promise<Op
     },
   };
 
-  // @ts-expect-error — old JS runtime, fully typed wrapper will come in Stage 5/6
-  const { createOpenCodeRuntime } = await import("../../lib/opencode/runtime.js");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { createOpenCodeRuntime } = await import("./open-code-runtime.js") as any;
   const runtime = createOpenCodeRuntime({ eventBus, config });
 
   return {
