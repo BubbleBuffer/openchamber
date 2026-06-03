@@ -1,18 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { FeatureRoutesDeps } from "./types.js";
-
+import { registerQuotaRoutes } from "../quota/routes.js";
+import { registerMagicPromptRoutes } from "../magic-prompts/routes.js";
+import { registerSessionFoldersRoutes } from "../session-folders/routes.js";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { registerFsRoutes } = require('../../../lib/fs/routes.js') as any;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { registerQuotaRoutes } = require('../../../lib/quota/routes.js') as any;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { registerGitHubRoutes } = require('../../../lib/github/routes.js') as any;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { registerGitRoutes } = require('../../../lib/git/routes.js') as any;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { registerMagicPromptRoutes } = require('../../../lib/magic-prompts/routes.js') as any;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { registerSessionFoldersRoutes } = require('../../../lib/session-folders/routes.js') as any;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { registerConfigEntityRoutes } = require('../../../lib/opencode/routes/config-entity-routes.js') as any;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
