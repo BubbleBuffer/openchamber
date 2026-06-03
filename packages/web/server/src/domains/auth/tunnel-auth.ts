@@ -1,17 +1,7 @@
 import crypto from 'node:crypto';
 import type { Request, Response } from 'express';
 
-const { createBoundedMap }: { createBoundedMap: (opts: { maxSize: number; ttlMs: number }) => BoundedMap } =
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('../../../lib/core/bounded-cache.js');
-
-interface BoundedMap {
-  get(key: unknown): unknown;
-  set(key: unknown, value: unknown): void;
-  delete(key: unknown): void;
-  values(): IterableIterator<unknown>;
-  dispose(): void;
-}
+import { createBoundedMap } from "../core/bounded-cache.js";
 
 interface BootstrapRecord {
   id: string;
@@ -23,7 +13,7 @@ interface BootstrapRecord {
   revokedAt: number | null;
 }
 
-interface TunnelSessionRecord {
+export interface TunnelSessionRecord {
   sessionId: string;
   tunnelId: string | null;
   mode: string | null;

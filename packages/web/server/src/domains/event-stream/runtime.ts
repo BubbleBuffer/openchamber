@@ -31,8 +31,7 @@ import { createPushRuntime } from "../../lib/notifications/push-runtime.js";
 import { createOpenCodeWatcherRuntime } from "../../lib/opencode/services/watcher.js";
 // @ts-expect-error — lib/ path resolution in TS
 import { EVENTS } from "../../lib/core/events.js";
-// @ts-expect-error — lib/ path resolution in TS
-import { createBoundedSet } from "../../lib/core/bounded-cache.js";
+import { createBoundedSet } from "../core/bounded-cache.js";
 
 // web-push is an old JS module — use createRequire to avoid top-level await
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

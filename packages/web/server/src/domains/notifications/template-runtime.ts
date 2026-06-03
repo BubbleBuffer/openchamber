@@ -1,14 +1,12 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, no-empty, @typescript-eslint/no-require-imports */
+/* eslint-disable @typescript-eslint/no-explicit-any, no-empty */
 import type { EventBus } from "../core/event-bus.js";
 import { EVENTS } from "../core/events.js";
 
 declare const AbortSignal: { timeout(ms: number): AbortSignal };
 
 
-const { createBoundedMap }: { createBoundedMap: (opts: { maxSize: number; ttlMs: number }) => Map<unknown, unknown> } =
-  require("../../../lib/core/bounded-cache.js") as any;
-
-const { summarizeText }: { summarizeText: any } = require("../../../lib/text/summarization.js") as any;
+import { createBoundedMap } from "../core/bounded-cache.js";
+import { summarizeText } from "../tts/summarization.js";
 
 interface BoundedMap<V> {
   get(key: unknown): V | undefined;

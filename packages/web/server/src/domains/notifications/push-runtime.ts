@@ -1,7 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, no-empty, @typescript-eslint/no-require-imports */
-// Pre-existing JS dependency — keep old import path
-const { createBoundedMap }: { createBoundedMap: (opts: { maxSize: number; ttlMs: number }) => Map<unknown, unknown> } =
-  require("../../../lib/core/bounded-cache.js") as any;
+/* eslint-disable @typescript-eslint/no-explicit-any, no-empty */
+import { createBoundedMap } from "../core/bounded-cache.js";
 
 interface BoundedMap<V> {
   get(key: unknown): V | undefined;

@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { PwaManifestDeps } from "./types.js";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { createBoundedMap } = require('../../../lib/core/bounded-cache.js') as any;
+import { createBoundedMap } from "../core/bounded-cache.js";
 
 const DEFAULT_PWA_APP_NAME = 'OpenChamber - AI Coding Assistant';
 const mapPwaOrientationToManifest = (value: string): string | undefined => {
@@ -25,7 +24,7 @@ export function registerPwaManifestRoute(app: any, deps: PwaManifestDeps): void 
     normalizePwaOrientation,
   } = deps;
 
-  const recentPwaSessionsCache = createBoundedMap({ maxSize: 50, ttlMs: 300_000 });
+  const recentPwaSessionsCache = createBoundedMap<string, { data: any[]; at: number }>({ maxSize: 50, ttlMs: 300_000 });
 
   const getRecentPwaSessionShortcuts = async (req: any): Promise<any[]> => {
     const now = Date.now();

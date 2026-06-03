@@ -1,12 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-require-imports */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { EventBus } from "../core/event-bus.js";
 import { EVENTS } from "../core/events.js";
 
-// Pre-existing JS dependency — keep old import path
-const { createBoundedMap, createBoundedSet }: {
-  createBoundedMap: (opts: { maxSize: number; ttlMs: number }) => Map<unknown, unknown>;
-  createBoundedSet: (opts: { maxSize: number; ttlMs: number }) => Set<unknown>;
-} = require("../../../lib/core/bounded-cache.js") as any;
+import { createBoundedMap, createBoundedSet } from "../core/bounded-cache.js";
 
 interface BoundedMap<V> {
   get(key: unknown): V | undefined;

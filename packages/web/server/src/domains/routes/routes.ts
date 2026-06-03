@@ -1,12 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { OpenCodeRoutesDeps } from "./types.js";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { createProjectIdFromPath } = require("../../../../lib/projects/project-id.js") as any;
+import { createProjectIdFromPath } from "../projects/index.js";
+import { getProviderAuth, removeProviderAuth } from "../auth/provider-auth.js";
 
 export function registerOpenCodeRoutes(app: any, deps: OpenCodeRoutesDeps): void {
   const {
-    crypto,
     clientReloadDelayMs,
     getOpenCodeResolutionSnapshot,
     formatSettingsResponse,
@@ -21,16 +20,8 @@ export function registerOpenCodeRoutes(app: any, deps: OpenCodeRoutesDeps): void
     refreshOpenCodeAfterConfigChange,
   } = deps;
 
-  let authLibrary: any = null;
   const pendingMcpAuthContextByState = new Map<string, any>();
   const PENDING_MCP_AUTH_TTL_MS = 30 * 60 * 1000;
-const getAuthLibrary = async () => {
-    if (!authLibrary) {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      authLibrary = require('../../lib/opencode/auth/auth.js') as any;
-    }
-    return authLibrary;
-  };
 
   const normalizePendingString = (value: unknown): string | null => {
     if (typeof value !== 'string') {
@@ -176,8 +167,6 @@ const getAuthLibrary = async () => {
       }
 
       const sources = getProviderSources(providerId, directory);
-      const authLib = await getAuthLibrary();
-      const { getProviderAuth } = authLib;
       const auth = getProviderAuth(providerId);
       sources.sources.auth.exists = Boolean(auth);
 
@@ -220,14 +209,11 @@ const getAuthLibrary = async () => {
       }
 
       let removed = false;
-      const authLib = await getAuthLibrary();
       if (scope === 'auth') {
-        const { removeProviderAuth } = authLib;
         removed = removeProviderAuth(providerId);
       } else if (scope === 'user' || scope === 'project' || scope === 'custom') {
         removed = removeProviderConfig(providerId, directory, scope);
       } else if (scope === 'all') {
-        const { removeProviderAuth } = authLib;
         const authRemoved = removeProviderAuth(providerId);
         const userRemoved = removeProviderConfig(providerId, directory, 'user');
         const projectRemoved = directory ? removeProviderConfig(providerId, directory, 'project') : false;

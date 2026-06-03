@@ -6,9 +6,8 @@ export interface ProviderAuthRuntime {
   listProviderAuths(): string[];
 }
 
-export interface TunnelAuthDeps {
-  createBoundedMap: (opts: { maxSize: number; ttlMs: number }) => Map<unknown, unknown>;
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface TunnelAuthDeps {}
 
 export interface TunnelAuthController {
   classifyRequestScope(req: unknown): string;
