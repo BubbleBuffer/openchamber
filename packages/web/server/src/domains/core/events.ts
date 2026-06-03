@@ -9,9 +9,6 @@ export const EVENTS = {
   NOTIFICATION_SEND_UI: "notification:send-ui",
   NOTIFICATION_SEND_DESKTOP: "notification:send-desktop",
   NOTIFICATION_SEND_PUSH: "notification:send-push",
-  TUNNEL_READY: "tunnel:ready",
-  TUNNEL_CHANGED: "tunnel:changed",
-  TUNNEL_ERROR: "tunnel:error",
   SERVER_PORT_BOUND: "server:port-bound",
 } as const;
 

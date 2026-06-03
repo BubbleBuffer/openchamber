@@ -18,10 +18,3 @@ export class ShutdownInProgressError extends ServerError {
     this.name = "ShutdownInProgressError";
   }
 }
-
-export class TunnelError extends ServerError {
-  constructor(message: string, code: string = "TUNNEL_ERROR") {
-    super(message, code);
-    this.name = "TunnelError";
-  }
-}
