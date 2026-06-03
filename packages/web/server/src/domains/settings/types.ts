@@ -2,23 +2,12 @@ export interface SettingsNormalizationDeps {
   os: typeof import("os");
   path: typeof import("path");
   processLike: typeof process;
-  tunnelBootstrapTtlDefaultMs: number;
-  tunnelBootstrapTtlMinMs: number;
-  tunnelBootstrapTtlMaxMs: number;
-  tunnelSessionTtlDefaultMs: number;
-  tunnelSessionTtlMinMs: number;
-  tunnelSessionTtlMaxMs: number;
 }
 
 export interface SettingsNormalizationRuntime {
   normalizeDirectoryPath(value: unknown): string | unknown;
   normalizePathForPersistence(value: unknown): string | unknown;
   normalizeSettingsPaths(input: any): { settings: any; changed: boolean };
-  normalizeTunnelBootstrapTtlMs(value: number | null): number | null;
-  normalizeTunnelSessionTtlMs(value: number): number;
-  normalizeManagedRemoteTunnelHostname(value: unknown): string | undefined;
-  normalizeManagedRemoteTunnelPresets(value: unknown): Array<{ id: string; name: string; hostname: string }> | undefined;
-  normalizeManagedRemoteTunnelPresetTokens(value: unknown): Record<string, string> | undefined;
   isUnsafeSkillRelativePath(value: unknown): boolean;
   sanitizeTypographySizesPartial(input: unknown): Record<string, string> | undefined;
   normalizeStringArray(input: unknown): string[];
@@ -30,14 +19,6 @@ export interface SettingsNormalizationRuntime {
 export interface SettingsHelpersDeps {
   normalizePathForPersistence: SettingsNormalizationRuntime["normalizePathForPersistence"];
   normalizeDirectoryPath: SettingsNormalizationRuntime["normalizeDirectoryPath"];
-  normalizeTunnelBootstrapTtlMs: SettingsNormalizationRuntime["normalizeTunnelBootstrapTtlMs"];
-  normalizeTunnelSessionTtlMs: SettingsNormalizationRuntime["normalizeTunnelSessionTtlMs"];
-  normalizeTunnelProvider: (value: unknown) => string | undefined;
-  normalizeTunnelMode: (value: unknown) => string | undefined;
-  normalizeOptionalPath: (value: unknown) => string | null;
-  normalizeManagedRemoteTunnelHostname: SettingsNormalizationRuntime["normalizeManagedRemoteTunnelHostname"];
-  normalizeManagedRemoteTunnelPresets: SettingsNormalizationRuntime["normalizeManagedRemoteTunnelPresets"];
-  normalizeManagedRemoteTunnelPresetTokens: SettingsNormalizationRuntime["normalizeManagedRemoteTunnelPresetTokens"];
   sanitizeTypographySizesPartial: SettingsNormalizationRuntime["sanitizeTypographySizesPartial"];
   normalizeStringArray: SettingsNormalizationRuntime["normalizeStringArray"];
   sanitizeModelRefs: SettingsNormalizationRuntime["sanitizeModelRefs"];
@@ -65,11 +46,6 @@ export interface SettingsRuntimeDeps {
   normalizeStringArray: SettingsNormalizationRuntime["normalizeStringArray"];
   formatSettingsResponse: SettingsHelpers["formatSettingsResponse"];
   resolveDirectoryCandidate: (value: string) => string | null;
-  normalizeManagedRemoteTunnelHostname: SettingsNormalizationRuntime["normalizeManagedRemoteTunnelHostname"];
-  normalizeManagedRemoteTunnelPresets: SettingsNormalizationRuntime["normalizeManagedRemoteTunnelPresets"];
-  normalizeManagedRemoteTunnelPresetTokens: SettingsNormalizationRuntime["normalizeManagedRemoteTunnelPresetTokens"];
-  syncManagedRemoteTunnelConfigWithPresets: (settings: object) => object;
-  upsertManagedRemoteTunnelToken: (token: { id: string; name: string; hostname: string; token: string }) => void;
 }
 
 export interface SettingsRuntime {
@@ -95,7 +71,7 @@ export interface ThemeRuntime {
 export interface SettingsDomainDeps {
   normalization: SettingsNormalizationDeps;
   helpers: SettingsHelpersDeps;
-  runtime: Omit<SettingsRuntimeDeps, "normalizeSettingsPaths" | "sanitizeSettingsUpdate" | "mergePersistedSettings" | "formatSettingsResponse" | "sanitizeProjects" | "normalizeManagedRemoteTunnelHostname" | "normalizeManagedRemoteTunnelPresets" | "normalizeManagedRemoteTunnelPresetTokens" | "normalizeStringArray" | "resolveDirectoryCandidate" | "syncManagedRemoteTunnelConfigWithPresets" | "upsertManagedRemoteTunnelToken">;
+  runtime: Omit<SettingsRuntimeDeps, "normalizeSettingsPaths" | "sanitizeSettingsUpdate" | "mergePersistedSettings" | "formatSettingsResponse" | "sanitizeProjects" | "normalizeStringArray" | "resolveDirectoryCandidate">;
   themes: ThemeRuntimeDeps;
 }
 
@@ -107,11 +83,6 @@ export interface SettingsDomain {
   normalizeDirectoryPath: SettingsNormalizationRuntime["normalizeDirectoryPath"];
   normalizePathForPersistence: SettingsNormalizationRuntime["normalizePathForPersistence"];
   normalizeSettingsPaths: SettingsNormalizationRuntime["normalizeSettingsPaths"];
-  normalizeTunnelBootstrapTtlMs: SettingsNormalizationRuntime["normalizeTunnelBootstrapTtlMs"];
-  normalizeTunnelSessionTtlMs: SettingsNormalizationRuntime["normalizeTunnelSessionTtlMs"];
-  normalizeManagedRemoteTunnelHostname: SettingsNormalizationRuntime["normalizeManagedRemoteTunnelHostname"];
-  normalizeManagedRemoteTunnelPresets: SettingsNormalizationRuntime["normalizeManagedRemoteTunnelPresets"];
-  normalizeManagedRemoteTunnelPresetTokens: SettingsNormalizationRuntime["normalizeManagedRemoteTunnelPresetTokens"];
   isUnsafeSkillRelativePath: SettingsNormalizationRuntime["isUnsafeSkillRelativePath"];
   sanitizeTypographySizesPartial: SettingsNormalizationRuntime["sanitizeTypographySizesPartial"];
   normalizeStringArray: SettingsNormalizationRuntime["normalizeStringArray"];

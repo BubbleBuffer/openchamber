@@ -5,14 +5,6 @@ export function createSettingsHelpers(deps: SettingsHelpersDeps): SettingsHelper
   const {
     normalizePathForPersistence,
     normalizeDirectoryPath,
-    normalizeTunnelBootstrapTtlMs,
-    normalizeTunnelSessionTtlMs,
-    normalizeTunnelProvider,
-    normalizeTunnelMode,
-    normalizeOptionalPath,
-    normalizeManagedRemoteTunnelHostname,
-    normalizeManagedRemoteTunnelPresets,
-    normalizeManagedRemoteTunnelPresetTokens,
     sanitizeTypographySizesPartial,
     normalizeStringArray,
     sanitizeModelRefs,
@@ -216,51 +208,6 @@ export function createSettingsHelpers(deps: SettingsHelpersDeps): SettingsHelper
       const normalizedDays = Math.max(1, Math.min(365, Math.round(candidate.autoDeleteAfterDays as number)));
       result.autoDeleteAfterDays = normalizedDays;
     }
-    if (candidate.tunnelBootstrapTtlMs === null) {
-      result.tunnelBootstrapTtlMs = null;
-    } else if (typeof candidate.tunnelBootstrapTtlMs === "number" && Number.isFinite(candidate.tunnelBootstrapTtlMs as number)) {
-      result.tunnelBootstrapTtlMs = normalizeTunnelBootstrapTtlMs(candidate.tunnelBootstrapTtlMs as number);
-    }
-    if (typeof candidate.tunnelSessionTtlMs === "number" && Number.isFinite(candidate.tunnelSessionTtlMs as number)) {
-      result.tunnelSessionTtlMs = normalizeTunnelSessionTtlMs(candidate.tunnelSessionTtlMs as number);
-    }
-    if (typeof candidate.tunnelProvider === "string") {
-      const provider = normalizeTunnelProvider(candidate.tunnelProvider);
-      if (provider) {
-        result.tunnelProvider = provider;
-      }
-    }
-    if (typeof candidate.tunnelMode === "string") {
-      result.tunnelMode = normalizeTunnelMode(candidate.tunnelMode);
-    }
-    if (candidate.managedLocalTunnelConfigPath === null) {
-      result.managedLocalTunnelConfigPath = null;
-    } else if (typeof candidate.managedLocalTunnelConfigPath === "string") {
-      const trimmed = (candidate.managedLocalTunnelConfigPath as string).trim();
-      result.managedLocalTunnelConfigPath = trimmed.length > 0 ? normalizeOptionalPath(trimmed) : null;
-    }
-    if (typeof candidate.managedRemoteTunnelHostname === "string") {
-      const hostname = normalizeManagedRemoteTunnelHostname(candidate.managedRemoteTunnelHostname);
-      result.managedRemoteTunnelHostname = hostname;
-    }
-    if (candidate.managedRemoteTunnelToken === null) {
-      result.managedRemoteTunnelToken = null;
-    } else if (typeof candidate.managedRemoteTunnelToken === "string") {
-      result.managedRemoteTunnelToken = (candidate.managedRemoteTunnelToken as string).trim();
-    }
-    const managedRemoteTunnelPresets = normalizeManagedRemoteTunnelPresets(candidate.managedRemoteTunnelPresets);
-    if (managedRemoteTunnelPresets) {
-      result.managedRemoteTunnelPresets = managedRemoteTunnelPresets;
-    }
-    const managedRemoteTunnelPresetTokens = normalizeManagedRemoteTunnelPresetTokens(candidate.managedRemoteTunnelPresetTokens);
-    if (managedRemoteTunnelPresetTokens) {
-      result.managedRemoteTunnelPresetTokens = managedRemoteTunnelPresetTokens;
-    }
-    if (typeof candidate.managedRemoteTunnelSelectedPresetId === "string") {
-      const id = (candidate.managedRemoteTunnelSelectedPresetId as string).trim();
-      result.managedRemoteTunnelSelectedPresetId = id || undefined;
-    }
-
     const typography = sanitizeTypographySizesPartial(candidate.typographySizes);
     if (typography) {
       result.typographySizes = typography;
@@ -617,17 +564,13 @@ export function createSettingsHelpers(deps: SettingsHelpersDeps): SettingsHelper
 
   const formatSettingsResponse = (settings: any): any => {
     const sanitized = sanitizeSettingsUpdate(settings);
-    delete sanitized.managedRemoteTunnelToken;
     const approved = normalizeStringArray(settings?.approvedDirectories);
     const bookmarks = normalizeStringArray(settings?.securityScopedBookmarks);
-    const hasManagedRemoteTunnelToken =
-      typeof settings?.managedRemoteTunnelToken === "string" && settings.managedRemoteTunnelToken.trim().length > 0;
     const pwaAppName = normalizePwaAppName(settings?.pwaAppName, "");
     const pwaOrientation = normalizePwaOrientation(settings?.pwaOrientation, "system");
 
     return {
       ...sanitized,
-      hasManagedRemoteTunnelToken,
       ...(pwaAppName ? { pwaAppName } : {}),
       pwaOrientation,
       approvedDirectories: approved,

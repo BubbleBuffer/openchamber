@@ -10,10 +10,8 @@ export interface CoreRoutesDeps {
 }
 
 export interface AuthRoutesDeps {
-  tunnelAuthController: any;
   uiAuthController: any;
   readSettingsFromDiskMigrated: () => Promise<object>;
-  normalizeTunnelSessionTtlMs: (value: number) => number;
 }
 
 export interface SettingsUtilityRoutesDeps {

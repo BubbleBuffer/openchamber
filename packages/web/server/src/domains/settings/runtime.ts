@@ -41,11 +41,6 @@ export function createSettingsRuntime(deps: SettingsRuntimeDeps): SettingsRuntim
     normalizeStringArray,
     formatSettingsResponse,
     resolveDirectoryCandidate,
-    normalizeManagedRemoteTunnelHostname,
-    normalizeManagedRemoteTunnelPresets,
-    normalizeManagedRemoteTunnelPresetTokens,
-    syncManagedRemoteTunnelConfigWithPresets,
-    upsertManagedRemoteTunnelToken,
   } = deps;
 
   let persistSettingsLock: Promise<any> = Promise.resolve();
@@ -733,99 +728,25 @@ export function createSettingsRuntime(deps: SettingsRuntimeDeps): SettingsRuntim
     return { settings: changed ? next : settings, changed };
   };
 
-  const migrateSettingsFromLegacyNamedTunnelKeys = async (
-    current: any,
-  ): Promise<{ settings: any; changed: boolean }> => {
-    const settings = current && typeof current === "object" ? current : {};
-    const next = { ...settings };
-    let changed = false;
-
-    if (
-      !Object.prototype.hasOwnProperty.call(next, "managedRemoteTunnelHostname") &&
-      Object.prototype.hasOwnProperty.call(next, "namedTunnelHostname")
-    ) {
-      next.managedRemoteTunnelHostname = normalizeManagedRemoteTunnelHostname(next.namedTunnelHostname);
-      changed = true;
-    }
-
-    if (
-      !Object.prototype.hasOwnProperty.call(next, "managedRemoteTunnelToken") &&
-      Object.prototype.hasOwnProperty.call(next, "namedTunnelToken")
-    ) {
-      if (next.namedTunnelToken === null) {
-        next.managedRemoteTunnelToken = null;
-      } else if (typeof next.namedTunnelToken === "string") {
-        next.managedRemoteTunnelToken = next.namedTunnelToken.trim();
-      }
-      changed = true;
-    }
-
-    if (
-      !Object.prototype.hasOwnProperty.call(next, "managedRemoteTunnelPresets") &&
-      Object.prototype.hasOwnProperty.call(next, "namedTunnelPresets")
-    ) {
-      next.managedRemoteTunnelPresets = normalizeManagedRemoteTunnelPresets(next.namedTunnelPresets);
-      changed = true;
-    }
-
-    if (
-      !Object.prototype.hasOwnProperty.call(next, "managedRemoteTunnelPresetTokens") &&
-      Object.prototype.hasOwnProperty.call(next, "namedTunnelPresetTokens")
-    ) {
-      next.managedRemoteTunnelPresetTokens = normalizeManagedRemoteTunnelPresetTokens(next.namedTunnelPresetTokens);
-      changed = true;
-    }
-
-    if (
-      !Object.prototype.hasOwnProperty.call(next, "managedRemoteTunnelSelectedPresetId") &&
-      Object.prototype.hasOwnProperty.call(next, "namedTunnelSelectedPresetId")
-    ) {
-      const selectedPresetId =
-        typeof next.namedTunnelSelectedPresetId === "string" ? next.namedTunnelSelectedPresetId.trim() : "";
-      if (selectedPresetId) {
-        next.managedRemoteTunnelSelectedPresetId = selectedPresetId;
-      }
-      changed = true;
-    }
-
-    const legacyKeys = [
-      "namedTunnelHostname",
-      "namedTunnelToken",
-      "namedTunnelPresets",
-      "namedTunnelPresetTokens",
-      "namedTunnelSelectedPresetId",
-    ];
-    for (const key of legacyKeys) {
-      if (Object.prototype.hasOwnProperty.call(next, key)) {
-        delete next[key];
-        changed = true;
-      }
-    }
-
-    return { settings: changed ? next : settings, changed };
-  };
-
   const readSettingsFromDiskMigrated = async (): Promise<any> => {
     const current = await readSettingsFromDisk();
     const migration1 = await migrateSettingsFromLegacyLastDirectory(current);
     const migration2 = await migrateSettingsFromLegacyThemePreferences(migration1.settings);
     const migration3 = await migrateSettingsFromLegacyCollapsedProjects(migration2.settings);
     const migration4 = await migrateSettingsNotificationDefaults(migration3.settings);
-    const migration5 = await migrateSettingsFromLegacyNamedTunnelKeys(migration4.settings);
-    const migration6 = normalizeSettingsPaths(migration5.settings);
-    const migration7 = await migrateSettingsToDeterministicProjectIds(migration6.settings);
+    const migration5 = normalizeSettingsPaths(migration4.settings);
+    const migration6 = await migrateSettingsToDeterministicProjectIds(migration5.settings);
     if (
       migration1.changed ||
       migration2.changed ||
       migration3.changed ||
       migration4.changed ||
       migration5.changed ||
-      migration6.changed ||
-      migration7.changed
+      migration6.changed
     ) {
-      await writeSettingsToDisk(migration7.settings);
+      await writeSettingsToDisk(migration6.settings);
     }
-    return migration7.settings;
+    return migration6.settings;
   };
 
   const persistSettings = async (changes: any): Promise<any> => {
@@ -863,42 +784,6 @@ export function createSettingsRuntime(deps: SettingsRuntimeDeps): SettingsRuntim
       } else if (next.activeProjectId) {
         console.log(`[persistSettings] No projects found, clearing activeProjectId ${next.activeProjectId}`);
         next = { ...next, activeProjectId: undefined };
-      }
-
-      if (Object.prototype.hasOwnProperty.call(sanitized, "managedRemoteTunnelPresets")) {
-        await syncManagedRemoteTunnelConfigWithPresets(next.managedRemoteTunnelPresets);
-      }
-
-      if (
-        Object.prototype.hasOwnProperty.call(sanitized, "managedRemoteTunnelPresetTokens") &&
-        sanitized.managedRemoteTunnelPresetTokens
-      ) {
-        const presetsById = new Map<string, { id: string; name: string; hostname: string }>(
-          ((next.managedRemoteTunnelPresets || []) as Array<{ id: string; name: string; hostname: string }>).map(
-            (entry) => [entry.id, entry],
-          ),
-        );
-        const updates: Array<{ id: string; name: string; hostname: string; token: string } | null> = Object.entries(
-          sanitized.managedRemoteTunnelPresetTokens as Record<string, string>,
-        )
-          .map(([presetId, token]: [string, any]) => {
-            const preset = presetsById.get(presetId);
-            if (!preset || typeof token !== "string" || token.trim().length === 0) {
-              return null;
-            }
-            return {
-              id: preset.id as string,
-              name: preset.name as string,
-              hostname: preset.hostname as string,
-              token: token.trim() as string,
-            };
-          });
-
-        for (const update of updates) {
-          if (update) {
-            await upsertManagedRemoteTunnelToken(update);
-          }
-        }
       }
 
       await writeSettingsToDisk(next);

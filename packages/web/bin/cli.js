@@ -8,7 +8,6 @@ import crypto from 'crypto';
 import { spawn, spawnSync } from 'child_process';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { isModuleCliExecution } from './cli-entry.js';
-import { cloudflareTunnelProviderCapabilities } from '../server/lib/tunnels/providers/cloudflare.js';
 import {
   intro as clackIntro, outro as clackOutro, log as clackLog,
   box as clackBox, confirm as clackConfirm,
@@ -59,7 +58,6 @@ const SESSION_TTL_PICKER_OPTIONS = [
   { value: '__custom__', label: 'Custom' },
 ];
 const PACKAGE_JSON = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
-const DEFAULT_TUNNEL_PROVIDER_CAPABILITIES = [cloudflareTunnelProviderCapabilities];
 
 let onCancelCleanup = null;
 let activeCommandOptions = null;
@@ -802,13 +800,13 @@ function parseArgs(argv = process.argv.slice(2)) {
         removedFlagErrors.push('`--daemon` was removed. OpenChamber now always runs in daemon mode.');
         break;
       case 'try-cf-tunnel':
-        removedFlagErrors.push('`--try-cf-tunnel` was removed. Use: openchamber tunnel start --provider cloudflare --mode quick');
+        removedFlagErrors.push('`--try-cf-tunnel` is no longer available.');
         break;
       case 'tunnel-qr':
-        removedFlagErrors.push('`--tunnel-qr` was removed. Use: openchamber tunnel start ... --qr');
+        removedFlagErrors.push('`--tunnel-qr` is no longer available.');
         break;
       case 'tunnel-password-url':
-        removedFlagErrors.push('`--tunnel-password-url` was removed. Use UI password auth directly after tunnel start.');
+        removedFlagErrors.push('`--tunnel-password-url` is no longer available.');
         break;
       case 'tunnel-provider':
       case 'tunnel-mode':
@@ -816,7 +814,7 @@ function parseArgs(argv = process.argv.slice(2)) {
       case 'tunnel-token':
       case 'tunnel-hostname':
       case 'tunnel':
-        removedFlagErrors.push(`\`--${name}\` was removed from top-level serve flow. Use: openchamber tunnel start ...`);
+        removedFlagErrors.push(`\`--${name}\` is no longer available.`);
         break;
       default:
         if (!long && name.length === 1) {
@@ -829,13 +827,9 @@ function parseArgs(argv = process.argv.slice(2)) {
   }
 
   const command = positional[0] || 'serve';
-  const subcommand = command === 'tunnel' ? (positional[1] || 'help') : null;
-  const tunnelAction = command === 'tunnel' ? (positional[2] || null) : null;
 
   return {
     command,
-    subcommand,
-    tunnelAction,
     options,
     removedFlagErrors,
     helpRequested,
@@ -855,7 +849,6 @@ COMMANDS:
   stop           Stop running instance(s)
   restart        Stop and start the server
   status         Show server status
-  tunnel         Tunnel lifecycle commands
   logs           Tail OpenChamber logs
   update         Check for and install updates
 
@@ -881,85 +874,7 @@ EXAMPLES:
   openchamber                    # Start in daemon mode on default port 3000 (or free port)
   openchamber --port 8080        # Start on port 8080 (daemon)
   openchamber serve --foreground # Start in foreground (for systemd Type=simple)
-  openchamber tunnel help        # Show tunnel lifecycle help
   openchamber logs               # Follow logs for latest running instance
-`);
-}
-
-function showTunnelHelp() {
-  console.log(`
- Tunnel Lifecycle Commands
-
-USAGE:
-  openchamber tunnel <SUBCOMMAND> [OPTIONS]
-
-SUBCOMMANDS:
-  help        Show this tunnel help
-  providers   Show available tunnel providers and capabilities
-  ready       Check tunnel readiness for a provider
-  doctor      Run deep tunnel diagnostics
-  status      Show tunnel status
-  start       Start a tunnel
-  stop        Stop active tunnel (keep server running)
-  profile     Manage saved managed-remote profiles
-
-COMMON OPTIONS:
-  -p, --port              Target OpenChamber instance port
-  --json                  Output machine-readable JSON
-  --all                   Apply to all running instances (doctor default, stop)
-
-START OPTIONS:
-  --provider <id>         Tunnel provider id (default: cloudflare)
-  --mode <id>             Tunnel mode (default: quick)
-  --profile <name>        Start tunnel from saved profile name
-  --config [path]         Managed-local config path (optional)
-  --token <token>         Managed-remote token (visible in process list)
-  --token-file <path>     Read token from file (recommended)
-  --token-stdin           Read token from stdin
-  --hostname <hostname>   Managed-remote hostname
-  --connect-ttl <value>   Connect-link TTL (e.g. 30m, 24h, 1d)
-  --session-ttl <value>   Session TTL (e.g. 8h, 24h, 1d)
-  --qr                    Print QR code for resulting tunnel URL
-  --no-qr                 Disable QR output
-  --dry-run               Validate inputs without applying changes
-
-OUTPUT OPTIONS:
-  --show-secrets          Show full tokens in output (default: redacted)
-  --plain                 Disable colors and decorations
-  -q, --quiet             Suppress non-essential output
-  --json                  Output machine-readable JSON
-
-BEHAVIOR NOTES:
-  - One active tunnel per OpenChamber instance.
-  - Starting a different mode/provider replaces the current tunnel and revokes old connect links/sessions.
-  - Connect links are one-time; generating a new link revokes the previous unused link.
-
-PROFILE USAGE:
-  openchamber tunnel profile list [--provider <id>] [--json]
-  openchamber tunnel profile show --name <name> [--provider <id>] [--json]
-  openchamber tunnel profile add --provider <id> --mode managed-remote --name <name> --hostname <host> --token <token> [--force] [--json]
-  openchamber tunnel profile add --provider <id> --mode managed-remote --name <name> --hostname <host> --token-file <path> [--force] [--json]
-  openchamber tunnel profile remove --name <name> [--provider <id>] [--json]
-
-SHELL COMPLETION:
-  openchamber tunnel completion bash   Generate Bash completion script
-  openchamber tunnel completion zsh    Generate Zsh completion script
-  openchamber tunnel completion fish   Generate Fish completion script
-
-EXAMPLES:
-  openchamber tunnel providers
-  openchamber tunnel ready --provider cloudflare
-  openchamber tunnel doctor --provider cloudflare
-  openchamber tunnel status
-  openchamber tunnel start --qr
-  openchamber tunnel start --profile prod-main
-  openchamber tunnel start --provider cloudflare --mode managed-remote --token-file ~/.secrets/cf-token --hostname app.example.com
-  openchamber tunnel start --provider cloudflare --mode managed-local --config ~/.cloudflared/config.yml
-  openchamber tunnel start --dry-run --provider cloudflare --mode managed-remote --token-file ~/.secrets/cf-token --hostname app.example.com
-  echo "$TOKEN" | openchamber tunnel profile add --provider cloudflare --mode managed-remote --name prod-main --hostname app.example.com --token-stdin
-  openchamber tunnel profile list --provider cloudflare
-  openchamber tunnel profile list --json --show-secrets
-  openchamber tunnel stop --port 3000
 `);
 }
 
@@ -967,110 +882,51 @@ function generateCompletionScript(shell) {
   const normalized = typeof shell === 'string' ? shell.trim().toLowerCase() : '';
 
   if (normalized === 'bash') {
-    return `# Bash completion for openchamber tunnel
-# Add to ~/.bashrc: eval "$(openchamber tunnel completion bash)"
-_openchamber_tunnel() {
-  local cur prev commands tunnel_commands profile_commands common_flags start_flags
+    return `# Bash completion for openchamber
+# Add to ~/.bashrc: eval "$(openchamber completion bash)"
+_openchamber() {
+  local cur commands common_flags
   COMPREPLY=()
   cur="\${COMP_WORDS[COMP_CWORD]}"
-  prev="\${COMP_WORDS[COMP_CWORD-1]}"
 
-  commands="serve stop restart status tunnel logs update"
-  tunnel_commands="help providers ready doctor status start stop profile completion"
-  profile_commands="list show add remove"
+  commands="serve stop restart status logs update"
   common_flags="--port --foreground --no-daemon --json --all --help --version --plain --quiet"
-  start_flags="--provider --mode --profile --config --token --token-file --token-stdin --hostname --connect-ttl --session-ttl --qr --no-qr --dry-run --show-secrets"
 
   if [[ \${COMP_CWORD} -eq 1 ]]; then
     COMPREPLY=( $(compgen -W "\${commands}" -- "\${cur}") )
     return 0
   fi
 
-  if [[ "\${COMP_WORDS[1]}" == "tunnel" ]]; then
-    if [[ \${COMP_CWORD} -eq 2 ]]; then
-      COMPREPLY=( $(compgen -W "\${tunnel_commands}" -- "\${cur}") )
-      return 0
-    fi
-    if [[ "\${COMP_WORDS[2]}" == "profile" && \${COMP_CWORD} -eq 3 ]]; then
-      COMPREPLY=( $(compgen -W "\${profile_commands}" -- "\${cur}") )
-      return 0
-    fi
-    if [[ "\${COMP_WORDS[2]}" == "completion" && \${COMP_CWORD} -eq 3 ]]; then
-      COMPREPLY=( $(compgen -W "bash zsh fish" -- "\${cur}") )
-      return 0
-    fi
-    if [[ "\${COMP_WORDS[2]}" == "start" ]]; then
-      COMPREPLY=( $(compgen -W "\${start_flags} \${common_flags}" -- "\${cur}") )
-      return 0
-    fi
-    COMPREPLY=( $(compgen -W "\${common_flags}" -- "\${cur}") )
-    return 0
-  fi
-
   COMPREPLY=( $(compgen -W "\${common_flags}" -- "\${cur}") )
   return 0
 }
-complete -F _openchamber_tunnel openchamber
+complete -F _openchamber openchamber
 `;
   }
 
   if (normalized === 'zsh') {
     return `#compdef openchamber
-# Zsh completion for openchamber tunnel
-# Add to ~/.zshrc: eval "$(openchamber tunnel completion zsh)"
+# Zsh completion for openchamber
+# Add to ~/.zshrc: eval "$(openchamber completion zsh)"
 
 _openchamber() {
-  local -a commands tunnel_commands profile_commands
+  local -a commands
 
   commands=(
     'serve:Start the web server'
     'stop:Stop running instance(s)'
     'restart:Stop and start the server'
     'status:Show server status'
-    'tunnel:Tunnel lifecycle commands'
     'logs:Tail OpenChamber logs'
     'update:Check for and install updates'
   )
 
-  tunnel_commands=(
-    'help:Show tunnel help'
-    'providers:Show available providers'
-    'ready:Check tunnel readiness'
-    'doctor:Run tunnel diagnostics'
-    'status:Show tunnel status'
-    'start:Start a tunnel'
-    'stop:Stop active tunnel'
-    'profile:Manage saved profiles'
-    'completion:Generate shell completion'
-  )
-
-  profile_commands=(
-    'list:List profiles'
-    'show:Show profile details'
-    'add:Add a profile'
-    'remove:Remove a profile'
-  )
-
   _arguments -C \\
-    '1:command:->command' \\
-    '*::arg:->args'
+    '1:command:->command'
 
   case \$state in
     command)
       _describe 'command' commands
-      ;;
-    args)
-      case \$words[1] in
-        tunnel)
-          if (( CURRENT == 2 )); then
-            _describe 'tunnel command' tunnel_commands
-          elif [[ \$words[2] == "profile" ]] && (( CURRENT == 3 )); then
-            _describe 'profile action' profile_commands
-          elif [[ \$words[2] == "completion" ]] && (( CURRENT == 3 )); then
-            _values 'shell' bash zsh fish
-          fi
-          ;;
-      esac
       ;;
   esac
 }
@@ -1080,7 +936,7 @@ compdef _openchamber openchamber
   }
 
   if (normalized === 'fish') {
-    return `# Fish completion for openchamber tunnel
+    return `# Fish completion for openchamber
 # Save to ~/.config/fish/completions/openchamber.fish
 
 complete -c openchamber -n '__fish_use_subcommand' -a 'serve' -d 'Start the web server'
@@ -1089,30 +945,8 @@ complete -c openchamber -n '__fish_seen_subcommand_from serve' -l no-daemon -d '
 complete -c openchamber -n '__fish_use_subcommand' -a 'stop' -d 'Stop running instance(s)'
 complete -c openchamber -n '__fish_use_subcommand' -a 'restart' -d 'Stop and start the server'
 complete -c openchamber -n '__fish_use_subcommand' -a 'status' -d 'Show server status'
-complete -c openchamber -n '__fish_use_subcommand' -a 'tunnel' -d 'Tunnel lifecycle commands'
 complete -c openchamber -n '__fish_use_subcommand' -a 'logs' -d 'Tail logs'
 complete -c openchamber -n '__fish_use_subcommand' -a 'update' -d 'Check for updates'
-
-complete -c openchamber -n '__fish_seen_subcommand_from tunnel; and not __fish_seen_subcommand_from help providers ready doctor status start stop profile completion' -a 'help' -d 'Show tunnel help'
-complete -c openchamber -n '__fish_seen_subcommand_from tunnel; and not __fish_seen_subcommand_from help providers ready doctor status start stop profile completion' -a 'providers' -d 'Show providers'
-complete -c openchamber -n '__fish_seen_subcommand_from tunnel; and not __fish_seen_subcommand_from help providers ready doctor status start stop profile completion' -a 'ready' -d 'Check readiness'
-complete -c openchamber -n '__fish_seen_subcommand_from tunnel; and not __fish_seen_subcommand_from help providers ready doctor status start stop profile completion' -a 'doctor' -d 'Run diagnostics'
-complete -c openchamber -n '__fish_seen_subcommand_from tunnel; and not __fish_seen_subcommand_from help providers ready doctor status start stop profile completion' -a 'status' -d 'Show tunnel status'
-complete -c openchamber -n '__fish_seen_subcommand_from tunnel; and not __fish_seen_subcommand_from help providers ready doctor status start stop profile completion' -a 'start' -d 'Start a tunnel'
-complete -c openchamber -n '__fish_seen_subcommand_from tunnel; and not __fish_seen_subcommand_from help providers ready doctor status start stop profile completion' -a 'stop' -d 'Stop tunnel'
-complete -c openchamber -n '__fish_seen_subcommand_from tunnel; and not __fish_seen_subcommand_from help providers ready doctor status start stop profile completion' -a 'profile' -d 'Manage profiles'
-complete -c openchamber -n '__fish_seen_subcommand_from tunnel; and not __fish_seen_subcommand_from help providers ready doctor status start stop profile completion' -a 'completion' -d 'Generate completions'
-
-complete -c openchamber -n '__fish_seen_subcommand_from tunnel; and __fish_seen_subcommand_from start' -l provider -d 'Provider id'
-complete -c openchamber -n '__fish_seen_subcommand_from tunnel; and __fish_seen_subcommand_from start' -l mode -d 'Tunnel mode'
-complete -c openchamber -n '__fish_seen_subcommand_from tunnel; and __fish_seen_subcommand_from start' -l profile -d 'Profile name'
-complete -c openchamber -n '__fish_seen_subcommand_from tunnel; and __fish_seen_subcommand_from start' -l config -d 'Config path'
-complete -c openchamber -n '__fish_seen_subcommand_from tunnel; and __fish_seen_subcommand_from start' -l token -d 'Token'
-complete -c openchamber -n '__fish_seen_subcommand_from tunnel; and __fish_seen_subcommand_from start' -l token-file -d 'Token file path'
-complete -c openchamber -n '__fish_seen_subcommand_from tunnel; and __fish_seen_subcommand_from start' -l token-stdin -d 'Read token from stdin'
-complete -c openchamber -n '__fish_seen_subcommand_from tunnel; and __fish_seen_subcommand_from start' -l hostname -d 'Hostname'
-complete -c openchamber -n '__fish_seen_subcommand_from tunnel; and __fish_seen_subcommand_from start' -l dry-run -d 'Validate without applying'
-complete -c openchamber -n '__fish_seen_subcommand_from tunnel; and __fish_seen_subcommand_from start' -l qr -d 'Show QR code'
 `;
   }
 
@@ -2126,21 +1960,6 @@ function getLatestInstance(instances) {
   })[0];
 }
 
-async function fetchTunnelProvidersFromPort(port, fetchImpl = globalThis.fetch) {
-  if (!Number.isFinite(port) || port <= 0 || typeof fetchImpl !== 'function') {
-    return null;
-  }
-  try {
-    const response = await fetchImpl(buildLocalUrl(port, '/api/openchamber/tunnel/providers'));
-    if (!response.ok) return null;
-    const body = await response.json().catch(() => null);
-    if (!body || !Array.isArray(body.providers)) return null;
-    return body.providers;
-  } catch {
-    return null;
-  }
-}
-
 async function fetchSystemInfoFromPort(port, fetchImpl = globalThis.fetch) {
   if (!Number.isFinite(port) || port <= 0 || typeof fetchImpl !== 'function') {
     return null;
@@ -2201,36 +2020,6 @@ async function discoverDesktopInstance(fetchImpl = globalThis.fetch) {
     pid: info.pid,
     runtime: info.runtime,
   };
-}
-
-async function resolveTunnelProviders(options = {}, deps = {}) {
-  const readPorts = typeof deps.readPorts === 'function'
-    ? deps.readPorts
-    : async () => (await discoverRunningInstances()).map((entry) => entry.port);
-  const fetchImpl = typeof deps.fetchImpl === 'function' ? deps.fetchImpl : globalThis.fetch;
-
-  const candidatePorts = [];
-  if (Number.isFinite(options.port) && options.port > 0) {
-    candidatePorts.push(options.port);
-  }
-
-  const discoveredPorts = await Promise.resolve(readPorts());
-  if (Array.isArray(discoveredPorts)) {
-    candidatePorts.push(...discoveredPorts);
-  }
-
-  if (!candidatePorts.includes(DEFAULT_PORT)) {
-    candidatePorts.push(DEFAULT_PORT);
-  }
-
-  for (const port of candidatePorts) {
-    const providers = await fetchTunnelProvidersFromPort(port, fetchImpl);
-    if (providers) {
-      return { providers, source: `api:${port}` };
-    }
-  }
-
-  return { providers: DEFAULT_TUNNEL_PROVIDER_CAPABILITIES, source: 'fallback' };
 }
 
 async function resolveTargetInstance({
@@ -2474,7 +2263,7 @@ async function handleTunnelProfileSubcommand(options, action) {
   if (!sub) {
     if (isJsonMode(options)) {
       printJson({
-        command: 'tunnel profile',
+        command: 'profile',
         subcommands: ['list', 'show', 'add', 'remove'],
       });
       return;
@@ -2549,30 +2338,6 @@ async function handleTunnelProfileSubcommand(options, action) {
     let token = normalizeProfileToken(resolvedTokenValue);
 
     if (canPrompt(options)) {
-      if (!provider) {
-        const providerResult = await resolveTunnelProviders(options, {
-          readPorts: async () => (await discoverRunningInstances()).map((entry) => entry.port),
-        });
-        const providerOptions = (Array.isArray(providerResult.providers) ? providerResult.providers : [])
-          .map((entry) => normalizeProfileProvider(entry?.provider))
-          .filter(Boolean)
-          .map((providerId) => ({ value: providerId, label: clackFormatProviderWithIcon(providerId) }));
-
-        if (providerOptions.length === 1) {
-          provider = providerOptions[0].value;
-        } else if (providerOptions.length > 1) {
-          const selectedProvider = await clackSelect({
-            message: 'Select tunnel provider',
-            options: providerOptions,
-          });
-          if (clackIsCancel(selectedProvider)) {
-            clackCancel('Profile add cancelled.');
-            return;
-          }
-          provider = normalizeProfileProvider(selectedProvider);
-        }
-      }
-
       if (!mode) {
         mode = 'managed-remote';
       }
@@ -2765,13 +2530,8 @@ async function handleTunnelProfileSubcommand(options, action) {
     return;
   }
 
-  const knownProfileActions = ['list', 'show', 'add', 'remove'];
-  const suggestion = findClosestMatch(sub, knownProfileActions);
-  const hint = suggestion ? ` Did you mean '${suggestion}'?` : '';
-  throw new TunnelCliError(
-    `Unknown tunnel profile subcommand '${sub}'.${hint} Use 'openchamber tunnel help'.`,
-    EXIT_CODE.USAGE_ERROR
-  );
+    console.log('The tunnel command is no longer available.');
+    process.exit(0);
 }
 
 const commands = {
@@ -3479,1132 +3239,9 @@ const commands = {
     clackOutro(`${runningCount} running runtime(s)`);
   },
 
-  async tunnel(options, subcommand, action) {
-    switch (subcommand) {
-      case 'help':
-        showTunnelHelp();
-        return;
-      case 'profile':
-        await handleTunnelProfileSubcommand(options, action);
-        return;
-      case 'providers': {
-        const result = await resolveTunnelProviders(options, {
-          readPorts: async () => (await discoverRunningInstances()).map((entry) => entry.port),
-        });
-        if (isJsonMode(options)) {
-          printJson({ providers: annotateTunnelProvidersForOutput(result.providers), source: result.source });
-          return;
-        }
-        if (isQuietMode(options)) {
-          for (const provider of result.providers) {
-            const modes = Array.isArray(provider?.modes) ? provider.modes : [];
-            const providerId = provider?.provider || 'unknown';
-            process.stdout.write(`provider ${providerId} modes ${modes.length}\n`);
-            for (const mode of modes) {
-              const requires = formatModeRequirements(mode).replace(/,\s+/g, ',');
-              process.stdout.write(`mode ${mode?.key || 'unknown'} requires ${requires}\n`);
-            }
-          }
-          return;
-        }
-        clackIntro('Tunnel Providers');
-        for (const provider of result.providers) {
-          const modes = Array.isArray(provider?.modes) ? provider.modes : [];
-          clackLog.success(`${clackFormatProviderWithIcon(provider.provider)} — ${modes.length} mode(s)`);
-          for (const mode of modes) {
-            const label = mode.label || mode.key;
-            const requires = formatModeRequirements(mode);
-            clackLog.step(`${mode.key} — ${label}\n  requires: ${requires}`);
-          }
-        }
-        clackOutro(`${result.providers.length} provider(s)`);
-        return;
-      }
-      case 'ready': {
-        const entries = await resolveTunnelReadEntries(options);
-        const provider = typeof options.provider === 'string' && options.provider.trim().length > 0
-          ? options.provider.trim().toLowerCase()
-          : 'cloudflare';
-
-        const results = [];
-        for (const entry of entries) {
-          try {
-            const { response, body } = await requestJson(entry.port, `/api/openchamber/tunnel/check?provider=${encodeURIComponent(provider)}`);
-            if (!response.ok) {
-              results.push({ port: entry.port, error: body?.error || `check ${response.status}` });
-              continue;
-            }
-            results.push({ port: entry.port, result: body });
-          } catch (error) {
-            results.push({ port: entry.port, error: error instanceof Error ? error.message : String(error) });
-          }
-        }
-
-        if (isJsonMode(options)) {
-          printJson({ instances: results });
-          return;
-        }
-
-        if (isQuietMode(options)) {
-          for (const result of results) {
-            if (result.error) {
-              process.stderr.write(`port ${result.port} failed: ${result.error}\n`);
-              continue;
-            }
-            const providerId = result.result?.provider || provider;
-            if (result.result?.available) {
-              process.stdout.write(`port ${result.port} ready ${providerId} ${result.result?.version || 'unknown'}\n`);
-            } else {
-              process.stdout.write(`port ${result.port} not-ready ${providerId} ${result.result?.message || 'not ready'}\n`);
-            }
-          }
-          return;
-        }
-
-        clackIntro('Tunnel Ready');
-        for (const result of results) {
-          if (result.error) {
-            logStatus('error', `port ${result.port} failed`, result.error);
-            continue;
-          }
-
-          logStatus(
-            result.result?.available ? 'success' : 'warning',
-            `port ${result.port} provider ${clackFormatProviderWithIcon(result.result?.provider || provider)}`,
-            result.result?.available
-              ? `ready (${result.result?.version || 'unknown version'})`
-              : (result.result?.message || 'not ready'),
-          );
-        }
-        clackOutro(`${results.length} instance(s)`);
-        return;
-      }
-      case 'status': {
-        const entries = await resolveTunnelReadEntries(options);
-
-        const results = [];
-        for (const entry of entries) {
-          try {
-            const { response, body } = await requestJson(entry.port, '/api/openchamber/tunnel/status');
-            if (!response.ok) {
-              results.push({ port: entry.port, error: body?.error || `status ${response.status}` });
-              continue;
-            }
-            results.push({ port: entry.port, status: body });
-          } catch (error) {
-            results.push({ port: entry.port, error: error instanceof Error ? error.message : String(error) });
-          }
-        }
-
-        if (isJsonMode(options)) {
-          printJson({ instances: results });
-          return;
-        }
-
-        if (isQuietMode(options)) {
-          for (const result of results) {
-            if (result.error) {
-              process.stderr.write(`port ${result.port} failed: ${result.error}\n`);
-              continue;
-            }
-            const active = Boolean(result.status?.active);
-            const provider = result.status?.provider || 'unknown';
-            const mode = result.status?.mode || 'unknown';
-            const url = result.status?.url || 'n/a';
-            process.stdout.write(`port ${result.port} ${active ? 'active' : 'inactive'} ${provider}/${mode} ${url}\n`);
-          }
-          return;
-        }
-
-        clackIntro('Tunnel Status');
-        for (const result of results) {
-          if (result.error) {
-            logStatus('error', `port ${result.port} failed`, result.error);
-            continue;
-          }
-          const sl = formatTunnelStatusLine(result.status, result.port);
-          logStatus(sl.status, sl.line, sl.detail);
-        }
-        clackOutro(`${results.length} instance(s)`);
-        return;
-      }
-      case 'doctor': {
-        const doctorSpin = createSpinner(options);
-        doctorSpin?.start('Running tunnel diagnostics...');
-
-        // Phase 1: Port discovery
-        const { statuses: portStatuses, availableEntries } = await resolveDoctorPortStatuses(options);
-
-        // Phase 2: Provider diagnostics via the doctor endpoint
-        doctorSpin?.message('Checking provider...');
-        let providerOption = typeof options.provider === 'string' && options.provider.trim().length > 0
-          ? options.provider.trim().toLowerCase()
-          : '';
-
-        let doctorProfile = null;
-        let doctorHostnameOverride = typeof options.hostname === 'string' ? options.hostname.trim() : '';
-        const explicitHostnameProvided = doctorHostnameOverride.length > 0;
-        const explicitTokenProvided = Boolean(options.tokenStdin)
-          || (typeof options.token === 'string' && options.token.trim().length > 0)
-          || (typeof options.tokenFile === 'string' && options.tokenFile.trim().length > 0);
-        let doctorTokenValue = resolveToken(options);
-        let hasSavedManagedRemoteProfile = false;
-        const normalizedMode = typeof options.mode === 'string' ? options.mode.trim().toLowerCase() : '';
-
-        if (typeof options.profile === 'string' && options.profile.trim().length > 0) {
-          const store = ensureTunnelProfilesMigrated();
-          const resolved = resolveProfileByName(store.profiles, options.profile, providerOption || options.provider);
-          if (!resolved.profile) {
-            throw new Error(resolved.error);
-          }
-          doctorProfile = resolved.profile;
-        } else if (!doctorHostnameOverride && !explicitTokenProvided && (!normalizedMode || normalizedMode === 'managed-remote')) {
-          const store = ensureTunnelProfilesMigrated();
-          const remoteProfiles = store.profiles.filter((entry) => {
-            if (entry.mode !== 'managed-remote') return false;
-            if (!providerOption) return true;
-            return entry.provider === providerOption;
-          });
-          hasSavedManagedRemoteProfile = remoteProfiles.some((entry) => {
-            const savedHostname = normalizeProfileHostname(entry.hostname);
-            const savedToken = normalizeProfileToken(entry.token);
-            return Boolean(savedHostname && savedToken);
-          });
-          if (remoteProfiles.length === 1) {
-            doctorProfile = remoteProfiles[0];
-          }
-        }
-
-        if (doctorProfile) {
-          providerOption = providerOption || doctorProfile.provider;
-          if (!doctorHostnameOverride && typeof doctorProfile.hostname === 'string') {
-            doctorHostnameOverride = doctorProfile.hostname.trim();
-          }
-          if ((!doctorTokenValue || doctorTokenValue.trim().length === 0) && typeof doctorProfile.token === 'string') {
-            doctorTokenValue = doctorProfile.token.trim();
-          }
-        }
-
-        let doctorResult = null;
-        let doctorError = null;
-        const diagnosticsEntries = [...availableEntries].sort((a, b) => b.mtime - a.mtime);
-        if (diagnosticsEntries.length > 0) {
-          const query = new URLSearchParams();
-          if (providerOption) query.set('provider', providerOption);
-          if (typeof options.mode === 'string' && options.mode.trim().length > 0) {
-            query.set('mode', options.mode.trim().toLowerCase());
-          }
-          if (typeof options.configPath === 'string') query.set('configPath', options.configPath);
-          if (doctorHostnameOverride.length > 0) {
-            query.set('managedRemoteTunnelHostname', doctorHostnameOverride);
-          }
-          if (hasSavedManagedRemoteProfile) {
-            query.set('hasSavedManagedRemoteProfile', '1');
-          }
-          const doctorBody = {};
-          doctorBody.managedRemoteTunnelTokenProvided = explicitTokenProvided;
-          doctorBody.managedRemoteTunnelHostnameProvided = explicitHostnameProvided;
-          if (typeof doctorTokenValue === 'string' && doctorTokenValue.trim().length > 0) {
-            doctorBody.managedRemoteTunnelToken = doctorTokenValue;
-          }
-
-          const failedPorts = [];
-          for (const diagnosticsEntry of diagnosticsEntries) {
-            try {
-              doctorSpin?.message(`Diagnosing provider on port ${diagnosticsEntry.port}...`);
-              const doctorFetchOptions = { timeoutMs: 10000 };
-              if (Object.keys(doctorBody).length > 0) {
-                doctorFetchOptions.method = 'POST';
-                doctorFetchOptions.body = JSON.stringify(doctorBody);
-              }
-              const { response, body } = await requestJson(
-                diagnosticsEntry.port,
-                `/api/openchamber/tunnel/doctor?${query.toString()}`,
-                doctorFetchOptions,
-              );
-              if (response.ok && body?.ok && isValidTunnelDoctorResponse(body)) {
-                doctorResult = body;
-                doctorError = null;
-                break;
-              }
-
-              const looksIncompatible = response.ok && (!body || typeof body !== 'object' || !body.ok);
-              const fallbackError = looksIncompatible
-                ? `port ${diagnosticsEntry.port}: doctor endpoint unavailable or incompatible (restart this CLI instance)`
-                : `port ${diagnosticsEntry.port}: ${body?.error || `doctor ${response.status}`}`;
-              failedPorts.push(fallbackError);
-            } catch (error) {
-              const message = error instanceof Error ? error.message : String(error);
-              failedPorts.push(`port ${diagnosticsEntry.port}: ${message}`);
-            }
-          }
-
-          if (!doctorResult) {
-            doctorError = failedPorts.length > 0
-              ? failedPorts[0]
-              : 'No compatible CLI instance found for tunnel doctor.';
-          }
-        }
-
-        doctorSpin?.clear();
-
-        // JSON output
-        if (isJsonMode(options)) {
-          const cliPorts = portStatuses
-            .filter((s) => s.available)
-            .map((s) => ({ port: s.port, type: 'cli', available: true }));
-          const desktopPorts = portStatuses
-            .filter((s) => !s.available)
-            .map((s) => ({ port: s.port, type: 'desktop', available: false }));
-          printJson({
-            ports: [...cliPorts, ...desktopPorts],
-            provider: doctorResult ? {
-              id: doctorResult.provider,
-              checks: doctorResult.providerChecks || [],
-            } : null,
-            modes: doctorResult?.modes || [],
-            error: doctorError || undefined,
-          });
-          return;
-        }
-
-        if (isQuietMode(options)) {
-          const cliPorts = portStatuses.filter((s) => s.available).map((s) => s.port);
-          process.stdout.write(`cli-ports ${cliPorts.join(',') || 'none'}\n`);
-          if (doctorError) {
-            process.stderr.write(`doctor-error ${doctorError}\n`);
-            return;
-          }
-          if (!doctorResult) {
-            process.stdout.write('doctor unavailable\n');
-            return;
-          }
-
-          const providerLabel = doctorResult.provider || providerOption || 'unknown';
-          process.stdout.write(`provider ${providerLabel}\n`);
-          const modes = Array.isArray(doctorResult.modes) ? doctorResult.modes : [];
-          for (const modeEntry of modes) {
-            const ready = modeEntry.ready === true || modeEntry.summary?.ready === true;
-            if (ready) {
-              process.stdout.write(`mode ${modeEntry.mode} ready\n`);
-              continue;
-            }
-
-            const blockers = Array.isArray(modeEntry.blockers)
-              ? modeEntry.blockers
-              : (Array.isArray(modeEntry.checks)
-                ? modeEntry.checks
-                  .filter((c) => c?.status === 'fail' && c?.id !== 'startup_readiness')
-                  .map((c) => c.detail || c.label || c.id)
-                : []);
-            process.stdout.write(`mode ${modeEntry.mode} not-ready ${blockers.length || 0}\n`);
-            for (const blocker of blockers) {
-              process.stdout.write(`blocker ${modeEntry.mode} ${String(blocker)}\n`);
-            }
-          }
-          return;
-        }
-
-        // ── Section 1: Ports ──────────────────────────────────────
-        const cliPorts = portStatuses.filter((s) => s.available);
-        const unavailablePorts = portStatuses.filter((s) => !s.available);
-
-        clackIntro(boldText('Ports'));
-        for (const entry of cliPorts) {
-          logStatus('success', `port ${entry.port} — CLI (available)`);
-        }
-        const desktopUnavailablePorts = [];
-        for (const entry of unavailablePorts) {
-          const isDesktop = typeof entry?.line === 'string' && entry.line.includes('desktop runtime');
-          if (isDesktop) {
-            desktopUnavailablePorts.push(entry.port);
-            logStatus('error', `port ${entry.port} — Desktop (tunneling not supported)`);
-            continue;
-          }
-          logStatus('error', `port ${entry.port} — No running instance`);
-        }
-        if (desktopUnavailablePorts.length > 0) {
-          clackLog.message('Only CLI instances (openchamber serve) support tunneling.');
-        }
-
-        if (cliPorts.length === 0 && unavailablePorts.length === 0) {
-          logStatus('warning', 'No running instances found', 'Start one with `openchamber serve`.');
-          clackOutro('No ports available');
-          return;
-        }
-        if (cliPorts.length === 0) {
-          logStatus('warning', 'No CLI instances available for tunneling', 'Start one with `openchamber serve`.');
-          clackOutro('No CLI ports available');
-          return;
-        }
-        clackOutro(`${cliPorts.length} CLI ${cliPorts.length === 1 ? 'port' : 'ports'} available`);
-        console.log('');
-
-        if (doctorProfile) {
-          logStatus('info', 'Using saved profile for managed-remote checks', `${doctorProfile.name} (${doctorProfile.provider}/${doctorProfile.mode})`);
-          console.log('');
-        }
-
-        // ── Section 2: Provider ─────────────────────────────────
-        if (doctorError) {
-          clackIntro(boldText('Provider'));
-          logStatus('error', 'Provider diagnostics failed', doctorError);
-          clackOutro('Failed');
-          return;
-        }
-        if (!doctorResult) {
-          clackIntro(boldText('Provider'));
-          logStatus('warning', 'Could not reach a running instance for diagnostics');
-          clackOutro('Unavailable');
-          return;
-        }
-
-        const providerLabel = clackFormatProviderWithIcon(doctorResult.provider || 'unknown');
-        clackIntro(boldText(`Provider: ${providerLabel}`));
-
-        let providerPassCount = 0;
-        for (const check of (doctorResult.providerChecks || [])) {
-          const passed = check.status === 'pass';
-          if (passed) {
-            providerPassCount++;
-            logStatus('success', `${check.label}${check.detail ? ` — ${check.detail}` : ''}`);
-          } else {
-            logStatus('error', check.label, check.detail || undefined);
-          }
-        }
-
-        const depCheck = (doctorResult.providerChecks || []).find(
-          (c) => c.id === 'dependency' || c.id === 'provider_dependency',
-        );
-        if (depCheck && depCheck.status !== 'pass') {
-          clackOutro('1 blocker — resolve before checking modes');
-          return;
-        }
-        clackOutro(`${providerPassCount} ${providerPassCount === 1 ? 'check' : 'checks'} passed`);
-        console.log('');
-
-        // ── Section 3: Modes ────────────────────────────────────
-        const DOCTOR_NOISE_CHECK_IDS = new Set(['startup_readiness', 'quick_mode_prerequisites']);
-        const modes = doctorResult.modes || [];
-        if (modes.length === 0) {
-          return;
-        }
-
-        clackIntro(boldText('Modes'));
-        let totalBlockers = 0;
-        const troubleshootingHints = [];
-        for (const modeEntry of modes) {
-          const isReady = modeEntry.ready === true || modeEntry.summary?.ready === true;
-          if (isReady) {
-            const passDetail = Array.isArray(modeEntry.checks)
-              ? modeEntry.checks.find((c) => c?.status === 'pass' && !DOCTOR_NOISE_CHECK_IDS.has(c?.id))?.detail
-              : null;
-            logStatus('success', `${modeEntry.mode} — Ready${passDetail ? ` (${passDetail})` : ''}`);
-          } else {
-            const blockers = Array.isArray(modeEntry.blockers)
-              ? modeEntry.blockers
-              : (Array.isArray(modeEntry.checks)
-                ? modeEntry.checks
-                  .filter((c) => c?.status === 'fail' && c?.id !== 'startup_readiness')
-                  .map((c) => c.detail || c.label || c.id)
-                : []);
-            totalBlockers += blockers.length;
-            const blockerCount = blockers.length;
-            const blockerWord = blockerCount === 1 ? 'blocker' : 'blockers';
-            logStatus('error', `${modeEntry.mode} — Not ready${blockerCount > 0 ? ` (${blockerCount} ${blockerWord})` : ''}`);
-            for (const blocker of blockers) {
-              clackLog.message(`  ${blocker}`);
-            }
-
-            const normalizedBlockers = blockers.map((blocker) => String(blocker).toLowerCase());
-            const isManagedRemote = modeEntry.mode === 'managed-remote';
-            const hasTokenIssue = normalizedBlockers.some((line) => line.includes('token')
-              || line.includes('unauthorized')
-              || line.includes('forbidden')
-              || line.includes('authentication')
-              || line.includes('auth'));
-            const hasPortOrOriginIssue = normalizedBlockers.some((line) => line.includes('port')
-              || line.includes('localhost')
-              || line.includes('127.0.0.1')
-              || line.includes('connection refused')
-              || line.includes('dial tcp'));
-
-            if (isManagedRemote && (hasPortOrOriginIssue || hasTokenIssue)) {
-              troubleshootingHints.push({
-                key: 'managed-remote-port',
-                code: '[PORT_MISMATCH]',
-                lines: [
-                  'Cloudflare target must match the active OpenChamber CLI port.',
-                  'Example: `http://127.0.0.1:<port>`',
-                  'If CLI picked a different port, update Cloudflare or run `openchamber serve --port <port>`.',
-                ],
-              });
-            }
-
-            if (isManagedRemote && hasTokenIssue) {
-              troubleshootingHints.push({
-                key: 'managed-remote-token',
-                code: '[QR_PREFETCH_TOKEN]',
-                lines: [
-                  'Some QR readers pre-fetch scanned URLs.',
-                  'Pre-fetch can consume one-time bootstrap tokens.',
-                  'If validation fails, generate a fresh token/QR and use it immediately in one browser/device.',
-                ],
-              });
-            }
-          }
-        }
-        clackOutro(totalBlockers > 0 ? `Done (${totalBlockers} ${totalBlockers === 1 ? 'issue' : 'issues'})` : 'All modes ready');
-
-        const dedupedHints = [];
-        const seenHintKeys = new Set();
-        for (const hint of troubleshootingHints) {
-          if (!seenHintKeys.has(hint.key)) {
-            seenHintKeys.add(hint.key);
-            dedupedHints.push(hint);
-          }
-        }
-
-        if (dedupedHints.length > 0) {
-          console.log('');
-          clackIntro(boldText('Suggestion notes'));
-          for (const hint of dedupedHints) {
-            const lines = Array.isArray(hint.lines) ? hint.lines : [];
-            const detail = lines.length > 0 ? lines.map((line) => `  ${line}`).join('\n') : undefined;
-            logStatus('info', hint.code || '[NOTE]', detail);
-          }
-          clackOutro(`${dedupedHints.length} ${dedupedHints.length === 1 ? 'suggestion' : 'suggestions'}`);
-        }
-        return;
-      }
-      case 'start': {
-        let provider = typeof options.provider === 'string' && options.provider.trim().length > 0
-          ? options.provider.trim().toLowerCase()
-          : '';
-        let mode = typeof options.mode === 'string' && options.mode.trim().length > 0
-          ? options.mode.trim().toLowerCase()
-          : '';
-        let resolvedTokenValue = resolveToken(options);
-        let token = typeof resolvedTokenValue === 'string' ? resolvedTokenValue : undefined;
-        let hostname = typeof options.hostname === 'string' ? options.hostname : undefined;
-        let selectedProfile = null;
-
-        if (options.explicitPort) {
-          assertSafeBrowserPort(options.port, { context: 'Tunnel start' });
-        }
-
-        if (typeof options.profile === 'string' && options.profile.trim().length > 0) {
-          const store = ensureTunnelProfilesMigrated();
-          const resolved = resolveProfileByName(store.profiles, options.profile, provider || options.provider);
-          if (!resolved.profile) {
-            throw new Error(resolved.error);
-          }
-          selectedProfile = resolved.profile;
-          provider = provider || selectedProfile.provider;
-          mode = mode || selectedProfile.mode;
-          token = (typeof token === 'string' && token.trim().length > 0) ? token : selectedProfile.token;
-          hostname = typeof options.hostname === 'string' && options.hostname.trim().length > 0 ? options.hostname : selectedProfile.hostname;
-        }
-
-        // Interactive profile selection when no profile/mode specified in TTY
-        if (!selectedProfile && !mode && canPrompt(options)) {
-          const store = ensureTunnelProfilesMigrated();
-          if (store.profiles.length > 0) {
-            const profileChoice = await clackSelect({
-              message: 'Start from a saved profile or choose a mode?',
-              options: [
-                { value: '__mode__', label: 'Choose a mode manually' },
-                ...store.profiles.map((p) => ({
-                  value: p.id,
-                  label: `${p.name} (${p.provider}/${p.mode})`,
-                  hint: p.hostname,
-                })),
-              ],
-            });
-            if (clackIsCancel(profileChoice)) {
-              clackCancel('Tunnel start cancelled.');
-              return;
-            }
-            if (profileChoice !== '__mode__') {
-              selectedProfile = store.profiles.find((p) => p.id === profileChoice);
-              if (selectedProfile) {
-                provider = provider || selectedProfile.provider;
-                mode = mode || selectedProfile.mode;
-                token = (typeof token === 'string' && token.trim().length > 0) ? token : selectedProfile.token;
-                hostname = typeof options.hostname === 'string' && options.hostname.trim().length > 0 ? options.hostname : selectedProfile.hostname;
-              }
-            }
-          }
-        }
-
-        provider = provider || 'cloudflare';
-
-        // Interactive mode selection when mode not yet resolved in TTY
-        if (!mode && canPrompt(options)) {
-          const providerCaps = DEFAULT_TUNNEL_PROVIDER_CAPABILITIES.find(
-            (cap) => cap.provider === provider
-          );
-          const modes = providerCaps?.modes || [];
-          if (modes.length > 1) {
-            const modeChoice = await clackSelect({
-              message: `Select tunnel mode for ${clackFormatProviderWithIcon(provider)}`,
-              options: modes.map((m) => ({
-                value: m.key,
-                label: `${m.key} — ${m.label}`,
-                hint: formatModeRequirements(m) !== 'none' ? `requires: ${formatModeRequirements(m)}` : undefined,
-              })),
-            });
-            if (clackIsCancel(modeChoice)) {
-              clackCancel('Tunnel start cancelled.');
-              return;
-            }
-            mode = modeChoice;
-          }
-        }
-
-        mode = mode || 'quick';
-        if (mode === 'managed-remote') {
-          if (!(typeof hostname === 'string' && hostname.trim().length > 0)) {
-            if (canPrompt(options)) {
-              const profilesStore = ensureTunnelProfilesMigrated();
-              const lastManagedRemoteProfile = [...profilesStore.profiles]
-                .filter((entry) => entry.provider === provider && entry.mode === 'managed-remote')
-                .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
-              const suggestedHostname = normalizeProfileHostname(lastManagedRemoteProfile?.hostname) || 'app.example.com';
-              const enteredHostname = await clackText({
-                message: 'Enter managed-remote tunnel hostname',
-                placeholder: suggestedHostname,
-                initialValue: suggestedHostname,
-                validate(value) {
-                  if (typeof value !== 'string' || value.trim().length === 0) {
-                    return 'Hostname is required.';
-                  }
-                  return undefined;
-                },
-              });
-              if (clackIsCancel(enteredHostname)) {
-                clackCancel('Tunnel start cancelled.');
-                return;
-              }
-              hostname = enteredHostname.trim();
-            } else {
-              throw new Error('Managed-remote mode requires --hostname <hostname>.');
-            }
-          }
-
-          if (!(typeof token === 'string' && token.trim().length > 0)) {
-            if (canPrompt(options)) {
-              const entered = await clackPassword({
-                message: 'Enter managed-remote tunnel token',
-              });
-              if (clackIsCancel(entered) || !entered || !entered.trim()) {
-                clackCancel('Tunnel start cancelled.');
-                return;
-              }
-              token = entered.trim();
-            } else {
-              throw new Error('Managed-remote mode requires a token (--token, --token-file, or --token-stdin).');
-            }
-          }
-
-          if (!selectedProfile && canPrompt(options)) {
-            const runChoice = await clackSelect({
-              message: 'Run once, or save profile and run?',
-              options: [
-                { value: 'run', label: 'Run once', hint: 'Do not save profile' },
-                { value: 'save-run', label: 'Save profile and run', hint: 'Reuse with --profile later' },
-              ],
-            });
-            if (clackIsCancel(runChoice)) {
-              clackCancel('Tunnel start cancelled.');
-              return;
-            }
-
-            if (runChoice === 'save-run') {
-              const suggestedName = suggestProfileNameFromHostname(hostname);
-              const enteredProfileName = await clackText({
-                message: 'Profile name',
-                placeholder: suggestedName,
-                initialValue: suggestedName,
-                validate(value) {
-                  return normalizeProfileName(value).length > 0 ? undefined : 'Profile name is required.';
-                },
-              });
-              if (clackIsCancel(enteredProfileName)) {
-                clackCancel('Tunnel start cancelled.');
-                return;
-              }
-
-              const desiredName = normalizeProfileName(enteredProfileName);
-              const store = ensureTunnelProfilesMigrated();
-              const existingIndex = store.profiles.findIndex(
-                (entry) => entry.provider === provider && entry.name.toLowerCase() === desiredName.toLowerCase()
-              );
-
-              if (existingIndex >= 0) {
-                const shouldOverwrite = await clackConfirm({
-                  message: `Profile '${desiredName}' already exists. Overwrite and run?`,
-                  initialValue: true,
-                });
-                if (clackIsCancel(shouldOverwrite) || !shouldOverwrite) {
-                  clackCancel('Tunnel start cancelled.');
-                  return;
-                }
-              }
-
-              const now = Date.now();
-              const nextProfiles = [...store.profiles];
-              if (existingIndex >= 0) {
-                const current = nextProfiles[existingIndex];
-                nextProfiles[existingIndex] = {
-                  ...current,
-                  mode: 'managed-remote',
-                  hostname,
-                  token,
-                  updatedAt: now,
-                };
-              } else {
-                nextProfiles.push({
-                  id: crypto.randomUUID(),
-                  name: desiredName,
-                  provider,
-                  mode: 'managed-remote',
-                  hostname,
-                  token,
-                  createdAt: now,
-                  updatedAt: now,
-                });
-              }
-
-              const persisted = { version: TUNNEL_PROFILES_VERSION, profiles: nextProfiles };
-              writeTunnelProfilesToDisk(persisted);
-              writeManagedRemotePairsToDiskFromProfiles(persisted);
-
-              selectedProfile = persisted.profiles.find(
-                (entry) => entry.provider === provider && entry.name.toLowerCase() === desiredName.toLowerCase()
-              ) || null;
-            }
-          }
-
-          if (typeof options.token === 'string' && !options.tokenFile && !options.tokenStdin && canPrompt(options)) {
-            clackBox(
-              'Token passed via --token is visible in your shell history and process list.\n' +
-              'Consider using --token-file or --token-stdin for better security.',
-              'Security Warning',
-            );
-          }
-        }
-
-        if (mode === 'managed-local') {
-          const hasConfigPath = typeof options.configPath === 'string' && options.configPath.trim().length > 0;
-          if (!hasConfigPath && canPrompt(options)) {
-            const lastConfigPath = readLastManagedLocalConfigPath();
-            const defaultConfigPath = getDefaultCloudflaredConfigPath();
-            const suggestedConfigPath = lastConfigPath || defaultConfigPath;
-            const suggestedConfigFound = isReadableRegularFile(suggestedConfigPath);
-            const defaultConfigFound = isReadableRegularFile(defaultConfigPath);
-
-            if (suggestedConfigFound || defaultConfigFound) {
-              const foundPath = suggestedConfigFound ? suggestedConfigPath : defaultConfigPath;
-              const configChoice = await clackSelect({
-                message: 'Managed-local config',
-                options: [
-                  {
-                    value: 'default',
-                    label: 'Use found config',
-                    hint: foundPath,
-                  },
-                  {
-                    value: 'custom',
-                    label: 'Enter config path',
-                  },
-                ],
-              });
-              if (clackIsCancel(configChoice)) {
-                clackCancel('Tunnel start cancelled.');
-                return;
-              }
-              if (configChoice === 'default') {
-                options.configPath = foundPath;
-              }
-            }
-
-            if (!(typeof options.configPath === 'string' && options.configPath.trim().length > 0)) {
-              const enteredPath = await clackText({
-                message: 'Enter managed-local config path',
-                placeholder: suggestedConfigPath,
-                initialValue: suggestedConfigPath,
-                validate(value) {
-                  if (typeof value !== 'string' || value.trim().length === 0) {
-                    return 'Config path is required.';
-                  }
-                  return undefined;
-                },
-              });
-              if (clackIsCancel(enteredPath)) {
-                clackCancel('Tunnel start cancelled.');
-                return;
-              }
-              options.configPath = enteredPath.trim();
-            }
-
-            if (typeof options.configPath === 'string' && options.configPath.trim().length > 0) {
-              writeLastManagedLocalConfigPath(options.configPath);
-            }
-          }
-        }
-
-        const ttlOverrides = await resolveTunnelTtlOverrides(options);
-        if (ttlOverrides === null) {
-          return;
-        }
-        const { connectTtlMs, sessionTtlMs } = ttlOverrides;
-
-        if (options.dryRun) {
-          const dryRunResult = {
-            ok: true,
-            dryRun: true,
-            provider,
-            mode,
-            hostname: hostname || null,
-            hasToken: typeof token === 'string' && token.trim().length > 0,
-            profile: selectedProfile ? selectedProfile.name : null,
-            configPath: options.configPath || null,
-            connectTtlMs: connectTtlMs ?? null,
-            sessionTtlMs: sessionTtlMs ?? null,
-          };
-          if (isJsonMode(options)) {
-            printJson(dryRunResult);
-          } else if (!isQuietMode(options)) {
-            clackIntro('Tunnel Start (dry-run)');
-            logStatus('info', `Would start ${clackFormatProviderWithIcon(provider)}/${mode}`, hostname || '(ephemeral URL)');
-            clackOutro('dry-run complete (no changes applied)');
-          }
-          return;
-        }
-
-        if (!options.explicitPort && canPrompt(options)) {
-          const runningInstances = await discoverRunningInstances();
-          if (runningInstances.length > 1) {
-            const safeInstances = runningInstances.filter((entry) => !isUnsafeBrowserPort(entry.port));
-            if (safeInstances.length === 0) {
-              throw new TunnelCliError(
-                'All discovered OpenChamber instance ports are browser-unsafe. Start or target a safe port (3000, 5173, 8080, or high ephemeral).',
-                EXIT_CODE.USAGE_ERROR,
-              );
-            }
-
-            const attachabilityResults = await Promise.all(
-              safeInstances.map(async (entry) => ({
-                entry,
-                attachability: await inspectTunnelAttachability(entry.port, { requireHealthy: true }),
-              }))
-            );
-            const attachableSafeInstances = attachabilityResults
-              .filter((item) => item.attachability.attachable)
-              .map((item) => item.entry);
-
-            if (attachableSafeInstances.length === 0) {
-              throw new TunnelCliError(
-                'No attachable OpenChamber CLI instances found on safe ports. Start one with `openchamber serve --port 3000`.',
-                EXIT_CODE.USAGE_ERROR,
-              );
-            }
-
-            const selectedPort = await clackSelect({
-              message: 'Select OpenChamber instance port',
-              options: attachableSafeInstances.map((entry) => ({
-                value: entry.port,
-                label: `port ${entry.port}`,
-              })),
-            });
-            if (clackIsCancel(selectedPort)) {
-              clackCancel('Tunnel start cancelled.');
-              return;
-            }
-            options.port = Number(selectedPort);
-            options.explicitPort = true;
-          }
-        }
-
-        const instance = await resolveTargetInstance({ options, allowAutoStart: true, rejectDesktopRuntime: true });
-        if (instance?.autoStarted && shouldRenderHumanOutput(options)) {
-          logStatus(
-            'info',
-            `Using auto-started instance on port ${instance.port}`,
-            `logs: openchamber logs -p ${instance.port}`,
-          );
-        }
-
-        if (instance?.autoStarted) {
-          setCancelCleanup(async () => {
-            try {
-              await commands.stop({ explicitPort: true, port: instance.port });
-            } catch {
-            }
-          });
-        }
-
-        if (instance?.autoStarted) {
-          const healthProgress = await createProgress(options, { max: 60 });
-          healthProgress?.start(`Waiting for OpenChamber on port ${instance.port} to become healthy (up to 60s)...`);
-          let progressedSeconds = 0;
-          const healthy = await waitForServerHealth(instance.port, {
-            timeoutMs: 60000,
-            intervalMs: 250,
-            onTick({ elapsedMs, complete }) {
-              if (!healthProgress) return;
-              const elapsedSeconds = Math.min(60, Math.floor(elapsedMs / 1000));
-              const delta = elapsedSeconds - progressedSeconds;
-              if (delta > 0) {
-                healthProgress.advance(delta);
-                progressedSeconds = elapsedSeconds;
-                healthProgress.message(`Waiting for OpenChamber health (${progressedSeconds}s / 60s)...`);
-              }
-              if (complete && progressedSeconds < 60) {
-                const remaining = 60 - progressedSeconds;
-                if (remaining > 0) {
-                  healthProgress.advance(remaining);
-                  progressedSeconds = 60;
-                }
-              }
-            },
-          });
-          if (!healthy) {
-            healthProgress?.stop('OpenChamber is still starting');
-            throw new Error(
-              `OpenChamber on port ${instance.port} is still starting after 60s. Startup time can vary by machine performance. ` +
-              `Wait another minute, then check health with \`curl -fsS ${buildLocalUrl(instance.port, '/health')}\`. ` +
-              `If health is OK, retry tunnel start with \`openchamber tunnel start --port ${instance.port}\`. ` +
-              `For diagnostics run \`openchamber logs -p ${instance.port}\`.`
-            );
-          }
-          healthProgress?.stop(`Instance ${instance.port} is healthy`);
-        }
-
-        if (selectedProfile && mode === 'managed-remote') {
-          const tokenSyncPayload = {
-            presetId: selectedProfile.id,
-            presetName: selectedProfile.name,
-            managedRemoteTunnelHostname: hostname,
-            managedRemoteTunnelToken: token,
-          };
-          const { response: presetResponse, body: presetBody } = await requestJson(instance.port, '/api/openchamber/tunnel/managed-remote-token', {
-            method: 'PUT',
-            body: JSON.stringify(tokenSyncPayload),
-          });
-          if (!presetResponse.ok || !presetBody?.ok) {
-            throw new Error(presetBody?.error || `Failed to sync tunnel profile token (${presetResponse.status})`);
-          }
-        }
-
-        const payload = {
-          provider,
-          mode,
-          ...(typeof connectTtlMs === 'number' ? { connectTtlMs } : {}),
-          ...(typeof sessionTtlMs === 'number' ? { sessionTtlMs } : {}),
-          ...(options.configPath === null ? { configPath: null } : {}),
-          ...(typeof options.configPath === 'string' ? { configPath: options.configPath } : {}),
-          ...(typeof token === 'string' ? { token } : {}),
-          ...(typeof hostname === 'string' ? { hostname } : {}),
-          ...(selectedProfile ? {
-            managedRemoteTunnelPresetId: selectedProfile.id,
-            managedRemoteTunnelPresetName: selectedProfile.name,
-          } : {}),
-        };
-
-        const spin = createSpinner(options);
-        spin?.start(`Starting ${clackFormatProviderWithIcon(provider)}/${mode} tunnel...`);
-
-        let response;
-        let body;
-        try {
-          ({ response, body } = await requestJson(instance.port, '/api/openchamber/tunnel/start', {
-            method: 'POST',
-            body: JSON.stringify(payload),
-            timeoutMs: 60000,
-          }));
-        } catch (error) {
-          if (error instanceof Error && /\/api\/openchamber\/tunnel\/start/.test(error.message) && /timed out/.test(error.message)) {
-            spin?.error('Tunnel start timed out');
-            throw new Error(
-              `Tunnel start timed out after 60s. cloudflared may still be starting; check with \`openchamber tunnel status --port ${instance.port}\`. Run \`openchamber logs -p ${instance.port}\` for details.`
-            );
-          }
-          spin?.error('Tunnel start failed');
-          const message = error instanceof Error ? error.message : String(error);
-          throw new Error(`${message} Run \`openchamber logs -p ${instance.port}\` for details.`);
-        }
-
-        if (!response.ok || !body?.ok) {
-          spin?.error('Tunnel start failed');
-          const baseError = body?.error || `Tunnel start failed (${response.status})`;
-          const isCloudflareTimeout = /context deadline exceeded|Client\.Timeout exceeded while awaiting headers|failed to request quick Tunnel/i.test(baseError);
-          const userError = isCloudflareTimeout
-            ? `Cloudflare quick tunnel request timed out. ${baseError}`
-            : baseError;
-          throw new Error(`${userError} Run \`openchamber logs -p ${instance.port}\` for details.`);
-        }
-
-        // Avoid duplicate "Tunnel started" lines: spinner completion is implied by
-        // the subsequent structured success section.
-        spin?.clear();
-
-        const replayCommand = buildTunnelStartReplayCommand({
-          port: instance.port,
-          provider,
-          mode,
-          profileName: selectedProfile?.name,
-          configPath: options.configPath,
-          hostname,
-          connectTtlMs,
-          sessionTtlMs,
-          qr: options.qr === true,
-          noQr: options.noQr === true,
-          includeTokenPlaceholder: !selectedProfile && mode === 'managed-remote' && typeof token === 'string' && token.trim().length > 0,
-          tokenViaStdin: options.tokenStdin === true,
-          tokenFileProvided: typeof options.tokenFile === 'string' && options.tokenFile.trim().length > 0,
-        });
-
-        if (isJsonMode(options)) {
-          printJson({ port: instance.port, replayCommand, ...body });
-        } else if (isQuietMode(options)) {
-          const quietUrl = body.connectUrl || body.url || 'n/a';
-          process.stdout.write(`port ${instance.port} ${quietUrl}\n`);
-        } else {
-          console.log('');
-          clackIntro(boldText('Tunnel Started'));
-          logStatus('success', `port ${instance.port} ${clackFormatProviderWithIcon(body.provider)}/${body.mode}`);
-          logStatus('success', body.connectUrl || body.url || 'n/a');
-          if (body.replacedTunnel) {
-            const revokedBootstrapCount = Number.isFinite(body.revokedBootstrapCount) ? body.revokedBootstrapCount : 0;
-            const invalidatedSessionCount = Number.isFinite(body.invalidatedSessionCount) ? body.invalidatedSessionCount : 0;
-            const previousMode = typeof body?.replaced?.mode === 'string' ? body.replaced.mode : 'unknown';
-            logStatus(
-              'warning',
-              `replaced previous ${previousMode} tunnel`,
-              `revoked ${revokedBootstrapCount}, invalidated ${invalidatedSessionCount}`,
-            );
-          }
-          clackOutro('');
-
-          const optionalTips = [
-            { line: 'Check status', detail: 'openchamber tunnel status' },
-            { line: 'Stop tunnel', detail: 'openchamber tunnel stop' },
-            { line: 'If needed, repeat with same settings', detail: replayCommand },
-          ];
-
-          if (!selectedProfile && mode === 'managed-remote' && typeof hostname === 'string' && hostname.trim().length > 0) {
-            const profileSaveCommand = buildTunnelProfileAddCommand({ provider, hostname });
-            optionalTips.push({ line: 'Optional: save reusable profile (stores hostname + token locally)', detail: profileSaveCommand });
-            optionalTips.push({ line: 'Start from saved profile', detail: 'openchamber tunnel start --profile <name>' });
-          }
-
-          console.log('');
-          clackIntro('Optional Tips');
-          for (const tip of optionalTips) {
-            logStatus('info', tip.line, tip.detail);
-          }
-          clackOutro('');
-        }
-
-        setCancelCleanup(null);
-
-        if (shouldDisplayTunnelQr(options)) {
-          const url = body.connectUrl || body.url;
-          if (typeof url === 'string' && url.length > 0) {
-            await displayTunnelQrCode(url);
-          }
-        }
-        return;
-      }
-      case 'stop': {
-        let entries;
-        if (options.all) {
-          entries = await resolveTargetInstance({ options, allowAutoStart: false, requireAll: true });
-          if (entries.length > 1 && !options.force && canPrompt(options)) {
-            const shouldStop = await clackConfirm({
-              message: `Stop tunnels on all ${entries.length} instances?`,
-            });
-            if (clackIsCancel(shouldStop) || !shouldStop) {
-              clackCancel('Tunnel stop cancelled.');
-              return;
-            }
-          }
-        } else {
-          entries = [await resolveTargetInstance({ options, allowAutoStart: false })];
-        }
-
-        const results = [];
-        for (const entry of entries) {
-          const tunnelStopSpin = shouldRenderHumanOutput(options) ? createSpinner(options) : null;
-          tunnelStopSpin?.start(`Stopping tunnel on port ${entry.port}...`);
-          try {
-            const { response, body } = await requestJson(entry.port, '/api/openchamber/tunnel/stop', {
-              method: 'POST',
-            });
-            if (!response.ok) {
-              tunnelStopSpin?.error(`Failed to stop tunnel on port ${entry.port}`);
-              results.push({ port: entry.port, error: body?.error || `stop ${response.status}` });
-              continue;
-            }
-            tunnelStopSpin?.stop(`Stopped tunnel on port ${entry.port}`);
-            results.push({ port: entry.port, result: body });
-          } catch (error) {
-            tunnelStopSpin?.error(`Failed to stop tunnel on port ${entry.port}`);
-            results.push({ port: entry.port, error: error instanceof Error ? error.message : String(error) });
-          }
-        }
-
-        if (isJsonMode(options)) {
-          printJson({ instances: results });
-          return;
-        }
-
-        if (isQuietMode(options)) {
-          for (const result of results) {
-            if (result.error) {
-              process.stderr.write(`port ${result.port} failed: ${result.error}\n`);
-              continue;
-            }
-            process.stdout.write(`port ${result.port} stopped\n`);
-          }
-          return;
-        }
-
-        clackIntro('Tunnel Stop');
-        for (const result of results) {
-          if (result.error) {
-            logStatus('error', `port ${result.port} failed`, result.error);
-            continue;
-          }
-          logStatus('success', `port ${result.port} stopped`, `revoked ${result.result?.revokedBootstrapCount || 0}, invalidated ${result.result?.invalidatedSessionCount || 0}`);
-        }
-        clackOutro(`${results.length} instance(s)`);
-        return;
-      }
-      case 'completion': {
-        const shell = action || 'bash';
-        const completionScript = generateCompletionScript(shell);
-        if (!completionScript) {
-          throw new TunnelCliError(
-            `Unsupported shell '${shell}'. Supported: bash, zsh, fish.`,
-            EXIT_CODE.USAGE_ERROR
-          );
-        }
-        process.stdout.write(completionScript);
-        return;
-      }
-      default: {
-        const knownTunnelSubcommands = ['help', 'providers', 'ready', 'doctor', 'status', 'start', 'stop', 'profile', 'completion'];
-        const suggestion = findClosestMatch(subcommand, knownTunnelSubcommands);
-        const hint = suggestion ? ` Did you mean '${suggestion}'?` : '';
-        throw new TunnelCliError(
-          `Unknown tunnel subcommand '${subcommand}'.${hint} Use 'openchamber tunnel help'.`,
-          EXIT_CODE.USAGE_ERROR
-        );
-      }
-    }
+  async tunnel(_options, _subcommand, _action) {
+    console.log('The tunnel command is no longer available.');
+    process.exit(0);
   },
 
   async logs(options) {
@@ -4828,7 +3465,7 @@ const commands = {
 
 async function main() {
   const parsed = parseArgs();
-  const { command, subcommand, tunnelAction, options, removedFlagErrors, helpRequested, versionRequested } = parsed;
+  const { command, options, removedFlagErrors, helpRequested, versionRequested } = parsed;
   activeCommandOptions = options;
 
   if (versionRequested) {
@@ -4858,21 +3495,12 @@ async function main() {
   }
 
   if (helpRequested) {
-    if (command === 'tunnel') {
-      showTunnelHelp();
-    } else {
-      showHelp();
-    }
-    return;
-  }
-
-  if (command === 'tunnel') {
-    await commands.tunnel(options, subcommand, tunnelAction);
+    showHelp();
     return;
   }
 
   if (!commands[command]) {
-    const knownCommands = ['serve', 'stop', 'restart', 'status', 'tunnel', 'logs', 'update'];
+    const knownCommands = ['serve', 'stop', 'restart', 'status', 'logs', 'update'];
     const suggestion = findClosestMatch(command, knownCommands);
     const hint = suggestion ? ` Did you mean '${suggestion}'?` : '';
     if (isJsonMode(options)) {
@@ -4979,8 +3607,6 @@ export {
   isValidTunnelDoctorResponse,
   readDesktopLocalPortFromSettings,
   getPidFilePath,
-  resolveTunnelProviders,
-  fetchTunnelProvidersFromPort,
   fetchSystemInfoFromPort,
   discoverRunningInstances,
   ensureTunnelProfilesMigrated,

@@ -1,4 +1,3 @@
-export { createTunnelAuth } from './tunnel-auth.js';
 export { createOpenCodeAuthState } from './opencode-auth-state.js';
 export {
   readAuthFile,
@@ -10,8 +9,6 @@ export {
   OPENCODE_DATA_DIR,
 } from './provider-auth.js';
 export type {
-  TunnelAuthController,
-  TunnelAuthDeps,
   OpenCodeAuthState,
   OpenCodeAuthStateDeps,
   ProviderAuthRuntime,

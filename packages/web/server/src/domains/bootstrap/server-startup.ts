@@ -6,18 +6,15 @@ export function createServerStartupRuntime(deps: ServerStartupDeps): ServerStart
     process,
     crypto,
     server,
-    normalizeTunnelBootstrapTtlMs,
     readSettingsFromDiskMigrated,
-    tunnelAuthController,
-    startTunnelWithNormalizedRequest,
     gracefulShutdown,
     getSignalsAttached,
     setSignalsAttached,
     syncToHmrState,
-    TUNNEL_MODE_QUICK,
-    TUNNEL_MODE_MANAGED_LOCAL,
-    TUNNEL_MODE_MANAGED_REMOTE,
   } = deps;
+
+  void crypto;
+  void readSettingsFromDiskMigrated;
 
   const resolveBindHost = (host?: string): string =>
     host
@@ -25,16 +22,12 @@ export function createServerStartupRuntime(deps: ServerStartupDeps): ServerStart
       ? process.env.OPENCHAMBER_HOST.trim()
       : '127.0.0.1');
 
-  const startListeningAndMaybeTunnel = async ({
+  const startListening = async ({
     port,
     bindHost,
-    startupTunnelRequest,
-    onTunnelReady,
   }: {
     port: number;
     bindHost: string;
-    startupTunnelRequest?: any;
-    onTunnelReady?: (url: string, connectUrl: string) => void;
   }): Promise<{ activePort: number }> => {
     let activePort = port;
 
@@ -61,51 +54,6 @@ export function createServerStartupRuntime(deps: ServerStartupDeps): ServerStart
         console.log(`OpenChamber server listening on ${bindHost}:${activePort}`);
         console.log(`Health check: http://${displayHost}:${activePort}/health`);
         console.log(`Web interface: http://${displayHost}:${activePort}`);
-
-        if (startupTunnelRequest) {
-          const startupModeLabel = startupTunnelRequest.mode === TUNNEL_MODE_QUICK
-            ? 'Quick Tunnel'
-            : (startupTunnelRequest.mode === TUNNEL_MODE_MANAGED_LOCAL
-              ? 'Managed Local Tunnel'
-              : (startupTunnelRequest.mode === TUNNEL_MODE_MANAGED_REMOTE ? 'Managed Remote Tunnel' : 'Tunnel'));
-          console.log(`\nInitializing ${startupModeLabel} for provider '${startupTunnelRequest.provider}'...`);
-          try {
-            const { publicUrl, mode } = await startTunnelWithNormalizedRequest({
-              provider: startupTunnelRequest.provider,
-              mode: startupTunnelRequest.mode,
-              intent: startupTunnelRequest.intent,
-              hostname: startupTunnelRequest.hostname,
-              token: startupTunnelRequest.token,
-              configPath: startupTunnelRequest.configPath,
-              selectedPresetId: '',
-              selectedPresetName: '',
-            });
-            if (publicUrl) {
-              tunnelAuthController.setActiveTunnel({
-                tunnelId: crypto.randomUUID(),
-                publicUrl,
-                mode,
-              });
-              const settings = await readSettingsFromDiskMigrated();
-              const bootstrapTtlMs = (settings as any)?.tunnelBootstrapTtlMs === null
-                ? null
-                : normalizeTunnelBootstrapTtlMs((settings as any)?.tunnelBootstrapTtlMs ?? null);
-              const bootstrapToken = tunnelAuthController.issueBootstrapToken({ ttlMs: bootstrapTtlMs });
-              const connectUrl = `${publicUrl.replace(/\/$/, '')}/connect?t=${encodeURIComponent(bootstrapToken.token)}`;
-              if (onTunnelReady) {
-                onTunnelReady(publicUrl, connectUrl);
-              } else {
-                console.log(`\n🌐 Tunnel URL: ${connectUrl}`);
-                console.log('🔑 One-time connect link (expires after first use)\n');
-              }
-            } else if (onTunnelReady) {
-              onTunnelReady(publicUrl, null as unknown as string);
-            }
-          } catch (error) {
-            console.error(`Failed to start tunnel: ${(error as Error).message}`);
-            console.log('Continuing without tunnel...');
-          }
-        }
 
         resolve();
       };
@@ -140,7 +88,7 @@ export function createServerStartupRuntime(deps: ServerStartupDeps): ServerStart
 
   return {
     resolveBindHost,
-    startListeningAndMaybeTunnel,
+    startListening,
     attachProcessHandlers,
   };
 }

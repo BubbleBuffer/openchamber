@@ -17,23 +17,7 @@ import { createEventBus, EVENTS } from './dist/domains/core/index.js';
 import { createOpenCodeDomain } from './dist/domains/opencode/index.js';
 
 import { createUiAuth } from './dist/domains/ui-auth/index.js';
-import { createTunnelAuth } from './dist/domains/auth/index.js';
-import { createManagedTunnelConfigRuntime } from './dist/domains/tunnels/index.js';
-import { createTunnelProviderRegistry } from './dist/domains/tunnels/index.js';
-import { createCloudflareTunnelProvider } from './dist/domains/tunnels/index.js';
 import { createRequestSecurityRuntime } from './dist/domains/security/index.js';
-import {
-  TUNNEL_MODE_MANAGED_LOCAL,
-  TUNNEL_MODE_MANAGED_REMOTE,
-  TUNNEL_MODE_QUICK,
-  TUNNEL_PROVIDER_CLOUDFLARE,
-  TunnelServiceError,
-  isSupportedTunnelMode,
-  normalizeOptionalPath,
-  normalizeTunnelStartRequest,
-  normalizeTunnelMode,
-  normalizeTunnelProvider,
-} from './dist/domains/tunnels/index.js';
 import { prepareNotificationLastMessage } from './dist/domains/notifications/index.js';
 import { createTerminalRuntime } from './dist/domains/terminal/runtime.js';
 import {
@@ -66,7 +50,6 @@ import { createBootstrapRuntime } from './dist/domains/bootstrap/index.js';
 import { createOpenCodeWatcherRuntime } from './dist/domains/opencode-support/index.js';
 import { createScheduledTasksRuntime } from './dist/domains/scheduled-tasks/index.js';
 import { createServerStartupRuntime } from './dist/domains/bootstrap/index.js';
-import { createTunnelWiringRuntime } from './dist/domains/bootstrap/index.js';
 import { createStartupPipelineRuntime } from './dist/domains/bootstrap/index.js';
 import { runCliEntryIfMain } from './dist/domains/bootstrap/index.js';
 import { registerNotificationRoutes, createNotificationEmitterRuntime, createNotificationTriggerRuntime, createPushRuntime, createNotificationTemplateRuntime } from './dist/domains/notifications/index.js';
@@ -91,12 +74,6 @@ const MODELS_METADATA_CACHE_TTL = 5 * 60 * 1000;
 const CLIENT_RELOAD_DELAY_MS = 800;
 const OPEN_CODE_READY_GRACE_MS = 12000;
 const LONG_REQUEST_TIMEOUT_MS = 4 * 60 * 1000;
-const TUNNEL_BOOTSTRAP_TTL_DEFAULT_MS = 30 * 60 * 1000;
-const TUNNEL_BOOTSTRAP_TTL_MIN_MS = 60 * 1000;
-const TUNNEL_BOOTSTRAP_TTL_MAX_MS = 24 * 60 * 60 * 1000;
-const TUNNEL_SESSION_TTL_DEFAULT_MS = 8 * 60 * 60 * 1000;
-const TUNNEL_SESSION_TTL_MIN_MS = 5 * 60 * 1000;
-const TUNNEL_SESSION_TTL_MAX_MS = 30 * 24 * 60 * 60 * 1000;
 
 // ── SSE compression bypass ────────────────────────────────────────
 const SSE_PATH_PREFIXES = ['/api/event', '/api/global/event', '/api/notifications/stream', '/api/openchamber/events'];
@@ -143,22 +120,11 @@ const fsPromises = fs.promises;
 // ── Settings normalization & helpers ────────────────────────────────
 const settingsNormalizationRuntime = createSettingsNormalizationRuntime({
   os, path, processLike: process,
-  tunnelBootstrapTtlDefaultMs: TUNNEL_BOOTSTRAP_TTL_DEFAULT_MS,
-  tunnelBootstrapTtlMinMs: TUNNEL_BOOTSTRAP_TTL_MIN_MS,
-  tunnelBootstrapTtlMaxMs: TUNNEL_BOOTSTRAP_TTL_MAX_MS,
-  tunnelSessionTtlDefaultMs: TUNNEL_SESSION_TTL_DEFAULT_MS,
-  tunnelSessionTtlMinMs: TUNNEL_SESSION_TTL_MIN_MS,
-  tunnelSessionTtlMaxMs: TUNNEL_SESSION_TTL_MAX_MS,
 });
 
 const normalizeDirectoryPath = (...args) => settingsNormalizationRuntime.normalizeDirectoryPath(...args);
 const normalizePathForPersistence = (...args) => settingsNormalizationRuntime.normalizePathForPersistence(...args);
 const normalizeSettingsPaths = (...args) => settingsNormalizationRuntime.normalizeSettingsPaths(...args);
-const normalizeTunnelBootstrapTtlMs = (...args) => settingsNormalizationRuntime.normalizeTunnelBootstrapTtlMs(...args);
-const normalizeTunnelSessionTtlMs = (...args) => settingsNormalizationRuntime.normalizeTunnelSessionTtlMs(...args);
-const normalizeManagedRemoteTunnelHostname = (...args) => settingsNormalizationRuntime.normalizeManagedRemoteTunnelHostname(...args);
-const normalizeManagedRemoteTunnelPresets = (...args) => settingsNormalizationRuntime.normalizeManagedRemoteTunnelPresets(...args);
-const normalizeManagedRemoteTunnelPresetTokens = (...args) => settingsNormalizationRuntime.normalizeManagedRemoteTunnelPresetTokens(...args);
 const isUnsafeSkillRelativePath = (...args) => settingsNormalizationRuntime.isUnsafeSkillRelativePath(...args);
 const sanitizeTypographySizesPartial = (...args) => settingsNormalizationRuntime.sanitizeTypographySizesPartial(...args);
 const normalizeStringArray = (...args) => settingsNormalizationRuntime.normalizeStringArray(...args);
@@ -176,28 +142,14 @@ const OPENCHAMBER_DATA_DIR = process.env.OPENCHAMBER_DATA_DIR
   : path.join(os.homedir(), '.config', 'openchamber');
 const SETTINGS_FILE_PATH = path.join(OPENCHAMBER_DATA_DIR, 'settings.json');
 const PUSH_SUBSCRIPTIONS_FILE_PATH = path.join(OPENCHAMBER_DATA_DIR, 'push-subscriptions.json');
-const CLOUDFLARE_MANAGED_REMOTE_TUNNELS_FILE_PATH = path.join(OPENCHAMBER_DATA_DIR, 'cloudflare-managed-remote-tunnels.json');
-const CLOUDFLARE_LEGACY_NAMED_TUNNELS_FILE_PATH = path.join(OPENCHAMBER_DATA_DIR, 'cloudflare-named-tunnels.json');
-const CLOUDFLARE_MANAGED_REMOTE_TUNNELS_VERSION = 1;
 
-// ── Theme, managed tunnel config, settings helpers ────────────────
+// ── Theme, settings helpers ────────────────
 const themeRuntime = createThemeRuntime({ fsPromises, path, themesDir: OPENCHAMBER_USER_THEMES_DIR, maxThemeJsonBytes: MAX_THEME_JSON_BYTES, logger: console });
 const readCustomThemesFromDisk = (...args) => themeRuntime.readCustomThemesFromDisk(...args);
 
-const managedTunnelConfigRuntime = createManagedTunnelConfigRuntime({
-  fsPromises, path, normalizeManagedRemoteTunnelHostname, normalizeManagedRemoteTunnelPresets,
-  constants: { CLOUDFLARE_MANAGED_REMOTE_TUNNELS_FILE_PATH, CLOUDFLARE_LEGACY_NAMED_TUNNELS_FILE_PATH, CLOUDFLARE_MANAGED_REMOTE_TUNNELS_VERSION },
-});
-const syncManagedRemoteTunnelConfigWithPresets = (...args) => managedTunnelConfigRuntime.syncManagedRemoteTunnelConfigWithPresets(...args);
-const upsertManagedRemoteTunnelToken = (...args) => managedTunnelConfigRuntime.upsertManagedRemoteTunnelToken(...args);
-const resolveManagedRemoteTunnelToken = (...args) => managedTunnelConfigRuntime.resolveManagedRemoteTunnelToken(...args);
-const readManagedRemoteTunnelConfigFromDisk = (...args) => managedTunnelConfigRuntime.readManagedRemoteTunnelConfigFromDisk(...args);
-
 const settingsHelpers = createSettingsHelpers({
-  normalizePathForPersistence, normalizeDirectoryPath, normalizeTunnelBootstrapTtlMs,
-  normalizeTunnelSessionTtlMs, normalizeTunnelProvider, normalizeTunnelMode, normalizeOptionalPath,
-  normalizeManagedRemoteTunnelHostname, normalizeManagedRemoteTunnelPresets,
-  normalizeManagedRemoteTunnelPresetTokens, sanitizeTypographySizesPartial,
+  normalizePathForPersistence, normalizeDirectoryPath,
+  sanitizeTypographySizesPartial,
   normalizeStringArray, sanitizeModelRefs, sanitizeSkillCatalogs, sanitizeProjects,
 });
 const normalizePwaAppName = (...args) => settingsHelpers.normalizePwaAppName(...args);
@@ -219,8 +171,7 @@ const resolveOptionalProjectDirectory = (...args) => projectDirectoryRuntime.res
 const settingsRuntime = createSettingsRuntime({
   fsPromises, path, crypto, SETTINGS_FILE_PATH, sanitizeProjects, sanitizeSettingsUpdate,
   mergePersistedSettings, normalizeSettingsPaths, normalizeStringArray, formatSettingsResponse,
-  resolveDirectoryCandidate, normalizeManagedRemoteTunnelHostname, normalizeManagedRemoteTunnelPresets,
-  normalizeManagedRemoteTunnelPresetTokens, syncManagedRemoteTunnelConfigWithPresets, upsertManagedRemoteTunnelToken,
+  resolveDirectoryCandidate,
 });
 const readSettingsFromDiskMigrated = (...args) => settingsRuntime.readSettingsFromDiskMigrated(...args);
 const readSettingsFromDisk = (...args) => settingsRuntime.readSettingsFromDisk(...args);
@@ -287,13 +238,10 @@ let signalsAttached = false;
 let server = null;
 let expressApp = null;
 let uiAuthController = null;
-let activeTunnelController = null;
 let terminalRuntime = null;
 let messageStreamRuntime = null;
 let exitOnShutdown = true;
 let globalWatcherStartPromise = null;
-let runtimeManagedRemoteTunnelHostname = '';
-let runtimeManagedRemoteTunnelToken = '';
 
 // ── syncToHmrState / syncFromHmrState closures ────────────────────
 const syncToHmrState = () => {
@@ -367,12 +315,6 @@ const openCodeResolutionRuntime = createOpenCodeResolutionRuntime({
   setResolvedOpencodeBinarySource: (value) => { openCodeEnvState.resolvedOpencodeBinarySource = value; },
 });
 const getOpenCodeResolutionSnapshot = (...args) => openCodeResolutionRuntime.getOpenCodeResolutionSnapshot(...args);
-
-// ── Tunnel provider ───────────────────────────────────────────────
-// Created BEFORE tunnelWiringRuntime since tunnelWiringRuntime needs them
-const tunnelProviderRegistry = createTunnelProviderRegistry([createCloudflareTunnelProvider()]);
-tunnelProviderRegistry.seal();
-const tunnelAuthController = createTunnelAuth();
 
 // ── EventBus ──────────────────────────────────────────────────────
 const eventBus = createEventBus();
@@ -562,28 +504,11 @@ const serverSessionMachineBridge = createServerSessionMachineBridge({
 });
 serverSessionMachineBridge.start();
 
-// ── Bootstrap, tunnel, startup pipeline, scheduled tasks ──────────
+// ── Bootstrap, startup pipeline, scheduled tasks ──────────
 const bootstrapRuntime = createBootstrapRuntime({
   createUiAuth, registerServerStatusRoutes, registerCommonRequestMiddleware,
   registerAuthAndAccessRoutes, registerNotificationRoutes,
   registerOpenChamberRoutes, express,
-});
-
-const tunnelWiringRuntime = createTunnelWiringRuntime({
-  crypto, URL, tunnelProviderRegistry, tunnelAuthController,
-  readSettingsFromDiskMigrated, readManagedRemoteTunnelConfigFromDisk,
-  normalizeTunnelProvider, normalizeTunnelMode, normalizeOptionalPath,
-  normalizeManagedRemoteTunnelHostname, normalizeTunnelBootstrapTtlMs,
-  normalizeTunnelSessionTtlMs, isSupportedTunnelMode,
-  upsertManagedRemoteTunnelToken, resolveManagedRemoteTunnelToken,
-  TUNNEL_MODE_QUICK, TUNNEL_MODE_MANAGED_LOCAL, TUNNEL_MODE_MANAGED_REMOTE,
-  TUNNEL_PROVIDER_CLOUDFLARE, TunnelServiceError,
-  getActiveTunnelController: () => activeTunnelController,
-  setActiveTunnelController: (value) => { activeTunnelController = value; },
-  getRuntimeManagedRemoteTunnelHostname: () => runtimeManagedRemoteTunnelHostname,
-  setRuntimeManagedRemoteTunnelHostname: (value) => { runtimeManagedRemoteTunnelHostname = value; },
-  getRuntimeManagedRemoteTunnelToken: () => runtimeManagedRemoteTunnelToken,
-  setRuntimeManagedRemoteTunnelToken: (value) => { runtimeManagedRemoteTunnelToken = value; },
 });
 
 const startupPipelineRuntime = createStartupPipelineRuntime({
@@ -654,9 +579,6 @@ const gracefulShutdownRuntime = createGracefulShutdownRuntime({
   getServer: () => server,
   getUiAuthController: () => uiAuthController,
   setUiAuthController: (value) => { uiAuthController = value; },
-  getActiveTunnelController: () => activeTunnelController,
-  setActiveTunnelController: (value) => { activeTunnelController = value; },
-  tunnelAuthController,
   scheduledTasksRuntime,
   serverSessionMachineBridge,
   sessionActorRegistry,
@@ -684,19 +606,7 @@ eventBus.on('opencode:unhealthy', () => {
 async function main(options = {}) {
   const port = Number.isFinite(options.port) && options.port >= 0 ? Math.trunc(options.port) : DEFAULT_PORT;
   const host = typeof options.host === 'string' && options.host.length > 0 ? options.host : undefined;
-  const tryCfTunnel = options.tryCfTunnel === true;
-  const shouldUseCanonicalTunnelConfig = typeof options.tunnelMode === 'string' || typeof options.tunnelProvider === 'string' || options.tunnelConfigPath === null || typeof options.tunnelConfigPath === 'string' || typeof options.tunnelToken === 'string' || typeof options.tunnelHostname === 'string';
-  const startupTunnelRequest = shouldUseCanonicalTunnelConfig
-    ? normalizeTunnelStartRequest({
-        provider: normalizeTunnelProvider(options.tunnelProvider),
-        mode: options.tunnelMode,
-        configPath: normalizeOptionalPath(options.tunnelConfigPath),
-        token: typeof options.tunnelToken === 'string' ? options.tunnelToken.trim() : '',
-        hostname: normalizeManagedRemoteTunnelHostname(options.tunnelHostname),
-      })
-    : (tryCfTunnel ? { provider: TUNNEL_PROVIDER_CLOUDFLARE, mode: TUNNEL_MODE_QUICK, configPath: undefined, token: '', hostname: undefined } : null);
   const attachSignals = options.attachSignals !== false;
-  const onTunnelReady = typeof options.onTunnelReady === 'function' ? options.onTunnelReady : null;
   if (typeof options.exitOnShutdown === 'boolean') exitOnShutdown = options.exitOnShutdown;
   if (typeof options.onDesktopNotification === 'function') notificationEmitterRuntime.setOnDesktopNotification(options.onDesktopNotification);
 
@@ -747,8 +657,8 @@ async function main(options = {}) {
         planModeExperimentalEnabled: PLAN_MODE_EXPERIMENT_ENABLED,
       };
     },
-    uiPassword, tunnelAuthController, readSettingsFromDiskMigrated,
-    normalizeTunnelSessionTtlMs, resolveZenModel,
+    uiPassword, readSettingsFromDiskMigrated,
+    resolveZenModel,
     ensurePushInitialized, ensureGlobalWatcherStarted, getOrCreateVapidKeys,
     getUiSessionTokenFromRequest, writeSettingsToDisk, addOrUpdatePushSubscription,
     removePushSubscription, updateUiVisibility, isUiVisible,
@@ -761,9 +671,6 @@ async function main(options = {}) {
     fetchFreeZenModels, getCachedZenModels, setAutoAcceptSession,
   });
   uiAuthController = bootstrapResult.uiAuthController;
-
-  const tunnelRuntimeContext = tunnelWiringRuntime.initialize(app, port);
-  const { tunnelService, startTunnelWithNormalizedRequest } = tunnelRuntimeContext;
 
   const featureRoutesRuntime = createFeatureRoutesRuntime({ clientReloadDelayMs: CLIENT_RELOAD_DELAY_MS });
   await featureRoutesRuntime.registerRoutes(app, {
@@ -811,15 +718,12 @@ async function main(options = {}) {
     bootstrapOpenCodeAtStartup,
     triggerHealthCheck: openCodeRuntime.triggerHealthCheck,
     staticRoutesRuntime, process, crypto,
-    normalizeTunnelBootstrapTtlMs, readSettingsFromDiskMigrated,
-    tunnelAuthController, startTunnelWithNormalizedRequest,
+    readSettingsFromDiskMigrated,
     gracefulShutdown,
     getSignalsAttached: () => signalsAttached,
     setSignalsAttached: (value) => { signalsAttached = value; },
     syncToHmrState,
-    TUNNEL_MODE_QUICK, TUNNEL_MODE_MANAGED_LOCAL, TUNNEL_MODE_MANAGED_REMOTE,
-    host, port, startupTunnelRequest, onTunnelReady,
-    tunnelRuntimeContext, attachSignals,
+    host, port, attachSignals,
   });
   terminalRuntime = startupPipelineResult.terminalRuntime;
   messageStreamRuntime = startupPipelineResult.messageStreamRuntime;
@@ -833,9 +737,8 @@ async function main(options = {}) {
   return {
     expressApp: app,
     httpServer: server,
-    getPort: () => tunnelRuntimeContext.getActivePort(),
+    getPort: () => startupPipelineResult.activePort,
     getOpenCodePort: () => openCodeRuntime.getPort(),
-    getTunnelUrl: () => tunnelService.getPublicUrl(),
     isReady: () => openCodeRuntime.isReady(),
     restartOpenCode: () => openCodeRuntime.restart(),
     stop: (shutdownOptions = {}) => gracefulShutdown({ exitProcess: shutdownOptions.exitProcess ?? false }),
@@ -845,8 +748,7 @@ async function main(options = {}) {
 // ── CLI entry ──────────────────────────────────────────────────────
 runCliEntryIfMain({
   process, currentFilename: __filename, parseServeCliOptions,
-  defaultPort: DEFAULT_PORT, cloudflareProvider: TUNNEL_PROVIDER_CLOUDFLARE,
-  managedLocalMode: TUNNEL_MODE_MANAGED_LOCAL,
+  defaultPort: DEFAULT_PORT,
   setExitOnShutdown: (value) => { exitOnShutdown = value; },
   startServer: main,
 });

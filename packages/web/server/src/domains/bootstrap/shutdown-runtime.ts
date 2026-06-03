@@ -26,9 +26,6 @@ export function createGracefulShutdownRuntime(deps: ShutdownDeps): ShutdownRunti
     getServer,
     getUiAuthController,
     setUiAuthController,
-    getActiveTunnelController,
-    setActiveTunnelController,
-    tunnelAuthController,
     serverSessionMachineBridge,
     sessionActorRegistry,
     sessionEffectExecutor,
@@ -128,14 +125,6 @@ export function createGracefulShutdownRuntime(deps: ShutdownDeps): ShutdownRunti
     if (uiAuthController) {
       uiAuthController.dispose();
       setUiAuthController(null);
-    }
-
-    const activeTunnelController = getActiveTunnelController();
-    if (activeTunnelController) {
-      console.log('Stopping active tunnel...');
-      activeTunnelController.stop();
-      setActiveTunnelController(null);
-      tunnelAuthController.clearActiveTunnel();
     }
 
     console.log('Graceful shutdown complete');

@@ -4,26 +4,18 @@ export interface ServerStartupDeps {
   process: typeof import("process");
   crypto: typeof import("crypto");
   server: any;
-  normalizeTunnelBootstrapTtlMs: (value: number | null) => number | null;
   readSettingsFromDiskMigrated: () => Promise<object>;
-  tunnelAuthController: any;
-  startTunnelWithNormalizedRequest: (request: any) => Promise<any>;
   gracefulShutdown: (opts?: any) => Promise<void>;
   getSignalsAttached: () => boolean;
   setSignalsAttached: (value: boolean) => void;
   syncToHmrState: () => void;
-  TUNNEL_MODE_QUICK: string;
-  TUNNEL_MODE_MANAGED_LOCAL: string;
-  TUNNEL_MODE_MANAGED_REMOTE: string;
 }
 
 export interface ServerStartupRuntime {
   resolveBindHost(host?: string): string;
-  startListeningAndMaybeTunnel(opts: {
+  startListening(opts: {
     port: number;
     bindHost: string;
-    startupTunnelRequest?: any;
-    onTunnelReady?: (url: string, connectUrl: string) => void;
   }): Promise<{ activePort: number }>;
   attachProcessHandlers(opts: { attachSignals?: boolean }): void;
 }
@@ -35,7 +27,7 @@ export interface StartupPipelineDeps {
 }
 
 export interface StartupPipelineRuntime {
-  run(opts: any): Promise<{ terminalRuntime: any; messageStreamRuntime: any }>;
+  run(opts: any): Promise<{ terminalRuntime: any; messageStreamRuntime: any; activePort: number }>;
 }
 
 export interface BootstrapDeps {
@@ -76,9 +68,6 @@ export interface ShutdownDeps {
   getServer: () => any;
   getUiAuthController: () => any;
   setUiAuthController: (value: any) => void;
-  getActiveTunnelController: () => any;
-  setActiveTunnelController: (value: any) => void;
-  tunnelAuthController: any;
   serverSessionMachineBridge: any;
   sessionActorRegistry: any;
   sessionEffectExecutor: any;
@@ -129,20 +118,12 @@ export interface ParseServeCliOptionsResult {
   port: number;
   host: string | undefined;
   uiPassword: string | null;
-  tryCfTunnel: boolean;
-  tunnelProvider: string | undefined;
-  tunnelMode: string | undefined;
-  tunnelConfigPath: string | null;
-  tunnelToken: string | undefined;
-  tunnelHostname: string | undefined;
 }
 
 export interface CliOptionsDeps {
   argv?: string[];
   env?: Record<string, string | undefined>;
   defaultPort: number;
-  cloudflareProvider: string;
-  managedLocalMode: string;
 }
 
 export interface CliEntryDeps {
@@ -150,8 +131,6 @@ export interface CliEntryDeps {
   currentFilename: string;
   parseServeCliOptions: (deps: CliOptionsDeps) => ParseServeCliOptionsResult;
   defaultPort: number;
-  cloudflareProvider: string;
-  managedLocalMode: string;
   setExitOnShutdown: (value: boolean) => void;
   startServer: Function;
 }

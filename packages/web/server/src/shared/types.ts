@@ -12,15 +12,6 @@ export interface ServerConfig {
   openchamberDataDir: string;
   settingsFilePath: string;
   pushSubscriptionsFilePath: string;
-  tunnelConfigPath: string | null;
-  runtimeManagedRemoteTunnelHostname: string | null;
-  runtimeManagedRemoteTunnelToken: string | null;
-  tryCfTunnel: boolean;
-  tunnelMode: string | null;
-  tunnelProvider: string | null;
-  tunnelToken: string | null;
-  tunnelHostname: string | null;
-  onTunnelReady: ((url: string, connectUrl: string) => void) | null;
   onDesktopNotification: ((payload: unknown) => void) | null;
   openchamberVersion: string;
   isDesktopNotifyEnabled: boolean;
@@ -31,7 +22,6 @@ export interface WebUiServerController {
   httpServer: HttpServer;
   getPort: () => number | null;
   getOpenCodePort: () => number | null;
-  getTunnelUrl: () => string | null;
   isReady: () => boolean;
   restartOpenCode: () => Promise<void>;
   stop: (options?: { exitProcess?: boolean }) => Promise<void>;
@@ -66,13 +56,6 @@ export interface StartWebUiServerOptions {
   attachSignals?: boolean;
   exitOnShutdown?: boolean;
   uiPassword?: string | null;
-  tryCfTunnel?: boolean;
-  tunnelMode?: string;
-  tunnelProvider?: string;
-  tunnelConfigPath?: string | null;
-  tunnelToken?: string;
-  tunnelHostname?: string;
-  onTunnelReady?: (url: string, connectUrl: string) => void;
   onDesktopNotification?: (payload: unknown) => void;
 }
 

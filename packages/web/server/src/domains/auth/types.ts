@@ -6,27 +6,6 @@ export interface ProviderAuthRuntime {
   listProviderAuths(): string[];
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface TunnelAuthDeps {}
-
-export interface TunnelAuthController {
-  classifyRequestScope(req: unknown): string;
-  setActiveTunnel(tunnel: unknown): void;
-  clearActiveTunnel(): void;
-  revokeTunnelArtifacts(): void;
-  issueBootstrapToken(): string;
-  getBootstrapStatus(): unknown;
-  requireTunnelSession(req: unknown, res: unknown, next: () => void): void;
-  getTunnelSessionFromRequest(req: unknown): unknown;
-  exchangeBootstrapToken(token: string, options: { sessionTtlMs: number; secure: boolean }): string | null;
-  listTunnelSessions(): unknown[];
-  clearTunnelSessionCookie(res: unknown): void;
-  getActiveTunnelId(): string | null;
-  getActiveTunnelHost(): string | null;
-  getActiveTunnelMode(): string | null;
-  dispose(): void;
-}
-
 export interface OpenCodeAuthStateDeps {
   crypto: typeof import("crypto");
   process: typeof import("process");
@@ -57,6 +36,5 @@ export interface AuthDomainDeps {
 
 export interface AuthDomain {
   providerAuth: ProviderAuthRuntime;
-  tunnelAuth: TunnelAuthController;
   opencodeAuth: OpenCodeAuthState;
 }

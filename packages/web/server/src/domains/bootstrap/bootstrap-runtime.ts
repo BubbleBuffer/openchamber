@@ -21,9 +21,7 @@ export function createBootstrapRuntime(deps: BootstrapDeps): BootstrapRuntime {
       gracefulShutdown,
       getHealthSnapshot,
       uiPassword,
-      tunnelAuthController,
       readSettingsFromDiskMigrated,
-      normalizeTunnelSessionTtlMs,
       resolveZenModel,
       ensurePushInitialized,
       ensureGlobalWatcherStarted,
@@ -71,10 +69,8 @@ export function createBootstrapRuntime(deps: BootstrapDeps): BootstrapRuntime {
     }
 
     registerAuthAndAccessRoutes(app, {
-      tunnelAuthController,
       uiAuthController,
       readSettingsFromDiskMigrated,
-      normalizeTunnelSessionTtlMs,
     });
 
     registerNotificationRoutes(app, {

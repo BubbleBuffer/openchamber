@@ -17,8 +17,7 @@ export type SettingsPageSlug =
   | 'shortcuts'
   | 'sessions'
   | 'magic-prompts'
-  | 'notifications'
-  | 'tunnel';
+  | 'notifications';
 
 export type SettingsPageGroup =
   | 'appearance'
@@ -177,7 +176,6 @@ export const SETTINGS_PAGE_METADATA: readonly SettingsPageMeta[] = [
   },
 
   { slug: 'notifications', title: 'Notifications', group: 'general', kind: 'single', keywords: ['alerts', 'native', 'summary', 'summarization'], },
-  { slug: 'tunnel', title: 'Remote Tunnel', group: 'advanced', kind: 'single', keywords: ['tunnel', 'cloudflare', 'qr', 'remote', 'mobile', 'share'], isAvailable: (ctx) => !ctx.isVSCode },
 ] as const;
 
 export const LEGACY_SIDEBAR_SECTION_TO_SETTINGS_SLUG: Record<SidebarSection, SettingsPageSlug> = {

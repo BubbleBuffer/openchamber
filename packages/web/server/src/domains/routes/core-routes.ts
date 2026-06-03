@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { CoreRoutesDeps, AuthRoutesDeps, SettingsUtilityRoutesDeps, CommonMiddlewareDeps } from "./types.js";
 
 export function registerServerStatusRoutes(app: any, deps: CoreRoutesDeps): void {
@@ -38,23 +37,10 @@ export function registerServerStatusRoutes(app: any, deps: CoreRoutesDeps): void
 
 export function registerAuthAndAccessRoutes(app: any, deps: AuthRoutesDeps): void {
   const {
-    tunnelAuthController,
     uiAuthController,
-    readSettingsFromDiskMigrated,
-    normalizeTunnelSessionTtlMs,
   } = deps;
 
   app.get('/auth/session', async (req: any, res: any) => {
-    const requestScope = tunnelAuthController.classifyRequestScope(req);
-    if (requestScope === 'tunnel' || requestScope === 'unknown-public') {
-      const tunnelSession = tunnelAuthController.getTunnelSessionFromRequest(req);
-      if (tunnelSession) {
-        return res.json({ authenticated: true, scope: 'tunnel' });
-      }
-      tunnelAuthController.clearTunnelSessionCookie(req, res);
-      return res.status(401).json({ authenticated: false, locked: true, tunnelLocked: true });
-    }
-
     try {
       await uiAuthController.handleSessionStatus(req, res);
     } catch {
@@ -63,42 +49,22 @@ export function registerAuthAndAccessRoutes(app: any, deps: AuthRoutesDeps): voi
   });
 
   app.post('/auth/session', (req: any, res: any) => {
-    const requestScope = tunnelAuthController.classifyRequestScope(req);
-    if (requestScope === 'tunnel' || requestScope === 'unknown-public') {
-      return res.status(403).json({ error: 'Password login is disabled for tunnel scope', tunnelLocked: true });
-    }
     return uiAuthController.handleSessionCreate(req, res);
   });
 
   app.get('/auth/passkey/status', (req: any, res: any) => {
-    const requestScope = tunnelAuthController.classifyRequestScope(req);
-    if (requestScope === 'tunnel' || requestScope === 'unknown-public') {
-      return res.json({ enabled: false, hasPasskeys: false, passkeyCount: 0, rpID: null, tunnelLocked: true });
-    }
     return uiAuthController.handlePasskeyStatus(req, res);
   });
 
   app.post('/auth/passkey/authenticate/options', (req: any, res: any) => {
-    const requestScope = tunnelAuthController.classifyRequestScope(req);
-    if (requestScope === 'tunnel' || requestScope === 'unknown-public') {
-      return res.status(403).json({ error: 'Passkey login is disabled for tunnel scope', tunnelLocked: true });
-    }
     return uiAuthController.handlePasskeyAuthenticationOptions(req, res);
   });
 
   app.post('/auth/passkey/authenticate/verify', (req: any, res: any) => {
-    const requestScope = tunnelAuthController.classifyRequestScope(req);
-    if (requestScope === 'tunnel' || requestScope === 'unknown-public') {
-      return res.status(403).json({ error: 'Passkey login is disabled for tunnel scope', tunnelLocked: true });
-    }
     return uiAuthController.handlePasskeyAuthenticationVerify(req, res);
   });
 
   app.post('/auth/passkey/register/options', async (req: any, res: any, next: any) => {
-    const requestScope = tunnelAuthController.classifyRequestScope(req);
-    if (requestScope === 'tunnel' || requestScope === 'unknown-public') {
-      return res.status(403).json({ error: 'Passkey setup is disabled for tunnel scope', tunnelLocked: true });
-    }
     try {
       await uiAuthController.requireAuth(req, res, async () => {
         await uiAuthController.handlePasskeyRegistrationOptions(req, res);
@@ -109,10 +75,6 @@ export function registerAuthAndAccessRoutes(app: any, deps: AuthRoutesDeps): voi
   });
 
   app.post('/auth/passkey/register/verify', async (req: any, res: any, next: any) => {
-    const requestScope = tunnelAuthController.classifyRequestScope(req);
-    if (requestScope === 'tunnel' || requestScope === 'unknown-public') {
-      return res.status(403).json({ error: 'Passkey setup is disabled for tunnel scope', tunnelLocked: true });
-    }
     try {
       await uiAuthController.requireAuth(req, res, async () => {
         await uiAuthController.handlePasskeyRegistrationVerify(req, res);
@@ -123,10 +85,6 @@ export function registerAuthAndAccessRoutes(app: any, deps: AuthRoutesDeps): voi
   });
 
   app.get('/api/passkeys', async (req: any, res: any, next: any) => {
-    const requestScope = tunnelAuthController.classifyRequestScope(req);
-    if (requestScope === 'tunnel' || requestScope === 'unknown-public') {
-      return res.status(403).json({ error: 'Passkey management is disabled for tunnel scope', tunnelLocked: true });
-    }
     try {
       await uiAuthController.requireAuth(req, res, async () => {
         await uiAuthController.handlePasskeyList(req, res);
@@ -137,10 +95,6 @@ export function registerAuthAndAccessRoutes(app: any, deps: AuthRoutesDeps): voi
   });
 
   app.delete('/api/passkeys/:id', async (req: any, res: any, next: any) => {
-    const requestScope = tunnelAuthController.classifyRequestScope(req);
-    if (requestScope === 'tunnel' || requestScope === 'unknown-public') {
-      return res.status(403).json({ error: 'Passkey management is disabled for tunnel scope', tunnelLocked: true });
-    }
     try {
       await uiAuthController.requireAuth(req, res, async () => {
         await uiAuthController.handlePasskeyRevoke(req, res);
@@ -151,10 +105,6 @@ export function registerAuthAndAccessRoutes(app: any, deps: AuthRoutesDeps): voi
   });
 
   app.post('/api/auth/reset', async (req: any, res: any, next: any) => {
-    const requestScope = tunnelAuthController.classifyRequestScope(req);
-    if (requestScope === 'tunnel' || requestScope === 'unknown-public') {
-      return res.status(403).json({ error: 'Global sign-out is disabled for tunnel scope', tunnelLocked: true });
-    }
     try {
       await uiAuthController.requireAuth(req, res, async () => {
         await uiAuthController.handleResetAuth(req, res);
@@ -164,41 +114,8 @@ export function registerAuthAndAccessRoutes(app: any, deps: AuthRoutesDeps): voi
     }
   });
 
-  app.get('/connect', async (req: any, res: any) => {
-    try {
-      const token = typeof req.query?.t === 'string' ? req.query.t : '';
-      const settings = await readSettingsFromDiskMigrated();
-      const tunnelSessionTtlMs = normalizeTunnelSessionTtlMs((settings as any)?.tunnelSessionTtlMs ?? 0);
-
-      const exchange = tunnelAuthController.exchangeBootstrapToken({
-        req,
-        res,
-        token,
-        sessionTtlMs: tunnelSessionTtlMs,
-      });
-
-      res.setHeader('Cache-Control', 'no-store');
-
-      if (!exchange.ok) {
-        if (exchange.reason === 'rate-limited') {
-          res.setHeader('Retry-After', String(exchange.retryAfter || 60));
-          return res.status(429).type('text/plain').send('Too many attempts. Please try again later.');
-        }
-        return res.status(401).type('text/plain').send('Connection link is invalid or expired.');
-      }
-
-      return res.redirect(302, '/');
-    } catch {
-      return res.status(500).type('text/plain').send('Failed to process connect request.');
-    }
-  });
-
   app.use('/api', async (req: any, res: any, next: any) => {
     try {
-      const requestScope = tunnelAuthController.classifyRequestScope(req);
-      if (requestScope === 'tunnel' || requestScope === 'unknown-public') {
-        return tunnelAuthController.requireTunnelSession(req, res, next);
-      }
       await uiAuthController.requireAuth(req, res, next);
     } catch (err) {
       next(err);
@@ -264,11 +181,7 @@ export function registerCommonRequestMiddleware(app: any, deps: CommonMiddleware
       req.path.startsWith('/api/opencode') ||
       req.path.startsWith('/api/push') ||
       req.path.startsWith('/api/notifications') ||
-      req.path.startsWith('/api/session-folders') ||
-      req.path.startsWith('/api/text') ||
-      req.path.startsWith('/api/voice') ||
-      req.path.startsWith('/api/tts') ||
-      req.path.startsWith('/api/openchamber/tunnel')
+      req.path.startsWith('/api/session-folders')
     ) {
       express.json({ limit: '50mb' })(req, res, next);
     } else if (req.path.startsWith('/api')) {

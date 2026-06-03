@@ -47,13 +47,6 @@ export async function startWebUiServer(
       attachSignals: config.attachSignals,
       exitOnShutdown: config.exitOnShutdown,
       uiPassword: config.uiPassword,
-      tryCfTunnel: config.tryCfTunnel,
-      tunnelMode: config.tunnelMode,
-      tunnelProvider: config.tunnelProvider,
-      tunnelConfigPath: config.tunnelConfigPath,
-      tunnelToken: config.tunnelToken,
-      tunnelHostname: config.tunnelHostname,
-      onTunnelReady: config.onTunnelReady,
       onDesktopNotification: config.onDesktopNotification,
     });
   } catch (err) {
@@ -76,8 +69,6 @@ export async function startWebUiServer(
     getPort: oldController!.getPort,
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     getOpenCodePort: oldController!.getOpenCodePort,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    getTunnelUrl: oldController!.getTunnelUrl,
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     isReady: oldController!.isReady,
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

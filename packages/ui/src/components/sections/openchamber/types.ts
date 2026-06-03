@@ -5,5 +5,4 @@ export type OpenChamberSection =
   | 'sessions'
   | 'git'
   | 'github'
-  | 'notifications'
-  | 'tunnel';
+  | 'notifications';

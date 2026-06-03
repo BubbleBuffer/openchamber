@@ -7,12 +7,6 @@ export function createSettingsNormalizationRuntime(
     os,
     path,
     processLike,
-    tunnelBootstrapTtlDefaultMs,
-    tunnelBootstrapTtlMinMs,
-    tunnelBootstrapTtlMaxMs,
-    tunnelSessionTtlDefaultMs,
-    tunnelSessionTtlMinMs,
-    tunnelSessionTtlMaxMs,
   } = deps;
 
   const normalizeDirectoryPath = (value: unknown): string | unknown => {
@@ -232,98 +226,6 @@ export function createSettingsNormalizationRuntime(
     return { settings: next, changed };
   };
 
-  const clampNumber = (value: number, min: number, max: number): number =>
-    Math.max(min, Math.min(max, value));
-
-  const normalizeTunnelBootstrapTtlMs = (value: number | null): number | null => {
-    if (value === null) {
-      return null;
-    }
-    if (!Number.isFinite(value)) {
-      return tunnelBootstrapTtlDefaultMs;
-    }
-    return clampNumber(Math.round(value), tunnelBootstrapTtlMinMs, tunnelBootstrapTtlMaxMs);
-  };
-
-  const normalizeTunnelSessionTtlMs = (value: number): number => {
-    if (!Number.isFinite(value)) {
-      return tunnelSessionTtlDefaultMs;
-    }
-    return clampNumber(Math.round(value), tunnelSessionTtlMinMs, tunnelSessionTtlMaxMs);
-  };
-
-  const normalizeManagedRemoteTunnelHostname = (value: unknown): string | undefined => {
-    if (typeof value !== "string") {
-      return undefined;
-    }
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return undefined;
-    }
-
-    const parsed = (() => {
-      try {
-        if (trimmed.includes("://")) {
-          return new URL(trimmed);
-        }
-        return new URL(`https://${trimmed}`);
-      } catch {
-        return null;
-      }
-    })();
-
-    const hostname = parsed?.hostname?.trim().toLowerCase() || "";
-    if (!hostname) {
-      return undefined;
-    }
-    return hostname;
-  };
-
-  const normalizeManagedRemoteTunnelPresets = (
-    value: unknown,
-  ): Array<{ id: string; name: string; hostname: string }> | undefined => {
-    if (!Array.isArray(value)) {
-      return undefined;
-    }
-
-    const result: Array<{ id: string; name: string; hostname: string }> = [];
-    const seenIds = new Set<string>();
-    const seenHostnames = new Set<string>();
-
-    for (const entry of value) {
-      if (!entry || typeof entry !== "object") continue;
-      const candidate = entry as Record<string, unknown>;
-      const id = typeof candidate.id === "string" ? candidate.id.trim() : "";
-      const name = typeof candidate.name === "string" ? candidate.name.trim() : "";
-      const hostname = normalizeManagedRemoteTunnelHostname(candidate.hostname);
-      if (!id || !name || !hostname) continue;
-      if (seenIds.has(id) || seenHostnames.has(hostname)) continue;
-      seenIds.add(id);
-      seenHostnames.add(hostname);
-      result.push({ id, name, hostname });
-    }
-
-    return result;
-  };
-
-  const normalizeManagedRemoteTunnelPresetTokens = (value: unknown): Record<string, string> | undefined => {
-    if (!value || typeof value !== "object" || Array.isArray(value)) {
-      return undefined;
-    }
-
-    const result: Record<string, string> = {};
-    for (const [rawId, rawToken] of Object.entries(value as Record<string, unknown>)) {
-      const id = typeof rawId === "string" ? rawId.trim() : "";
-      const token = typeof rawToken === "string" ? rawToken.trim() : "";
-      if (!id || !token) {
-        continue;
-      }
-      result[id] = token;
-    }
-
-    return Object.keys(result).length > 0 ? result : undefined;
-  };
-
   const isUnsafeSkillRelativePath = (value: unknown): boolean => {
     if (typeof value !== "string" || value.length === 0) {
       return true;
@@ -430,11 +332,6 @@ export function createSettingsNormalizationRuntime(
     normalizeDirectoryPath,
     normalizePathForPersistence,
     normalizeSettingsPaths,
-    normalizeTunnelBootstrapTtlMs,
-    normalizeTunnelSessionTtlMs,
-    normalizeManagedRemoteTunnelHostname,
-    normalizeManagedRemoteTunnelPresets,
-    normalizeManagedRemoteTunnelPresetTokens,
     isUnsafeSkillRelativePath,
     sanitizeTypographySizesPartial,
     normalizeStringArray,

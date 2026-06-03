@@ -8,7 +8,7 @@ export function createStartupPipelineRuntime(deps: StartupPipelineDeps): Startup
     createServerStartupRuntime,
   } = deps;
 
-  const run = async (options: any): Promise<{ terminalRuntime: any; messageStreamRuntime: any }> => {
+  const run = async (options: any): Promise<{ terminalRuntime: any; messageStreamRuntime: any; activePort: number }> => {
     const {
       app,
       server,
@@ -35,22 +35,13 @@ export function createStartupPipelineRuntime(deps: StartupPipelineDeps): Startup
       staticRoutesRuntime,
       process,
       crypto,
-      normalizeTunnelBootstrapTtlMs,
       readSettingsFromDiskMigrated,
-      tunnelAuthController,
-      startTunnelWithNormalizedRequest,
       gracefulShutdown,
       getSignalsAttached,
       setSignalsAttached,
       syncToHmrState,
-      TUNNEL_MODE_QUICK,
-      TUNNEL_MODE_MANAGED_LOCAL,
-      TUNNEL_MODE_MANAGED_REMOTE,
       host,
       port,
-      startupTunnelRequest,
-      onTunnelReady,
-      tunnelRuntimeContext,
       attachSignals,
     } = options;
 
@@ -93,33 +84,25 @@ export function createStartupPipelineRuntime(deps: StartupPipelineDeps): Startup
       process,
       crypto,
       server,
-      normalizeTunnelBootstrapTtlMs,
       readSettingsFromDiskMigrated,
-      tunnelAuthController,
-      startTunnelWithNormalizedRequest,
       gracefulShutdown,
       getSignalsAttached,
       setSignalsAttached,
       syncToHmrState,
-      TUNNEL_MODE_QUICK,
-      TUNNEL_MODE_MANAGED_LOCAL,
-      TUNNEL_MODE_MANAGED_REMOTE,
     });
 
     const bindHost = serverStartupRuntime.resolveBindHost(host);
-    const startupResult = await serverStartupRuntime.startListeningAndMaybeTunnel({
+    const startupResult = await serverStartupRuntime.startListening({
       port,
       bindHost,
-      startupTunnelRequest,
-      onTunnelReady,
     });
-    tunnelRuntimeContext.setActivePort(startupResult.activePort);
 
     serverStartupRuntime.attachProcessHandlers({ attachSignals });
 
     return {
       terminalRuntime,
       messageStreamRuntime,
+      activePort: startupResult.activePort,
     };
   };
 

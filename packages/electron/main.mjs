@@ -139,7 +139,6 @@ const state = {
 
 const QUIT_RISK_POLL_INTERVAL_MS = 5_000;
 const quitRisk = {
-  hasActiveTunnel: false,
   hasRunningScheduledTasks: false,
   hasEnabledScheduledTasks: false,
   runningScheduledTasksCount: 0,
@@ -147,15 +146,11 @@ const quitRisk = {
 };
 
 const shouldRequireQuitConfirmation = () =>
-  quitRisk.hasActiveTunnel
-  || quitRisk.hasRunningScheduledTasks
+  quitRisk.hasRunningScheduledTasks
   || quitRisk.hasEnabledScheduledTasks;
 
 const quitConfirmationMessage = () => {
   const reasons = [];
-  if (quitRisk.hasActiveTunnel) {
-    reasons.push('an active tunnel');
-  }
   if (quitRisk.runningScheduledTasksCount > 0) {
     reasons.push(`${quitRisk.runningScheduledTasksCount} running scheduled task${quitRisk.runningScheduledTasksCount === 1 ? '' : 's'}`);
   }
@@ -250,7 +245,6 @@ const refreshQuitRiskFlags = async () => {
   if (!base) return;
 
   const scheduledUrl = `${base}/api/openchamber/scheduled-tasks/status`;
-  const tunnelUrl = `${base}/api/openchamber/tunnel/status`;
 
   const fetchJson = async (url) => {
     try {
@@ -262,7 +256,7 @@ const refreshQuitRiskFlags = async () => {
     }
   };
 
-  const [scheduled, tunnel] = await Promise.all([fetchJson(scheduledUrl), fetchJson(tunnelUrl)]);
+  const scheduled = await fetchJson(scheduledUrl);
 
   if (scheduled && typeof scheduled === 'object') {
     const enabledCount = Number(scheduled.enabledScheduledTasksCount ?? 0);
@@ -271,10 +265,6 @@ const refreshQuitRiskFlags = async () => {
     quitRisk.runningScheduledTasksCount = Number.isFinite(runningCount) ? runningCount : 0;
     quitRisk.hasEnabledScheduledTasks = Boolean(scheduled.hasEnabledScheduledTasks) || quitRisk.enabledScheduledTasksCount > 0;
     quitRisk.hasRunningScheduledTasks = Boolean(scheduled.hasRunningScheduledTasks) || quitRisk.runningScheduledTasksCount > 0;
-  }
-
-  if (tunnel && typeof tunnel === 'object') {
-    quitRisk.hasActiveTunnel = Boolean(tunnel.active);
   }
 };
 
