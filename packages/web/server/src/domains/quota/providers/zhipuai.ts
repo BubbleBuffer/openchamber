@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-require-imports */
 import { readAuthFile } from "../../auth/provider-auth.js";
 import { getAuthEntry, normalizeAuthEntry } from "../auth-utils.js";
 import { buildResult, toUsageWindow } from "../formatters.js";
@@ -19,7 +19,6 @@ function getApiKey(): string | null {
   }
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { readConfigLayers } = require("../../../lib/opencode/shared.js") as any;
     const layers = readConfigLayers();
     const { mergedConfig } = layers;

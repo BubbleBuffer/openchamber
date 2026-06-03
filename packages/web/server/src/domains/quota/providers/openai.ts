@@ -1,7 +1,6 @@
 import { readAuthFile } from "../../auth/provider-auth.js";
 import { getAuthEntry, normalizeAuthEntry } from "../auth-utils.js";
 import { buildResult, toUsageWindow } from "../formatters.js";
-import { toNumber, toTimestamp } from "../transformers.js";
 import type { UsageWindow } from "../types.js";
 
 export const providerId = "openai";
