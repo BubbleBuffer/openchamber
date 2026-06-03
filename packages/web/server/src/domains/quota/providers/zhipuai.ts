@@ -74,8 +74,9 @@ export const fetchQuota = async () => {
     }
 
     const payload = (await response.json()) as Record<string, unknown>;
-    const limits = Array.isArray(payload?.data?.limits)
-      ? (payload.data.limits as Record<string, unknown>[])
+    const data = payload?.data as { limits?: unknown[] } | null | undefined;
+    const limits = Array.isArray(data?.limits)
+      ? (data.limits as Record<string, unknown>[])
       : [];
     const tokensLimit = limits.find((limit) => limit?.type === "TOKENS_LIMIT") as Record<string, unknown> | undefined;
     const windowSeconds = resolveWindowSeconds(tokensLimit as { unit?: number; number?: number } | undefined);
