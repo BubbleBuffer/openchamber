@@ -1,8 +1,9 @@
 # Server TypeScript Modernization — Handoff Spec
 
-> **Status:** 6 of 6 stages complete. Critical startup/shutdown path fully typed.
-> **Branch:** `feature/server-typescript-modernization` (78 commits ahead of main)
-> **Date:** 2026-06-02
+> **Status:** Stages 1-8 complete. TTS + Cloudflare tunnels deleted (not ported). Main blockers resolved; all route handlers ported.
+> **Branch:** `feature/server-typescript-modernization` (85+ commits ahead of main)
+> **Date:** 2026-06-02 (updated 2026-06-03)
+> **Commits since handoff:** 12+
 
 ## 1. What We Built
 
@@ -74,123 +75,112 @@ const { registerFsRoutes } = require("../../../lib/fs/routes.js") as any;
 ```
 These are documented and known to be cleaned up when the target domain gets ported.
 
-## 4. What Remains (80 JS files, ~20K lines)
+## 4. What Remains (~64 JS files in lib/)
 
-### 4.1 Immediate Action Required — Broken Dependencies (BLOCKERS)
+### 4.1 Stage 7 (COMPLETED): Fix Blockers + Port Bounded Cache
+- `lib/core/bounded-cache.js` → ported to `src/domains/core/bounded-cache.ts` (LRU+TTL Map/Set, 29 tests)
+- `lib/core/bounded-cache.js` re-export shim kept for 2 remaining JS consumers (`git/service.js`, `pwa-manifest-routes.js`)
+- All 6 TS consumer `require()` calls → typed ES imports
+- `routes/routes.ts` broken auth import fixed
+- `bootstrap/lifecycle.ts` broken lifecycle import fixed
+- `auth/types.ts` TunnelAuthDeps cleaned
 
-These files are referenced via `require()` from TS but **do not exist on disk** (deleted alongside ported domains without migrating their consumers):
+### 4.2 TTS + Cloudflare Tunnels (DELETED — Spec divergence)
+- `summarizeText` extracted to `core/summarize.ts` (kept for notifications)
+- TTS domain deleted: `src/domains/tts/`, all frontend voice hooks/components (14 files), VS Code stubs
+- Cloudflare tunnels deleted: `src/domains/tunnels/`, `lib/cloudflare-tunnel.js`, `tunnel-auth.ts`, `tunnel-wiring.ts`, all bootstrap/settings/routes tunnel wiring, TunnelSettings UI, Electron quit-checks, CLI tunnel subcommand
+- Vestigial cleanup: `TUNNEL_*` events removed, `TunnelError` class removed, `index.d.ts` tunnel fields purged
+- Commit: `0a7879f4` (43 files, -7608 lines)
 
-| Missing File | Referenced By | Fix Required |
+### 4.3 Stage 8 (COMPLETED): Kill require() Bridges
+All 12 `require()` calls in `feature-routes-runtime.ts` replaced with typed ES imports. Ported route files:
+
+| Route file | New TS location | Lines |
 |---|---|---|
-| `lib/core/bounded-cache.js` | `domains/auth/tunnel-auth.ts`, `domains/notifications/push-runtime.ts`, `domains/notifications/template-runtime.ts`, `domains/notifications/trigger-runtime.ts`, `domains/routes/pwa-manifest.ts` | **Port to TS:** Create `domains/core/bounded-cache.ts` (factory `createBoundedMap`, `createBoundedSet`). Update all 5 consumers. |
-| `lib/opencode/auth/auth.js` | `domains/routes/routes.ts:29` | **Already ported:** Exists as `domains/auth/provider-auth.ts`. Update `routes.ts` import to `require("../../../dist/domains/auth/index.js")` |
-| `lib/opencode/bootstrap/lifecycle.js` | `domains/bootstrap/lifecycle.ts:6` | **Already ported:** Exists as `domains/opencode/lifecycle.ts`. Update `bootstrap/lifecycle.ts` bridge to import from `../opencode/lifecycle.js` |
+| `lib/quota/routes.js` | `src/domains/quota/routes.ts` | 38 |
+| `lib/magic-prompts/routes.js` | `src/domains/magic-prompts/routes.ts` | 65 |
+| `lib/magic-prompts/runtime.js` | `src/domains/magic-prompts/runtime.ts` | 120 |
+| `lib/session-folders/routes.js` | `src/domains/session-folders/routes.ts` | 72 |
+| `lib/scheduled-tasks/routes.js` | `src/domains/scheduled-tasks/routes.ts` | 230 |
+| `lib/fs/routes.js` | `src/domains/fs/routes.ts` | 835 |
+| `lib/github/routes.js` | `src/domains/github/routes.ts` | 1350 |
+| `lib/git/routes.js` | `src/domains/git/routes.ts` | 990 |
+| `lib/opencode/routes/config-entity-routes.js` | `src/domains/opencode/routes/config-entity-routes.ts` | 375 |
+| `lib/opencode/routes/core-routes.js` | `src/domains/opencode/routes/core-routes.ts` | 290 |
+| `lib/opencode/routes/project-icon-routes.js` | `src/domains/opencode/routes/project-icon-routes.ts` | 400 |
+| `lib/opencode/routes/skill-routes.js` | `src/domains/opencode/routes/skill-routes.ts` | 710 |
+| `lib/opencode/routes/routes.js` | `src/domains/opencode/routes/routes.ts` | 300 |
 
-### 4.2 High Priority — Bridged But Awaiting Full Port
+All 12 old lib/ JS files deleted. Stale file cleanup: `lib/fs/routes.js`, `lib/scheduled-tasks/routes.js`, `lib/security/request-security.js` removed (already ported). Commit: `d5e219a9`.
 
-These `lib/` files are referenced via `require()` from `feature-routes-runtime.ts`. They work at runtime but should be ported to proper TS domains:
+### 4.4 Remaining lib/ JS Files (Stages 9-10)
 
-**Route handlers** (7 files, ~2,300 lines total):
-- `lib/opencode/routes/core-routes.js` — settings utility routes
-- `lib/opencode/routes/routes.js` — OpenCode config/proxy routes
-- `lib/opencode/routes/config-entity-routes.js` — agents, commands, MCP CRUD
-- `lib/opencode/routes/project-icon-routes.js` — project icon management
-- `lib/opencode/routes/skill-routes.js` — skill discovery/installation
-- `lib/opencode/routes/pwa-manifest-routes.js` — not referenced (dead code — ported to TS already)
-- `lib/opencode/index.js` — OpenCode service barrel
+These contain the **core domain logic** — not just route wrappers. The route registration is ported, but the underlying implementations still live in lib/:
 
-**Domain services** (3 files, ~1,450 lines total):
-- `lib/fs/routes.js` — filesystem routes
-- `lib/git/routes.js`, `lib/git/index.js` — git routes + barrel
-- `lib/github/routes.js` — GitHub routes
-- `lib/magic-prompts/routes.js` — magic prompts
-- `lib/scheduled-tasks/routes.js` — scheduled tasks
-- `lib/session-folders/routes.js` — session folders
-- `lib/quota/routes.js`, `lib/quota/index.js` — quota providers
-- `lib/skills-catalog/index.js` — skills catalog search/install
+| Category | Files | Lines (est.) |
+|---|---|---|
+| **Quota providers** | `lib/quota/index.js`, `lib/quota/utils/*` (4), `lib/quota/providers/*` (16) | ~3,500 |
+| **Skills catalog** | `lib/skills-catalog/index.js`, `source.js`, `scan.js`, `install.js`, `git.js`, `curated-sources.js`, `cache.js`, `clawdhub/*` (4) | ~1,500 |
+| **Git domain** | `lib/git/credentials.js`, `identity-storage.js`, `service.js`, `index.js` | ~800 |
+| **GitHub domain** | `lib/github/auth.js`, `device-flow.js`, `octokit.js`, `pr-status.js`, `repo/index.js`, `index.js` | ~1,200 |
+| **Opencode runtime** | `lib/opencode/services/agents.js`, `commands.js`, `mcp.js`, `providers.js`, `skills.js`, `lib/opencode/shared.js`, `lib/opencode/index.js` | ~1,000 |
+| **Opencode routes (unported)** | `lib/opencode/routes/openchamber-routes.js`, `pwa-manifest-routes.js`, `feature-routes-runtime.js`, `static-routes-runtime.js` | ~1,500 |
+| **Env runtime** | `lib/opencode/env/env-runtime.js` (fully rewritten in TS at `src/domains/opencode-support/env-runtime.ts` — 1123 lines) | already done |
+| **Misc** | `lib/core/bounded-cache.js` (kept as shim for JS consumers), `lib/package-manager.js`, `lib/opencode/network/hmr-state-runtime.js` | ~200 |
+| **Test files** | `lib/*/runtime.test.js`, `lib/git/routes.test.js`, etc. (7 files) | ~1,500 |
 
-### 4.3 Medium Priority — Unported Feature Domains
+### 4.5 Already Ported to TS (committed in `b86ff47e`)
+These domains are fully in `src/domains/`, wired into `index.js` via `dist/` imports:
+- `fs/` (search), `projects/` (config, with tests), `scheduled-tasks/` (runtime), `security/`, `ui-auth/`, `opencode-support/` (env, watcher, network), `tunnels/` (deleted instead)
 
-These `lib/` directories have no TS equivalent yet. They are imported from `index.js` (direct imports, not `require()`):
+## 5. Remaining Cleanup Work (Stages 9-10)
 
-| Directory | Files | Lines (est.) | Index.js Import |
-|-----------|-------|------|------|
-| `lib/tts/` | index.js, routes.js, service.js, capability-runtime.js, base-url.js, stt.js | ~800 | `import { registerTtsRoutes } from './lib/tts/routes.js'` |
-| `lib/tunnels/` | index.js, types.js, registry.js, routes.js, managed-config.js, providers/cloudflare.js | ~600 | Multiple imports for tunnel provider, registry, types |
-| `lib/ui-auth/` | ui-auth.js, ui-passkeys.js | ~500 | `import { createUiAuth } from './lib/ui-auth/ui-auth.js'` |
-| `lib/security/` | request-security.js | ~100 | Direct import in index.js |
-| `lib/cloudflare-tunnel.js` | — | ~50 | Direct import in index.js |
-| `lib/package-manager.js` | — | ~50 | Direct import in index.js |
-| `lib/opencode/env/env-runtime.js` | — | ~1095 | `import { createOpenCodeEnvRuntime } from './lib/opencode/env/env-runtime.js'` |
+### Stage 9: Port Remaining Domain Logic
 
-### 4.4 Low Priority — Already Ported, Can Be Deleted
+These are the deep domain implementations still in lib/ (not route wrappers — those are done). Port each to `src/domains/<name>/` following the established factory pattern:
 
-These `lib/` files have a functional TS equivalent but are kept as dead code because the TS version isn't the canonical import yet (bridge wrappers still need them):
+**Priority order:**
 
-| Dead lib/ File | TS Equivalent |
-|---|---|
-| `lib/opencode/routes/pwa-manifest-routes.js` | `dist/domains/routes/pwa-manifest.js` |
-| `lib/opencode/routes/static-routes-runtime.js` | `dist/domains/routes/static-routes.js` |
-| `lib/opencode/env/env-config.js` | `dist/domains/opencode-support/env-config.js` |
-| `lib/opencode/network/hmr-state-runtime.js` | `dist/domains/opencode-support/hmr-state.js` |
-| `lib/opencode/network/tunnel-wiring-runtime.js` | `dist/domains/bootstrap/tunnel-wiring.js` (bridge) |
-| `lib/opencode/resolution/opencode-resolution-runtime.js` | `dist/domains/opencode-support/opencode-resolution.js` |
-| `lib/opencode/resolution/project-directory-runtime.js` | `dist/domains/opencode-support/project-directory.js` |
-| `lib/tunnels/tunnel-runtime.js` | superseded (no consumers) |
-| `lib/opencode/runtime.test.js` | legacy test file |
+1. **Quota domain** (20 lib/ files, ~3,500 lines)
+   - `lib/quota/index.js` → factory entry point
+   - `lib/quota/utils/*` → `src/domains/quota/utils/`
+   - `lib/quota/providers/*` (16 provider files) → `src/domains/quota/providers/`
+   - Already has `routes.ts` ported; wire into barrel
 
-### 4.5 Test Files (can port or discard)
+2. **Skills catalog** (10 lib/ files, ~1,500 lines)
+   - `lib/skills-catalog/index.js`, `source.js`, `scan.js`, `install.js`, `git.js`, `curated-sources.js`, `cache.js`
+   - `lib/skills-catalog/clawdhub/*` (4 files)
 
-- `lib/opencode/bootstrap/lifecycle.test.js`
-- `lib/opencode/routes/core-routes.test.js`
-- `lib/opencode/runtime.test.js`
-- `lib/opencode/server-utils-runtime.test.js`
-- `lib/opencode/services/watcher.test.js`
-- `lib/opencode/session/session-runtime.test.js`
-- `lib/projects/project-config.test.js`
-- `lib/quota/providers/google/auth.test.js` (name guessed — verify)
-- `lib/scheduled-tasks/runtime.test.js`
-- `lib/tunnels/tunnel-runtime.test.js`
+3. **Git domain** (4 lib/ files, ~800 lines)
+   - `lib/git/credentials.js`, `identity-storage.js`, `service.js`, `index.js`
+   - Already has `routes.ts` ported; wire into barrel
+   - `service.js` is the last consumer of `lib/core/bounded-cache.js` shim — porting it lets us delete the shim
 
-## 5. Remaining Cleanup Work (Stages 7+)
+4. **GitHub domain** (5 lib/ files, ~1,200 lines)
+   - `lib/github/auth.js`, `device-flow.js`, `octokit.js`, `pr-status.js`, `repo/index.js`, `index.js`
+   - Already has `routes.ts` ported; wire into barrel
 
-### Stage 7: Fix Blockers + Port Bounded Cache
-1. Create `domains/core/bounded-cache.ts` — port `lib/core/bounded-cache.js` (LLM-optimized LRU with TTL)
-2. Update 5 consumer files to import from `../core/bounded-cache.js`
-3. Fix `routes/routes.ts:29` to import from `dist/domains/auth/index.js`
-4. Fix `bootstrap/lifecycle.ts:6` to import from `../opencode/lifecycle.js`
-5. Verify type-check, lint, build, tests
+5. **Opencode services** (7 lib/ files, ~1,000 lines)
+   - `lib/opencode/services/agents.js`, `commands.js`, `mcp.js`, `providers.js`, `skills.js`
+   - `lib/opencode/shared.js`, `lib/opencode/index.js`
 
-### Stage 8: Kill `feature-routes-runtime.ts` require() Bridges
-Strategy: Port each referenced route handler domain to TS, then update `feature-routes-runtime.ts` to use TS imports. Do NOT port `feature-routes-runtime.ts` itself until ALL its consumers are ported — it's the hub of dynamic imports.
+6. **Opencode unported routes** (4 lib/ files, ~1,500 lines)
+   - `lib/opencode/routes/openchamber-routes.js`, `pwa-manifest-routes.js`, `feature-routes-runtime.js`, `static-routes-runtime.js`
+   - Note: `pwa-manifest-routes.js` is the last remaining consumer of `lib/core/bounded-cache.js` along with `git/service.js`
 
-Order of porting (each is ~1-2 files, one domain):
-1. `lib/opencode/routes/core-routes.js` → merge into `domains/routes/core-routes.ts`
-2. `lib/opencode/routes/routes.js` → merge into `domains/routes/routes.ts`  
-3. `lib/opencode/routes/config-entity-routes.js` → merge into `domains/routes/config-entity-routes.ts`
-4. `lib/opencode/routes/project-icon-routes.js` → merge into `domains/routes/project-icon-routes.ts`
-5. `lib/opencode/routes/skill-routes.js` → merge into `domains/routes/skill-routes.ts`
-6. `lib/opencode/index.js` → merge services barrel into proper TS
-7. `lib/fs/routes.js` → new `domains/fs/`
-8. `lib/git/routes.js` + `lib/git/index.js` → new `domains/git/`
-9. `lib/github/routes.js` → new `domains/github/`
-10. `lib/magic-prompts/routes.js` → new `domains/magic-prompts/`
-11. `lib/scheduled-tasks/routes.js` → new `domains/scheduled-tasks/`
-12. `lib/session-folders/routes.js` → new `domains/session-folders/`
-13. `lib/quota/routes.js` + `lib/quota/index.js` → new `domains/quota/`
-14. `lib/skills-catalog/index.js` → new `domains/skills-catalog/`
+7. **Misc remaining** — `lib/package-manager.js`, `lib/opencode/network/hmr-state-runtime.js`
 
-After all 14 domains are ported, `feature-routes-runtime.ts` can be rewritten without any `require()` calls. Then delete all old `lib/opencode/routes/*` files.
-
-### Stage 9: Port Remaining Feature Domains
-1. TTS domain (`lib/tts/` → `domains/tts/`)
-2. Tunnels domain (`lib/tunnels/` → `domains/tunnels/`)
-3. UI Auth domain (`lib/ui-auth/` → `domains/ui-auth/`)
-4. Security domain (`lib/security/` → `domains/security/`)
-5. OpenCode env runtime (`lib/opencode/env/env-runtime.js` — 1095 lines, the largest remaining file)
+**Verification:** After each domain port, verify `npx tsc -p packages/web/tsconfig.server.json` and `bun test`, delete old lib/ files, commit.
 
 ### Stage 10: Rewrite `index.js` as Pure TypeScript
-Once ALL lib/ imports are gone, rewrite `packages/web/server/index.js` as `src/index.ts` with no JS bridge. This is the final stage — true strangler completion.
+
+Once lib/ domain logic is fully ported, rewrite `packages/web/server/index.js` as `src/index.ts`:
+- Replace all remaining `./lib/` imports with `./dist/domains/` paths  
+- Replace module-level mutable state with domain factory closures
+- Eliminate the `opencode-proxy.js` / `sse-routes.js` top-level files (fold into domains)
+- Delete the JS entrypoint
+
+After Stage 10, `packages/web/server/lib/` should be empty (only DOCUMENTATION.md files remaining).
 
 ## 6. Key Patterns to Maintain
 
