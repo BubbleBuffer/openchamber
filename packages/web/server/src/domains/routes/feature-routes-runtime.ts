@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { FeatureRoutesDeps } from "./types.js";
+import type { QuotaProviderRegistry } from "../quota/types.js";
 import { registerQuotaRoutes } from "../quota/routes.js";
 import { registerMagicPromptRoutes } from "../magic-prompts/routes.js";
 import { registerSessionFoldersRoutes } from "../session-folders/routes.js";
@@ -18,11 +19,11 @@ export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps): any {
     clientReloadDelayMs,
   } = deps;
 
-  let quotaProviders: any = null;
-  const getQuotaProviders = async () => {
+  let quotaProviders: QuotaProviderRegistry | null = null;
+  const getQuotaProviders = async (): Promise<QuotaProviderRegistry> => {
     if (!quotaProviders) {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      quotaProviders = require('../../../lib/quota/index.js') as any;
+      const mod = await import("../quota/providers/index.js");
+      quotaProviders = mod;
     }
     return quotaProviders;
   };
@@ -151,7 +152,8 @@ export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps): any {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { scanClawdHubPage, installSkillsFromClawdHub, isClawdHubSource } = require('../../../lib/skills-catalog/index.js') as any;
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { getProfiles, getProfile } = require('../../../lib/git/index.js') as any;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { getProfiles, getProfile } = require('../git/index.js') as any;
 
     registerSkillRoutes(app, {
       fs,

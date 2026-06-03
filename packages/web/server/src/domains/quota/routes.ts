@@ -1,15 +1,16 @@
 import type { Express } from "express";
+import type { QuotaProviderRegistry } from "./types.js";
 
 export interface QuotaRoutesDeps {
-  getQuotaProviders(): Promise<{ listConfiguredQuotaProviders(): unknown[]; fetchQuotaForProvider(providerId: string): Promise<unknown> }>;
+  getQuotaProviders(): Promise<QuotaProviderRegistry>;
 }
 
 export function registerQuotaRoutes(app: Express, { getQuotaProviders }: QuotaRoutesDeps): void {
   app.get("/api/quota/providers", async (_req, res) => {
     try {
-      const { listConfiguredQuotaProviders } = await getQuotaProviders();
-      const providers = listConfiguredQuotaProviders();
-      res.json({ providers });
+      const providers = await getQuotaProviders();
+      const result = providers.listConfiguredQuotaProviders();
+      res.json({ providers: result });
     } catch (error) {
       console.error("Failed to list quota providers:", error);
       res.status(500).json({ error: (error as Error).message || "Failed to list quota providers" });
@@ -22,8 +23,8 @@ export function registerQuotaRoutes(app: Express, { getQuotaProviders }: QuotaRo
       if (!providerId) {
         return res.status(400).json({ error: "Provider ID is required" });
       }
-      const { fetchQuotaForProvider } = await getQuotaProviders();
-      const result = await fetchQuotaForProvider(providerId);
+      const providers = await getQuotaProviders();
+      const result = await providers.fetchQuotaForProvider(providerId);
       res.json(result);
     } catch (error) {
       console.error("Failed to fetch quota:", error);
