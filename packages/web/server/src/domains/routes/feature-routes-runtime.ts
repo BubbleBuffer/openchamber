@@ -3,24 +3,15 @@ import type { FeatureRoutesDeps } from "./types.js";
 import { registerQuotaRoutes } from "../quota/routes.js";
 import { registerMagicPromptRoutes } from "../magic-prompts/routes.js";
 import { registerSessionFoldersRoutes } from "../session-folders/routes.js";
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { registerFsRoutes } = require('../../../lib/fs/routes.js') as any;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { registerGitHubRoutes } = require('../../../lib/github/routes.js') as any;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { registerGitRoutes } = require('../../../lib/git/routes.js') as any;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { registerConfigEntityRoutes } = require('../../../lib/opencode/routes/config-entity-routes.js') as any;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { registerSettingsUtilityRoutes } = require('../../../lib/opencode/routes/core-routes.js') as any;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { registerProjectIconRoutes } = require('../../../lib/opencode/routes/project-icon-routes.js') as any;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { registerScheduledTaskRoutes } = require('../../../lib/scheduled-tasks/routes.js') as any;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { registerSkillRoutes } = require('../../../lib/opencode/routes/skill-routes.js') as any;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { registerOpenCodeRoutes } = require('../../../lib/opencode/routes/routes.js') as any;
+import { registerFsRoutes } from "../fs/routes.js";
+import { registerGitHubRoutes } from "../github/routes.js";
+import { registerGitRoutes } from "../git/routes.js";
+import { registerConfigEntityRoutes } from "../opencode/routes/config-entity-routes.js";
+import { registerSettingsUtilityRoutes } from "../opencode/routes/core-routes.js";
+import { registerProjectIconRoutes } from "../opencode/routes/project-icon-routes.js";
+import { registerScheduledTaskRoutes } from "../scheduled-tasks/routes.js";
+import { registerSkillRoutes } from "../opencode/routes/skill-routes.js";
+import { registerOpenCodeRoutes } from "../opencode/routes/routes.js";
 
 export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps): any {
   const {
@@ -201,7 +192,7 @@ export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps): any {
 
     registerQuotaRoutes(app, { getQuotaProviders });
     registerGitHubRoutes(app);
-    registerGitRoutes(app);
+    registerGitRoutes(app, {});
     registerMagicPromptRoutes(app, {
       fsPromises,
       path,
