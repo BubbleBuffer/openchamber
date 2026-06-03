@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 
 import { registerNotificationRoutes } from './lib/notifications/routes.js';
-import { registerScheduledTaskRoutes } from './lib/scheduled-tasks/routes.js';
+import { registerScheduledTaskRoutes } from './dist/domains/scheduled-tasks/routes.js';
 
 const createRouteRegistry = () => {
   const routes = new Map();
