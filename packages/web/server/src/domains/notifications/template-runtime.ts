@@ -6,7 +6,7 @@ declare const AbortSignal: { timeout(ms: number): AbortSignal };
 
 
 import { createBoundedMap } from "../core/bounded-cache.js";
-import { summarizeText } from "../tts/summarization.js";
+import { summarizeText } from "../core/summarize.js";
 
 interface BoundedMap<V> {
   get(key: unknown): V | undefined;
