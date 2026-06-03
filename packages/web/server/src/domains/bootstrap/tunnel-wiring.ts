@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { printTunnelWarning } from "../../../lib/cloudflare-tunnel.js";
+import { createTunnelService } from "../tunnels/tunnel-service.js";
+import { createTunnelRoutesRuntime } from "../tunnels/routes.js";
+
 export function createTunnelWiringRuntime(dependencies: any): any {
   const {
     crypto,
@@ -32,13 +36,6 @@ export function createTunnelWiringRuntime(dependencies: any): any {
 
   const initialize = async (app: any, initialPort: number) => {
     let activePort = initialPort;
-
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { printTunnelWarning } = require("../../../../lib/cloudflare-tunnel.js") as any;
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { createTunnelService } = require("../../../../lib/tunnels/index.js") as any;
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { createTunnelRoutesRuntime } = require("../../../../lib/tunnels/routes.js") as any;
 
     const tunnelService = createTunnelService({
       registry: tunnelProviderRegistry,
@@ -85,7 +82,7 @@ export function createTunnelWiringRuntime(dependencies: any): any {
 
     return {
       tunnelService,
-      startTunnelWithNormalizedRequest: (...args: any[]) => tunnelRoutesRuntime.startTunnelWithNormalizedRequest(...args),
+      startTunnelWithNormalizedRequest: (...args: any[]) => (tunnelRoutesRuntime as any).startTunnelWithNormalizedRequest(...args),
       getActivePort: () => activePort,
       setActivePort: (value: number) => {
         activePort = value;

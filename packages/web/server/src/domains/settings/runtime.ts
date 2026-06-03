@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { SettingsRuntimeDeps, SettingsRuntime } from "./types.js";
-// @ts-expect-error - JS module
-import { createProjectIdFromPath } from "../../../lib/projects/project-id.js";
+import { createProjectIdFromPath } from "../projects/index.js";
 
 const DEFAULT_NOTIFICATION_TEMPLATES = {
   completion: { title: "{agent_name} is ready", message: "{model_name} completed the task" },

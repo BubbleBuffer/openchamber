@@ -16,12 +16,12 @@ import webPush from 'web-push';
 import { createEventBus, EVENTS } from './dist/domains/core/index.js';
 import { createOpenCodeDomain } from './dist/domains/opencode/index.js';
 
-import { createUiAuth } from './lib/ui-auth/ui-auth.js';
+import { createUiAuth } from './dist/domains/ui-auth/index.js';
 import { createTunnelAuth } from './dist/domains/auth/index.js';
-import { createManagedTunnelConfigRuntime } from './lib/tunnels/managed-config.js';
-import { createTunnelProviderRegistry } from './lib/tunnels/registry.js';
-import { createCloudflareTunnelProvider } from './lib/tunnels/providers/cloudflare.js';
-import { createRequestSecurityRuntime } from './lib/security/request-security.js';
+import { createManagedTunnelConfigRuntime } from './dist/domains/tunnels/index.js';
+import { createTunnelProviderRegistry } from './dist/domains/tunnels/index.js';
+import { createCloudflareTunnelProvider } from './dist/domains/tunnels/index.js';
+import { createRequestSecurityRuntime } from './dist/domains/security/index.js';
 import {
   TUNNEL_MODE_MANAGED_LOCAL,
   TUNNEL_MODE_MANAGED_REMOTE,
@@ -33,18 +33,18 @@ import {
   normalizeTunnelStartRequest,
   normalizeTunnelMode,
   normalizeTunnelProvider,
-} from './lib/tunnels/types.js';
+} from './dist/domains/tunnels/index.js';
 import { prepareNotificationLastMessage } from './dist/domains/notifications/index.js';
-import { registerTtsRoutes } from './lib/tts/routes.js';
-import { detectSayTtsCapability } from './lib/tts/capability-runtime.js';
+import { registerTtsRoutes } from './dist/domains/tts/index.js';
+import { detectSayTtsCapability } from './dist/domains/tts/index.js';
 import { createTerminalRuntime } from './dist/domains/terminal/runtime.js';
 import {
   createGlobalUiEventBroadcaster,
   createGlobalMessageStreamHub,
   createMessageStreamWsRuntime,
 } from './dist/domains/event-stream/index.js';
-import { createFsSearchRuntime as createFsSearchRuntimeFactory } from './lib/fs/search.js';
-import { createOpenCodeEnvRuntime } from './lib/opencode/env/env-runtime.js';
+import { createFsSearchRuntime as createFsSearchRuntimeFactory } from './dist/domains/fs/index.js';
+import { createOpenCodeEnvRuntime } from './dist/domains/opencode-support/index.js';
 import { resolveOpenCodeEnvConfig } from './dist/domains/opencode-support/index.js';
 import { createHmrStateRuntime } from './dist/domains/opencode-support/index.js';
 import { createProjectDirectoryRuntime } from './dist/domains/opencode-support/index.js';
@@ -65,15 +65,15 @@ import { createSettingsRuntime } from './dist/domains/settings/index.js';
 import { createOpenCodeResolutionRuntime } from './dist/domains/opencode-support/index.js';
 import { createBootstrapRuntime } from './dist/domains/bootstrap/index.js';
 
-import { createOpenCodeWatcherRuntime } from './lib/opencode/services/watcher.js';
-import { createScheduledTasksRuntime } from './lib/scheduled-tasks/runtime.js';
+import { createOpenCodeWatcherRuntime } from './dist/domains/opencode-support/index.js';
+import { createScheduledTasksRuntime } from './dist/domains/scheduled-tasks/index.js';
 import { createServerStartupRuntime } from './dist/domains/bootstrap/index.js';
 import { createTunnelWiringRuntime } from './dist/domains/bootstrap/index.js';
 import { createStartupPipelineRuntime } from './dist/domains/bootstrap/index.js';
 import { runCliEntryIfMain } from './dist/domains/bootstrap/index.js';
 import { registerNotificationRoutes, createNotificationEmitterRuntime, createNotificationTriggerRuntime, createPushRuntime, createNotificationTemplateRuntime } from './dist/domains/notifications/index.js';
 import { createGracefulShutdownRuntime } from './dist/domains/bootstrap/index.js';
-import { createProjectConfigRuntime } from './lib/projects/project-config.js';
+import { createProjectConfigRuntime } from './dist/domains/projects/index.js';
 import { createSessionMachine } from '@openchamber/session-state';
 import { createSessionRuntime, createSessionActorRegistry as createSessionActorRegistryFactory, createEffectExecutor as createEffectExecutorFactory, createSnapshotPublisher as createSnapshotPublisherFactory, createServerSessionMachineBridge } from './dist/domains/sessions/index.js';
 

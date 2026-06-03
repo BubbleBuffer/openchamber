@@ -1,4 +1,4 @@
-import { createProjectIdFromPath } from '../../projects/project-id.js';
+import { createProjectIdFromPath } from '../../../dist/domains/projects/index.js';
 
 export const registerOpenCodeRoutes = (app, dependencies) => {
   const {

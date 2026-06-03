@@ -44,28 +44,38 @@ export interface OpenCodeEnvConfigResult {
   configuredOpenCodeHostname: string;
 }
 
+export interface EnvRuntimeState {
+  cachedLoginShellEnvSnapshot?: Record<string, string> | null;
+  useWslForOpencode?: boolean;
+  resolvedWslBinary?: string | null;
+  resolvedWslOpencodePath?: string | null;
+  resolvedWslDistro?: string | null;
+  resolvedOpencodeBinary?: string | null;
+  resolvedOpencodeBinarySource?: string | null;
+  resolvedGitBinary?: string;
+  resolvedNodeBinary?: string | null;
+  resolvedBunBinary?: string | null;
+}
+
 export interface EnvRuntimeDeps {
-  state: HmrState;
+  state: EnvRuntimeState;
   normalizeDirectoryPath: (value: unknown) => string | unknown;
   readSettingsFromDiskMigrated: () => Promise<object>;
   ENV_CONFIGURED_OPENCODE_WSL_DISTRO: string | null;
 }
 
 export interface OpenCodeEnvRuntime {
-  parseNullSeparatedEnvSnapshot(raw: string): object | null;
   isExecutable(filePath: string): boolean;
   searchPathFor(binaryName: string): string | null;
-  prependToPath(dir: string): void;
-  getWindowsShellEnvSnapshot(): object | null;
-  getLoginShellEnvSnapshot(): object | null;
+  getLoginShellEnvSnapshot(): Record<string, string> | null;
   applyLoginShellEnvSnapshot(): void;
-  ensureOpencodeCliEnv(): void;
-  applyOpencodeBinaryFromSettings(): Promise<void>;
+  ensureOpencodeCliEnv(): string | null;
+  applyOpencodeBinaryFromSettings(): Promise<string | null>;
   resolveOpencodeCliPath(): string | null;
   resolveGitBinaryForSpawn(): string;
   resolveWslExecutablePath(): string | null;
   buildWslExecArgs(args: string[], distro?: string): string[];
-  resolveManagedOpenCodeLaunchSpec(binary: string): any | null;
+  resolveManagedOpenCodeLaunchSpec(binary: string | null): { binary: string; args: string[]; wrapperType: string | null } | null;
   clearResolvedOpenCodeBinary(): void;
 }
 
@@ -128,4 +138,23 @@ export interface OpenCodeResolutionDeps {
 
 export interface OpenCodeResolutionRuntime {
   getOpenCodeResolutionSnapshot(settings: object): Promise<object>;
+}
+
+export interface OpenCodeWatcherDeps {
+  waitForOpenCodePort: () => Promise<void>;
+  openCodeRuntime: { getUrl(path: string, query: string): string; getAuthHeaders(): Record<string, string> };
+  onPayload: (payload: Record<string, unknown>) => void;
+  fetchImpl?: typeof fetch;
+  upstreamStallTimeoutMs?: number;
+  upstreamReconnectDelayMs?: number;
+  globalEventHub?: {
+    subscribeEvent(cb: (event: { payload: unknown }) => void): () => void;
+    subscribeStatus(cb: (status: { type: string; error?: unknown }) => void): () => void;
+    start(): void;
+  } | null;
+}
+
+export interface OpenCodeWatcherRuntime {
+  start(): Promise<void>;
+  stop(): void;
 }

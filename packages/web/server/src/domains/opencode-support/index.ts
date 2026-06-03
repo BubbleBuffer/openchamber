@@ -5,4 +5,5 @@ export { createOpenCodeAuthStateRuntime } from "./auth-state.js";
 export { createHmrStateRuntime } from "./hmr-state.js";
 export { createOpenCodeResolutionRuntime } from "./opencode-resolution.js";
 export { createProjectDirectoryRuntime } from "./project-directory.js";
+export { createOpenCodeWatcherRuntime } from "./watcher.js";
 export type * from "./types.js";
