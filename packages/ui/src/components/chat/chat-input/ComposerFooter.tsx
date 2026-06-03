@@ -1,5 +1,4 @@
 import React from 'react';
-import { BrowserVoiceButton } from '@/components/voice';
 import { ModelControls } from '../controls/ModelControls';
 import { ComposerAttachmentControls } from './ComposerAttachmentControls';
 import { ComposerActionButtons } from './ComposerActionButtons';
@@ -99,7 +98,6 @@ export const ComposerFooter = React.memo(function ComposerFooter({
       </div>
       <div className={cn('flex items-center flex-1 justify-end', footerGapClass, 'md:gap-x-3')}>
         <MemoModelControls className={cn('flex-1 min-w-0 justify-end')} />
-        <BrowserVoiceButton />
         <ComposerActionButtons
           isMobile={false}
           footerIconButtonClass={footerIconButtonClass}

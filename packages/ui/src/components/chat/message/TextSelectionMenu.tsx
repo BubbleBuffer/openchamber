@@ -12,7 +12,6 @@ import { toast } from '@/components/ui';
 import { getProjectNotesAndTodos, saveProjectNotesAndTodos } from '@/lib/config/openchamberConfig';
 import { resolveProjectForSessionDirectory } from '@/lib/project/projectResolution';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
-import { summarizeText } from '@/lib/voice/summarize';
 import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 
 interface TextSelectionMenuProps {
@@ -505,13 +504,9 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({ containerR
 
     try {
       setIsAddingToNotes(true);
-      const distilledInsight = await summarizeText(selectedText, {
-        threshold: 0,
-        maxLength: 100,
-        mode: 'note',
-      });
+      const insight = appendDistilledInsightToNotes('', selectedText);
       const projectData = await getProjectNotesAndTodos(currentProjectRef);
-      const nextNotes = appendDistilledInsightToNotes(projectData.notes, distilledInsight);
+      const nextNotes = appendDistilledInsightToNotes(projectData.notes, insight);
       const saved = await saveProjectNotesAndTodos(currentProjectRef, {
         notes: nextNotes,
         todos: projectData.todos,
@@ -523,7 +518,7 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({ containerR
       window.dispatchEvent(new CustomEvent('openchamber:project-notes-updated', {
         detail: { projectId: currentProjectRef.id },
       }));
-      toast.success('Added distilled insight to notes');
+      toast.success('Added to notes');
       hideMenu();
       window.getSelection()?.removeAllRanges();
     } catch (error) {

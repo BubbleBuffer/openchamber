@@ -101,7 +101,6 @@ const pageOrder: SettingsPageSlug[] = [
   'usage',
   'skills.installed',
   'skills.catalog',
-  'voice',
   'tunnel',
 ];
 
@@ -157,8 +156,6 @@ export function getSettingsNavIcon(slug: SettingsPageSlug): React.ComponentType<
 
     case 'usage':
       return RiBarChart2Line;
-    case 'voice':
-      return RiMicLine;
     case 'tunnel':
       return RiGlobalLine;
     case 'home':
@@ -381,7 +378,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
     shortcuts: 'shortcuts',
     sessions: 'sessions',
     notifications: 'notifications',
-    voice: 'voice',
     tunnel: 'tunnel',
   }), []);
 
@@ -457,7 +453,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
       case 'shortcuts':
       case 'sessions':
       case 'notifications':
-      case 'voice':
       case 'tunnel': {
         const section = openChamberSectionBySlug[slug] ?? 'visual';
         return <OpenChamberPage section={section} />;
@@ -532,7 +527,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
                         )}
                       >
                         <span className="typography-ui-label font-normal truncate">{page.title}</span>
-                        {(page.slug === 'voice' || page.slug === 'tunnel') && (
+                        {page.slug === 'tunnel' && (
                           <span className="shrink-0 typography-micro px-1 rounded leading-none pb-px text-[var(--status-warning)] bg-[var(--status-warning)]/10">
                             beta
                           </span>

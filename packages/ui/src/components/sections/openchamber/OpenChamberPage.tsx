@@ -7,7 +7,6 @@ import { DefaultsSettings } from './DefaultsSettings';
 import { GitSettings } from './GitSettings';
 import { NotificationSettings } from './NotificationSettings';
 import { GitHubSettings } from './GitHubSettings';
-import { VoiceSettings } from './VoiceSettings';
 import { TunnelSettings } from './TunnelSettings';
 import { OpenCodeCliSettings } from './OpenCodeCliSettings';
 import { DesktopNetworkSettings } from './DesktopNetworkSettings';
@@ -83,8 +82,6 @@ export const OpenChamberPage: React.FC<OpenChamberPageProps> = ({ section }) => 
                 return <GitHubSectionContent />;
             case 'notifications':
                 return <NotificationSectionContent />;
-            case 'voice':
-                return <VoiceSectionContent />;
             case 'tunnel':
                 return <TunnelSectionContent />;
             default:
@@ -178,14 +175,6 @@ const GitHubSectionContent: React.FC = () => {
 // Notifications section: Native browser notifications
 const NotificationSectionContent: React.FC = () => {
     return <NotificationSettings />;
-};
-
-// Voice section: Language selection and continuous mode
-const VoiceSectionContent: React.FC = () => {
-    if (isVSCodeRuntime()) {
-        return null;
-    }
-    return <VoiceSettings />;
 };
 
 const TunnelSectionContent: React.FC = () => {

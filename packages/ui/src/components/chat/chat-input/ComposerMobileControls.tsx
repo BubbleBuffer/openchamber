@@ -1,5 +1,4 @@
 import React from 'react';
-import { BrowserVoiceButton } from '@/components/voice';
 import { ModelControls } from '../controls/ModelControls';
 import { UnifiedControlsDrawer } from '../controls/UnifiedControlsDrawer';
 import { MobileAgentButton } from '../controls/MobileAgentButton';
@@ -121,7 +120,6 @@ export const ComposerMobileControls = React.memo(function ComposerMobileControls
             />
           </div>
           <div className="flex items-center gap-x-1 flex-shrink-0">
-            <BrowserVoiceButton />
             <ComposerActionButtons
               isMobile={true}
               footerIconButtonClass={footerIconButtonClass}

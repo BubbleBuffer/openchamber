@@ -7,7 +7,6 @@ export function createBootstrapRuntime(deps: BootstrapDeps): BootstrapRuntime {
     registerServerStatusRoutes,
     registerCommonRequestMiddleware,
     registerAuthAndAccessRoutes,
-    registerTtsRoutes,
     registerNotificationRoutes,
     registerOpenChamberRoutes,
     express,
@@ -26,7 +25,6 @@ export function createBootstrapRuntime(deps: BootstrapDeps): BootstrapRuntime {
       readSettingsFromDiskMigrated,
       normalizeTunnelSessionTtlMs,
       resolveZenModel,
-      sayTTSCapability,
       ensurePushInitialized,
       ensureGlobalWatcherStarted,
       getOrCreateVapidKeys,
@@ -78,8 +76,6 @@ export function createBootstrapRuntime(deps: BootstrapDeps): BootstrapRuntime {
       readSettingsFromDiskMigrated,
       normalizeTunnelSessionTtlMs,
     });
-
-    registerTtsRoutes(app, { resolveZenModel, sayTTSCapability });
 
     registerNotificationRoutes(app, {
       uiAuthController,

@@ -509,27 +509,6 @@ const handleLocalApiRequest = async (url: URL, init?: RequestInit) => {
     );
   }
 
-  if (normalizedPathname === '/api/tts/status' && method === 'GET') {
-    return new Response(JSON.stringify({ available: false }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  if (normalizedPathname === '/api/tts/say/status' && method === 'GET') {
-    return new Response(JSON.stringify({ available: false, voices: [] }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  if ((pathname === '/api/tts/speak' || pathname === '/api/tts/say/speak' || pathname === '/api/text/summarize') && method === 'POST') {
-    return new Response(JSON.stringify({ error: 'TTS endpoints are not available in VS Code runtime' }), {
-      status: 501,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
   // Health endpoints: reflect actual connection status
   if (pathname === '/health' || pathname === '/api/health') {
     const connectionStatus = window.__OPENCHAMBER_CONNECTION__?.status;

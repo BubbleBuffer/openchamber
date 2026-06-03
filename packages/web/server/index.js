@@ -35,8 +35,6 @@ import {
   normalizeTunnelProvider,
 } from './dist/domains/tunnels/index.js';
 import { prepareNotificationLastMessage } from './dist/domains/notifications/index.js';
-import { registerTtsRoutes } from './dist/domains/tts/index.js';
-import { detectSayTtsCapability } from './dist/domains/tts/index.js';
 import { createTerminalRuntime } from './dist/domains/terminal/runtime.js';
 import {
   createGlobalUiEventBroadcaster,
@@ -567,7 +565,7 @@ serverSessionMachineBridge.start();
 // ── Bootstrap, tunnel, startup pipeline, scheduled tasks ──────────
 const bootstrapRuntime = createBootstrapRuntime({
   createUiAuth, registerServerStatusRoutes, registerCommonRequestMiddleware,
-  registerAuthAndAccessRoutes, registerTtsRoutes, registerNotificationRoutes,
+  registerAuthAndAccessRoutes, registerNotificationRoutes,
   registerOpenChamberRoutes, express,
 });
 
@@ -704,7 +702,6 @@ async function main(options = {}) {
 
   console.log(`Starting OpenChamber on port ${port === 0 ? 'auto' : port}`);
 
-  const sayTTSCapability = await detectSayTtsCapability(process);
   void validateZenModelAtStartup();
 
   const app = express();
@@ -751,7 +748,7 @@ async function main(options = {}) {
       };
     },
     uiPassword, tunnelAuthController, readSettingsFromDiskMigrated,
-    normalizeTunnelSessionTtlMs, resolveZenModel, sayTTSCapability,
+    normalizeTunnelSessionTtlMs, resolveZenModel,
     ensurePushInitialized, ensureGlobalWatcherStarted, getOrCreateVapidKeys,
     getUiSessionTokenFromRequest, writeSettingsToDisk, addOrUpdatePushSubscription,
     removePushSubscription, updateUiVisibility, isUiVisible,

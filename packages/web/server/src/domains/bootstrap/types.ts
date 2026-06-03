@@ -43,7 +43,6 @@ export interface BootstrapDeps {
   registerServerStatusRoutes: Function;
   registerCommonRequestMiddleware: Function;
   registerAuthAndAccessRoutes: Function;
-  registerTtsRoutes: Function;
   registerNotificationRoutes: Function;
   registerOpenChamberRoutes: Function;
   express: typeof import("express");

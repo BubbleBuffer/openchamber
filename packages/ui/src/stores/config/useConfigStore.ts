@@ -4,4 +4,3 @@
 
 export { useProviderConfigStore } from "./useProviderConfigStore";
 export { useAgentConfigStore } from "../agents/useAgentConfigStore";
-export { useVoiceSettingsStore } from "../voice/useVoiceSettingsStore";

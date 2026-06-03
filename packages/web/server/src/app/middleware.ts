@@ -33,8 +33,7 @@ export function registerJsonBodyParsing(app: Express): void {
     "/api/config/", "/api/projects", "/api/fs", "/api/git",
     "/api/magic-prompts", "/api/prompts", "/api/terminal",
     "/api/opencode", "/api/push", "/api/notifications",
-    "/api/session-folders", "/api/text", "/api/voice",
-    "/api/tts", "/api/openchamber/tunnel",
+    "/api/session-folders", "/api/openchamber/tunnel",
   ];
 
   app.use((req, _res, next) => {

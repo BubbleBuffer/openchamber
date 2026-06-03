@@ -26,8 +26,6 @@ import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { flattenAssistantTextParts, suggestPlanTitleFromText } from '@/lib/messages/messageText';
 import { MULTIRUN_EXECUTION_FORK_PROMPT_META_TEXT } from '@/lib/messages/executionMeta';
-import { useMessageTTS } from '@/hooks/useMessageTTS';
-import { useVoiceSettingsStore } from '@/stores/voice/useVoiceSettingsStore';
 import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { TextSelectionMenu } from './TextSelectionMenu';
 import { copyTextToClipboard } from '@/lib/clipboard';
@@ -723,19 +721,6 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
     const isLastAssistantInTurn = turnGroupingContext?.isLastAssistantInTurn ?? false;
     const hasStopFinish = messageFinish === 'stop';
 
-    // TTS for message playback
-    const { isPlaying: isTTSPlaying, play: playTTS, stop: stopTTS } = useMessageTTS();
-    const showMessageTTSButtons = useVoiceSettingsStore((state) => state.showMessageTTSButtons);
-    const voiceProvider = useVoiceSettingsStore((state) => state.voiceProvider);
-
-    const readAloudTooltip = React.useMemo(() => {
-        if (isTTSPlaying) {
-            return 'Stop speaking';
-        }
-        const providerLabel = voiceProvider === 'browser' ? 'Browser' : voiceProvider === 'openai' ? 'OpenAI' : voiceProvider === 'openai-compatible' ? 'Custom' : 'Say';
-        return `Read aloud (${providerLabel} voice)`;
-    }, [isTTSPlaying, voiceProvider]);
-
     const currentSession = React.useMemo(() => {
         if (!currentSessionId) {
             return null;
@@ -943,23 +928,6 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
             openMultiRunLauncherWithPrompt(prefilledPrompt);
         },
         [assistantPlanText, openMultiRunLauncherWithPrompt]
-    );
-
-    const handleTTSClick = React.useCallback(
-        (event: React.MouseEvent<HTMLButtonElement>) => {
-            event.stopPropagation();
-            event.preventDefault();
-
-            if (isTTSPlaying) {
-                stopTTS();
-                return;
-            }
-
-            if (assistantPlanText.trim()) {
-                void playTTS(assistantPlanText);
-            }
-        },
-        [assistantPlanText, isTTSPlaying, playTTS, stopTTS]
     );
 
     const handleSaveAsPlanClick = React.useCallback(
@@ -1524,32 +1492,6 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
                 </TooltipTrigger>
                 <TooltipContent sideOffset={6}>Start new multi-run from this answer</TooltipContent>
             </Tooltip>
-
-            {showMessageTTSButtons && hasCopyableText && (
-                <Tooltip delayDuration={1000}>
-                    <TooltipTrigger asChild>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className={cn(
-                                'h-8 w-8 bg-transparent hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50',
-                                isTTSPlaying ? 'text-status-success' : 'text-muted-foreground hover:text-foreground'
-                            )}
-                            aria-label={isTTSPlaying ? 'Stop speaking' : 'Read aloud'}
-                            onPointerDown={(event) => event.stopPropagation()}
-                            onClick={handleTTSClick}
-                        >
-                            {isTTSPlaying ? (
-                                <RiStopLine className="h-3.5 w-3.5" />
-                            ) : (
-                                <RiVolumeUpLine className="h-3.5 w-3.5" />
-                            )}
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent sideOffset={6}>{readAloudTooltip}</TooltipContent>
-                </Tooltip>
-            )}
         </>
     );
 
