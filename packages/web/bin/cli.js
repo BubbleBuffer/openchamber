@@ -3345,7 +3345,7 @@ const commands = {
     const showOutput = shouldRenderHumanOutput(options);
     const updateSpin = createSpinner(options);
 
-    const packageManagerPath = path.join(__dirname, '..', 'server', 'lib', 'package-manager.js');
+    const packageManagerPath = path.join(__dirname, '..', 'server', 'dist', 'domains', 'package-manager', 'index.js');
     const {
       checkForUpdates,
       executeUpdate,

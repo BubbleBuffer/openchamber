@@ -1,4 +1,5 @@
 import type { Express, Request, Response } from "express";
+import { resolveGitHubPrStatus } from "./pr-status.js";
 
 export interface GitHubRoutesDeps {
   // No explicit dependencies - all loaded dynamically via getGitHubLibraries()
@@ -271,8 +272,6 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         return res.json({ connected: false });
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { resolveGitHubPrStatus } = require("./pr-status.js") as any;
       const resolvedStatus = await resolveGitHubPrStatus({
         octokit,
         directory,

@@ -1,13 +1,13 @@
 # Server TypeScript Modernization — Handoff Spec
 
-> **Status:** Stages 1-8 complete. TTS + Cloudflare tunnels deleted (not ported). Main blockers resolved; all route handlers ported.
-> **Branch:** `feature/server-typescript-modernization` (85+ commits ahead of main)
+> **Status:** Stages 1-8 complete, Stage 9.1 (quota) complete, Stage 9.3 (git) complete, Stage 9.4 (github) complete. TTS + Cloudflare tunnels deleted (not ported).
+> **Branch:** `feature/server-typescript-modernization`
 > **Date:** 2026-06-02 (updated 2026-06-03)
-> **Commits since handoff:** 12+
+> **Commits since handoff:** 20+
 
 ## 1. What We Built
 
-**79 new TS files (25K lines)** across 12 domain directories under `packages/web/server/src/domains/`:
+**101 new TS files (27K lines)** across 13 domain directories under `packages/web/server/src/domains/`:
 
 | Domain | Files | Purpose |
 |--------|-------|---------|
@@ -117,17 +117,17 @@ All 12 old lib/ JS files deleted. Stale file cleanup: `lib/fs/routes.js`, `lib/s
 
 These contain the **core domain logic** — not just route wrappers. The route registration is ported, but the underlying implementations still live in lib/:
 
-| Category | Files | Lines (est.) |
-|---|---|---|
-| **Quota providers** | `lib/quota/index.js`, `lib/quota/utils/*` (4), `lib/quota/providers/*` (16) | ~3,500 |
-| **Skills catalog** | `lib/skills-catalog/index.js`, `source.js`, `scan.js`, `install.js`, `git.js`, `curated-sources.js`, `cache.js`, `clawdhub/*` (4) | ~1,500 |
-| **Git domain** | `lib/git/credentials.js`, `identity-storage.js`, `service.js`, `index.js` | ~800 |
-| **GitHub domain** | `lib/github/auth.js`, `device-flow.js`, `octokit.js`, `pr-status.js`, `repo/index.js`, `index.js` | ~1,200 |
-| **Opencode runtime** | `lib/opencode/services/agents.js`, `commands.js`, `mcp.js`, `providers.js`, `skills.js`, `lib/opencode/shared.js`, `lib/opencode/index.js` | ~1,000 |
-| **Opencode routes (unported)** | `lib/opencode/routes/openchamber-routes.js`, `pwa-manifest-routes.js`, `feature-routes-runtime.js`, `static-routes-runtime.js` | ~1,500 |
-| **Env runtime** | `lib/opencode/env/env-runtime.js` (fully rewritten in TS at `src/domains/opencode-support/env-runtime.ts` — 1123 lines) | already done |
-| **Misc** | `lib/core/bounded-cache.js` (kept as shim for JS consumers), `lib/package-manager.js`, `lib/opencode/network/hmr-state-runtime.js` | ~200 |
-| **Test files** | `lib/*/runtime.test.js`, `lib/git/routes.test.js`, etc. (7 files) | ~1,500 |
+| Category | Files | Lines (est.) | Status |
+|---|---|---|---|
+| **Quota providers** | ~~`lib/quota/`~~ 24 JS files → 22 TS files in `src/domains/quota/` (types.ts + 3 utils + 17 providers + registry + routes) | ~3,500 | ✅ **DONE** (2026-06-03) |
+| **Skills catalog** | `lib/skills-catalog/index.js`, `source.js`, `scan.js`, `install.js`, `git.js`, `curated-sources.js`, `cache.js`, `clawdhub/*` (4) | ~1,500 | ⏳ |
+| **Git domain** | `lib/git/credentials.js`, `identity-storage.js`, `service.js`, `index.js` | ~800 | ✅ Ported 2026-06-03 |
+| **GitHub domain** | `lib/github/auth.js`, `device-flow.js`, `octokit.js`, `pr-status.js`, `repo/index.js`, `index.js` | ~1,200 | ✅ Ported 2026-06-03 |
+| **Opencode runtime** | `lib/opencode/services/agents.js`, `commands.js`, `mcp.js`, `providers.js`, `skills.js`, `lib/opencode/shared.js`, `lib/opencode/index.js` | ~1,000 | ⏳ |
+| **Opencode routes (unported)** | `lib/opencode/routes/openchamber-routes.js`, `pwa-manifest-routes.js`, `feature-routes-runtime.js`, `static-routes-runtime.js` | ~1,500 | ⏳ |
+| **Env runtime** | `lib/opencode/env/env-runtime.js` | 1,123 | already done in `src/domains/opencode-support/env-runtime.ts` |
+| **Misc** | `lib/core/bounded-cache.js` (shim — 1 remaining JS consumer), `lib/package-manager.js`, `lib/opencode/network/hmr-state-runtime.js` | ~200 | ⏳ |
+| **Test files** | `lib/*/runtime.test.js`, `lib/git/routes.test.js`, etc. (7 files) | ~1,500 | ⏳ |
 
 ### 4.5 Already Ported to TS (committed in `b86ff47e`)
 These domains are fully in `src/domains/`, wired into `index.js` via `dist/` imports:
@@ -137,28 +137,32 @@ These domains are fully in `src/domains/`, wired into `index.js` via `dist/` imp
 
 ### Stage 9: Port Remaining Domain Logic
 
+> **Planning**: Before porting any domain here, load `writing-plans` skill and create a plan under `.superpawers/plans/`. Execute via `subagent-driven-development`.
+
 These are the deep domain implementations still in lib/ (not route wrappers — those are done). Port each to `src/domains/<name>/` following the established factory pattern:
 
 **Priority order:**
 
-1. **Quota domain** (20 lib/ files, ~3,500 lines)
-   - `lib/quota/index.js` → factory entry point
-   - `lib/quota/utils/*` → `src/domains/quota/utils/`
-   - `lib/quota/providers/*` (16 provider files) → `src/domains/quota/providers/`
-   - Already has `routes.ts` ported; wire into barrel
+    ~~1. **Quota domain** (20 lib/ files, ~3,500 lines)~~ ✅ **DONE** (2026-06-03)
+    ~~   - `lib/quota/index.js` → factory entry point~~
+    ~~   - `lib/quota/utils/*` → `src/domains/quota/utils/`~~
+    ~~   - `lib/quota/providers/*` (16 provider files) → `src/domains/quota/providers/`~~
+    ~~   - Already has `routes.ts` ported; wire into barrel~~
 
 2. **Skills catalog** (10 lib/ files, ~1,500 lines)
    - `lib/skills-catalog/index.js`, `source.js`, `scan.js`, `install.js`, `git.js`, `curated-sources.js`, `cache.js`
    - `lib/skills-catalog/clawdhub/*` (4 files)
 
-3. **Git domain** (4 lib/ files, ~800 lines)
-   - `lib/git/credentials.js`, `identity-storage.js`, `service.js`, `index.js`
-   - Already has `routes.ts` ported; wire into barrel
-   - `service.js` is the last consumer of `lib/core/bounded-cache.js` shim — porting it lets us delete the shim
+   ~~3. **Git domain** (4 lib/ files, ~800 lines)~~ ✅ **DONE** (2026-06-03)
+   - Ported `credentials.ts`, `identity-storage.ts`, `service.ts`, `types.ts` to `src/domains/git/`
+   - 4 old JS files deleted from `lib/git/`
+   - `feature-routes-runtime.ts` updated to import from new domain
+   - `bounded-cache.js` shim consumers reduced from 2→1
 
-4. **GitHub domain** (5 lib/ files, ~1,200 lines)
-   - `lib/github/auth.js`, `device-flow.js`, `octokit.js`, `pr-status.js`, `repo/index.js`, `index.js`
-   - Already has `routes.ts` ported; wire into barrel
+   ~~4. **GitHub domain** (5 lib/ files, ~1,200 lines)~~ ✅ **DONE** (2026-06-03)
+   - Ported `auth.ts`, `device-flow.ts`, `octokit.ts`, `repo.ts`, `pr-status.ts`, `types.ts` to `src/domains/github/`
+   - Rewrote `index.ts` barrel, fixed `routes.ts` `require()` bridge
+   - 6 old JS files deleted from `lib/github/`
 
 5. **Opencode services** (7 lib/ files, ~1,000 lines)
    - `lib/opencode/services/agents.js`, `commands.js`, `mcp.js`, `providers.js`, `skills.js`

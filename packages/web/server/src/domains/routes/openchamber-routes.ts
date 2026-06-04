@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { OpenChamberRoutesDeps } from "./types.js";
+import { checkForUpdates, getUpdateCommand, detectPackageManagerDetails } from "../package-manager/index.js";
 
 export function registerOpenChamberRoutes(app: any, deps: OpenChamberRoutesDeps): void {
   const {
@@ -22,8 +22,6 @@ export function registerOpenChamberRoutes(app: any, deps: OpenChamberRoutesDeps)
 
   app.get('/api/openchamber/update-check', async (req: any, res: any) => {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { checkForUpdates } = require('../../../lib/package-manager.js') as any;
       const parseString = (value: unknown): string | undefined => (typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined);
       const parseReportUsage = (value: unknown): boolean => {
         if (typeof value !== 'string') return true;
@@ -63,8 +61,6 @@ export function registerOpenChamberRoutes(app: any, deps: OpenChamberRoutesDeps)
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { spawn: spawnChild } = require('child_process') as any;
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { checkForUpdates, getUpdateCommand, detectPackageManagerDetails } = require('../../../lib/package-manager.js') as any;
 
       const updateInfo = await checkForUpdates();
       if (!updateInfo.available) {
