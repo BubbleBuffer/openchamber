@@ -1,3 +1,5 @@
+import type { Octokit, RestEndpointMethodTypes } from "@octokit/rest";
+
 export interface GitHubAuthUser {
   login: string | null;
   avatarUrl: string | null;
@@ -49,7 +51,7 @@ export interface ParsedGitHubRemote {
 }
 
 export interface ResolveGitHubPrStatusOptions {
-  octokit: any;
+  octokit: Octokit;
   directory: string;
   branch: string;
   remoteName?: string;
@@ -57,7 +59,7 @@ export interface ResolveGitHubPrStatusOptions {
 
 export interface ResolvedPrStatus {
   repo: { owner: string; repo: string } | null;
-  pr: any | null;
+  pr: RestEndpointMethodTypes["pulls"]["get"]["response"]["data"] | null;
   defaultBranch?: string | null;
   resolvedRemoteName?: string | null;
 }

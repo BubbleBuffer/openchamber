@@ -1,3 +1,4 @@
+import type { Octokit } from "@octokit/rest";
 import { getRemotes, getStatus } from "../git/service.js";
 import { resolveGitHubRepoFromDirectory } from "./repo.js";
 import type { ParsedGitHubRemote, ResolveGitHubPrStatusOptions, ResolvedPrStatus } from "./types.js";
@@ -148,7 +149,7 @@ const buildSourceMatcher = (sourceCandidates: { repo?: ParsedGitHubRemote | null
   return { matches, compare };
 };
 
-const getRepoDefaultBranch = async (octokit: any, repo: ParsedGitHubRemote | null): Promise<string | null> => {
+const getRepoDefaultBranch = async (octokit: Octokit, repo: ParsedGitHubRemote | null): Promise<string | null> => {
   const repoKey = normalizeRepoKey(repo?.owner, repo?.repo);
   if (!repoKey) {
     return null;
@@ -175,7 +176,7 @@ const getRepoDefaultBranch = async (octokit: any, repo: ParsedGitHubRemote | nul
   }
 };
 
-const getRepoMetadata = async (octokit: any, repo: ParsedGitHubRemote | null): Promise<any> => {
+const getRepoMetadata = async (octokit: Octokit, repo: ParsedGitHubRemote | null): Promise<any> => {
   const repoKey = normalizeRepoKey(repo?.owner, repo?.repo);
   if (!repoKey) {
     return null;
@@ -234,7 +235,7 @@ const resolveRemoteCandidates = async (
 };
 
 const expandRepoNetwork = async (
-  octokit: any,
+  octokit: Octokit,
   candidates: { remoteName: string; repo: ParsedGitHubRemote; priority: number }[],
 ): Promise<{ repo: ParsedGitHubRemote; remoteName: string; priority: number }[]> => {
   const expanded: { repo: ParsedGitHubRemote; remoteName: string; priority: number }[] = [];
@@ -291,7 +292,7 @@ const expandRepoNetwork = async (
   return expanded.sort((left, right) => left.priority - right.priority);
 };
 
-const safeListPulls = async (octokit: any, options: Record<string, unknown>): Promise<any[]> => {
+const safeListPulls = async (octokit: Octokit, options: Record<string, unknown>): Promise<any[]> => {
   try {
     const response = await octokit.rest.pulls.list(options);
     return Array.isArray(response?.data) ? response.data : [];
@@ -333,7 +334,7 @@ const searchFallbackPr = async ({
   branch,
   repoNames,
 }: {
-  octokit: any;
+  octokit: Octokit;
   branch: string;
   repoNames: string[];
 }): Promise<{ repo: ParsedGitHubRemote; pr: any } | null> => {
@@ -412,7 +413,7 @@ const findFirstMatchingPr = async ({
   branch,
   sourceCandidates,
 }: {
-  octokit: any;
+  octokit: Octokit;
   target: { repo: ParsedGitHubRemote; remoteName: string };
   branch: string;
   sourceCandidates: { repo: ParsedGitHubRemote; remoteName: string }[];
