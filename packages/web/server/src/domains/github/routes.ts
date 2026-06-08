@@ -7,7 +7,7 @@ export interface GitHubRoutesDeps {
 
 export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): void {
   const getGitHubLibraries = async () => {
-    return await import("./index.js") as any;
+    return await import("./index.js");
   };
 
   const getGitHubUserSummary = async (octokit: any) => {
@@ -145,7 +145,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         });
       }
 
-      const accessToken = payload?.access_token;
+      const accessToken = payload?.access_token as string | undefined | null;
       if (!accessToken) {
         return res.status(500).json({ error: "Missing access_token from GitHub" });
       }
@@ -491,7 +491,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         return res.status(401).json({ error: "GitHub not connected" });
       }
 
-      const ghLib = await import("./index.js") as any;
+      const ghLib: typeof import("./index.js") = await import("./index.js");
       const { repo } = await ghLib.resolveGitHubRepoFromDirectory(directory, remote);
       if (!repo) {
         return res.status(400).json({ error: "Unable to resolve GitHub repo from git remote" });
@@ -529,7 +529,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       // Determine the source remote for the head branch
       // Priority: 1) explicit headRemote, 2) tracking branch remote, 3) 'origin' if targeting non-origin
       let sourceRemote = headRemote;
-      const gitLib = await import("../git/index.js") as any;
+      const gitLib: typeof import("../git/index.js") = await import("../git/index.js");
       const { getStatus, getRemotes } = gitLib;
 
       // If no explicit headRemote, check the branch's tracking info
@@ -672,7 +672,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         return res.status(401).json({ error: "GitHub not connected" });
       }
 
-      const ghLib = await import("./index.js") as any;
+      const ghLib: typeof import("./index.js") = await import("./index.js");
       const { repo } = await ghLib.resolveGitHubRepoFromDirectory(directory);
       if (!repo) {
         return res.status(400).json({ error: "Unable to resolve GitHub repo from git remote" });
@@ -750,7 +750,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         return res.status(401).json({ error: "GitHub not connected" });
       }
 
-      const ghLib = await import("./index.js") as any;
+      const ghLib: typeof import("./index.js") = await import("./index.js");
       const { repo } = await ghLib.resolveGitHubRepoFromDirectory(directory);
       if (!repo) {
         return res.status(400).json({ error: "Unable to resolve GitHub repo from git remote" });
@@ -794,7 +794,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         return res.status(401).json({ error: "GitHub not connected" });
       }
 
-      const ghLib = await import("./index.js") as any;
+      const ghLib: typeof import("./index.js") = await import("./index.js");
       const { repo } = await ghLib.resolveGitHubRepoFromDirectory(directory);
       if (!repo) {
         return res.status(400).json({ error: "Unable to resolve GitHub repo from git remote" });
@@ -847,7 +847,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         return res.json({ connected: false });
       }
 
-      const ghLib = await import("./index.js") as any;
+      const ghLib: typeof import("./index.js") = await import("./index.js");
       const { repo } = await ghLib.resolveGitHubRepoFromDirectory(directory);
       if (!repo) {
         return res.json({ connected: true, repo: null, issues: [] });
@@ -913,7 +913,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         return res.json({ connected: false });
       }
 
-      const ghLib = await import("./index.js") as any;
+      const ghLib: typeof import("./index.js") = await import("./index.js");
       const { repo } = await ghLib.resolveGitHubRepoFromDirectory(directory);
       if (!repo) {
         return res.json({ connected: true, repo: null, issue: null });
@@ -984,7 +984,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         return res.json({ connected: false });
       }
 
-      const ghLib = await import("./index.js") as any;
+      const ghLib: typeof import("./index.js") = await import("./index.js");
       const { repo } = await ghLib.resolveGitHubRepoFromDirectory(directory);
       if (!repo) {
         return res.json({ connected: true, repo: null, comments: [] });
@@ -1032,7 +1032,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         return res.json({ connected: false });
       }
 
-      const ghLib = await import("./index.js") as any;
+      const ghLib: typeof import("./index.js") = await import("./index.js");
       const { repo } = await ghLib.resolveGitHubRepoFromDirectory(directory);
       if (!repo) {
         return res.json({ connected: true, repo: null, prs: [] });
@@ -1116,7 +1116,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         return res.json({ connected: false });
       }
 
-      const ghLib = await import("./index.js") as any;
+      const ghLib: typeof import("./index.js") = await import("./index.js");
       const { repo } = await ghLib.resolveGitHubRepoFromDirectory(directory);
       if (!repo) {
         return res.json({ connected: true, repo: null, pr: null });
