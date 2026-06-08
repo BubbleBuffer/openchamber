@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { readAuthFile } from "../../auth/provider-auth.js";
 import { readConfigLayers } from "../../opencode/services/index.js";
 import { getAuthEntry, normalizeAuthEntry } from "../auth-utils.js";
@@ -24,9 +23,10 @@ function getApiKey(): string | null {
     const { mergedConfig } = layers;
 
     for (const alias of aliases) {
-      const providerConfig = (mergedConfig as any)?.provider?.[alias];
-      if (providerConfig?.options?.apiKey) {
-        return providerConfig.options.apiKey;
+      const providerConfig = (mergedConfig as Record<string, unknown>)?.provider as Record<string, unknown> | undefined;
+      const config = providerConfig?.[alias] as Record<string, unknown> | undefined;
+      if (config?.options?.apiKey) {
+        return config.options.apiKey;
       }
     }
   } catch {
