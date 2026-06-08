@@ -171,7 +171,7 @@ export function readConfigFile(filePath: string | null): Record<string, unknown>
   }
 }
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
+export function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value != null && typeof value === "object" && !Array.isArray(value);
 }
 

@@ -1,15 +1,12 @@
 import {
   CONFIG_FILE,
+  isPlainObject,
   readConfigLayers,
   getConfigForPath,
   writeConfig,
 } from "./shared.js";
 
 import type { ProviderSources } from "./types.js";
-
-function isPlainObjectCheck(value: unknown): value is Record<string, unknown> {
-  return value != null && typeof value === "object" && !Array.isArray(value);
-}
 
 export function getProviderSources(
   providerId: string,
@@ -18,22 +15,22 @@ export function getProviderSources(
   const layers = readConfigLayers(workingDirectory);
   const { userConfig, projectConfig, customConfig, paths } = layers;
 
-  const customProviders = isPlainObjectCheck(customConfig?.provider)
+  const customProviders = isPlainObject(customConfig?.provider)
     ? (customConfig.provider as Record<string, unknown>)
     : {};
-  const customProvidersAlias = isPlainObjectCheck(customConfig?.providers)
+  const customProvidersAlias = isPlainObject(customConfig?.providers)
     ? (customConfig.providers as Record<string, unknown>)
     : {};
-  const projectProviders = isPlainObjectCheck(projectConfig?.provider)
+  const projectProviders = isPlainObject(projectConfig?.provider)
     ? (projectConfig.provider as Record<string, unknown>)
     : {};
-  const projectProvidersAlias = isPlainObjectCheck(projectConfig?.providers)
+  const projectProvidersAlias = isPlainObject(projectConfig?.providers)
     ? (projectConfig.providers as Record<string, unknown>)
     : {};
-  const userProviders = isPlainObjectCheck(userConfig?.provider)
+  const userProviders = isPlainObject(userConfig?.provider)
     ? (userConfig.provider as Record<string, unknown>)
     : {};
-  const userProvidersAlias = isPlainObjectCheck(userConfig?.providers)
+  const userProvidersAlias = isPlainObject(userConfig?.providers)
     ? (userConfig.providers as Record<string, unknown>)
     : {};
 
@@ -82,10 +79,10 @@ export function removeProviderConfig(
   }
 
   const targetConfig = getConfigForPath(layers, targetPath);
-  const providerConfig = isPlainObjectCheck(targetConfig.provider)
+  const providerConfig = isPlainObject(targetConfig.provider)
     ? (targetConfig.provider as Record<string, unknown>)
     : {};
-  const providersConfig = isPlainObjectCheck(targetConfig.providers)
+  const providersConfig = isPlainObject(targetConfig.providers)
     ? (targetConfig.providers as Record<string, unknown>)
     : {};
   const removedProvider = Object.prototype.hasOwnProperty.call(providerConfig, providerId);
