@@ -909,7 +909,7 @@ const syncSandboxesToOpenCodeDb = (projectID: any, sandboxes: any) => {
       db.close();
     }
   } catch (e) {
-    console.warn('Failed to sync sandboxes to OpenCode DB:', error instanceof Error ? error.message : String(error));
+    console.warn('Failed to sync sandboxes to OpenCode DB:', e instanceof Error ? e.message : String(e));
   }
 };
 
@@ -1026,11 +1026,11 @@ const queueWorktreeBootstrap = (args: any) => {
           ensureRemoteName,
           ensureRemoteUrl,
         }).catch((error: any) => {
-          console.warn('Worktree upstream configuration failed:', error instanceof Error ? error.message : String(error));
+          console.warn('Worktree upstream configuration failed:', e instanceof Error ? e.message : String(e));
         });
       }
       await runWorktreeStartScripts(directory, projectID, startCommand).catch((error: any) => {
-        console.warn('Worktree start script task failed:', error instanceof Error ? error.message : String(error));
+        console.warn('Worktree start script task failed:', e instanceof Error ? e.message : String(e));
       });
       setWorktreeBootstrapState(directory, WORKTREE_BOOTSTRAP_READY);
     };
@@ -1039,9 +1039,9 @@ const queueWorktreeBootstrap = (args: any) => {
       setWorktreeBootstrapState(
         directory,
         WORKTREE_BOOTSTRAP_FAILED,
-        error instanceof Error ? error.message : String(error)
+        e instanceof Error ? e.message : String(e)
       );
-      console.warn('Worktree bootstrap task failed:', error instanceof Error ? error.message : String(error));
+      console.warn('Worktree bootstrap task failed:', e instanceof Error ? e.message : String(e));
     });
   }, 0);
 };
@@ -1815,7 +1815,7 @@ export async function getFileDiff(directory: any, { path: filePath, staged = fal
       }
     }
   } catch (e) {
-    if (error && typeof error === 'object' && error.code === 'ENOENT') {
+    if (e && typeof e === 'object' && e.code === 'ENOENT') {
       modified = '';
     } else {
       console.error('Failed to read modified file contents for diff:', error);
@@ -2211,7 +2211,7 @@ async function filterActiveRemoteBranches(git: SimpleGit, remoteBranches: string
       return actualRemoteBranches.has(branchName);
     });
   } catch (e) {
-    console.warn('Failed to filter active remote branches, returning all:', error.message);
+    console.warn('Failed to filter active remote branches, returning all:', e instanceof Error ? e.message : String(e));
     return remoteBranches;
   }
 }
@@ -2554,7 +2554,7 @@ export async function createWorktree(directory: any, input: any = {}) {
   try {
     await syncProjectSandboxAdd(context.projectID, context.primaryWorktree, candidate.directory);
   } catch (e) {
-    console.warn('Failed to sync OpenCode sandbox metadata (add):', error instanceof Error ? error.message : String(error));
+    console.warn('Failed to sync OpenCode sandbox metadata (add):', e instanceof Error ? e.message : String(e));
   }
 
   const shouldSetUpstream = Boolean(input?.setUpstream);
@@ -2643,7 +2643,7 @@ export async function removeWorktree(directory: any, input: any = {}) {
     try {
       await syncProjectSandboxRemove(context.projectID, context.primaryWorktree, targetDirectory);
     } catch (e) {
-      console.warn('Failed to sync OpenCode sandbox metadata (remove):', error instanceof Error ? error.message : String(error));
+      console.warn('Failed to sync OpenCode sandbox metadata (remove):', e instanceof Error ? e.message : String(e));
     }
 
     clearWorktreeBootstrapState(targetDirectory);
@@ -2671,7 +2671,7 @@ export async function removeWorktree(directory: any, input: any = {}) {
   try {
     await syncProjectSandboxRemove(context.projectID, context.primaryWorktree, matchedEntry.worktree);
   } catch (e) {
-    console.warn('Failed to sync OpenCode sandbox metadata (remove):', error instanceof Error ? error.message : String(error));
+    console.warn('Failed to sync OpenCode sandbox metadata (remove):', e instanceof Error ? e.message : String(e));
   }
 
   clearWorktreeBootstrapState(matchedEntry.worktree);
