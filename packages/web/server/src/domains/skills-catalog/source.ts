@@ -1,28 +1,51 @@
-const GITHUB_HOST = 'github.com';
+import type { ParseSkillRepoSourceResult } from "./types.js";
 
-function normalizeGitHubOwnerRepo(owner, repo) {
-  const normalizedOwner = String(owner || '').trim();
-  const normalizedRepo = String(repo || '').trim().replace(/\.git$/i, '');
+const GITHUB_HOST = "github.com";
+
+function normalizeGitHubOwnerRepo(
+  owner: string,
+  repo: string
+): { owner: string; repo: string } | null {
+  const normalizedOwner = String(owner || "").trim();
+  const normalizedRepo = String(repo || "").trim().replace(/\.git$/i, "");
   if (!normalizedOwner || !normalizedRepo) {
     return null;
   }
   return { owner: normalizedOwner, repo: normalizedRepo };
 }
 
-export function parseSkillRepoSource(input, options = {}) {
-  const raw = typeof input === 'string' ? input.trim() : '';
+export function parseSkillRepoSource(
+  input: string,
+  options: { subpath?: string } = {}
+): ParseSkillRepoSourceResult {
+  const raw = typeof input === "string" ? input.trim() : "";
   if (!raw) {
-    return { ok: false, error: { kind: 'invalidSource', message: 'Repository source is required' } };
+    return {
+      ok: false,
+      error: {
+        kind: "invalidSource",
+        message: "Repository source is required",
+      },
+    };
   }
 
-  const explicitSubpath = typeof options.subpath === 'string' && options.subpath.trim() ? options.subpath.trim() : null;
+  const explicitSubpath =
+    typeof options.subpath === "string" && options.subpath.trim()
+      ? options.subpath.trim()
+      : null;
 
   // SSH URL: git@github.com:owner/repo(.git)
   const sshMatch = raw.match(/^git@github\.com:([^/\s]+)\/([^\s#]+)$/i);
   if (sshMatch) {
     const parsed = normalizeGitHubOwnerRepo(sshMatch[1], sshMatch[2]);
     if (!parsed) {
-      return { ok: false, error: { kind: 'invalidSource', message: 'Invalid SSH repository URL' } };
+      return {
+        ok: false,
+        error: {
+          kind: "invalidSource",
+          message: "Invalid SSH repository URL",
+        },
+      };
     }
 
     return {
@@ -43,7 +66,13 @@ export function parseSkillRepoSource(input, options = {}) {
   if (httpsMatch) {
     const parsed = normalizeGitHubOwnerRepo(httpsMatch[1], httpsMatch[2]);
     if (!parsed) {
-      return { ok: false, error: { kind: 'invalidSource', message: 'Invalid HTTPS repository URL' } };
+      return {
+        ok: false,
+        error: {
+          kind: "invalidSource",
+          message: "Invalid HTTPS repository URL",
+        },
+      };
     }
 
     return {
@@ -63,10 +92,19 @@ export function parseSkillRepoSource(input, options = {}) {
   if (shorthandMatch) {
     const parsed = normalizeGitHubOwnerRepo(shorthandMatch[1], shorthandMatch[2]);
     if (!parsed) {
-      return { ok: false, error: { kind: 'invalidSource', message: 'Invalid repository source' } };
+      return {
+        ok: false,
+        error: {
+          kind: "invalidSource",
+          message: "Invalid repository source",
+        },
+      };
     }
 
-    const shorthandSubpath = typeof shorthandMatch[3] === 'string' && shorthandMatch[3].trim() ? shorthandMatch[3].trim() : null;
+    const shorthandSubpath =
+      typeof shorthandMatch[3] === "string" && shorthandMatch[3].trim()
+        ? shorthandMatch[3].trim()
+        : null;
     const effectiveSubpath = explicitSubpath || shorthandSubpath;
 
     return {
@@ -81,5 +119,11 @@ export function parseSkillRepoSource(input, options = {}) {
     };
   }
 
-  return { ok: false, error: { kind: 'invalidSource', message: 'Unsupported repository source format' } };
+  return {
+    ok: false,
+    error: {
+      kind: "invalidSource",
+      message: "Unsupported repository source format",
+    },
+  };
 }

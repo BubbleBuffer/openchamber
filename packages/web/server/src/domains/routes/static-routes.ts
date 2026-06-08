@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { StaticRoutesDeps } from "./types.js";
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { registerPwaManifestRoute } = require('../../../lib/opencode/routes/pwa-manifest-routes.js') as any;
+import { registerPwaManifestRoute } from "./pwa-manifest.js";
 
 export function createStaticRoutesRuntime(deps: StaticRoutesDeps): any {
   const {

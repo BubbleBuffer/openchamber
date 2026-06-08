@@ -1,21 +1,41 @@
 import {
   CONFIG_FILE,
   readConfigLayers,
-  isPlainObject,
   getConfigForPath,
   writeConfig,
-} from '../shared.js';
+} from "./shared.js";
 
-function getProviderSources(providerId, workingDirectory) {
+import type { ProviderSources } from "./types.js";
+
+function isPlainObjectCheck(value: unknown): value is Record<string, unknown> {
+  return value != null && typeof value === "object" && !Array.isArray(value);
+}
+
+export function getProviderSources(
+  providerId: string,
+  workingDirectory: string | null
+): ProviderSources {
   const layers = readConfigLayers(workingDirectory);
   const { userConfig, projectConfig, customConfig, paths } = layers;
 
-  const customProviders = isPlainObject(customConfig?.provider) ? customConfig.provider : {};
-  const customProvidersAlias = isPlainObject(customConfig?.providers) ? customConfig.providers : {};
-  const projectProviders = isPlainObject(projectConfig?.provider) ? projectConfig.provider : {};
-  const projectProvidersAlias = isPlainObject(projectConfig?.providers) ? projectConfig.providers : {};
-  const userProviders = isPlainObject(userConfig?.provider) ? userConfig.provider : {};
-  const userProvidersAlias = isPlainObject(userConfig?.providers) ? userConfig.providers : {};
+  const customProviders = isPlainObjectCheck(customConfig?.provider)
+    ? (customConfig.provider as Record<string, unknown>)
+    : {};
+  const customProvidersAlias = isPlainObjectCheck(customConfig?.providers)
+    ? (customConfig.providers as Record<string, unknown>)
+    : {};
+  const projectProviders = isPlainObjectCheck(projectConfig?.provider)
+    ? (projectConfig.provider as Record<string, unknown>)
+    : {};
+  const projectProvidersAlias = isPlainObjectCheck(projectConfig?.providers)
+    ? (projectConfig.providers as Record<string, unknown>)
+    : {};
+  const userProviders = isPlainObjectCheck(userConfig?.provider)
+    ? (userConfig.provider as Record<string, unknown>)
+    : {};
+  const userProvidersAlias = isPlainObjectCheck(userConfig?.providers)
+    ? (userConfig.providers as Record<string, unknown>)
+    : {};
 
   const customExists =
     Object.prototype.hasOwnProperty.call(customProviders, providerId) ||
@@ -32,25 +52,29 @@ function getProviderSources(providerId, workingDirectory) {
       auth: { exists: false },
       user: { exists: userExists, path: paths.userPath },
       project: { exists: projectExists, path: paths.projectPath || null },
-      custom: { exists: customExists, path: paths.customPath }
-    }
+      custom: { exists: customExists, path: paths.customPath },
+    },
   };
 }
 
-function removeProviderConfig(providerId, workingDirectory, scope = 'user') {
-  if (!providerId || typeof providerId !== 'string') {
-    throw new Error('Provider ID is required');
+export function removeProviderConfig(
+  providerId: string,
+  workingDirectory: string | null,
+  scope = "user"
+): boolean {
+  if (!providerId || typeof providerId !== "string") {
+    throw new Error("Provider ID is required");
   }
 
   const layers = readConfigLayers(workingDirectory);
   let targetPath = layers.paths.userPath;
 
-  if (scope === 'project') {
+  if (scope === "project") {
     if (!workingDirectory) {
-      throw new Error('Working directory is required for project scope');
+      throw new Error("Working directory is required for project scope");
     }
     targetPath = layers.paths.projectPath || targetPath;
-  } else if (scope === 'custom') {
+  } else if (scope === "custom") {
     if (!layers.paths.customPath) {
       return false;
     }
@@ -58,8 +82,12 @@ function removeProviderConfig(providerId, workingDirectory, scope = 'user') {
   }
 
   const targetConfig = getConfigForPath(layers, targetPath);
-  const providerConfig = isPlainObject(targetConfig.provider) ? targetConfig.provider : {};
-  const providersConfig = isPlainObject(targetConfig.providers) ? targetConfig.providers : {};
+  const providerConfig = isPlainObjectCheck(targetConfig.provider)
+    ? (targetConfig.provider as Record<string, unknown>)
+    : {};
+  const providersConfig = isPlainObjectCheck(targetConfig.providers)
+    ? (targetConfig.providers as Record<string, unknown>)
+    : {};
   const removedProvider = Object.prototype.hasOwnProperty.call(providerConfig, providerId);
   const removedProviders = Object.prototype.hasOwnProperty.call(providersConfig, providerId);
 
@@ -89,8 +117,3 @@ function removeProviderConfig(providerId, workingDirectory, scope = 'user') {
   console.log(`Removed provider ${providerId} from config: ${targetPath}`);
   return true;
 }
-
-export {
-  getProviderSources,
-  removeProviderConfig,
-};

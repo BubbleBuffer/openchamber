@@ -14,6 +14,33 @@ import { registerScheduledTaskRoutes } from "../scheduled-tasks/routes.js";
 import { registerSkillRoutes } from "../opencode/routes/skill-routes.js";
 import { registerOpenCodeRoutes } from "../opencode/routes/routes.js";
 
+import {
+  getProviderSources, removeProviderConfig,
+  getAgentSources, getAgentConfig, createAgent, updateAgent, deleteAgent,
+  getCommandSources, createCommand, updateCommand, deleteCommand,
+  listMcpConfigs, getMcpConfig, createMcpConfig, updateMcpConfig, deleteMcpConfig,
+  getSkillSources, discoverSkills, createSkill, updateSkill, deleteSkill,
+  readSkillSupportingFile, writeSkillSupportingFile, deleteSkillSupportingFile,
+  SKILL_SCOPE, SKILL_DIR,
+} from "../opencode/services/index.js";
+
+import {
+  getCuratedSkillsSources, getCacheKey, getCachedScan, setCachedScan,
+  parseSkillRepoSource, scanSkillsRepository, installSkillsFromRepository,
+  scanClawdHubPage, installSkillsFromClawdHub, isClawdHubSource,
+} from "../skills-catalog/index.js";
+
+import { getProfiles, getProfile } from "../git/index.js";
+
+// skill-routes.ts type definitions use null patterns from legacy JS;
+// casting mirrors the previous require() as any behavior
+const _parseSkillRepoSource = parseSkillRepoSource as any;
+const _scanSkillsRepository = scanSkillsRepository as any;
+const _installSkillsFromRepository = installSkillsFromRepository as any;
+const _scanClawdHubPage = scanClawdHubPage as any;
+const _installSkillsFromClawdHub = installSkillsFromClawdHub as any;
+const _getProfile = getProfile as any;
+
 export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps): any {
   const {
     clientReloadDelayMs,
@@ -63,9 +90,6 @@ export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps): any {
       writeSseEvent,
     } = routeDependencies;
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { getProviderSources, removeProviderConfig } = require('../../../lib/opencode/index.js') as any;
-
     registerSettingsUtilityRoutes(app, {
       readCustomThemesFromDisk,
       refreshOpenCodeAfterConfigChange,
@@ -110,13 +134,6 @@ export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps): any {
       writeSseEvent,
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { getAgentSources, getAgentConfig, createAgent, updateAgent, deleteAgent } = require('../../../lib/opencode/index.js') as any;
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { getCommandSources, createCommand, updateCommand, deleteCommand } = require('../../../lib/opencode/index.js') as any;
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { listMcpConfigs, getMcpConfig, createMcpConfig, updateMcpConfig, deleteMcpConfig } = require('../../../lib/opencode/index.js') as any;
-
     registerConfigEntityRoutes(app, {
       resolveProjectDirectory,
       resolveOptionalProjectDirectory,
@@ -137,23 +154,6 @@ export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps): any {
       updateMcpConfig,
       deleteMcpConfig,
     });
-
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { getSkillSources, discoverSkills, createSkill, updateSkill, deleteSkill } = require('../../../lib/opencode/index.js') as any;
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { readSkillSupportingFile, writeSkillSupportingFile, deleteSkillSupportingFile } = require('../../../lib/opencode/index.js') as any;
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { SKILL_SCOPE, SKILL_DIR } = require('../../../lib/opencode/index.js') as any;
-
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { getCuratedSkillsSources, getCacheKey, getCachedScan, setCachedScan } = require('../../../lib/skills-catalog/index.js') as any;
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { parseSkillRepoSource, scanSkillsRepository, installSkillsFromRepository } = require('../../../lib/skills-catalog/index.js') as any;
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { scanClawdHubPage, installSkillsFromClawdHub, isClawdHubSource } = require('../../../lib/skills-catalog/index.js') as any;
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getProfiles, getProfile } = require('../git/index.js') as any;
 
     registerSkillRoutes(app, {
       fs,
@@ -182,14 +182,14 @@ export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps): any {
       getCacheKey,
       getCachedScan,
       setCachedScan,
-      parseSkillRepoSource,
-      scanSkillsRepository,
-      installSkillsFromRepository,
-      scanClawdHubPage,
-      installSkillsFromClawdHub,
+      parseSkillRepoSource: _parseSkillRepoSource,
+      scanSkillsRepository: _scanSkillsRepository,
+      installSkillsFromRepository: _installSkillsFromRepository,
+      scanClawdHubPage: _scanClawdHubPage,
+      installSkillsFromClawdHub: _installSkillsFromClawdHub,
       isClawdHubSource,
       getProfiles,
-      getProfile,
+      getProfile: _getProfile,
     });
 
     registerQuotaRoutes(app, { getQuotaProviders });

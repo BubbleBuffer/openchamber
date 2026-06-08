@@ -1,5 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-require-imports */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { readAuthFile } from "../../auth/provider-auth.js";
+import { readConfigLayers } from "../../opencode/services/index.js";
 import { getAuthEntry, normalizeAuthEntry } from "../auth-utils.js";
 import { buildResult, toUsageWindow } from "../formatters.js";
 import { normalizeTimestamp, resolveWindowSeconds, resolveWindowLabel } from "../transformers.js";
@@ -19,12 +20,11 @@ function getApiKey(): string | null {
   }
 
   try {
-    const { readConfigLayers } = require("../../../lib/opencode/shared.js") as any;
-    const layers = readConfigLayers();
+    const layers = readConfigLayers(null);
     const { mergedConfig } = layers;
 
     for (const alias of aliases) {
-      const providerConfig = mergedConfig?.provider?.[alias];
+      const providerConfig = (mergedConfig as any)?.provider?.[alias];
       if (providerConfig?.options?.apiKey) {
         return providerConfig.options.apiKey;
       }
