@@ -32,15 +32,6 @@ import {
 
 import { getProfiles, getProfile } from "../git/index.js";
 
-// skill-routes.ts type definitions use null patterns from legacy JS;
-// casting mirrors the previous require() as any behavior
-const _parseSkillRepoSource = parseSkillRepoSource as any;
-const _scanSkillsRepository = scanSkillsRepository as any;
-const _installSkillsFromRepository = installSkillsFromRepository as any;
-const _scanClawdHubPage = scanClawdHubPage as any;
-const _installSkillsFromClawdHub = installSkillsFromClawdHub as any;
-const _getProfile = getProfile as any;
-
 export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps): any {
   const {
     clientReloadDelayMs,
@@ -182,19 +173,19 @@ export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps): any {
       getCacheKey,
       getCachedScan,
       setCachedScan,
-      parseSkillRepoSource: _parseSkillRepoSource,
-      scanSkillsRepository: _scanSkillsRepository,
-      installSkillsFromRepository: _installSkillsFromRepository,
-      scanClawdHubPage: _scanClawdHubPage,
-      installSkillsFromClawdHub: _installSkillsFromClawdHub,
+      parseSkillRepoSource,
+      scanSkillsRepository,
+      installSkillsFromRepository,
+      scanClawdHubPage,
+      installSkillsFromClawdHub,
       isClawdHubSource,
       getProfiles,
-      getProfile: _getProfile,
+      getProfile,
     });
 
     registerQuotaRoutes(app, { getQuotaProviders });
     registerGitHubRoutes(app);
-    registerGitRoutes(app, {});
+    registerGitRoutes(app);
     registerMagicPromptRoutes(app, {
       fsPromises,
       path,
