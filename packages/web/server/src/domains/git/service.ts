@@ -48,7 +48,7 @@ const gpgconfCandidates = ['gpgconf', '/opt/homebrew/bin/gpgconf', '/usr/local/b
 let resolvedGitBinary: string | null = null;
 const worktreeBootstrapState = createBoundedMap({ maxSize: 50, ttlMs: 3600_000 });
 
-async function resolveDefaultBranch(git: any) {
+async function resolveDefaultBranch(git: SimpleGit) {
   const candidates = [];
 
   const originHead = await git
@@ -328,24 +328,25 @@ const buildGitEnv = async () => {
   return env;
 };
 
-const createGit = async (directory?: any) => {
+const createGit = async (directory?: string): Promise<SimpleGit> => {
   const env = await buildGitEnv();
-  const spawnOptions = { windowsHide: true };
   const binary = getGitBinary();
   const hasCustomBinary = typeof binary === 'string' && binary.trim() && binary !== 'git' && binary !== 'git.exe';
-  const unsafe = hasCustomBinary ? { allowUnsafeCustomBinary: true } : undefined;
+  const spawnOptions: Record<string, unknown> = { windowsHide: true };
+
+  const options: Parameters<typeof simpleGit>[0] = {
+    binary: binary || undefined,
+    ...(hasCustomBinary ? { unsafe: { allowUnsafeCustomBinary: true } } : {}),
+  } as Parameters<typeof simpleGit>[0];
+
   if (!directory) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return simpleGit({ env, spawnOptions, binary, unsafe } as any);
+    return simpleGit({ ...options });
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   return simpleGit({
+    ...options,
     baseDir: normalizeDirectoryPath(directory),
-    env,
-    spawnOptions,
-    binary,
-    unsafe,
-  } as any);
+  });
 };
 
 const normalizeDirectoryPath = (value: any) => {
@@ -2177,7 +2178,7 @@ export async function getBranches(directory: any) {
   }
 }
 
-async function filterActiveRemoteBranches(git: any, remoteBranches: any) {
+async function filterActiveRemoteBranches(git: SimpleGit, remoteBranches: string[]) {
   try {
 
     const lsRemoteResult = await git.raw(['ls-remote', '--heads', 'origin']);
