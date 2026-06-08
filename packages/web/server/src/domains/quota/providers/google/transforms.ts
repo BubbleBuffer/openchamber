@@ -93,9 +93,7 @@ export function transformModelData(
     ? Math.round(remainingFraction * 100)
     : null;
   const usedPercent = remainingPercent !== null ? Math.max(0, 100 - remainingPercent) : null;
-  const resetAt = quotaInfo?.resetTime
-    ? new Date(quotaInfo.resetTime as string).getTime()
-    : null;
+  const resetAt = toTimestamp(quotaInfo?.resetTime);
   const window = resolveGoogleWindow(sourceId, resetAt);
 
   return {

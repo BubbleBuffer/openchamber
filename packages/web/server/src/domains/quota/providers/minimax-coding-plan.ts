@@ -1,7 +1,7 @@
 import { readAuthFile } from "../../auth/provider-auth.js";
 import { getAuthEntry, normalizeAuthEntry } from "../auth-utils.js";
 import { buildResult, toUsageWindow } from "../formatters.js";
-import { toNumber, toTimestamp } from "../transformers.js";
+import { asObject, toNumber, toTimestamp } from "../transformers.js";
 import type { QuotaProviderResult, UsageWindow } from "../types.js";
 
 export const providerId = "minimax-coding-plan";
@@ -52,14 +52,14 @@ export const fetchQuota = async (): Promise<QuotaProviderResult> => {
     }
 
     const payload = (await response.json()) as Record<string, unknown>;
-    const baseResp = payload?.base_resp as Record<string, unknown> | undefined;
-    if (baseResp && (baseResp.status_code as number) !== 0) {
+    const baseResp = asObject(payload?.base_resp);
+    if (baseResp && toNumber(baseResp.status_code) !== 0) {
       return buildResult({
         providerId,
         providerName,
         ok: false,
         configured: true,
-        error: (baseResp.status_msg as string) || `API error: ${baseResp.status_code}`,
+        error: typeof baseResp.status_msg === "string" ? baseResp.status_msg : `API error: ${baseResp.status_code}`,
       });
     }
 

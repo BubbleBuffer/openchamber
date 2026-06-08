@@ -43,7 +43,7 @@ export function resolveGeminiCliAuth(
     return null;
   }
 
-  const oauthObject = asObject(entryObject["oauth"] as unknown) ?? entryObject;
+  const oauthObject = asObject(entryObject["oauth"]) ?? entryObject;
   const accessToken =
     asNonEmptyString(oauthObject["access"]) ??
     asNonEmptyString(oauthObject["token"]);
@@ -72,7 +72,7 @@ export function resolveAntigravityAuth(): GoogleAuthSource | null {
         typeof data?.activeIndex === "number" ? data.activeIndex : 0;
       const account = accounts[index] ?? accounts[0];
       if (account?.refreshToken) {
-        const refreshParts = parseGoogleRefreshToken(account.refreshToken as string);
+        const refreshParts = parseGoogleRefreshToken(asNonEmptyString(account["refreshToken"]));
         return {
           sourceId: "antigravity",
           sourceLabel: "Antigravity",
@@ -82,7 +82,7 @@ export function resolveAntigravityAuth(): GoogleAuthSource | null {
             asNonEmptyString(account["managedProjectId"]) ??
             refreshParts.projectId ??
             refreshParts.managedProjectId,
-          email: account["email"] as string | undefined,
+          email: asNonEmptyString(account["email"]),
         };
       }
     }

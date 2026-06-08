@@ -1,7 +1,7 @@
 import { readAuthFile } from "../../auth/provider-auth.js";
 import { getAuthEntry, normalizeAuthEntry } from "../auth-utils.js";
 import { buildResult, toUsageWindow } from "../formatters.js";
-import { toNumber, toTimestamp } from "../transformers.js";
+import { asObject, toNumber, toTimestamp } from "../transformers.js";
 import type { QuotaProviderResult, UsageWindow } from "../types.js";
 
 const NANO_GPT_DAILY_WINDOW_SECONDS = 86400;
@@ -55,7 +55,7 @@ export const fetchQuota = async (): Promise<QuotaProviderResult> => {
     const daily = payload?.daily as Record<string, unknown> | undefined;
     const monthly = payload?.monthly as Record<string, unknown> | undefined;
     const period = payload?.period as Record<string, unknown> | undefined;
-    const state = (payload?.state as string) ?? "active";
+    const state = typeof payload?.state === "string" ? payload.state : "active";
 
     if (daily) {
       let usedPercent: number | null = null;
@@ -64,7 +64,8 @@ export const fetchQuota = async (): Promise<QuotaProviderResult> => {
         usedPercent = Math.max(0, Math.min(100, percentUsed * 100));
       } else {
         const used = toNumber(daily?.used);
-        const limit = toNumber(daily?.limit ?? (daily?.limits as Record<string, unknown>)?.daily);
+        const dailyLimits = asObject(daily?.limits);
+        const limit = toNumber(daily?.limit) ?? toNumber(dailyLimits?.daily);
         if (used !== null && limit !== null && limit > 0) {
           usedPercent = Math.max(0, Math.min(100, (used / limit) * 100));
         }
@@ -86,7 +87,8 @@ export const fetchQuota = async (): Promise<QuotaProviderResult> => {
         usedPercent = Math.max(0, Math.min(100, percentUsed * 100));
       } else {
         const used = toNumber(monthly?.used);
-        const limit = toNumber(monthly?.limit ?? (monthly?.limits as Record<string, unknown>)?.monthly);
+        const monthlyLimits = asObject(monthly?.limits);
+        const limit = toNumber(monthly?.limit) ?? toNumber(monthlyLimits?.monthly);
         if (used !== null && limit !== null && limit > 0) {
           usedPercent = Math.max(0, Math.min(100, (used / limit) * 100));
         }

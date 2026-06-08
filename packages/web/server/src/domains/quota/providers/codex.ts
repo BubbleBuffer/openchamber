@@ -1,7 +1,7 @@
 import { readAuthFile } from "../../auth/provider-auth.js";
 import { getAuthEntry, normalizeAuthEntry } from "../auth-utils.js";
 import { buildResult, toUsageWindow, formatMoney } from "../formatters.js";
-import { toNumber, toTimestamp } from "../transformers.js";
+import { asNonEmptyString, asObject, toNumber, toTimestamp } from "../transformers.js";
 import type { QuotaProviderResult, UsageWindow } from "../types.js";
 
 export const providerId = "codex";
@@ -17,8 +17,8 @@ export const isConfigured = (): boolean => {
 export const fetchQuota = async (): Promise<QuotaProviderResult> => {
   const auth = readAuthFile();
   const entry = normalizeAuthEntry(getAuthEntry(auth, aliases));
-  const accessToken = (entry?.access ?? entry?.token) as string | undefined;
-  const accountId = entry?.accountId as string | undefined;
+  const accessToken = asNonEmptyString(entry?.access) ?? asNonEmptyString(entry?.token);
+  const accountId = asNonEmptyString(entry?.accountId);
 
   if (!accessToken) {
     return buildResult({
@@ -56,9 +56,10 @@ export const fetchQuota = async (): Promise<QuotaProviderResult> => {
     }
 
     const payload = (await response.json()) as Record<string, unknown>;
-    const primary = (payload?.rate_limit as Record<string, unknown>)?.primary_window as Record<string, unknown> | undefined;
-    const secondary = (payload?.rate_limit as Record<string, unknown>)?.secondary_window as Record<string, unknown> | undefined;
-    const credits = payload?.credits as Record<string, unknown> | undefined;
+    const rateLimit = asObject(payload?.rate_limit);
+    const primary = rateLimit ? asObject(rateLimit.primary_window) : null;
+    const secondary = rateLimit ? asObject(rateLimit.secondary_window) : null;
+    const credits = asObject(payload?.credits);
 
     const windows: Record<string, UsageWindow> = {};
     if (primary) {

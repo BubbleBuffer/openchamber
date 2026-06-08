@@ -1,6 +1,7 @@
 import { readAuthFile } from "../../auth/provider-auth.js";
 import { getAuthEntry, normalizeAuthEntry } from "../auth-utils.js";
 import { buildResult, toUsageWindow } from "../formatters.js";
+import { asNonEmptyString, asObject, toNumber, toTimestamp } from "../transformers.js";
 import type { QuotaProviderResult, UsageWindow } from "../types.js";
 
 export const providerId = "openai";
@@ -16,7 +17,7 @@ export const isConfigured = (): boolean => {
 export const fetchQuota = async (): Promise<QuotaProviderResult> => {
   const auth = readAuthFile();
   const entry = normalizeAuthEntry(getAuthEntry(auth, aliases));
-  const accessToken = (entry?.access ?? entry?.token) as string | undefined;
+  const accessToken = asNonEmptyString(entry?.access) ?? asNonEmptyString(entry?.token);
 
   if (!accessToken) {
     return buildResult({
@@ -48,22 +49,23 @@ export const fetchQuota = async (): Promise<QuotaProviderResult> => {
     }
 
     const payload = (await response.json()) as Record<string, unknown>;
-    const primary = (payload?.rate_limit as Record<string, unknown>)?.primary_window as Record<string, unknown> | undefined;
-    const secondary = (payload?.rate_limit as Record<string, unknown>)?.secondary_window as Record<string, unknown> | undefined;
+    const rateLimit = asObject(payload?.rate_limit);
+    const primary = rateLimit ? asObject(rateLimit.primary_window) : null;
+    const secondary = rateLimit ? asObject(rateLimit.secondary_window) : null;
 
     const windows: Record<string, UsageWindow> = {};
     if (primary) {
       windows["5h"] = toUsageWindow({
-        usedPercent: (primary.used_percent as number) ?? null,
-        windowSeconds: (primary.limit_window_seconds as number) ?? null,
-        resetAt: primary.reset_at ? (primary.reset_at as number) * 1000 : null,
+        usedPercent: toNumber(primary?.used_percent),
+        windowSeconds: toNumber(primary?.limit_window_seconds),
+        resetAt: toTimestamp(primary?.reset_at),
       });
     }
     if (secondary) {
       windows["weekly"] = toUsageWindow({
-        usedPercent: (secondary.used_percent as number) ?? null,
-        windowSeconds: (secondary.limit_window_seconds as number) ?? null,
-        resetAt: secondary.reset_at ? (secondary.reset_at as number) * 1000 : null,
+        usedPercent: toNumber(secondary?.used_percent),
+        windowSeconds: toNumber(secondary?.limit_window_seconds),
+        resetAt: toTimestamp(secondary?.reset_at),
       });
     }
 
