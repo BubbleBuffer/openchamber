@@ -94,7 +94,7 @@ export function getMcpConfig(
  */
 export function createMcpConfig(
   name: string,
-  mcpConfig: any,
+  mcpConfig: Partial<McpEntry>,
   workingDirectory: string | null,
   scope: typeof AGENT_SCOPE[keyof typeof AGENT_SCOPE]
 ): void {
@@ -137,7 +137,7 @@ export function createMcpConfig(
  */
 export function updateMcpConfig(
   name: string,
-  updates: any,
+  updates: Partial<McpEntry>,
   workingDirectory: string | null
 ): void {
   const layers = readConfigLayers(workingDirectory);
