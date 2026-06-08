@@ -4,7 +4,7 @@ import { readConfigLayers } from "../../opencode/services/index.js";
 import { getAuthEntry, normalizeAuthEntry } from "../auth-utils.js";
 import { buildResult, toUsageWindow } from "../formatters.js";
 import { normalizeTimestamp, resolveWindowSeconds, resolveWindowLabel } from "../transformers.js";
-import type { UsageWindow } from "../types.js";
+import type { QuotaProviderResult, UsageWindow } from "../types.js";
 
 export const providerId = "zhipuai-coding-plan";
 export const providerName = "ZhipuAI";
@@ -40,7 +40,7 @@ export const isConfigured = (): boolean => {
   return Boolean(getApiKey());
 };
 
-export const fetchQuota = async () => {
+export const fetchQuota = async (): Promise<QuotaProviderResult> => {
   const apiKey = getApiKey();
 
   if (!apiKey) {

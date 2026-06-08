@@ -10,7 +10,7 @@ import {
   fetchGoogleQuotaBuckets,
   fetchGoogleModels,
 } from "./api.js";
-import type { UsageWindow } from "../../types.js";
+import type { QuotaProviderResult, UsageWindow } from "../../types.js";
 
 export {
   resolveGoogleOAuthClient,
@@ -32,7 +32,7 @@ export {
   fetchGoogleModels,
 } from "./api.js";
 
-export const fetchGoogleQuota = async () => {
+export const fetchGoogleQuota = async (): Promise<QuotaProviderResult> => {
   const authSources = resolveGoogleAuthSources();
   if (!authSources.length) {
     return buildResult({

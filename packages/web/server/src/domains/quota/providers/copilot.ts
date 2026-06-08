@@ -2,7 +2,7 @@ import { readAuthFile } from "../../auth/provider-auth.js";
 import { getAuthEntry, normalizeAuthEntry } from "../auth-utils.js";
 import { buildResult, toUsageWindow } from "../formatters.js";
 import { toNumber, toTimestamp } from "../transformers.js";
-import type { UsageWindow } from "../types.js";
+import type { QuotaProviderResult, UsageWindow } from "../types.js";
 
 function buildCopilotWindows(payload: Record<string, unknown>): Record<string, UsageWindow> {
   const quota = (payload?.quota_snapshots ?? {}) as Record<string, Record<string, unknown>>;
@@ -44,7 +44,7 @@ export const isConfigured = (): boolean => {
   return Boolean(entry?.access || entry?.token);
 };
 
-export const fetchQuota = async () => {
+export const fetchQuota = async (): Promise<QuotaProviderResult> => {
   const auth = readAuthFile();
   const entry = normalizeAuthEntry(getAuthEntry(auth, aliases));
   const accessToken = (entry?.access ?? entry?.token) as string | undefined;
@@ -102,7 +102,7 @@ export const fetchQuota = async () => {
 export const providerIdAddon = "github-copilot-addon";
 export const providerNameAddon = "GitHub Copilot Add-on";
 
-export const fetchQuotaAddon = async () => {
+export const fetchQuotaAddon = async (): Promise<QuotaProviderResult> => {
   const auth = readAuthFile();
   const entry = normalizeAuthEntry(getAuthEntry(auth, aliases));
   const accessToken = (entry?.access ?? entry?.token) as string | undefined;

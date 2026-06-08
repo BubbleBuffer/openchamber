@@ -2,7 +2,7 @@ import { readAuthFile } from "../../auth/provider-auth.js";
 import { getAuthEntry, normalizeAuthEntry } from "../auth-utils.js";
 import { buildResult, toUsageWindow, formatMoney } from "../formatters.js";
 import { toNumber, toTimestamp } from "../transformers.js";
-import type { UsageWindow } from "../types.js";
+import type { QuotaProviderResult, UsageWindow } from "../types.js";
 
 export const providerId = "codex";
 export const providerName = "Codex";
@@ -14,7 +14,7 @@ export const isConfigured = (): boolean => {
   return Boolean(entry?.access || entry?.token);
 };
 
-export const fetchQuota = async () => {
+export const fetchQuota = async (): Promise<QuotaProviderResult> => {
   const auth = readAuthFile();
   const entry = normalizeAuthEntry(getAuthEntry(auth, aliases));
   const accessToken = (entry?.access ?? entry?.token) as string | undefined;

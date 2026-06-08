@@ -2,7 +2,7 @@ import { readAuthFile } from "../../auth/provider-auth.js";
 import { getAuthEntry, normalizeAuthEntry } from "../auth-utils.js";
 import { buildResult, toUsageWindow } from "../formatters.js";
 import { toNumber, toTimestamp } from "../transformers.js";
-import type { UsageWindow } from "../types.js";
+import type { QuotaProviderResult, UsageWindow } from "../types.js";
 
 export const providerId = "minimax-cn-coding-plan";
 export const providerName = "MiniMax Coding Plan (minimaxi.com)";
@@ -14,7 +14,7 @@ export const isConfigured = (): boolean => {
   return Boolean(entry?.key || entry?.token);
 };
 
-export const fetchQuota = async () => {
+export const fetchQuota = async (): Promise<QuotaProviderResult> => {
   const auth = readAuthFile();
   const entry = normalizeAuthEntry(getAuthEntry(auth, aliases));
   const apiKey = (entry?.key ?? entry?.token) as string | undefined;

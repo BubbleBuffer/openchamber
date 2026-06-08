@@ -3,7 +3,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { buildResult, toUsageWindow } from "../formatters.js";
 import { toNumber } from "../transformers.js";
-import type { UsageWindow } from "../types.js";
+import type { QuotaProviderResult, UsageWindow } from "../types.js";
 
 const COOKIE_PATH = join(homedir(), ".config", "ollama-quota", "cookie");
 
@@ -60,7 +60,7 @@ export const isConfigured = (): boolean => {
   return Boolean(cookie);
 };
 
-export const fetchQuota = async () => {
+export const fetchQuota = async (): Promise<QuotaProviderResult> => {
   const cookie = readCookieFile();
 
   if (!cookie) {
