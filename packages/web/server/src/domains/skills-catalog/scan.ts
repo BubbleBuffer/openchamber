@@ -6,7 +6,7 @@ import yaml from "yaml";
 import { assertGitAvailable, looksLikeAuthError, runGit } from "./git.js";
 import { parseSkillRepoSource } from "./source.js";
 
-import type { ScanSkillsRepositoryResult, SkillScanItem } from "./types.js";
+import type { CloneRepoOptions, CloneSuccess, CloneFailure, ScanSkillsRepositoryResult, SkillScanItem } from "./types.js";
 
 const SKILL_NAME_PATTERN = /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/;
 
@@ -51,28 +51,6 @@ async function safeRm(dir: string): Promise<void> {
   } catch {
     // ignore
   }
-}
-
-interface CloneRepoOptions {
-  cloneUrl: string;
-  identity?: { sshKey?: string };
-  tempDir: string;
-}
-
-interface CloneSuccess {
-  ok: true;
-}
-
-interface CloneFailure {
-  ok: false;
-  error: {
-    ok: false;
-    stdout: string;
-    stderr: string;
-    message: string;
-    code: number | null;
-    signal: string | null;
-  };
 }
 
 async function cloneRepo(options: CloneRepoOptions): Promise<CloneSuccess | CloneFailure> {

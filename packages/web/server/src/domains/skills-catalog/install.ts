@@ -5,7 +5,7 @@ import path from "node:path";
 import { assertGitAvailable, looksLikeAuthError, runGit } from "./git.js";
 import { parseSkillRepoSource } from "./source.js";
 
-import type { InstallSkillsFromRepositoryResult } from "./types.js";
+import type { CloneRepoOptions, CloneSuccess, CloneFailure, InstallSkillsFromRepositoryResult } from "./types.js";
 
 const SKILL_NAME_PATTERN = /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/;
 
@@ -105,28 +105,6 @@ async function copyDirectoryNoSymlinks(
   };
 
   await walk(srcDir, dstDir);
-}
-
-interface CloneRepoOptions {
-  cloneUrl: string;
-  identity?: { sshKey?: string };
-  tempDir: string;
-}
-
-interface CloneSuccess {
-  ok: true;
-}
-
-interface CloneFailure {
-  ok: false;
-  error: {
-    ok: false;
-    stdout: string;
-    stderr: string;
-    message: string;
-    code: number | null;
-    signal: string | null;
-  };
 }
 
 async function cloneRepo(
@@ -283,13 +261,6 @@ export async function installSkillsFromRepository({
   if (!parsed.ok) {
     return { ok: false, error: parsed.error };
   }
-
-  const effectiveSubpath =
-    parsed.effectiveSubpath ||
-    (typeof defaultSubpath === "string" && defaultSubpath.trim()
-      ? defaultSubpath.trim()
-      : null);
-  void effectiveSubpath;
 
   const cloneUrl = identity?.sshKey
     ? parsed.cloneUrlSsh

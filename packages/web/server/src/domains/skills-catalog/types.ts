@@ -183,3 +183,24 @@ export interface ClawdHubInstallError {
 }
 
 export type InstallSkillsFromClawdHubResult = ClawdHubInstallResult | ClawdHubInstallError;
+
+export interface CloneRepoOptions {
+  url: string;
+  targetDir: string;
+  branch?: string;
+  depth?: number;
+  subpath?: string | null;
+  repoLock?: Promise<void>;
+}
+
+export interface CloneSuccess {
+  ok: true;
+  targetDir: string;
+}
+
+export interface CloneFailure {
+  ok: false;
+  error: string;
+}
+
+export type CloneResult = CloneSuccess | CloneFailure;
