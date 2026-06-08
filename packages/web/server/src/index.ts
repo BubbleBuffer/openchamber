@@ -15,7 +15,7 @@ import crypto from "node:crypto";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import webPush from "web-push";
 
-import { createEventBus, EVENTS } from "./domains/core/index.js";
+import { createEventBus } from "./domains/core/index.js";
 import { createOpenCodeDomain } from "./domains/opencode/index.js";
 
 import { createUiAuth } from "./domains/ui-auth/index.js";
@@ -371,12 +371,12 @@ const applyOpencodeBinaryFromSettings: (...args: any[]) => any = (...args) =>
   (openCodeEnvRuntime as any).applyOpencodeBinaryFromSettings(...args);
 const resolveOpencodeCliPath: (...args: any[]) => any = (...args) =>
   (openCodeEnvRuntime as any).resolveOpencodeCliPath(...args);
-const isExecutable: (...args: any[]) => any = (...args) =>
-  (openCodeEnvRuntime as any).isExecutable(...args);
-const searchPathFor: (...args: any[]) => any = (...args) =>
-  (openCodeEnvRuntime as any).searchPathFor(...args);
-const resolveGitBinaryForSpawn: (...args: any[]) => any = (...args) =>
-  (openCodeEnvRuntime as any).resolveGitBinaryForSpawn(...args);
+const isExecutable: (filePath: string) => boolean = (filePath) =>
+  openCodeEnvRuntime.isExecutable(filePath);
+const searchPathFor: (binaryName: string) => string | null = (binaryName) =>
+  openCodeEnvRuntime.searchPathFor(binaryName);
+const resolveGitBinaryForSpawn: () => string = () =>
+  openCodeEnvRuntime.resolveGitBinaryForSpawn();
 const resolveWslExecutablePath: (...args: any[]) => any = (...args) =>
   (openCodeEnvRuntime as any).resolveWslExecutablePath(...args);
 const buildWslExecArgs: (...args: any[]) => any = (...args) =>
@@ -617,7 +617,7 @@ const ensureGlobalWatcherStarted = async (): Promise<void | null> => {
   if (globalWatcherStartPromise) return globalWatcherStartPromise;
   globalWatcherStartPromise = openCodeWatcherRuntime.start().catch((e) => {
     globalWatcherStartPromise = null;
-    throw error;
+    throw e;
   });
   return globalWatcherStartPromise;
 };
@@ -713,7 +713,7 @@ const bootstrapOpenCodeAtStartup = async (): Promise<void> => {
   if (ENV_DESKTOP_NOTIFY) {
     void ensureGlobalWatcherStarted().catch((e) => {
       console.warn(
-        `Global event watcher startup failed: ${error?.message || error}`
+        `Global event watcher startup failed: ${e instanceof Error ? e.message : String(e)}`
       );
     });
   }
