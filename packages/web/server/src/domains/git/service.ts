@@ -705,7 +705,7 @@ const ensureOpenCodeProjectId = async (primaryWorktree: any) => {
   return projectId;
 };
 
-const resolveWorktreeProjectContext = async (directory: any) => {
+const resolveWorktreeProjectContext = async (directory: string) => {
   const directoryPath = normalizeDirectoryPath(directory);
   if (!directoryPath) {
     throw new Error('Directory is required');
@@ -736,7 +736,7 @@ const resolveWorktreeProjectContext = async (directory: any) => {
   };
 };
 
-const listWorktreeEntries = async (directory: any) => {
+const listWorktreeEntries = async (directory: string) => {
   const rawResult = await runGitCommandOrThrow(
     directory,
     ['worktree', 'list', '--porcelain'],
@@ -843,7 +843,7 @@ const findBranchInUse = async (primaryWorktree: any, localBranchName: any) => {
   }) || null;
 };
 
-const runWorktreeStartCommand = async (directory: any, command: any): Promise<{ success: boolean; stdout?: string; stderr?: string; message?: string }> => {
+const runWorktreeStartCommand = async (directory: string, command: string): Promise<{ success: boolean; stdout?: string; stderr?: string; message?: string }> => {
   const text = String(command || '').trim();
   if (!text) {
     return { success: true };
@@ -979,7 +979,7 @@ const syncProjectSandboxRemove = async (projectID: any, primaryWorktree: any, sa
   });
 };
 
-const runWorktreeStartScripts = async (directory: any, projectID: any, startCommand: any) => {
+const runWorktreeStartScripts = async (directory: string, projectID: string, startCommand: string) => {
   const projectStart = await loadProjectStartCommand(projectID);
   if (projectStart) {
     const projectResult = await runWorktreeStartCommand(directory, projectStart);
@@ -2056,7 +2056,7 @@ export async function push(directory: string, options: GitPushOptions = {}): Pro
   }
 }
 
-export async function deleteRemoteBranch(directory: any, options: any = {}) {
+export async function deleteRemoteBranch(directory: string, options: { branch: string; remote?: string } = {}): Promise<boolean> {
   const { branch, remote } = options;
   if (!branch) {
     throw new Error('branch is required to delete remote branch');
@@ -2077,7 +2077,7 @@ export async function deleteRemoteBranch(directory: any, options: any = {}) {
   }
 }
 
-export async function fetch(directory: any, options: any = {}) {
+export async function fetch(directory: string, options: GitFetchOptions = {}): Promise<boolean> {
   const git = await createGit(directory);
 
   try {
@@ -2094,7 +2094,7 @@ export async function fetch(directory: any, options: any = {}) {
   }
 }
 
-export async function commit(directory: any, message: any, options: any = {}) {
+export async function commit(directory: string, message: string, options: GitCommitOptions = {}): Promise<boolean> {
   const git = await createGit(directory);
 
   try {
@@ -2162,7 +2162,7 @@ export async function commit(directory: any, message: any, options: any = {}) {
   }
 }
 
-export async function getBranches(directory: any) {
+export async function getBranches(directory: string): Promise<GitBranchResult> {
   const git = await createGit(directory);
 
   try {
@@ -2216,7 +2216,7 @@ async function filterActiveRemoteBranches(git: SimpleGit, remoteBranches: string
   }
 }
 
-export async function createBranch(directory: any, branchName: any, options: any = {}) {
+export async function createBranch(directory: string, branchName: string, options: GitCreateBranchOptions = {}): Promise<boolean> {
   const git = await createGit(directory);
 
   try {
@@ -2228,7 +2228,7 @@ export async function createBranch(directory: any, branchName: any, options: any
   }
 }
 
-export async function checkoutBranch(directory: any, branchName: any) {
+export async function checkoutBranch(directory: string, branchName: string): Promise<boolean> {
   const git = await createGit(directory);
 
   try {
@@ -2240,7 +2240,7 @@ export async function checkoutBranch(directory: any, branchName: any) {
   }
 }
 
-export async function getWorktrees(directory: any) {
+export async function getWorktrees(directory: string): Promise<GitWorktreeEntry[]> {
   const directoryPath = normalizeDirectoryPath(directory);
   if (!directoryPath || !fs.existsSync(directoryPath) || !fs.existsSync(path.join(directoryPath, '.git'))) {
     return [];
@@ -2263,7 +2263,7 @@ export async function getWorktrees(directory: any) {
   }
 }
 
-export async function validateWorktreeCreate(directory: any, input: any = {}) {
+export async function validateWorktreeCreate(directory: string, input: GitWorktreeCreateInput = {}): Promise<GitWorktreeValidateResult> {
   const mode = input?.mode === 'existing' ? 'existing' : 'new';
   const errors = [];
 
@@ -2438,7 +2438,7 @@ export async function validateWorktreeCreate(directory: any, input: any = {}) {
   }
 }
 
-export async function previewWorktreeCreate(directory: any, input: any = {}) {
+export async function previewWorktreeCreate(directory: string, input: GitWorktreeCreateInput = {}): Promise<GitWorktreePreviewResult> {
   const mode = input?.mode === 'existing' ? 'existing' : 'new';
   const context = await resolveWorktreeProjectContext(directory);
   await fsp.mkdir(context.worktreeRoot, { recursive: true });
@@ -2459,7 +2459,7 @@ export async function previewWorktreeCreate(directory: any, input: any = {}) {
   };
 }
 
-export async function createWorktree(directory: any, input: any = {}) {
+export async function createWorktree(directory: string, input: GitWorktreeCreateInput = {}): Promise<GitWorktreeCreateResult> {
   const mode = input?.mode === 'existing' ? 'existing' : 'new';
   const context = await resolveWorktreeProjectContext(directory);
   await fsp.mkdir(context.worktreeRoot, { recursive: true });
@@ -2587,7 +2587,7 @@ export async function createWorktree(directory: any, input: any = {}) {
   };
 }
 
-export async function getWorktreeBootstrapStatus(directory: any) {
+export async function getWorktreeBootstrapStatus(directory: string): Promise<GitWorktreeBootstrapState> {
   const key = toBootstrapStateKey(directory);
   if (!key) {
     throw new Error('Worktree directory is required');
@@ -2605,7 +2605,7 @@ export async function getWorktreeBootstrapStatus(directory: any) {
   };
 }
 
-export async function removeWorktree(directory: any, input: any = {}) {
+export async function removeWorktree(directory: string, input: GitWorktreeRemoveInput = {}): Promise<boolean> {
   const targetDirectory = normalizeDirectoryPath(input?.directory);
   if (!targetDirectory) {
     throw new Error('Worktree directory is required');
@@ -2679,7 +2679,7 @@ export async function removeWorktree(directory: any, input: any = {}) {
   return true;
 }
 
-export async function deleteBranch(directory: any, branch: any, options: any = {}) {
+export async function deleteBranch(directory: string, branch: string, options: GitDeleteBranchOptions = {}): Promise<boolean> {
   const git = await createGit(directory);
 
   try {
@@ -2695,7 +2695,7 @@ export async function deleteBranch(directory: any, branch: any, options: any = {
   }
 }
 
-export async function getLog(directory: any, options: any = {}) {
+export async function getLog(directory: string, options: GitLogOptions = {}): Promise<GitLogResult> {
   const git = await createGit(directory);
 
   try {
@@ -2810,7 +2810,7 @@ export async function getLog(directory: any, options: any = {}) {
   }
 }
 
-export async function isLinkedWorktree(directory: any) {
+export async function isLinkedWorktree(directory: string): Promise<boolean> {
   const git = await createGit(directory);
   try {
     const [gitDir, gitCommonDir] = await Promise.all([
@@ -2824,7 +2824,7 @@ export async function isLinkedWorktree(directory: any) {
   }
 }
 
-export async function validateWorktreeDirectory(directory: any, worktreeRoot: any) {
+export async function validateWorktreeDirectory(directory: string, worktreeRoot: string): Promise<GitWorktreeValidateDirResult> {
   const directoryPath = normalizeDirectoryPath(directory);
   const rootPath = normalizeDirectoryPath(worktreeRoot);
 
@@ -2860,7 +2860,7 @@ export async function validateWorktreeDirectory(directory: any, worktreeRoot: an
   };
 }
 
-export async function canonicalizeWorktreeState(directory: any) {
+export async function canonicalizeWorktreeState(directory: string): Promise<GitCanonicalizeStateResult> {
   const directoryPath = normalizeDirectoryPath(directory);
 
   if (!directoryPath) {
@@ -2959,7 +2959,7 @@ export async function canonicalizeWorktreeState(directory: any) {
   };
 }
 
-export async function getCommitFiles(directory: any, commitHash: any) {
+export async function getCommitFiles(directory: string, commitHash: string): Promise<GitCommitFilesResult> {
   const git = await createGit(directory);
 
   try {
@@ -3042,7 +3042,7 @@ export async function getCommitFiles(directory: any, commitHash: any) {
   }
 }
 
-export async function renameBranch(directory: any, oldName: any, newName: any) {
+export async function renameBranch(directory: string, oldName: string, newName: string): Promise<boolean> {
   const git = await createGit(directory);
 
   try {
@@ -3089,7 +3089,7 @@ export async function renameBranch(directory: any, oldName: any, newName: any) {
   }
 }
 
-export async function getRemotes(directory: any) {
+export async function getRemotes(directory: string): Promise<GitRemoteEntry[]> {
   const git = await createGit(directory);
 
   try {
@@ -3106,7 +3106,7 @@ export async function getRemotes(directory: any) {
   }
 }
 
-export async function removeRemote(directory: any, options: any = {}) {
+export async function removeRemote(directory: string, options: GitRemoveRemoteOptions = {}): Promise<boolean> {
   const remoteName = String(options.remote || '').trim();
   if (!remoteName) {
     throw new Error('remote is required to remove a remote');
@@ -3126,7 +3126,7 @@ export async function removeRemote(directory: any, options: any = {}) {
   }
 }
 
-export async function rebase(directory: any, options: any = {}) {
+export async function rebase(directory: string, options: GitRebaseOptions = {}): Promise<boolean> {
   const git = await createGit(directory);
 
   try {
@@ -3162,7 +3162,7 @@ export async function rebase(directory: any, options: any = {}) {
   }
 }
 
-export async function abortRebase(directory: any) {
+export async function abortRebase(directory: string): Promise<boolean> {
   const git = await createGit(directory);
 
   try {
@@ -3174,7 +3174,7 @@ export async function abortRebase(directory: any) {
   }
 }
 
-export async function merge(directory: any, options: any = {}) {
+export async function merge(directory: string, options: GitMergeOptions = {}): Promise<{ success: boolean; conflicts?: string[] }> {
   const git = await createGit(directory);
 
   try {
@@ -3210,7 +3210,7 @@ export async function merge(directory: any, options: any = {}) {
   }
 }
 
-export async function abortMerge(directory: any) {
+export async function abortMerge(directory: string): Promise<boolean> {
   const git = await createGit(directory);
 
   try {
@@ -3222,7 +3222,7 @@ export async function abortMerge(directory: any) {
   }
 }
 
-export async function continueRebase(directory: any) {
+export async function continueRebase(directory: string): Promise<boolean> {
   const directoryPath = normalizeDirectoryPath(directory);
   const git = await createGit(directoryPath);
 
@@ -3263,7 +3263,7 @@ export async function continueRebase(directory: any) {
   }
 }
 
-export async function continueMerge(directory: any) {
+export async function continueMerge(directory: string): Promise<boolean> {
   const directoryPath = normalizeDirectoryPath(directory);
   const git = await createGit(directoryPath);
 
@@ -3309,7 +3309,7 @@ export async function continueMerge(directory: any) {
   }
 }
 
-export async function getConflictDetails(directory: any) {
+export async function getConflictDetails(directory: string): Promise<GitConflictDetails> {
   const directoryPath = normalizeDirectoryPath(directory);
   const git = await createGit(directoryPath);
 
@@ -3373,7 +3373,7 @@ export async function getConflictDetails(directory: any) {
 
 // ============== Stash Operations ==============
 
-export async function stash(directory: any, options: any = {}) {
+export async function stash(directory: string, options: GitStashOptions = {}): Promise<{ success: boolean }> {
   const git = await createGit(directory);
 
   try {
@@ -3396,7 +3396,7 @@ export async function stash(directory: any, options: any = {}) {
   }
 }
 
-export async function stashPop(directory: any) {
+export async function stashPop(directory: string): Promise<{ success: boolean }> {
   const git = await createGit(directory);
 
   try {
