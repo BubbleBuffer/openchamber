@@ -4,7 +4,7 @@ export interface GitRoutesDeps {
   // No external dependencies - git library is loaded dynamically via import()
 }
 
-export function registerGitRoutes(app: Express, _deps: GitRoutesDeps): void {
+export function registerGitRoutes(app: Express, _deps?: GitRoutesDeps): void {
   let gitLibraries: { [key: string]: any } | null = null;
 
   const getGitLibraries = async () => {
