@@ -245,11 +245,11 @@ export function getAgentPermissionSource(
   const layers = readConfigLayers(workingDirectory);
 
   // Project opencode.json
-  const projectJsonPermission = (layers.projectConfig as any)?.agent?.[agentName]?.permission;
-  if (
-    projectJsonPermission !== undefined &&
-    layers.paths.projectPath
-  ) {
+  const projectConfig = layers.projectConfig as Record<string, unknown>;
+  const projectAgent = projectConfig?.agent as Record<string, unknown> | undefined;
+  const projectAgentEntry = projectAgent?.[agentName] as Record<string, unknown> | undefined;
+  const projectJsonPermission = projectAgentEntry?.permission;
+  if (projectJsonPermission !== undefined && layers.paths.projectPath) {
     return {
       source: "json",
       scope: AGENT_SCOPE.PROJECT,
@@ -258,7 +258,10 @@ export function getAgentPermissionSource(
   }
 
   // User opencode.json
-  const userJsonPermission = (layers.userConfig as any)?.agent?.[agentName]?.permission;
+  const userConfig = layers.userConfig as Record<string, unknown>;
+  const userAgent = userConfig?.agent as Record<string, unknown> | undefined;
+  const userAgentEntry = userAgent?.[agentName] as Record<string, unknown> | undefined;
+  const userJsonPermission = userAgentEntry?.permission;
   if (userJsonPermission !== undefined) {
     return {
       source: "json",
@@ -268,7 +271,10 @@ export function getAgentPermissionSource(
   }
 
   // Custom config (env var)
-  const customJsonPermission = (layers.customConfig as any)?.agent?.[agentName]?.permission;
+  const customConfig = layers.customConfig as Record<string, unknown>;
+  const customAgent = customConfig?.agent as Record<string, unknown> | undefined;
+  const customAgentEntry = customAgent?.[agentName] as Record<string, unknown> | undefined;
+  const customJsonPermission = customAgentEntry?.permission;
   if (customJsonPermission !== undefined && layers.paths.customPath) {
     return {
       source: "json",
@@ -294,8 +300,10 @@ function mergePermissionWithNonWildcards(
     const { frontmatter } = parseMdFile(permissionSource.path);
     existingPermission = frontmatter.permission;
   } else if (permissionSource.source === "json") {
-    const config = readConfigFile(permissionSource.path);
-    existingPermission = (config as any)?.agent?.[agentName]?.permission;
+    const config = readConfigFile(permissionSource.path) as Record<string, unknown>;
+    const agent = config?.agent as Record<string, unknown> | undefined;
+    const agentEntry = agent?.[agentName] as Record<string, unknown> | undefined;
+    existingPermission = agentEntry?.permission;
   }
 
   if (!existingPermission || typeof existingPermission === "string") {
@@ -662,14 +670,12 @@ export function updateAgent(
         );
         console.log(`Updated permission in .md file: ${permissionSource.path}`);
       } else if (permissionSource.source === "json") {
-        const existingConfig = readConfigFile(permissionSource.path!) as any;
-        if (!existingConfig?.agent) {
-          existingConfig.agent = {};
-        }
-        if (!existingConfig?.agent?.[agentName]) {
-          existingConfig.agent[agentName] = {};
-        }
-        existingConfig.agent[agentName].permission = newPermission;
+        const existingConfig = readConfigFile(permissionSource.path!) as Record<string, unknown>;
+        const agent = (existingConfig?.agent as Record<string, unknown>) || {};
+        const agentEntry = (agent[agentName] as Record<string, unknown>) || {};
+        agentEntry.permission = newPermission;
+        agent[agentName] = agentEntry;
+        existingConfig.agent = agent;
         writeConfig(existingConfig, permissionSource.path!);
         console.log(`Updated permission in JSON: ${permissionSource.path}`);
       } else {
@@ -677,22 +683,26 @@ export function updateAgent(
           mdData.frontmatter.permission = newPermission;
           mdModified = true;
         } else if (hasJsonFields) {
-          const cfg = config as any;
-          if (!cfg.agent) cfg.agent = {};
-          if (!cfg.agent[agentName]) cfg.agent[agentName] = {};
-          cfg.agent[agentName].permission = newPermission;
+          const cfg = config;
+          const cfgAgent = (cfg.agent as Record<string, unknown>) || {};
+          const cfgAgentEntry = (cfgAgent[agentName] as Record<string, unknown>) || {};
+          cfgAgentEntry.permission = newPermission;
+          cfgAgent[agentName] = cfgAgentEntry;
+          cfg.agent = cfgAgent;
           jsonModified = true;
         } else {
-          const cfg = workingDirectory
-            ? (layers.projectConfig as any) || {}
-            : (layers.userConfig as any) || {};
+          const baseConfig = workingDirectory
+            ? (layers.projectConfig as Record<string, unknown>) || {}
+            : (layers.userConfig as Record<string, unknown>) || {};
           const cfgPath = workingDirectory
             ? layers.paths.projectPath || layers.paths.userPath
             : layers.paths.userPath;
-          if (!cfg.agent) cfg.agent = {};
-          if (!cfg.agent[agentName]) cfg.agent[agentName] = {};
-          cfg.agent[agentName].permission = newPermission;
-          writeConfig(cfg, cfgPath!);
+          const baseAgent = (baseConfig?.agent as Record<string, unknown>) || {};
+          const baseAgentEntry = (baseAgent[agentName] as Record<string, unknown>) || {};
+          baseAgentEntry.permission = newPermission;
+          baseAgent[agentName] = baseAgentEntry;
+          baseConfig.agent = baseAgent;
+          writeConfig(baseConfig, cfgPath!);
           console.log(`Created permission in JSON: ${cfgPath}`);
         }
       }
@@ -840,9 +850,10 @@ export function deleteAgent(
       layers,
       workingDirectory ? AGENT_SCOPE.PROJECT : AGENT_SCOPE.USER
     );
-    const targetConfig = (jsonTarget.config as any) || {};
-    if (!targetConfig.agent) targetConfig.agent = {};
-    targetConfig.agent[agentName] = { disable: true };
+    const targetConfig = (jsonTarget.config as Record<string, unknown>) || {};
+    const targetAgent = (targetConfig?.agent as Record<string, unknown>) || {};
+    targetAgent[agentName] = { disable: true };
+    targetConfig.agent = targetAgent;
     writeConfig(targetConfig, jsonTarget.path || CONFIG_FILE);
     console.log(`Disabled built-in agent: ${agentName}`);
   }

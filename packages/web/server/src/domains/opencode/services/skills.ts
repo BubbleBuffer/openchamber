@@ -244,9 +244,10 @@ export function discoverSkills(workingDirectory: string | null): SkillItem[] {
 
   let configuredPaths: string[] = [];
   try {
-    const config = readConfig(workingDirectory) as any;
-    configuredPaths = Array.isArray(config?.skills?.paths)
-      ? (config.skills.paths as string[])
+    const config = readConfig(workingDirectory);
+    const skillsConfig = (config as Record<string, unknown>)?.skills as Record<string, unknown> | undefined;
+    configuredPaths = Array.isArray(skillsConfig?.paths)
+      ? (skillsConfig.paths as string[])
       : [];
   } catch {
     configuredPaths = [];
