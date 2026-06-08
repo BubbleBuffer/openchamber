@@ -59,8 +59,7 @@ export function registerOpenChamberRoutes(app: any, deps: OpenChamberRoutesDeps)
 
   app.post('/api/openchamber/update-install', async (_req: any, res: any) => {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { spawn: spawnChild } = require('child_process') as any;
+      const { spawn: spawnChild } = await import("node:child_process");
 
       const updateInfo = await checkForUpdates();
       if (!updateInfo.available) {
