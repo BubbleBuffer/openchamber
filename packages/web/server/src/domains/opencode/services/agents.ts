@@ -617,8 +617,6 @@ export function updateAgent(
         continue;
       } else if (isPromptFileReference(normalizedValue)) {
         if (!config.agent) config.agent = {};
-        if (!config.agent) config.agent = {};
-        if (!config.agent) config.agent = {} as Record<string, unknown>;
         if (!((config.agent as Record<string, unknown>)[agentName])) {
           (config.agent as Record<string, unknown>)[agentName] = {};
         }
@@ -633,8 +631,6 @@ export function updateAgent(
       }
 
       if (!config.agent) config.agent = {};
-      if (!config.agent) config.agent = {};
-      if (!config.agent) config.agent = {} as Record<string, unknown>;
       if (!((config.agent as Record<string, unknown>)[agentName])) {
         (config.agent as Record<string, unknown>)[agentName] = {};
       }
@@ -750,8 +746,6 @@ export function updateAgent(
 
     if (inJson) {
       if (!config.agent) config.agent = {};
-      if (!config.agent) config.agent = {};
-      if (!config.agent) config.agent = {} as Record<string, unknown>;
       if (!((config.agent as Record<string, unknown>)[agentName])) {
         (config.agent as Record<string, unknown>)[agentName] = {};
       }
@@ -773,8 +767,6 @@ export function updateAgent(
         mdModified = true;
       } else {
         if (!config.agent) config.agent = {};
-        if (!config.agent) config.agent = {};
-        if (!config.agent) config.agent = {} as Record<string, unknown>;
         if (!((config.agent as Record<string, unknown>)[agentName])) {
           (config.agent as Record<string, unknown>)[agentName] = {};
         }

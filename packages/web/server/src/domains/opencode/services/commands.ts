@@ -319,8 +319,6 @@ export function updateCommand(
         continue;
       } else if (isPromptFileReference(normalizedValue)) {
         if (!config.command) config.command = {};
-        if (!config.command) config.command = {};
-        if (!config.command) config.command = {} as Record<string, unknown>;
         if (!((config.command as Record<string, unknown>)[commandName])) {
           (config.command as Record<string, unknown>)[commandName] = {};
         }
@@ -335,8 +333,6 @@ export function updateCommand(
       }
 
       if (!config.command) config.command = {};
-      if (!config.command) config.command = {};
-      if (!config.command) config.command = {} as Record<string, unknown>;
       if (!((config.command as Record<string, unknown>)[commandName])) {
         (config.command as Record<string, unknown>)[commandName] = {};
       }
@@ -355,9 +351,6 @@ export function updateCommand(
 
     if (inJson) {
       if (!config.command) config.command = {};
-      if (!config.command) config.command = {};
-      if (!config.command) config.command = {} as Record<string, unknown>;
-      if (!((config.command as Record<string, unknown>)[commandName])) {
         (config.command as Record<string, unknown>)[commandName] = {};
       }
       (
@@ -378,8 +371,6 @@ export function updateCommand(
         mdModified = true;
       } else {
         if (!config.command) config.command = {};
-        if (!config.command) config.command = {};
-        if (!config.command) config.command = {} as Record<string, unknown>;
         if (!((config.command as Record<string, unknown>)[commandName])) {
           (config.command as Record<string, unknown>)[commandName] = {};
         }
