@@ -617,20 +617,27 @@ const normalizeUpstreamTarget = (remote: any, branch: any) => {
   };
 };
 
-const parseGitErrorText = (error: any) => {
-  const stderr = typeof error?.stderr === 'string' ? error.stderr : '';
-  const stdout = typeof error?.stdout === 'string' ? error.stdout : '';
-  const message = typeof error?.message === 'string' ? error.message : '';
-  return [stderr, stdout, message]
-    .map((chunk: any) => String(chunk || '').trim())
-    .filter(Boolean)
-    .join('\n')
-    .trim();
+const parseGitErrorText = (error: unknown): { message: string; stderr: string; stdout: string; code: string | null } => {
+  const e = error as { stderr?: unknown; stdout?: unknown; message?: unknown; code?: unknown } | null | undefined;
+  const stderr = typeof e?.stderr === 'string' ? e.stderr : '';
+  const stdout = typeof e?.stdout === 'string' ? e.stdout : '';
+  const message = typeof e?.message === 'string' ? e.message : '';
+  const code = typeof e?.code === 'string' || typeof e?.code === 'number' ? String(e.code) : null;
+  return {
+    message: [stderr, stdout, message]
+      .map((chunk) => String(chunk || '').trim())
+      .filter(Boolean)
+      .join('\n')
+      .trim(),
+    stderr,
+    stdout,
+    code,
+  };
 };
 
-const isNotGitRepositoryError = (error: any) => {
-  const text = parseGitErrorText(error);
-  return /not a git repository/i.test(text);
+const isNotGitRepositoryError = (error: unknown) => {
+  const err = parseGitErrorText(error);
+  return /not a git repository/i.test(err.message);
 };
 
 const runGitCommand = async (cwd: any, args: any) => {
@@ -647,13 +654,14 @@ const runGitCommand = async (cwd: any, args: any) => {
       stdout: String(stdout || ''),
       stderr: String(stderr || ''),
     };
-  } catch (error: any) {
+  } catch (e) {
+    const err = parseGitErrorText(e);
     return {
       success: false,
-      exitCode: typeof error?.code === 'number' ? error.code : 1,
-      stdout: String(error?.stdout || ''),
-      stderr: String(error?.stderr || ''),
-      message: parseGitErrorText(error),
+      exitCode: err.code ? parseInt(err.code, 10) : 1,
+      stdout: err.stdout,
+      stderr: err.stderr,
+      message: err.message,
     };
   }
 };
@@ -847,11 +855,11 @@ const runWorktreeStartCommand = async (directory: any, command: any): Promise<{ 
       env: await buildGitEnv(),
       windowsHide: true,
       maxBuffer: 20 * 1024 * 1024,
-    }).then(({ stdout, stderr }) => ({ success: true, stdout, stderr })).catch((error: any) => ({
+    }).then(({ stdout, stderr }) => ({ success: true, stdout, stderr })).catch((e) => ({
       success: false,
-      stdout: error?.stdout,
-      stderr: error?.stderr,
-      message: parseGitErrorText(error),
+      stdout: err.stdout,
+      stderr: err.stderr,
+      message: parseGitErrorText(e).message,
     }));
     return result;
   }
@@ -860,11 +868,11 @@ const runWorktreeStartCommand = async (directory: any, command: any): Promise<{ 
     cwd: directory,
     env: await buildGitEnv(),
     maxBuffer: 20 * 1024 * 1024,
-  }).then(({ stdout, stderr }) => ({ success: true, stdout, stderr })).catch((error: any) => ({
+  }).then(({ stdout, stderr }) => ({ success: true, stdout, stderr })).catch((e) => ({
     success: false,
-    stdout: error?.stdout,
-    stderr: error?.stderr,
-    message: parseGitErrorText(error),
+    stdout: err.stdout,
+    stderr: err.stderr,
+    message: parseGitErrorText(e).message,
   }));
   return result;
 };
@@ -900,7 +908,7 @@ const syncSandboxesToOpenCodeDb = (projectID: any, sandboxes: any) => {
     } finally {
       db.close();
     }
-  } catch (error: any) {
+  } catch (e) {
     console.warn('Failed to sync sandboxes to OpenCode DB:', error instanceof Error ? error.message : String(error));
   }
 };
@@ -1175,8 +1183,8 @@ export async function getGlobalIdentity() {
       userEmail: userEmail?.value || null,
       sshCommand: sshCommand?.value || null
     };
-  } catch (error: any) {
-    console.error('Failed to get global Git identity:', error);
+  } catch (e) {
+    console.error('Failed to get global Git identity:', e);
     return {
       userName: null,
       userEmail: null,
@@ -1218,8 +1226,8 @@ export async function getCurrentIdentity(directory: any) {
       userEmail: userEmail?.value || null,
       sshCommand: sshCommand?.value || null
     };
-  } catch (error: any) {
-    console.error('Failed to get current Git identity:', error);
+  } catch (e) {
+    console.error('Failed to get current Git identity:', e);
     return {
       userName: null,
       userEmail: null,
@@ -1269,9 +1277,9 @@ export async function setLocalIdentity(directory: any, profile: any) {
     }
 
     return true;
-  } catch (error: any) {
-    console.error('Failed to set Git identity:', error);
-    throw error;
+  } catch (e) {
+    console.error('Failed to set Git identity:', e);
+    throw e;
   }
 }
 
@@ -1378,7 +1386,7 @@ export async function getStatus(directory: any, options: any = {}) {
             insertions: lineCount,
             deletions: 0,
           };
-        } catch (error: any) {
+        } catch (e) {
           console.warn('Failed to estimate diff stats for new file', file.path, error);
           return null;
         }
@@ -1508,7 +1516,7 @@ export async function getStatus(directory: any, options: any = {}) {
       mergeInProgress,
       rebaseInProgress,
     };
-  } catch (error: any) {
+  } catch (e) {
     if (!isNotGitRepositoryError(error)) {
       console.error('Failed to get Git status:', error);
     }
@@ -1555,17 +1563,18 @@ export async function getDiff(directory: any, { path, staged = false, contextLin
       try {
         const noIndexDiff = await git.raw(noIndexArgs);
         return noIndexDiff;
-      } catch (noIndexError: any) {
+      } catch (e) {
+        const noIndexErr = e as { exitCode?: unknown; message?: string };
         // git diff --no-index returns exit code 1 when differences exist (not a real error)
-        if (noIndexError.exitCode === 1 && noIndexError.message) {
-          return noIndexError.message;
+        if (noIndexErr.exitCode === 1 && noIndexErr.message) {
+          return noIndexErr.message;
         }
-        throw noIndexError;
+        throw e;
       }
     }
-  } catch (error: any) {
-    console.error('Failed to get Git diff:', error);
-    throw error;
+  } catch (e) {
+    console.error('Failed to get Git diff:', e);
+    throw e;
   }
 }
 
@@ -1805,7 +1814,7 @@ export async function getFileDiff(directory: any, { path: filePath, staged = fal
         modified = await fsp.readFile(fullPath, 'utf8');
       }
     }
-  } catch (error: any) {
+  } catch (e) {
     if (error && typeof error === 'object' && error.code === 'ENOENT') {
       modified = '';
     } else {
@@ -1845,25 +1854,26 @@ export async function revertFile(directory: any, filePath: any) {
       try {
         await fsp.rm(absoluteTarget, { recursive: true, force: true });
         return;
-      } catch (fsError: any) {
-        if (fsError && typeof fsError === 'object' && fsError.code === 'ENOENT') {
+      } catch (e) {
+        const fsErr = e as { code?: string };
+        if (fsErr && fsErr.code === 'ENOENT') {
           return;
         }
-        console.error('Failed to remove untracked file during revert:', fsError);
-        throw fsError;
+        console.error('Failed to remove untracked file during revert:', e);
+        throw e;
       }
     }
   }
 
   try {
     await git.raw(['restore', '--staged', filePath]);
-  } catch (error: any) {
+  } catch (e) {
     await git.raw(['reset', 'HEAD', '--', filePath]).catch(() => {});
   }
 
   try {
     await git.raw(['restore', filePath]);
-  } catch (error: any) {
+  } catch (e) {
     try {
       await git.raw(['checkout', '--', filePath]);
     } catch (fallbackError) {
@@ -1881,8 +1891,8 @@ export async function collectDiffs(directory: any, files: any = []) {
       if (diff && diff.trim().length > 0) {
         results.push({ path: filePath, diff });
       }
-    } catch (error: any) {
-      console.error(`Failed to diff ${filePath}:`, error);
+    } catch (e) {
+      console.error('Failed to diff ' + filePath + ':', e);
     }
   }
   return results;
@@ -1905,9 +1915,9 @@ export async function pull(directory: any, options: any = {}) {
       insertions: result.insertions,
       deletions: result.deletions
     };
-  } catch (error: any) {
-    console.error('Failed to pull:', error);
-    throw error;
+  } catch (e) {
+    console.error('Failed to pull:', e);
+    throw e;
   }
 }
 
@@ -1919,9 +1929,9 @@ export async function push(directory: any, options: any = {}) {
       ? [error.git.message, error.git.stderr, error.git.stdout]
       : [];
     const candidates = [
-      error?.message,
-      error?.stderr,
-      error?.stdout,
+      err.message,
+      err.stderr,
+      err.stdout,
       ...fromNestedGit,
     ]
       .map((value: any) => String(value || '').trim())
@@ -1943,7 +1953,7 @@ export async function push(directory: any, options: any = {}) {
   };
 
   const looksLikeMissingUpstream = (error: any) => {
-    const message = String(error?.message || error?.stderr || '').toLowerCase();
+    const message = String(err.message || err.stderr || '').toLowerCase();
     return (
       message.includes('has no upstream') ||
       message.includes('no upstream') ||
@@ -1973,9 +1983,9 @@ export async function push(directory: any, options: any = {}) {
         repo: directory,
         ref: null,
       };
-    } catch (error: any) {
-      if (!looksLikeMissingUpstream(error)) {
-        const message = describePushError(error);
+    } catch (e) {
+      if (!looksLikeMissingUpstream(e)) {
+        const message = describePushError(e);
         console.error('Failed to push:', error);
         throw new Error(message);
       }
@@ -1986,7 +1996,7 @@ export async function push(directory: any, options: any = {}) {
         const remotes = await git.getRemotes(true);
         const fallbackRemote = remotes.find((entry: any) => entry.name === 'origin')?.name || remotes[0]?.name;
         if (!branch || !fallbackRemote) {
-          const message = describePushError(error);
+          const message = describePushError(e);
           throw new Error(message);
         }
 
@@ -2011,7 +2021,7 @@ export async function push(directory: any, options: any = {}) {
         const result = await git.push(remoteName, status.current, buildUpstreamOptions(options.options));
         return normalizePushResult(result);
       }
-    } catch (error: any) {
+    } catch (e) {
       // If we can't read status, fall back to the regular push path below.
       console.warn('Failed to read git status before push:', error);
     }
@@ -2020,10 +2030,10 @@ export async function push(directory: any, options: any = {}) {
   try {
     const result = await git.push(remoteName, options.branch, options.options || {});
     return normalizePushResult(result);
-  } catch (error: any) {
+  } catch (e) {
     // Last-resort fallback: retry with upstream if the error suggests it's missing.
-    if (!looksLikeMissingUpstream(error)) {
-      const message = describePushError(error);
+    if (!looksLikeMissingUpstream(e)) {
+      const message = describePushError(e);
       console.error('Failed to push:', error);
       throw new Error(message);
     }
@@ -2061,7 +2071,7 @@ export async function deleteRemoteBranch(directory: any, options: any = {}) {
   try {
     await git.push(remoteName, `:${targetBranch}`);
     return { success: true };
-  } catch (error: any) {
+  } catch (e) {
     console.error('Failed to delete remote branch:', error);
     throw error;
   }
@@ -2078,7 +2088,7 @@ export async function fetch(directory: any, options: any = {}) {
     );
 
     return { success: true };
-  } catch (error: any) {
+  } catch (e) {
     console.error('Failed to fetch:', error);
     throw error;
   }
@@ -2129,11 +2139,11 @@ export async function commit(directory: any, message: any, options: any = {}) {
     let result;
     try {
       result = await git.commit(message, commitArgs);
-    } catch (error: any) {
-      const gitErrorText = parseGitErrorText(error);
-      const isPathspecError = gitErrorText.includes('pathspec') && gitErrorText.includes('did not match any files');
+    } catch (e) {
+      const gitErrorText = parseGitErrorText(e);
+      const isPathspecError = gitErrorText.message.includes('pathspec') && gitErrorText.message.includes('did not match any files');
       if (!isPathspecError || !commitArgs || commitArgs.length === 0) {
-        throw error;
+        throw e;
       }
 
       // Fallback for deleted/stale selections: commit currently staged changes.
@@ -2146,7 +2156,7 @@ export async function commit(directory: any, message: any, options: any = {}) {
       branch: result.branch,
       summary: result.summary
     };
-  } catch (error: any) {
+  } catch (e) {
     console.error('Failed to commit:', error);
     throw error;
   }
@@ -2172,7 +2182,7 @@ export async function getBranches(directory: any) {
       current: result.current,
       branches: result.branches
     };
-  } catch (error: any) {
+  } catch (e) {
     console.error('Failed to get branches:', error);
     throw error;
   }
@@ -2200,7 +2210,7 @@ async function filterActiveRemoteBranches(git: SimpleGit, remoteBranches: string
       const branchName = match[1];
       return actualRemoteBranches.has(branchName);
     });
-  } catch (error: any) {
+  } catch (e) {
     console.warn('Failed to filter active remote branches, returning all:', error.message);
     return remoteBranches;
   }
@@ -2212,7 +2222,7 @@ export async function createBranch(directory: any, branchName: any, options: any
   try {
     await git.checkoutBranch(branchName, options.startPoint || 'HEAD');
     return { success: true, branch: branchName };
-  } catch (error: any) {
+  } catch (e) {
     console.error('Failed to create branch:', error);
     throw error;
   }
@@ -2224,7 +2234,7 @@ export async function checkoutBranch(directory: any, branchName: any) {
   try {
     await git.checkout(branchName);
     return { success: true, branch: branchName };
-  } catch (error: any) {
+  } catch (e) {
     console.error('Failed to checkout branch:', error);
     throw error;
   }
@@ -2247,8 +2257,8 @@ export async function getWorktrees(directory: any) {
       branch: entry.branch || '',
       path: entry.worktree,
     }));
-  } catch (error: any) {
-    console.warn('Failed to list worktrees, returning empty list:', error?.message || error);
+  } catch (e) {
+    console.warn('Failed to list worktrees, returning empty list:', err.message || error);
     return [];
   }
 }
@@ -2297,7 +2307,7 @@ export async function validateWorktreeCreate(directory: any, input: any = {}) {
             };
           }
         }
-      } catch (error: any) {
+      } catch (e) {
         errors.push({
           code: 'branch_not_found',
           message: error instanceof Error ? error.message : 'Existing branch not found',
@@ -2417,7 +2427,7 @@ export async function validateWorktreeCreate(directory: any, input: any = {}) {
         localBranch: localBranch || null,
       },
     };
-  } catch (error: any) {
+  } catch (e) {
     return {
       ok: false,
       errors: [{
@@ -2543,7 +2553,7 @@ export async function createWorktree(directory: any, input: any = {}) {
 
   try {
     await syncProjectSandboxAdd(context.projectID, context.primaryWorktree, candidate.directory);
-  } catch (error: any) {
+  } catch (e) {
     console.warn('Failed to sync OpenCode sandbox metadata (add):', error instanceof Error ? error.message : String(error));
   }
 
@@ -2632,7 +2642,7 @@ export async function removeWorktree(directory: any, input: any = {}) {
 
     try {
       await syncProjectSandboxRemove(context.projectID, context.primaryWorktree, targetDirectory);
-    } catch (error: any) {
+    } catch (e) {
       console.warn('Failed to sync OpenCode sandbox metadata (remove):', error instanceof Error ? error.message : String(error));
     }
 
@@ -2660,7 +2670,7 @@ export async function removeWorktree(directory: any, input: any = {}) {
 
   try {
     await syncProjectSandboxRemove(context.projectID, context.primaryWorktree, matchedEntry.worktree);
-  } catch (error: any) {
+  } catch (e) {
     console.warn('Failed to sync OpenCode sandbox metadata (remove):', error instanceof Error ? error.message : String(error));
   }
 
@@ -2679,7 +2689,7 @@ export async function deleteBranch(directory: any, branch: any, options: any = {
     const args = ['branch', options.force ? '-D' : '-d', branchName];
     await git.raw(args);
     return { success: true };
-  } catch (error: any) {
+  } catch (e) {
     console.error('Failed to delete branch:', error);
     throw error;
   }
@@ -2794,7 +2804,7 @@ export async function getLog(directory: any, options: any = {}) {
       latest: merged[0] || null,
       total: baseLog.total
     };
-  } catch (error: any) {
+  } catch (e) {
     console.error('Failed to get log:', error);
     throw error;
   }
@@ -2808,7 +2818,7 @@ export async function isLinkedWorktree(directory: any) {
       git.raw(['rev-parse', '--git-common-dir']).then((output: any) => output.trim())
     ]);
     return gitDir !== gitCommonDir;
-  } catch (error: any) {
+  } catch (e) {
     console.error('Failed to determine worktree type:', error);
     return false;
   }
@@ -3026,7 +3036,7 @@ export async function getCommitFiles(directory: any, commitHash: any) {
     }
 
     return { files };
-  } catch (error: any) {
+  } catch (e) {
     console.error('Failed to get commit files:', error);
     throw error;
   }
@@ -3073,7 +3083,7 @@ export async function renameBranch(directory: any, oldName: any, newName: any) {
     }
 
     return { success: true, branch: newName };
-  } catch (error: any) {
+  } catch (e) {
     console.error('Failed to rename branch:', error);
     throw error;
   }
@@ -3090,7 +3100,7 @@ export async function getRemotes(directory: any) {
       fetchUrl: remote.refs.fetch,
       pushUrl: remote.refs.push
     }));
-  } catch (error: any) {
+  } catch (e) {
     console.error('Failed to get remotes:', error);
     throw error;
   }
@@ -3110,7 +3120,7 @@ export async function removeRemote(directory: any, options: any = {}) {
   try {
     await git.removeRemote(remoteName);
     return { success: true };
-  } catch (error: any) {
+  } catch (e) {
     console.error('Failed to remove remote:', error);
     throw error;
   }
@@ -3131,8 +3141,8 @@ export async function rebase(directory: any, options: any = {}) {
       success: true,
       conflict: false
     };
-  } catch (error: any) {
-    const errorMessage = String(error?.message || error || '').toLowerCase();
+  } catch (e) {
+    const errorMessage = String(err.message || error || '').toLowerCase();
     const isConflict = errorMessage.includes('conflict') || 
                        errorMessage.includes('could not apply') ||
                        errorMessage.includes('merge conflict');
@@ -3158,7 +3168,7 @@ export async function abortRebase(directory: any) {
   try {
     await git.rebase(['--abort']);
     return { success: true };
-  } catch (error: any) {
+  } catch (e) {
     console.error('Failed to abort rebase:', error);
     throw error;
   }
@@ -3179,8 +3189,8 @@ export async function merge(directory: any, options: any = {}) {
       success: true,
       conflict: false
     };
-  } catch (error: any) {
-    const errorMessage = String(error?.message || error || '').toLowerCase();
+  } catch (e) {
+    const errorMessage = String(err.message || error || '').toLowerCase();
     const isConflict = errorMessage.includes('conflict') || 
                        errorMessage.includes('merge conflict') ||
                        errorMessage.includes('automatic merge failed');
@@ -3206,7 +3216,7 @@ export async function abortMerge(directory: any) {
   try {
     await git.merge(['--abort']);
     return { success: true };
-  } catch (error: any) {
+  } catch (e) {
     console.error('Failed to abort merge:', error);
     throw error;
   }
@@ -3220,8 +3230,8 @@ export async function continueRebase(directory: any) {
     // Set GIT_EDITOR to prevent editor prompts
     await git.env('GIT_EDITOR', 'true').rebase(['--continue']);
     return { success: true, conflict: false };
-  } catch (error: any) {
-    const errorMessage = String(error?.message || error || '').toLowerCase();
+  } catch (e) {
+    const errorMessage = String(err.message || error || '').toLowerCase();
     const isConflict = errorMessage.includes('conflict') || 
                        errorMessage.includes('needs merge') ||
                        errorMessage.includes('unmerged') ||
@@ -3272,8 +3282,8 @@ export async function continueMerge(directory: any) {
     // Use --no-edit to use the default merge commit message
     await git.env('GIT_EDITOR', 'true').commit([], { '--no-edit': null });
     return { success: true, conflict: false };
-  } catch (error: any) {
-    const errorMessage = String(error?.message || error || '').toLowerCase();
+  } catch (e) {
+    const errorMessage = String(err.message || error || '').toLowerCase();
     const isConflict = errorMessage.includes('conflict') || 
                        errorMessage.includes('needs merge') ||
                        errorMessage.includes('unmerged') ||
@@ -3355,7 +3365,7 @@ export async function getConflictDetails(directory: any) {
       headInfo: headInfo.trim(),
       operation,
     };
-  } catch (error: any) {
+  } catch (e) {
     console.error('Failed to get conflict details:', error);
     throw error;
   }
@@ -3380,7 +3390,7 @@ export async function stash(directory: any, options: any = {}) {
 
     await git.raw(args);
     return { success: true };
-  } catch (error: any) {
+  } catch (e) {
     console.error('Failed to stash:', error);
     throw error;
   }
@@ -3392,7 +3402,7 @@ export async function stashPop(directory: any) {
   try {
     await git.raw(['stash', 'pop']);
     return { success: true };
-  } catch (error: any) {
+  } catch (e) {
     console.error('Failed to pop stash:', error);
     throw error;
   }
