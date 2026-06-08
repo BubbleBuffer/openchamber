@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { Application } from "express";
 import type { FeatureRoutesDeps } from "./types.js";
 import type { QuotaProviderRegistry } from "../quota/types.js";
 import { registerQuotaRoutes } from "../quota/routes.js";
@@ -46,7 +46,7 @@ export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps): any {
     return quotaProviders;
   };
 
-  const registerRoutes = async (app: any, routeDependencies: any): Promise<void> => {
+  const registerRoutes = async (app: Application, routeDependencies: any): Promise<void> => {
     const {
       crypto,
       fs,

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { Application, Request, Response } from "express";
 import type { StaticRoutesDeps } from "./types.js";
 import { registerPwaManifestRoute } from "./pwa-manifest.js";
 
@@ -24,13 +24,13 @@ export function createStaticRoutesRuntime(deps: StaticRoutesDeps): any {
     return path.join(__dirname, '..', 'dist');
   };
 
-  const registerStaticRoutes = (app: any): void => {
+  const registerStaticRoutes = (app: Application): void => {
     const distPath = resolveDistPath();
 
     if (fs.existsSync(distPath)) {
       console.log(`Serving static files from ${distPath}`);
       app.use(express.static(distPath, {
-        setHeaders(res: any, filePath: string) {
+        setHeaders(res: Response, filePath: string) {
           // Service workers should never be long-cached; iOS is especially sensitive.
           if (typeof filePath === 'string' && filePath.endsWith(`${path.sep}sw.js`)) {
             res.setHeader('Cache-Control', 'no-store');
@@ -47,14 +47,14 @@ export function createStaticRoutesRuntime(deps: StaticRoutesDeps): any {
         normalizePwaOrientation,
       });
 
-      app.get(/^(?!\/api|.*\.(js|css|svg|png|jpg|jpeg|gif|ico|woff|woff2|ttf|eot|map)).*$/, (_req: any, res: any) => {
+      app.get(/^(?!\/api|.*\.(js|css|svg|png|jpg|jpeg|gif|ico|woff|woff2|ttf|eot|map)).*$/, (_req: Request, res: Response) => {
         res.sendFile(path.join(distPath, 'index.html'));
       });
       return;
     }
 
     console.warn(`Warning: ${distPath} not found, static files will not be served`);
-    app.get(/^(?!\/api|.*\.(js|css|svg|png|jpg|jpeg|gif|ico|woff|woff2|ttf|eot|map)).*$/, (_req: any, res: any) => {
+    app.get(/^(?!\/api|.*\.(js|css|svg|png|jpg|jpeg|gif|ico|woff|woff2|ttf|eot|map)).*$/, (_req: Request, res: Response) => {
       res.status(404).send('Static files not found. Please build the application first.');
     });
   };

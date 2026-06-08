@@ -1,7 +1,8 @@
+import type { Application, Request, Response } from "express";
 import type { OpenChamberRoutesDeps } from "./types.js";
 import { checkForUpdates, getUpdateCommand, detectPackageManagerDetails } from "../package-manager/index.js";
 
-export function registerOpenChamberRoutes(app: any, deps: OpenChamberRoutesDeps): void {
+export function registerOpenChamberRoutes(app: Application, deps: OpenChamberRoutesDeps): void {
   const {
     fs,
     os,
@@ -20,7 +21,7 @@ export function registerOpenChamberRoutes(app: any, deps: OpenChamberRoutesDeps)
   let cachedModelsMetadata: unknown | null = null;
   let cachedModelsMetadataTimestamp = 0;
 
-  app.get('/api/openchamber/update-check', async (req: any, res: any) => {
+  app.get('/api/openchamber/update-check', async (req: Request, res: Response) => {
     try {
       const parseString = (value: unknown): string | undefined => (typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined);
       const parseReportUsage = (value: unknown): boolean => {
@@ -57,7 +58,7 @@ export function registerOpenChamberRoutes(app: any, deps: OpenChamberRoutesDeps)
     }
   });
 
-  app.post('/api/openchamber/update-install', async (_req: any, res: any) => {
+  app.post('/api/openchamber/update-install', async (_req: Request, res: Response) => {
     try {
       const { spawn: spawnChild } = await import("node:child_process");
 
@@ -244,7 +245,7 @@ export function registerOpenChamberRoutes(app: any, deps: OpenChamberRoutesDeps)
     }
   });
 
-  app.get('/api/openchamber/models-metadata', async (_req: any, res: any) => {
+  app.get('/api/openchamber/models-metadata', async (_req: Request, res: Response) => {
     const now = Date.now();
 
     if (cachedModelsMetadata && now - cachedModelsMetadataTimestamp < modelsMetadataCacheTtl) {
@@ -290,7 +291,7 @@ export function registerOpenChamberRoutes(app: any, deps: OpenChamberRoutesDeps)
     }
   });
 
-  app.get('/api/zen/models', async (_req: any, res: any) => {
+  app.get('/api/zen/models', async (_req: Request, res: Response) => {
     try {
       const models = await fetchFreeZenModels();
       res.setHeader('Cache-Control', 'public, max-age=300');

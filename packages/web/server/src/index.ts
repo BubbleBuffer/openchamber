@@ -3,6 +3,7 @@ import "./instrument.mjs";
 import "reflect-metadata";
 import * as Sentry from "@sentry/node";
 import express from "express";
+import type { Response } from "express";
 import compression from "compression";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
@@ -66,9 +67,9 @@ const __dirname = path.dirname(path.dirname(__filename));
 
 const DEFAULT_PORT = 3000;
 const DESKTOP_NOTIFY_PREFIX = "[OpenChamberDesktopNotify] ";
-const uiNotificationClients: Set<any> = new Set();
-const uiNotificationWsClients: Set<any> = new Set();
-const uiOpenChamberEventClients: Set<any> = new Set();
+const uiNotificationClients: Set<Response> = new Set();
+const uiNotificationWsClients: Set<Response> = new Set();
+const uiOpenChamberEventClients: Set<Response> = new Set();
 const HEALTH_CHECK_INTERVAL = 15000;
 const SHUTDOWN_TIMEOUT = 10000;
 const MODELS_DEV_API_URL = "https://models.dev/api.json";
@@ -614,7 +615,7 @@ const openCodeWatcherRuntime = (createOpenCodeWatcherRuntime as any)({
 
 const ensureGlobalWatcherStarted = async (): Promise<void | null> => {
   if (globalWatcherStartPromise) return globalWatcherStartPromise;
-  globalWatcherStartPromise = openCodeWatcherRuntime.start().catch((error: any) => {
+  globalWatcherStartPromise = openCodeWatcherRuntime.start().catch((e) => {
     globalWatcherStartPromise = null;
     throw error;
   });
@@ -710,7 +711,7 @@ const bootstrapOpenCodeAtStartup = async (): Promise<void> => {
     openCodeRuntime.startHealthMonitoring(HEALTH_CHECK_INTERVAL);
   }
   if (ENV_DESKTOP_NOTIFY) {
-    void ensureGlobalWatcherStarted().catch((error: any) => {
+    void ensureGlobalWatcherStarted().catch((e) => {
       console.warn(
         `Global event watcher startup failed: ${error?.message || error}`
       );
@@ -998,10 +999,10 @@ async function main(options: any = {}): Promise<any> {
 
   try {
     await scheduledTasksRuntime.start();
-  } catch (error: any) {
+  } catch (e) {
     console.warn(
       "[ScheduledTasks] Failed to start runtime:",
-      error?.message || error
+      e instanceof Error ? e.message : String(e)
     );
   }
 
