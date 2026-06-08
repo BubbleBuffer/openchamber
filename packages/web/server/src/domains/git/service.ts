@@ -77,7 +77,7 @@ const WORKTREE_BOOTSTRAP_PENDING = 'pending';
 const WORKTREE_BOOTSTRAP_READY = 'ready';
 const WORKTREE_BOOTSTRAP_FAILED = 'failed';
 
-const toBootstrapStateKey = (directory: any) => {
+const toBootstrapStateKey = (directory: string): string => {
   const normalized = normalizeDirectoryPath(directory);
   if (!normalized) {
     return '';
@@ -85,7 +85,7 @@ const toBootstrapStateKey = (directory: any) => {
   return path.resolve(normalized);
 };
 
-const setWorktreeBootstrapState = (directory: any, status: any, error: any = null) => {
+const setWorktreeBootstrapState = (directory: string, status: string, error: string | null = null): void => {
   const key = toBootstrapStateKey(directory);
   if (!key) {
     return;
@@ -97,7 +97,7 @@ const setWorktreeBootstrapState = (directory: any, status: any, error: any = nul
   });
 };
 
-const clearWorktreeBootstrapState = (directory: any) => {
+const clearWorktreeBootstrapState = (directory: string): void => {
   const key = toBootstrapStateKey(directory);
   if (!key) {
     return;
@@ -105,7 +105,7 @@ const clearWorktreeBootstrapState = (directory: any) => {
   worktreeBootstrapState.delete(key);
 };
 
-const isExecutableFile = (candidate: any) => {
+const isExecutableFile = (candidate: string): boolean => {
   if (typeof candidate !== 'string' || candidate.trim().length === 0) {
     return false;
   }
@@ -125,7 +125,7 @@ const isExecutableFile = (candidate: any) => {
   }
 };
 
-const normalizeGitExecutableCandidate = (candidate: any) => {
+const normalizeGitExecutableCandidate = (candidate: string): string | null => {
   if (typeof candidate !== 'string') {
     return null;
   }
@@ -145,7 +145,7 @@ const normalizeGitExecutableCandidate = (candidate: any) => {
   return trimmed;
 };
 
-const listPathExecutableCandidates = (binaryName: any) => {
+const listPathExecutableCandidates = (binaryName: string): string[] => {
   const currentPath = process.env.PATH || '';
   const seen = new Set();
   const matches = [];
@@ -160,7 +160,7 @@ const listPathExecutableCandidates = (binaryName: any) => {
   return matches;
 };
 
-const listWindowsGitInstallCandidates = () => {
+const listWindowsGitInstallCandidates = (): string[] => {
   const roots = [
     process.env.ProgramFiles,
     process.env['ProgramFiles(x86)'],
@@ -218,7 +218,7 @@ const getGitBinary = () => resolveGitBinary();
  * Escape an SSH key path for use in core.sshCommand.
  * Handles Windows/Unix differences and prevents command injection.
  */
-function escapeSshKeyPath(sshKeyPath: any) {
+function escapeSshKeyPath(sshKeyPath: string): string {
   const isWindows = process.platform === 'win32';
   
   // Normalize path first on Windows (convert backslashes to forward slashes)
@@ -257,12 +257,12 @@ function escapeSshKeyPath(sshKeyPath: any) {
 /**
  * Build the SSH command string for git config
  */
-function buildSshCommand(sshKeyPath: any) {
+function buildSshCommand(sshKeyPath: string): string {
   const escapedPath = escapeSshKeyPath(sshKeyPath);
   return `ssh -i ${escapedPath} -o IdentitiesOnly=yes`;
 }
 
-const isSocketPath = async (candidate: any) => {
+const isSocketPath = async (candidate: string): Promise<boolean> => {
   if (!candidate || typeof candidate !== 'string') {
     return false;
   }
@@ -289,7 +289,7 @@ const resolveSshAuthSock = async () => {
     return gpgSock;
   }
 
-  const runGpgconf = async (args: any) => {
+  const runGpgconf = async (args: string[]): Promise<string> => {
     for (const candidate of gpgconfCandidates) {
       try {
         const { stdout } = await execFileAsync(candidate, args);
@@ -349,7 +349,7 @@ const createGit = async (directory?: string): Promise<SimpleGit> => {
   });
 };
 
-const normalizeDirectoryPath = (value: any) => {
+const normalizeDirectoryPath = (value: string): string | null => {
   if (typeof value !== 'string') {
     return value;
   }
@@ -370,7 +370,7 @@ const normalizeDirectoryPath = (value: any) => {
   return trimmed;
 };
 
-const cleanBranchName = (branch: any) => {
+const cleanBranchName = (branch: string): string => {
   if (!branch) {
     return branch;
   }
@@ -459,11 +459,11 @@ const getOpenCodeDataPath = () => {
   return path.join(xdgDataHome, 'opencode');
 };
 
-const pickRandom = (values: any) => values[Math.floor(Math.random() * values.length)];
+const pickRandom = <T>(values: readonly T[]): T => values[Math.floor(Math.random() * values.length)];
 
 const generateOpenCodeRandomName = () => `${pickRandom(OPENCODE_ADJECTIVES)}-${pickRandom(OPENCODE_NOUNS)}`;
 
-const slugWorktreeName = (value: any) => {
+const slugWorktreeName = (value: string): string => {
   return String(value || '')
     .trim()
     .replace(/^refs\/heads\//, '')
@@ -478,8 +478,8 @@ const slugWorktreeName = (value: any) => {
     .slice(0, 80);
 };
 
-const parseWorktreePorcelain = (raw: any) => {
-  const lines = String(raw || '').split('\n').map((line: any) => line.trim());
+const parseWorktreePorcelain = (raw: string): Array<{ worktree?: string; head?: string; branchRef?: string; branch?: string }> => {
+  const lines = String(raw || '').split('\n').map((line: string) => line.trim());
   const entries = [];
   let current: { worktree?: string; head?: string; branchRef?: string; branch?: string } | null = null;
 
@@ -523,14 +523,14 @@ const parseWorktreePorcelain = (raw: any) => {
   return entries;
 };
 
-const canonicalPath = async (input: any) => {
+const canonicalPath = async (input: string): Promise<string> => {
   const absolutePath = path.resolve(input);
   const realPath = await fsp.realpath(absolutePath).catch(() => absolutePath);
   const normalized = path.normalize(realPath);
   return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
 };
 
-const checkPathExists = async (targetPath: any) => {
+const checkPathExists = async (targetPath: string): Promise<boolean> => {
   try {
     await fsp.stat(targetPath);
     return true;
@@ -539,7 +539,7 @@ const checkPathExists = async (targetPath: any) => {
   }
 };
 
-const normalizeStartRef = (value: any) => {
+const normalizeStartRef = (value: string): string => {
   const trimmed = String(value || '').trim();
   if (!trimmed) {
     return 'HEAD';
@@ -547,7 +547,7 @@ const normalizeStartRef = (value: any) => {
   return trimmed;
 };
 
-const parseRemoteBranchRef = (value: any) => {
+const parseRemoteBranchRef = (value: string): null | { remote: string; branch: string; remoteRef: string; fullRef: string } => {
   const trimmed = String(value || '').trim();
   if (!trimmed) {
     return null;
@@ -584,7 +584,7 @@ const parseRemoteBranchRef = (value: any) => {
   };
 };
 
-const resolveRemoteBranchRef = async (primaryWorktree: any, value: any) => {
+const resolveRemoteBranchRef = async (primaryWorktree: string, value: string): Promise<null | { remote: string; branch: string; remoteRef: string; fullRef: string }> => {
   const raw = String(value || '').trim();
   const parsed = parseRemoteBranchRef(raw);
   if (!parsed) {
@@ -604,7 +604,7 @@ const resolveRemoteBranchRef = async (primaryWorktree: any, value: any) => {
   return parsed;
 };
 
-const normalizeUpstreamTarget = (remote: any, branch: any) => {
+const normalizeUpstreamTarget = (remote: string, branch: string): null | { remote: string; branch: string; full: string } => {
   const remoteName = String(remote || '').trim();
   const branchName = String(branch || '').trim();
   if (!remoteName || !branchName) {
@@ -640,7 +640,7 @@ const isNotGitRepositoryError = (error: unknown) => {
   return /not a git repository/i.test(err.message);
 };
 
-const runGitCommand = async (cwd: any, args: any) => {
+const runGitCommand = async (cwd: string, args: string[]): Promise<{ success: boolean; exitCode: number; stdout: string; stderr: string; message?: string }> => {
   try {
     const { stdout, stderr } = await execFileAsync(getGitBinary(), args, {
       cwd,
@@ -666,7 +666,7 @@ const runGitCommand = async (cwd: any, args: any) => {
   }
 };
 
-const runGitCommandOrThrow = async (cwd: any, args: any, fallbackMessage: any) => {
+const runGitCommandOrThrow = async (cwd: string, args: string[], fallbackMessage?: string): Promise<{ success: boolean; exitCode: number; stdout: string; stderr: string; message?: string }> => {
   const result = await runGitCommand(cwd, args);
   if (!result.success) {
     throw new Error(result.message || fallbackMessage || 'Git command failed');
