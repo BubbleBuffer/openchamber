@@ -1160,7 +1160,7 @@ const applyUpstreamConfiguration = async (args: any) => {
   await setBranchTrackingFallback(worktreeDirectory, localBranch, upstream);
 };
 
-export async function isGitRepository(directory: any) {
+export async function isGitRepository(directory: string): Promise<boolean> {
   const directoryPath = normalizeDirectoryPath(directory);
   if (!directoryPath || !fs.existsSync(directoryPath)) {
     return false;
@@ -1170,7 +1170,7 @@ export async function isGitRepository(directory: any) {
   return result.success;
 }
 
-export async function getGlobalIdentity() {
+export async function getGlobalIdentity(): Promise<GitIdentity | null> {
   const git = await createGit();
 
   try {
@@ -1193,7 +1193,7 @@ export async function getGlobalIdentity() {
   }
 }
 
-export async function getRemoteUrl(directory: any, remoteName: any = 'origin') {
+export async function getRemoteUrl(directory: string, remoteName: string = 'origin'): Promise<string | null> {
   const git = await createGit(directory);
 
   try {
@@ -1204,7 +1204,7 @@ export async function getRemoteUrl(directory: any, remoteName: any = 'origin') {
   }
 }
 
-export async function getCurrentIdentity(directory: any) {
+export async function getCurrentIdentity(directory: string): Promise<GitIdentity | null> {
   const git = await createGit(directory);
 
   try {
@@ -1236,7 +1236,7 @@ export async function getCurrentIdentity(directory: any) {
   }
 }
 
-export async function hasLocalIdentity(directory: any) {
+export async function hasLocalIdentity(directory: string): Promise<boolean> {
   const git = await createGit(directory);
 
   try {
@@ -1248,25 +1248,25 @@ export async function hasLocalIdentity(directory: any) {
   }
 }
 
-export async function setLocalIdentity(directory: any, profile: any) {
+export async function setLocalIdentity(directory: string, identity: { name?: string; email?: string }): Promise<boolean> {
   const git = await createGit(directory);
 
   try {
 
-    await git.addConfig('user.name', profile.userName, false, 'local');
-    await git.addConfig('user.email', profile.userEmail, false, 'local');
+    await git.addConfig('user.name', identity.name, false, 'local');
+    await git.addConfig('user.email', identity.email, false, 'local');
 
-    const authType = profile.authType || 'ssh';
+    const authType = identity.authType || 'ssh';
 
-    if (authType === 'ssh' && profile.sshKey) {
+    if (authType === 'ssh' && identity.sshKey) {
       await git.addConfig(
         'core.sshCommand',
-        buildSshCommand(profile.sshKey),
+        buildSshCommand(identity.sshKey),
         false,
         'local'
       );
       await git.raw(['config', '--local', '--unset', 'credential.helper']).catch(() => {});
-    } else if (authType === 'token' && profile.host) {
+    } else if (authType === 'token' && identity.host) {
       await git.addConfig(
         'credential.helper',
         'store',
@@ -1283,7 +1283,7 @@ export async function setLocalIdentity(directory: any, profile: any) {
   }
 }
 
-export async function getStatus(directory: any, options: any = {}) {
+export async function getStatus(directory: string, options: GitStatusOptions = {}): Promise<GitStatusResult> {
   const directoryPath = normalizeDirectoryPath(directory);
   const git = await createGit(directoryPath);
   const lightMode = options.mode === 'light';
@@ -1524,7 +1524,7 @@ export async function getStatus(directory: any, options: any = {}) {
   }
 }
 
-export async function getDiff(directory: any, { path, staged = false, contextLines = 3 }: GitDiffOptions = {}) {
+export async function getDiff(directory: string, { path, staged = false, contextLines = 3 }: GitDiffOptions = {}): Promise<string> {
   const git = await createGit(directory);
 
   try {
@@ -1578,7 +1578,7 @@ export async function getDiff(directory: any, { path, staged = false, contextLin
   }
 }
 
-export async function getRangeDiff(directory: any, { base, head, path, contextLines = 3 }: Partial<GitRangeDiffOptions> = {}) {
+export async function getRangeDiff(directory: string, { base, head, path, contextLines = 3 }: GitRangeDiffOptions): Promise<string> {
   const git = await createGit(directory);
   const baseRef = typeof base === 'string' ? base.trim() : '';
   const headRef = typeof head === 'string' ? head.trim() : '';
@@ -1626,7 +1626,7 @@ export async function getRangeDiff(directory: any, { base, head, path, contextLi
   return diff;
 }
 
-export async function getRangeFiles(directory: any, { base, head }: { base?: string; head?: string } = {}) {
+export async function getRangeFiles(directory: string, { base, head }: GitRangeDiffOptions): Promise<string[]> {
   const git = await createGit(directory);
   const baseRef = typeof base === 'string' ? base.trim() : '';
   const headRef = typeof head === 'string' ? head.trim() : '';
@@ -1753,7 +1753,7 @@ const isBinaryDiff = async (directoryPath: any, filePath: any, staged: any) => {
   return false;
 };
 
-export async function getFileDiff(directory: any, { path: filePath, staged = false }: { path?: string; staged?: boolean } = {}) {
+export async function getFileDiff(directory: string, { path: filePath, staged = false }: { path: string; staged?: boolean; contextLines?: number }): Promise<GitFileDiffResult> {
   if (!directory || !filePath) {
     throw new Error('directory and path are required for getFileDiff');
   }
@@ -1831,7 +1831,7 @@ export async function getFileDiff(directory: any, { path: filePath, staged = fal
   };
 }
 
-export async function revertFile(directory: any, filePath: any) {
+export async function revertFile(directory: string, filePath: string): Promise<void> {
   const directoryPath = normalizeDirectoryPath(directory);
   const git = await createGit(directoryPath);
   const repoRoot = path.resolve(directoryPath);
@@ -1883,7 +1883,7 @@ export async function revertFile(directory: any, filePath: any) {
   }
 }
 
-export async function collectDiffs(directory: any, files: any = []) {
+export async function collectDiffs(directory: string, files: string[] = []): Promise<Array<{path: string; diff: string}>> {
   const results = [];
   for (const filePath of files) {
     try {
@@ -1898,7 +1898,7 @@ export async function collectDiffs(directory: any, files: any = []) {
   return results;
 }
 
-export async function pull(directory: any, options: any = {}) {
+export async function pull(directory: string, options: GitPullOptions = {}): Promise<boolean> {
   const git = await createGit(directory);
 
   try {
@@ -1921,7 +1921,7 @@ export async function pull(directory: any, options: any = {}) {
   }
 }
 
-export async function push(directory: any, options: any = {}) {
+export async function push(directory: string, options: GitPushOptions = {}): Promise<boolean> {
   const git = await createGit(directory);
 
   const describePushError = (error: any) => {
