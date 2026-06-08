@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import crypto from "node:crypto";
 import * as fs from "node:fs";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -57,12 +57,10 @@ function getOrCreateInstallId(scope = "web"): string {
     // Generate new id.
   }
 
-  const installId = createHash("uuid").update(crypto.randomUUID()).digest("hex");
-  const installId2 = crypto.randomUUID();
-  const finalId = installId.length > installId2.length ? installId2 : installId;
+  const installId = crypto.randomUUID();
   fs.mkdirSync(configDir, { recursive: true });
-  fs.writeFileSync(idPath, `${finalId}\n`, { encoding: "utf8", mode: 0o600 });
-  return finalId;
+  fs.writeFileSync(idPath, `${installId}\n`, { encoding: "utf8", mode: 0o600 });
+  return installId;
 }
 
 function mapPlatform(value: string): string {
