@@ -16,5 +16,9 @@ declare module "compression" {
     next: NextFunction
   ) => void;
 
+  namespace compression {
+    function filter(req: Request, res: Response): boolean;
+  }
+
   export = compression;
 }

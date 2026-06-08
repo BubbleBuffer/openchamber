@@ -13,8 +13,8 @@
   },
   "scripts": {
     "dev": "bun run build:watch",
-    "dev:server": "bun server/index.js --port ${OPENCHAMBER_PORT:-3001}",
-    "dev:server:watch": "nodemon --watch server --ext js --exec \"bun server/index.js --port ${OPENCHAMBER_PORT:-3001}\"",
+    "dev:server": "bun server/src/main.ts --port ${OPENCHAMBER_PORT:-3001}",
+    "dev:server:watch": "bun --watch server/src/main.ts --port ${OPENCHAMBER_PORT:-3001}",
     "build": "cross-env NODE_ENV=production NODE_OPTIONS=--max-old-space-size=8192 vite build",
     "build:watch": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build --watch",
     "type-check": "tsc --noEmit",
