@@ -62,7 +62,7 @@ export async function fetchClawdHubSkills({
   cursor,
 }: {
   cursor?: string;
-} = {}): Promise<{ items: unknown[]; nextCursor: string | null }> {
+}): Promise<{ items: Record<string, unknown>[]; nextCursor: string | null }> {
   const url = cursor
     ? `${CLAWDHUB_API_BASE}/skills?cursor=${encodeURIComponent(cursor)}&limit=${CLAWDHUB_PAGE_LIMIT}`
     : `${CLAWDHUB_API_BASE}/skills?limit=${CLAWDHUB_PAGE_LIMIT}`;
@@ -76,24 +76,15 @@ export async function fetchClawdHubSkills({
     );
   }
 
-  const data = (await response.json()) as {
-    nextCursor?: string;
-    next_cursor?: string;
-    next?: string;
-    cursor?: string;
-    items?: unknown[];
-  };
-  const nextCursor =
-    (typeof data.nextCursor === "string" && data.nextCursor) ||
+  const raw = await response.json();
+  const data = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const items = Array.isArray(data.items) ? data.items : [];
+  const nextCursor = (typeof data.nextCursor === "string" && data.nextCursor) ||
     (typeof data.next_cursor === "string" && data.next_cursor) ||
     (typeof data.next === "string" && data.next) ||
     (typeof data.cursor === "string" && data.cursor) ||
     null;
-
-  return {
-    items: data.items || [],
-    nextCursor,
-  };
+  return { items, nextCursor };
 }
 
 /**
@@ -102,7 +93,7 @@ export async function fetchClawdHubSkills({
 export async function fetchClawdHubSkillVersion(
   slug: string,
   version = "latest"
-): Promise<unknown> {
+): Promise<Record<string, unknown>> {
   // For 'latest', we need to first get the skill metadata to find the latest version
   if (version === "latest") {
     const skillResponse = await rateLimitedFetch(
@@ -111,12 +102,11 @@ export async function fetchClawdHubSkillVersion(
     if (!skillResponse.ok) {
       throw new Error(`ClawdHub skill not found: ${slug}`);
     }
-    const skillData = (await skillResponse.json()) as {
-      skill?: { tags?: { latest?: string } };
-      latestVersion?: { version?: string };
-    };
+    const raw = await skillResponse.json();
+    const data = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
     const latestVersion =
-      skillData.skill?.tags?.latest || skillData.latestVersion?.version;
+      (data.skill && typeof data.skill === "object" && (data.skill as Record<string, unknown>)["tags"] && typeof (data.skill as Record<string, unknown>)["tags"] === "object" && ((data.skill as Record<string, unknown>)["tags"] as Record<string, unknown>)["latest"]) as string | undefined ||
+      (data.latestVersion && typeof data.latestVersion === "object" && (data.latestVersion as Record<string, unknown>)["version"]) as string | undefined;
     if (!latestVersion) {
       throw new Error(`No latest version found for skill: ${slug}`);
     }
@@ -135,7 +125,8 @@ export async function fetchClawdHubSkillVersion(
     );
   }
 
-  return response.json();
+  const raw = await response.json();
+  return typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
 }
 
 /**
