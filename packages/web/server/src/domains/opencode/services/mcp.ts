@@ -262,7 +262,7 @@ function buildMcpEntry(data: unknown): Partial<McpEntry> {
     }
 
     if ((data as Record<string, unknown>)?.oauth === false) {
-      entry.oauth = { oauth: false } as unknown as McpEntry["oauth"];
+      entry.oauth = false;
     } else if (
       (data as Record<string, unknown>)?.oauth &&
       typeof (data as Record<string, unknown>)?.oauth === "object" &&

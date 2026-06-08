@@ -129,7 +129,7 @@ export interface McpEntry {
   command?: string[];
   url?: string;
   headers?: Record<string, string>;
-  oauth?: {
+  oauth?: false | {
     clientId?: string;
     clientSecret?: string;
     scope?: string;
