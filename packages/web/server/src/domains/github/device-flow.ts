@@ -25,20 +25,35 @@ async function postForm(url: string, params: Record<string, string | undefined |
 
   const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
   if (!response.ok) {
-    const message = (payload as any)?.error_description || (payload as any)?.error || response.statusText;
-    const error: any = new Error(message || "GitHub request failed");
-    error.status = response.status;
-    error.payload = payload;
+    const message = String(
+      (payload as Record<string, unknown>)?.error_description ??
+      (payload as Record<string, unknown>)?.error ??
+      response.statusText
+    );
+    const error = Object.assign(new Error(message || "GitHub request failed"), {
+      status: response.status,
+      payload,
+    });
     throw error;
   }
   return payload ?? {};
 }
 
 export async function startDeviceFlow({ clientId, scope }: StartDeviceFlowParams): Promise<StartDeviceFlowResult> {
-  return postForm(DEVICE_CODE_URL, {
+  const result = await postForm(DEVICE_CODE_URL, {
     client_id: clientId,
     scope,
-  }) as unknown as Promise<StartDeviceFlowResult>;
+  });
+
+  if (
+    typeof result.device_code !== "string" ||
+    typeof result.user_code !== "string" ||
+    typeof result.verification_uri !== "string"
+  ) {
+    throw new Error("Invalid device flow response from GitHub");
+  }
+
+  return result as StartDeviceFlowResult;
 }
 
 export async function exchangeDeviceCode({ clientId, deviceCode }: { clientId: string; deviceCode: string }): Promise<Record<string, unknown>> {
