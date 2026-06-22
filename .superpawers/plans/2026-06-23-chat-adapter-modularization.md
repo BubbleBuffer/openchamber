@@ -12,7 +12,7 @@
 
 ## Branch And Working Tree Constraints
 
-Current branch is expected to be `feature/chat-adapter-modularization-spec`. The branch was created from a dirty worktree containing pre-existing chat and server changes. Do not revert or overwrite those changes.
+This plan is executed on the current branch (`feature/server-typescript-modernization` at time of writing). Do not revert or overwrite unrelated changes. Server migration work is in `packages/web/server/**` and should not be touched by this plan.
 
 The existing dirty files at plan time are part of the cleanup baseline:
 
@@ -57,9 +57,6 @@ Checkpoint commits are recommended after each task. If the user does not want co
 | `packages/ui/src/components/chat/chat-input/useComposerHistory.ts` | User message history navigation state and actions. |
 | `packages/ui/src/components/chat/chat-input/useComposerKeyboard.ts` | Keyboard orchestration around autocomplete, shell mode, history, submit, and queue. |
 | `packages/ui/src/components/chat/timeline/useTurnWindow.ts` | Turn window model, turn start clamping, rendered-message derivation. |
-| `packages/ui/src/components/chat/timeline/useOlderHistoryLoader.ts` | Reveal-buffered-turns and fetch-older-history orchestration. |
-| `packages/ui/src/components/chat/timeline/useScrollIntent.ts` | Pending render waiters and pending scroll request queue. |
-| `packages/ui/src/components/chat/timeline/useHashNavigation.ts` | Hash target parsing and navigation wrapper in a later timeline task after turn-window extraction is stable. |
 | `packages/ui/src/components/chat/message-list/useMessageEntryUiState.ts` | Turn group expansion/collapse state. |
 | `packages/ui/src/components/chat/message-list/useMessageAnimationState.ts` | User message animation bookkeeping. |
 | `packages/ui/src/components/chat/message-list/MessageListEntries.tsx` | Virtual row rendering delegation. |
@@ -86,6 +83,32 @@ Checkpoint commits are recommended after each task. If the user does not want co
 | `packages/web/server/lib/opencode/**` | Server runtime cleanup is separate from this chat UI plan. |
 | `packages/ui/src/sync/**` | Current stores remain source of truth; adapter internals wrap them without broad sync rewrites. |
 | `packages/ui/src/stores/**` | No store deletion or broad state consolidation in this phase. |
+
+### Deferred / Future Scope
+
+These items are explicitly out of scope for this plan. They are listed here so an agent executing the plan does not silently drop spec requirements.
+
+| Item | Spec Phase | Reason for Deferral |
+|------|-----------|---------------------|
+| Phase 2.4 — Split `ChatContainer` / `SessionMount` / `ChatSessionView` / `ChatViewport` roles; remove duplicated loading/empty/session wrapper responsibilities | Spec §2.4 | Out of scope; this plan focuses on the adapter boundary and focused extractions, not role deduplication. Follow-up plan. |
+| `packages/ui/src/components/chat/timeline/useOlderHistoryLoader.ts` | Spec §2.5 | Scroll intent and older history loading remain inside `useChatTimelineController.ts` for this plan. Extracting them requires the `messageListRef` shared-coupling protocol to be reworked first. |
+| `packages/ui/src/components/chat/timeline/useScrollIntent.ts` | Spec §2.5 | Same as above. Pending render waiters and pending scroll request queue stay in the controller. |
+| `packages/ui/src/components/chat/timeline/useViewportAnchorRestore.ts` | Spec §2.5 | `useViewportAnchor` already exists at `chat/hooks/useViewportAnchor.ts` and is DOM-coupled. Spec's separate "restore" hook would duplicate it without clear benefit; deferred. |
+| `packages/ui/src/components/chat/timeline/useHashNavigation.ts` | Spec §2.5 | `useChatTurnNavigation.ts` already covers this. A rename + move is a separate task with no semantic change; deferred to keep this plan focused. |
+| Splitting oversized files (`ChatMessage.tsx`, `MessageBody.tsx`, `ToolPart.tsx`, `ProgressiveGroup.tsx`, `ModelControls.tsx`, `MarkdownRendererImpl.tsx`, `MobileSessionStatusBar.tsx`, `FileAttachment.tsx`, `TextSelectionMenu.tsx`) | Spec §3 | These are functionally cohesive but large. Splitting them requires their own planning round (test infrastructure, dedicated hooks). Out of scope here. |
+| `useChatSessionData` decomposition | Spec §2.1 | Known re-render bottleneck — wraps 5+ store boundaries (sync-context, machine selectors, plan detection). This plan's adapters wrap it rather than splitting it. A follow-up plan should decompose it into narrower per-domain fetchers to reduce XState `useSelector` calls per component. |
+| `useVirtualizedChatEntries` move into `message-list/` | Spec §2.6 | File is already at `chat/hooks/useVirtualizedChatEntries.ts` and works. Moving it without restructuring is a separate task. |
+| Adapter tests for `state/useChat*.ts` | Spec §4 | Existing adapter hooks are thin wrappers around machine selectors and are exercised by machine tests in `chat/state/chatMessagesMachine.test.tsx` and `chat/state/chatTimelineMachine.test.tsx`. New tests would be tautological; deferred. |
+
+### Known Risks Carried Forward
+
+| Risk | Source | Mitigation in this plan |
+|------|--------|------------------------|
+| `useChatSessionData` is a single bottleneck for 4+ state sources | Researcher report §5.1 | Adapters wrap the existing aggregator (Task 3). Follow-up decomposition plan needed. |
+| `messageListRef` shared coupling between `SessionMount` → `ChatViewport` → `VirtualizedMessageList` for scroll-to-turn/message | Researcher report §5.2 | Carried over; not solved in this plan. Required for `useOlderHistoryLoader` / `useScrollIntent` extraction. |
+| Pending scroll request protocol is fragile across render cycles | Researcher report §5.4 | Carried over; refactoring would break deferred timeline hooks. |
+| Spec's `useChatSelection` may compete with existing `useSelectionStore` | Researcher report §5.7 | `useChatSelection` reads `useSelectionStore` directly — no new state of its own. No conflict. |
+| Composer state is most coupled to broad stores | Researcher report §5.8 | Composer adapter hooks wrap the same stores `ChatInput` already uses. No new coupling introduced. |
 
 ---
 
@@ -1473,6 +1496,72 @@ export function useTurnWindow({ sessionId, messages }: UseTurnWindowOptions) {
 ```
 
 Adjust imports and return values to match current `windowTurns.ts` exports. Do not rewrite the turn window algorithm.
+
+- [ ] **Step 2a: Write failing unit tests for turn window pure utilities**
+
+The turn window extraction depends on the pure helpers `buildTurnWindowModel`, `updateTurnWindowModelIncremental`, and `getInitialTurnStart` in `packages/ui/src/components/chat/lib/turns/windowTurns.ts`. The spec's Verification Strategy (line 296) requires unit tests for any timeline projection utility that creates a pure seam. Before extracting `useTurnWindow`, write the missing tests.
+
+Create `packages/ui/src/components/chat/lib/turns/windowTurns.test.ts`:
+
+```ts
+import { describe, expect, it } from 'vitest';
+import type { ChatMessageEntry } from './types';
+import {
+  buildTurnWindowModel,
+  getInitialTurnStart,
+  updateTurnWindowModelIncremental,
+} from './windowTurns';
+
+const makeMessage = (id: string): ChatMessageEntry => ({
+  info: { id, role: 'user', sessionID: 'sess-1', time: { created: 0 } } as any,
+  parts: [],
+} as any);
+
+describe('buildTurnWindowModel', () => {
+  it('returns zero turns for empty messages', () => {
+    const model = buildTurnWindowModel([]);
+    expect(model.turnCount).toBe(0);
+  });
+
+  it('counts one turn per user message', () => {
+    const model = buildTurnWindowModel([makeMessage('m1'), makeMessage('m2')]);
+    expect(model.turnCount).toBe(2);
+  });
+});
+
+describe('updateTurnWindowModelIncremental', () => {
+  it('returns null when nothing changed', () => {
+    const initial = buildTurnWindowModel([makeMessage('m1')]);
+    const result = updateTurnWindowModelIncremental(initial, [makeMessage('m1')], [makeMessage('m1')]);
+    expect(result).toBeNull();
+  });
+
+  it('returns new model when a turn was appended', () => {
+    const initial = buildTurnWindowModel([makeMessage('m1')]);
+    const result = updateTurnWindowModelIncremental(initial, [makeMessage('m1')], [makeMessage('m1'), makeMessage('m2')]);
+    expect(result?.turnCount).toBe(2);
+  });
+});
+
+describe('getInitialTurnStart', () => {
+  it('clamps negative input to zero', () => {
+    expect(getInitialTurnStart(5)).toBe(0);
+  });
+
+  it('returns turn count - 1 when there is at least one turn', () => {
+    expect(getInitialTurnStart(0)).toBe(0);
+    expect(getInitialTurnStart(3)).toBe(2);
+  });
+});
+```
+
+Adjust the exact message shape (`info.role`, `info.sessionID`, `info.time`) to match the existing `ChatMessageEntry` type. Run:
+
+```bash
+bun test packages/ui/src/components/chat/lib/turns/windowTurns.test.ts
+```
+
+Expected: tests pass against the existing implementations. (If any test fails, the existing helper has a different shape than assumed — fix the test, not the helper. The goal is to characterize existing behavior, not to fix latent bugs.)
 
 - [ ] **Step 3: Wire `useChatTimelineController` through `useTurnWindow`**
 
