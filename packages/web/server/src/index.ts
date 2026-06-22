@@ -129,24 +129,17 @@ const settingsNormalizationRuntime = createSettingsNormalizationRuntime({
   processLike: process,
 });
 
-const normalizeDirectoryPath: (...args: any[]) => any = (...args) =>
-  (settingsNormalizationRuntime as any).normalizeDirectoryPath(...args);
-const normalizePathForPersistence: (...args: any[]) => any = (...args) =>
-  (settingsNormalizationRuntime as any).normalizePathForPersistence(...args);
-const normalizeSettingsPaths: (...args: any[]) => any = (...args) =>
-  (settingsNormalizationRuntime as any).normalizeSettingsPaths(...args);
-const isUnsafeSkillRelativePath: (...args: any[]) => any = (...args) =>
-  (settingsNormalizationRuntime as any).isUnsafeSkillRelativePath(...args);
-const sanitizeTypographySizesPartial: (...args: any[]) => any = (...args) =>
-  (settingsNormalizationRuntime as any).sanitizeTypographySizesPartial(...args);
-const normalizeStringArray: (...args: any[]) => any = (...args) =>
-  (settingsNormalizationRuntime as any).normalizeStringArray(...args);
-const sanitizeModelRefs: (...args: any[]) => any = (...args) =>
-  (settingsNormalizationRuntime as any).sanitizeModelRefs(...args);
-const sanitizeSkillCatalogs: (...args: any[]) => any = (...args) =>
-  (settingsNormalizationRuntime as any).sanitizeSkillCatalogs(...args);
-const sanitizeProjects: (...args: any[]) => any = (...args) =>
-  (settingsNormalizationRuntime as any).sanitizeProjects(...args);
+const {
+  normalizeDirectoryPath,
+  normalizePathForPersistence,
+  normalizeSettingsPaths,
+  isUnsafeSkillRelativePath,
+  sanitizeTypographySizesPartial,
+  normalizeStringArray,
+  sanitizeModelRefs,
+  sanitizeSkillCatalogs,
+  sanitizeProjects,
+} = settingsNormalizationRuntime;
 
 // ── Paths & config ────────────────────────────────────────────────
 const OPENCHAMBER_USER_CONFIG_ROOT = path.join(os.homedir(), ".config", "openchamber");
@@ -167,8 +160,7 @@ const themeRuntime = createThemeRuntime({
   maxThemeJsonBytes: MAX_THEME_JSON_BYTES,
   logger: console,
 });
-const readCustomThemesFromDisk: (...args: any[]) => any = (...args) =>
-  (themeRuntime as any).readCustomThemesFromDisk(...args);
+const { readCustomThemesFromDisk } = themeRuntime;
 
 const settingsHelpers = createSettingsHelpers({
   normalizePathForPersistence,
@@ -179,16 +171,13 @@ const settingsHelpers = createSettingsHelpers({
   sanitizeSkillCatalogs,
   sanitizeProjects,
 });
-const normalizePwaAppName: (...args: any[]) => any = (...args) =>
-  (settingsHelpers as any).normalizePwaAppName(...args);
-const normalizePwaOrientation: (...args: any[]) => any = (...args) =>
-  (settingsHelpers as any).normalizePwaOrientation(...args);
-const sanitizeSettingsUpdate: (...args: any[]) => any = (...args) =>
-  (settingsHelpers as any).sanitizeSettingsUpdate(...args);
-const mergePersistedSettings: (...args: any[]) => any = (...args) =>
-  (settingsHelpers as any).mergePersistedSettings(...args);
-const formatSettingsResponse: (...args: any[]) => any = (...args) =>
-  (settingsHelpers as any).formatSettingsResponse(...args);
+const {
+  normalizePwaAppName,
+  normalizePwaOrientation,
+  sanitizeSettingsUpdate,
+  mergePersistedSettings,
+  formatSettingsResponse,
+} = settingsHelpers;
 
 // ── Settings & project directory ──────────────────────────────────
 const projectDirectoryRuntime = createProjectDirectoryRuntime({
@@ -198,14 +187,12 @@ const projectDirectoryRuntime = createProjectDirectoryRuntime({
   getReadSettingsFromDiskMigrated: () => readSettingsFromDiskMigrated,
   sanitizeProjects,
 } as any);
-const resolveDirectoryCandidate: (...args: any[]) => any = (...args) =>
-  (projectDirectoryRuntime as any).resolveDirectoryCandidate(...args);
-const validateDirectoryPath: (...args: any[]) => any = (...args) =>
-  (projectDirectoryRuntime as any).validateDirectoryPath(...args);
-const resolveProjectDirectory: (...args: any[]) => any = (...args) =>
-  (projectDirectoryRuntime as any).resolveProjectDirectory(...args);
-const resolveOptionalProjectDirectory: (...args: any[]) => any = (...args) =>
-  (projectDirectoryRuntime as any).resolveOptionalProjectDirectory(...args);
+const {
+  resolveDirectoryCandidate,
+  validateDirectoryPath,
+  resolveProjectDirectory,
+  resolveOptionalProjectDirectory,
+} = projectDirectoryRuntime;
 
 const settingsRuntime = createSettingsRuntime({
   fsPromises,
@@ -220,23 +207,20 @@ const settingsRuntime = createSettingsRuntime({
   formatSettingsResponse,
   resolveDirectoryCandidate,
 });
-const readSettingsFromDiskMigrated: (...args: any[]) => any = (...args) =>
-  (settingsRuntime as any).readSettingsFromDiskMigrated(...args);
-const readSettingsFromDisk: (...args: any[]) => any = (...args) =>
-  (settingsRuntime as any).readSettingsFromDisk(...args);
-const writeSettingsToDisk: (...args: any[]) => any = (...args) =>
-  (settingsRuntime as any).writeSettingsToDisk(...args);
-const persistSettings: (...args: any[]) => any = (...args) =>
-  (settingsRuntime as any).persistSettings(...args);
+const {
+  readSettingsFromDiskMigrated,
+  readSettingsFromDisk,
+  writeSettingsToDisk,
+  persistSettings,
+} = settingsRuntime;
 
 // ── Request security ──────────────────────────────────────────────
 const requestSecurityRuntime = createRequestSecurityRuntime({ readSettingsFromDiskMigrated });
-const getUiSessionTokenFromRequest: (...args: any[]) => any = (...args) =>
-  (requestSecurityRuntime as any).getUiSessionTokenFromRequest(...args);
-const rejectWebSocketUpgrade: (...args: any[]) => any = (...args) =>
-  (requestSecurityRuntime as any).rejectWebSocketUpgrade(...args);
-const isRequestOriginAllowed: (...args: any[]) => any = (...args) =>
-  (requestSecurityRuntime as any).isRequestOriginAllowed(...args);
+const {
+  getUiSessionTokenFromRequest,
+  rejectWebSocketUpgrade,
+  isRequestOriginAllowed,
+} = requestSecurityRuntime;
 
 // ── Push runtime ──────────────────────────────────────────────────
 const pushRuntime = createPushRuntime({
@@ -247,24 +231,17 @@ const pushRuntime = createPushRuntime({
   readSettingsFromDiskMigrated,
   writeSettingsToDisk,
 });
-const getOrCreateVapidKeys: (...args: any[]) => any = (...args) =>
-  (pushRuntime as any).getOrCreateVapidKeys(...args);
-const addOrUpdatePushSubscription: (...args: any[]) => any = (...args) =>
-  (pushRuntime as any).addOrUpdatePushSubscription(...args);
-const removePushSubscription: (...args: any[]) => any = (...args) =>
-  (pushRuntime as any).removePushSubscription(...args);
-const sendPushToAllUiSessions: (...args: any[]) => any = (...args) =>
-  (pushRuntime as any).sendPushToAllUiSessions(...args);
-const updateUiVisibility: (...args: any[]) => any = (...args) =>
-  (pushRuntime as any).updateUiVisibility(...args);
-const isAnyUiVisible: (...args: any[]) => any = (...args) =>
-  (pushRuntime as any).isAnyUiVisible(...args);
-const isUiVisible: (...args: any[]) => any = (...args) =>
-  (pushRuntime as any).isUiVisible(...args);
-const ensurePushInitialized: (...args: any[]) => any = (...args) =>
-  (pushRuntime as any).ensurePushInitialized(...args);
-const setPushInitialized: (...args: any[]) => any = (...args) =>
-  (pushRuntime as any).setPushInitialized(...args);
+const {
+  getOrCreateVapidKeys,
+  addOrUpdatePushSubscription,
+  removePushSubscription,
+  sendPushToAllUiSessions,
+  updateUiVisibility,
+  isAnyUiVisible,
+  isUiVisible,
+  ensurePushInitialized,
+  setPushInitialized,
+} = pushRuntime;
 
 // ── Terminal constants ────────────────────────────────────────────
 const TERMINAL_INPUT_WS_MAX_REBINDS_PER_WINDOW = 128;
@@ -361,30 +338,25 @@ const openCodeEnvRuntime = createOpenCodeEnvRuntime({
   readSettingsFromDiskMigrated,
   ENV_CONFIGURED_OPENCODE_WSL_DISTRO,
 });
-const applyLoginShellEnvSnapshot: (...args: any[]) => any = (...args) =>
-  (openCodeEnvRuntime as any).applyLoginShellEnvSnapshot(...args);
-const getLoginShellEnvSnapshot: (...args: any[]) => any = (...args) =>
-  (openCodeEnvRuntime as any).getLoginShellEnvSnapshot(...args);
-const ensureOpencodeCliEnv: (...args: any[]) => any = (...args) =>
-  (openCodeEnvRuntime as any).ensureOpencodeCliEnv(...args);
-const applyOpencodeBinaryFromSettings: (...args: any[]) => any = (...args) =>
-  (openCodeEnvRuntime as any).applyOpencodeBinaryFromSettings(...args);
-const resolveOpencodeCliPath: (...args: any[]) => any = (...args) =>
-  (openCodeEnvRuntime as any).resolveOpencodeCliPath(...args);
-const isExecutable: (filePath: string) => boolean = (filePath) =>
-  openCodeEnvRuntime.isExecutable(filePath);
-const searchPathFor: (binaryName: string) => string | null = (binaryName) =>
-  openCodeEnvRuntime.searchPathFor(binaryName);
-const resolveGitBinaryForSpawn: () => string = () =>
-  openCodeEnvRuntime.resolveGitBinaryForSpawn();
-const resolveWslExecutablePath: (...args: any[]) => any = (...args) =>
-  (openCodeEnvRuntime as any).resolveWslExecutablePath(...args);
-const buildWslExecArgs: (...args: any[]) => any = (...args) =>
-  (openCodeEnvRuntime as any).buildWslExecArgs(...args);
-const resolveManagedOpenCodeLaunchSpec: (...args: any[]) => any = (...args) =>
-  (openCodeEnvRuntime as any).resolveManagedOpenCodeLaunchSpec(...args);
-const clearResolvedOpenCodeBinary: (...args: any[]) => any = (...args) =>
-  (openCodeEnvRuntime as any).clearResolvedOpenCodeBinary(...args);
+const {
+  applyLoginShellEnvSnapshot,
+  getLoginShellEnvSnapshot,
+  ensureOpencodeCliEnv,
+  applyOpencodeBinaryFromSettings: _applyOpencodeBinaryFromSettings,
+  resolveOpencodeCliPath,
+  isExecutable,
+  searchPathFor,
+  resolveGitBinaryForSpawn,
+  resolveWslExecutablePath,
+  buildWslExecArgs,
+  resolveManagedOpenCodeLaunchSpec,
+  clearResolvedOpenCodeBinary,
+} = openCodeEnvRuntime;
+// applyOpencodeBinaryFromSettings returns Promise<string | null> from the runtime
+// but the consumers (OpenCodeResolutionDeps, LifecycleDeps) expect Promise<void>
+const applyOpencodeBinaryFromSettings: () => Promise<void> = async () => {
+  await _applyOpencodeBinaryFromSettings();
+};
 
 applyLoginShellEnvSnapshot();
 
@@ -410,8 +382,7 @@ const openCodeResolutionRuntime = createOpenCodeResolutionRuntime({
     openCodeEnvState.resolvedOpencodeBinarySource = value;
   },
 });
-const getOpenCodeResolutionSnapshot: (...args: any[]) => any = (...args) =>
-  (openCodeResolutionRuntime as any).getOpenCodeResolutionSnapshot(...args);
+const { getOpenCodeResolutionSnapshot } = openCodeResolutionRuntime;
 
 // ── EventBus ──────────────────────────────────────────────────────
 const eventBus = createEventBus();
@@ -486,17 +457,13 @@ const notificationEmitterRuntime = createNotificationEmitterRuntime({
   getUiNotificationClients: () => uiNotificationClients,
   getBroadcastGlobalUiEvent: () => broadcastGlobalUiEvent,
 });
-const writeSseEvent: (...args: any[]) => any = (...args) =>
-  (notificationEmitterRuntime as any).writeSseEvent(...args);
-const emitDesktopNotification: (...args: any[]) => any = (...args) =>
-  (notificationEmitterRuntime as any).emitDesktopNotification(...args);
+const { writeSseEvent, emitDesktopNotification, broadcastUiNotification } =
+  notificationEmitterRuntime;
 const broadcastGlobalUiEvent = createGlobalUiEventBroadcaster({
   sseClients: uiNotificationClients,
   wsClients: uiNotificationWsClients as unknown as Set<any>,
   writeSseEvent,
 });
-const broadcastUiNotification: (...args: any[]) => any = (...args) =>
-  (notificationEmitterRuntime as any).broadcastUiNotification(...args);
 
 // ── Session actor registry (created before sessionRuntime so runtime derives snapshots from machine actors) ───
 const sessionActorRegistry = createSessionActorRegistryFactory({
@@ -538,22 +505,16 @@ const serverUtilsRuntime = (createServerUtilsRuntime as any)({
   },
 });
 
-const setupProxy: (...args: any[]) => any = (...args) =>
-  (serverUtilsRuntime as any).setupProxy(...args);
-const waitForOpenCodePort: (...args: any[]) => any = (...args) =>
-  (serverUtilsRuntime as any).waitForOpenCodePort(...args);
-const buildAugmentedPath: (...args: any[]) => any = (...args) =>
-  (serverUtilsRuntime as any).buildAugmentedPath(...args);
-const buildManagedOpenCodePath: (...args: any[]) => any = (...args) =>
-  (serverUtilsRuntime as any).buildManagedOpenCodePath(...args);
-const parseSseDataPayload: (...args: any[]) => any = (...args) =>
-  (serverUtilsRuntime as any).parseSseDataPayload(...args);
-const fetchAgentsSnapshot: (...args: any[]) => any = (...args) =>
-  (serverUtilsRuntime as any).fetchAgentsSnapshot(...args);
-const fetchProvidersSnapshot: (...args: any[]) => any = (...args) =>
-  (serverUtilsRuntime as any).fetchProvidersSnapshot(...args);
-const fetchModelsSnapshot: (...args: any[]) => any = (...args) =>
-  (serverUtilsRuntime as any).fetchModelsSnapshot(...args);
+const {
+  setupProxy,
+  waitForOpenCodePort,
+  buildAugmentedPath,
+  buildManagedOpenCodePath,
+  parseSseDataPayload,
+  fetchAgentsSnapshot,
+  fetchProvidersSnapshot,
+  fetchModelsSnapshot,
+} = serverUtilsRuntime;
 
 // ── Notification template & trigger runtimes ──────────────────────
 const notificationTemplateRuntime = (createNotificationTemplateRuntime as any)({
@@ -563,32 +524,21 @@ const notificationTemplateRuntime = (createNotificationTemplateRuntime as any)({
   getOpenCodeRuntime: () => openCodeRuntimeRef.current,
   resolveGitBinaryForSpawn,
 });
-const createTimeoutSignal: (...args: any[]) => any = (...args) =>
-  (notificationTemplateRuntime as any).createTimeoutSignal(...args);
-const resolveNotificationTemplate: (...args: any[]) => any = (...args) =>
-  (notificationTemplateRuntime as any).resolveNotificationTemplate(...args);
-const shouldApplyResolvedTemplateMessage: (...args: any[]) => any = (...args) =>
-  (notificationTemplateRuntime as any).shouldApplyResolvedTemplateMessage(...args);
-const summarizeText: (...args: any[]) => any = (...args) =>
-  (notificationTemplateRuntime as any).summarizeText(...args);
-const extractTextFromParts: (...args: any[]) => any = (...args) =>
-  (notificationTemplateRuntime as any).extractTextFromParts(...args);
-const extractLastMessageText: (...args: any[]) => any = (...args) =>
-  (notificationTemplateRuntime as any).extractLastMessageText(...args);
-const fetchLastAssistantMessageText: (...args: any[]) => any = (...args) =>
-  (notificationTemplateRuntime as any).fetchLastAssistantMessageText(...args);
-const maybeCacheSessionInfoFromEvent: (...args: any[]) => any = (...args) =>
-  (notificationTemplateRuntime as any).maybeCacheSessionInfoFromEvent(...args);
-const buildTemplateVariables: (...args: any[]) => any = (...args) =>
-  (notificationTemplateRuntime as any).buildTemplateVariables(...args);
-const fetchFreeZenModels: (...args: any[]) => any = (...args) =>
-  (notificationTemplateRuntime as any).fetchFreeZenModels(...args);
-const resolveZenModel: (...args: any[]) => any = (...args) =>
-  (notificationTemplateRuntime as any).resolveZenModel(...args);
-const validateZenModelAtStartup: (...args: any[]) => any = (...args) =>
-  (notificationTemplateRuntime as any).validateZenModelAtStartup(...args);
-const getCachedZenModels: (...args: any[]) => any = (...args) =>
-  (notificationTemplateRuntime as any).getCachedZenModels(...args);
+const {
+  createTimeoutSignal,
+  resolveNotificationTemplate,
+  shouldApplyResolvedTemplateMessage,
+  summarizeText,
+  extractTextFromParts,
+  extractLastMessageText,
+  fetchLastAssistantMessageText,
+  maybeCacheSessionInfoFromEvent,
+  buildTemplateVariables,
+  fetchFreeZenModels,
+  resolveZenModel,
+  validateZenModelAtStartup,
+  getCachedZenModels,
+} = notificationTemplateRuntime;
 
 const notificationTriggerRuntime = (createNotificationTriggerRuntime as any)({
   eventBus,
@@ -606,10 +556,7 @@ const notificationTriggerRuntime = (createNotificationTriggerRuntime as any)({
   sendPushToAllUiSessions,
   getOpenCodeRuntime: () => openCodeRuntimeRef.current,
 });
-const maybeSendPushForTrigger: (...args: any[]) => any = (...args) =>
-  (notificationTriggerRuntime as any).maybeSendPushForTrigger(...args);
-const setAutoAcceptSession: (...args: any[]) => any = (...args) =>
-  (notificationTriggerRuntime as any).setAutoAcceptSession(...args);
+const { maybeSendPushForTrigger, setAutoAcceptSession } = notificationTriggerRuntime;
 
 // ── Event stream (SSE/WS hub) ─────────────────────────────────────
 const globalMessageStreamHub = createGlobalMessageStreamHub({
@@ -690,7 +637,7 @@ const startupPipelineRuntime = createStartupPipelineRuntime({
 });
 
 const refreshOpenCodeAfterConfigChange: (...args: any[]) => any = (...args) =>
-  (openCodeRuntime as any).refreshAfterConfigChange(...args);
+  openCodeRuntime.refreshAfterConfigChange(...args);
 
 const scheduledTasksRuntime = (createScheduledTasksRuntime as any)({
   projectConfigRuntime: createProjectConfigRuntime({
@@ -799,8 +746,7 @@ const gracefulShutdownRuntime = (createGracefulShutdownRuntime as any)({
   sessionActorRegistry,
   sessionEffectExecutor,
 });
-const gracefulShutdown: (...args: any[]) => any = (...args) =>
-  (gracefulShutdownRuntime as any).gracefulShutdown(...args);
+const { gracefulShutdown } = gracefulShutdownRuntime;
 
 // ── EventBus subscriptions ────────────────────────────────────────
 eventBus.on("opencode:ready", () => {
