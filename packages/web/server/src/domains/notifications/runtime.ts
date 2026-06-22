@@ -20,14 +20,14 @@ export const createNotificationRuntime = (deps: {
     eventBus,
     readSettingsFromDisk,
     persistSettings,
-    openCodeRuntime,
+    getOpenCodeRuntime: openCodeRuntime,
     resolveGitBinaryForSpawn,
   });
 
   const triggerRuntime = createNotificationTriggerRuntime({
     eventBus,
     readSettingsFromDisk,
-    openCodeRuntime,
+    getOpenCodeRuntime: openCodeRuntime,
     prepareNotificationLastMessage,
     summarizeText: templateRuntime.summarizeText,
     resolveZenModel: templateRuntime.resolveZenModel,

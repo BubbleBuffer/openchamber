@@ -1,4 +1,3 @@
-import type { Application } from "express";
 import type { FeatureRoutesDeps } from "./types.js";
 import type { QuotaProviderRegistry } from "../quota/types.js";
 import { registerQuotaRoutes } from "../quota/routes.js";
@@ -46,7 +45,7 @@ export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps): any {
     return quotaProviders;
   };
 
-  const registerRoutes = async (app: Application, routeDependencies: any): Promise<void> => {
+  const registerRoutes = async (app: any, routeDependencies: any): Promise<void> => {
     const {
       crypto,
       fs,
@@ -173,14 +172,14 @@ export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps): any {
       getCacheKey,
       getCachedScan,
       setCachedScan,
-      parseSkillRepoSource,
-      scanSkillsRepository,
-      installSkillsFromRepository,
-      scanClawdHubPage,
-      installSkillsFromClawdHub,
+      parseSkillRepoSource: parseSkillRepoSource as any,
+      scanSkillsRepository: scanSkillsRepository as any,
+      installSkillsFromRepository: installSkillsFromRepository as any,
+      scanClawdHubPage: scanClawdHubPage as any,
+      installSkillsFromClawdHub: installSkillsFromClawdHub as any,
       isClawdHubSource,
-      getProfiles,
-      getProfile,
+      getProfiles: getProfiles as any,
+      getProfile: getProfile as any,
     });
 
     registerQuotaRoutes(app, { getQuotaProviders });

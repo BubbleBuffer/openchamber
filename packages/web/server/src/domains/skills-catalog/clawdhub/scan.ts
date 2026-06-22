@@ -81,7 +81,7 @@ export async function scanClawdHub(): Promise<ScanClawdHubResult> {
 
       try {
         const pageResult = await fetchClawdHubSkills({ cursor: cursor ?? undefined });
-        items = (pageResult.items as ClawdHubApiItem[]) || [];
+        items = (pageResult.items as unknown as ClawdHubApiItem[]) || [];
         nextCursor = pageResult.nextCursor || null;
       } catch (error) {
         if (page > 0 && allItems.length > 0) {
@@ -131,7 +131,7 @@ export async function scanClawdHubPage({
 }: { cursor?: string } = {}): Promise<ScanClawdHubPageResult> {
   try {
     const { items, nextCursor } = await fetchClawdHubSkills({ cursor });
-    const mapped = (items as ClawdHubApiItem[])
+    const mapped = (items as unknown as ClawdHubApiItem[])
       .map(mapClawdHubItem)
       .slice(0, CLAWDHUB_PAGE_LIMIT);
     mapped.sort(

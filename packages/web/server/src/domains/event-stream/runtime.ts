@@ -93,7 +93,7 @@ export function createMessageStreamWsRuntime(
   const globalHub: GlobalHub =
     globalEventHub ??
     createGlobalMessageStreamHub({
-      openCodeRuntime,
+      getOpenCodeRuntime: openCodeRuntime,
       fetchImpl,
       upstreamStallTimeoutMs,
       upstreamReconnectDelayMs,
@@ -254,7 +254,7 @@ export const createEventStreamRuntime = (deps: any) => {
     writeSettingsToDisk,
   });
 
-  const globalMessageStreamHub = createGlobalMessageStreamHub({ openCodeRuntime });
+  const globalMessageStreamHub = createGlobalMessageStreamHub({ getOpenCodeRuntime: openCodeRuntime });
 
   if (sessionSnapshotPublisher) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -292,8 +292,8 @@ export const createEventStreamRuntime = (deps: any) => {
     globalWatcherStartPromise = (async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const watcher: any = createOpenCodeWatcherRuntime({
-        waitForOpenCodePort: null,
-        openCodeRuntime,
+        waitForOpenCodePort: null as any,
+        getOpenCodeRuntime: openCodeRuntime,
         globalEventHub: globalMessageStreamHub,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onPayload: (payload: any) => {

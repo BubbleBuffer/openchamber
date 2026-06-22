@@ -492,7 +492,7 @@ const emitDesktopNotification: (...args: any[]) => any = (...args) =>
   (notificationEmitterRuntime as any).emitDesktopNotification(...args);
 const broadcastGlobalUiEvent = createGlobalUiEventBroadcaster({
   sseClients: uiNotificationClients,
-  wsClients: uiNotificationWsClients,
+  wsClients: uiNotificationWsClients as unknown as Set<any>,
   writeSseEvent,
 });
 const broadcastUiNotification: (...args: any[]) => any = (...args) =>
@@ -635,7 +635,7 @@ const openCodeWatcherRuntime = (createOpenCodeWatcherRuntime as any)({
 
 const ensureGlobalWatcherStarted = async (): Promise<void | null> => {
   if (globalWatcherStartPromise) return globalWatcherStartPromise;
-  globalWatcherStartPromise = openCodeWatcherRuntime.start().catch((e) => {
+  globalWatcherStartPromise = openCodeWatcherRuntime.start().catch((e: any) => {
     globalWatcherStartPromise = null;
     throw e;
   });

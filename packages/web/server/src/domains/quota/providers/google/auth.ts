@@ -81,8 +81,8 @@ export function resolveAntigravityAuth(): GoogleAuthSource | null {
             asNonEmptyString(account["projectId"]) ??
             asNonEmptyString(account["managedProjectId"]) ??
             refreshParts.projectId ??
-            refreshParts.managedProjectId,
-          email: asNonEmptyString(account["email"]),
+            refreshParts.managedProjectId ?? undefined,
+          email: asNonEmptyString(account["email"]) ?? undefined,
         };
       }
     }

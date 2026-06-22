@@ -129,15 +129,15 @@ async function cloneRepo(
     tempDir,
   ];
 
-  const result = await runGit(preferred, { identity, timeoutMs: 90_000 });
+  const result = await runGit(preferred, { identity: identity ?? undefined, timeoutMs: 90_000 });
   if (result.ok) return { ok: true };
 
-  const fallbackResult = await runGit(fallback, { identity, timeoutMs: 90_000 });
+  const fallbackResult = await runGit(fallback, { identity: identity ?? undefined, timeoutMs: 90_000 });
   if (fallbackResult.ok) return { ok: true };
 
   return {
     ok: false,
-    error: fallbackResult,
+    error: fallbackResult as any,
   };
 }
 
@@ -340,8 +340,8 @@ export async function installSkillsFromRepository({
   try {
     const cloned = await cloneRepo({ cloneUrl, identity, tempDir: tempBase });
     if (!cloned.ok) {
-      const msg = `${cloned.error?.stderr || ""}\n${
-        cloned.error?.message || ""
+      const msg = `${(cloned.error as any)?.stderr || ""}\n${
+        (cloned.error as any)?.message || ""
       }`.trim();
       if (looksLikeAuthError(msg)) {
         return {

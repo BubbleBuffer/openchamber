@@ -92,8 +92,8 @@ export async function createOpenCodeAuthStateRuntime(
   };
 
   return {
-    getOpenCodeAuthHeaders,
+    getOpenCodeAuthHeaders: getOpenCodeAuthHeaders as any,
     isOpenCodeConnectionSecure,
-    ensureLocalOpenCodeServerPassword,
+    ensureLocalOpenCodeServerPassword: ensureLocalOpenCodeServerPassword as any,
   };
 }

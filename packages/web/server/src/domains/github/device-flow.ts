@@ -53,7 +53,7 @@ export async function startDeviceFlow({ clientId, scope }: StartDeviceFlowParams
     throw new Error("Invalid device flow response from GitHub");
   }
 
-  return result as StartDeviceFlowResult;
+  return result as unknown as StartDeviceFlowResult;
 }
 
 export async function exchangeDeviceCode({ clientId, deviceCode }: { clientId: string; deviceCode: string }): Promise<Record<string, unknown>> {
