@@ -335,7 +335,9 @@ const createGit = async (directory?: string): Promise<SimpleGit> => {
   const spawnOptions: Record<string, unknown> = { windowsHide: true };
 
   const options: Parameters<typeof simpleGit>[0] = {
+    env,
     binary: binary || undefined,
+    spawnOptions,
     ...(hasCustomBinary ? { unsafe: { allowUnsafeCustomBinary: true } } : {}),
   } as Parameters<typeof simpleGit>[0];
 
@@ -345,7 +347,7 @@ const createGit = async (directory?: string): Promise<SimpleGit> => {
 
   return simpleGit({
     ...options,
-    baseDir: normalizeDirectoryPath(directory),
+    baseDir: normalizeDirectoryPath(directory) as string,
   });
 };
 
@@ -855,12 +857,15 @@ const runWorktreeStartCommand = async (directory: string, command: string): Prom
       env: await buildGitEnv(),
       windowsHide: true,
       maxBuffer: 20 * 1024 * 1024,
-    }).then(({ stdout, stderr }) => ({ success: true, stdout, stderr })).catch((e) => ({
-      success: false,
-      stdout: err.stdout,
-      stderr: err.stderr,
-      message: parseGitErrorText(e).message,
-    }));
+    }).then(({ stdout, stderr }) => ({ success: true, stdout, stderr })).catch((e) => {
+      const gitErr = parseGitErrorText(e);
+      return {
+        success: false,
+        stdout: (e as { stdout?: string }).stdout ?? '',
+        stderr: gitErr.message,
+        message: gitErr.message,
+      };
+    });
     return result;
   }
 
@@ -868,12 +873,15 @@ const runWorktreeStartCommand = async (directory: string, command: string): Prom
     cwd: directory,
     env: await buildGitEnv(),
     maxBuffer: 20 * 1024 * 1024,
-  }).then(({ stdout, stderr }) => ({ success: true, stdout, stderr })).catch((e) => ({
-    success: false,
-    stdout: err.stdout,
-    stderr: err.stderr,
-    message: parseGitErrorText(e).message,
-  }));
+  }).then(({ stdout, stderr }) => ({ success: true, stdout, stderr })).catch((e) => {
+    const gitErr = parseGitErrorText(e);
+    return {
+      success: false,
+      stdout: (e as { stdout?: string }).stdout ?? '',
+      stderr: gitErr.message,
+      message: gitErr.message,
+    };
+  });
   return result;
 };
 
@@ -1025,17 +1033,17 @@ const queueWorktreeBootstrap = (args: any) => {
           upstreamBranch,
           ensureRemoteName,
           ensureRemoteUrl,
-        }).catch((error: any) => {
+        }).catch((e) => {
           console.warn('Worktree upstream configuration failed:', e instanceof Error ? e.message : String(e));
         });
       }
-      await runWorktreeStartScripts(directory, projectID, startCommand).catch((error: any) => {
+      await runWorktreeStartScripts(directory, projectID, startCommand).catch((e) => {
         console.warn('Worktree start script task failed:', e instanceof Error ? e.message : String(e));
       });
       setWorktreeBootstrapState(directory, WORKTREE_BOOTSTRAP_READY);
     };
 
-    void run().catch((error: any) => {
+    void run().catch((e) => {
       setWorktreeBootstrapState(
         directory,
         WORKTREE_BOOTSTRAP_FAILED,
@@ -1248,7 +1256,7 @@ export async function hasLocalIdentity(directory: string): Promise<boolean> {
   }
 }
 
-export async function setLocalIdentity(directory: string, identity: { name?: string; email?: string }): Promise<boolean> {
+export async function setLocalIdentity(directory: string, identity: { name?: string; userName?: string; userEmail?: string; authType?: string; sshKey?: string | null; host?: string | null }): Promise<boolean> {
   const git = await createGit(directory);
 
   try {
@@ -1387,7 +1395,7 @@ export async function getStatus(directory: string, options: GitStatusOptions = {
             deletions: 0,
           };
         } catch (e) {
-          console.warn('Failed to estimate diff stats for new file', file.path, error);
+          console.warn('Failed to estimate diff stats for new file', file.path, e);
           return null;
         }
       })
@@ -1517,10 +1525,10 @@ export async function getStatus(directory: string, options: GitStatusOptions = {
       rebaseInProgress,
     };
   } catch (e) {
-    if (!isNotGitRepositoryError(error)) {
-      console.error('Failed to get Git status:', error);
+    if (!isNotGitRepositoryError(e)) {
+      console.error('Failed to get Git status:', e);
     }
-    throw error;
+    throw e;
   }
 }
 

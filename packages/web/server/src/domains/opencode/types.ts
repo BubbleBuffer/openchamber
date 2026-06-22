@@ -33,6 +33,7 @@ export interface OpenCodeDomain {
   isReady(): boolean;
   isRestarting(): boolean;
   getPort(): number | null;
+  getBaseUrl(): string | null;
   setApp(app: Express): void;
   init(): Promise<void>;
   restart(): Promise<void>;

@@ -320,5 +320,6 @@ export function createOpenCodeRuntime({
     getLifecycleRuntime: () => lifecycleRuntime,
     getAuthRuntime: () => authRuntimePromise,
     getNetworkRuntime: () => networkRuntime,
+    getState: () => state,
   };
 }

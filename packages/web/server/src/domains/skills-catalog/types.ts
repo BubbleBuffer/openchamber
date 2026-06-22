@@ -185,17 +185,13 @@ export interface ClawdHubInstallError {
 export type InstallSkillsFromClawdHubResult = ClawdHubInstallResult | ClawdHubInstallError;
 
 export interface CloneRepoOptions {
-  url: string;
-  targetDir: string;
-  branch?: string;
-  depth?: number;
-  subpath?: string | null;
-  repoLock?: Promise<void>;
+  cloneUrl: string;
+  identity?: { sshKey?: string } | null;
+  tempDir: string;
 }
 
 export interface CloneSuccess {
   ok: true;
-  targetDir: string;
 }
 
 export interface CloneFailure {

@@ -1,9 +1,5 @@
 import type { Express, Request, Response } from "express";
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { createProjectIdFromPath } = require("../../../../dist/domains/projects/index.js") as {
-  createProjectIdFromPath: (path: string) => string;
-};
+import { createProjectIdFromPath } from "../../projects/index.js";
 
 interface OpenCodeRoutesDeps {
   crypto: typeof import("crypto");

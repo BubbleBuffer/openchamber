@@ -4,7 +4,7 @@ import { createUpstreamSseReader } from "./upstream-reader.js";
 export { MESSAGE_STREAM_GLOBAL_REPLAY_LIMIT } from "./types.js";
 
 export function createGlobalMessageStreamHub({
-  openCodeRuntime,
+  getOpenCodeRuntime,
   fetchImpl = fetch,
   upstreamStallTimeoutMs,
   upstreamReconnectDelayMs,
@@ -59,13 +59,13 @@ export function createGlobalMessageStreamHub({
       buildUrl: () => {
         buildUrlFailed = false;
         try {
-          return new URL(openCodeRuntime.getUrl("/global/event", ""));
+          return new URL(getOpenCodeRuntime().getUrl("/global/event", ""));
         } catch {
           buildUrlFailed = true;
           throw new Error("OpenCode service unavailable");
         }
       },
-      getHeaders: () => openCodeRuntime.getAuthHeaders(),
+      getHeaders: () => getOpenCodeRuntime().getAuthHeaders(),
       onConnect() {
         connected = true;
         const wasReady = everConnected;

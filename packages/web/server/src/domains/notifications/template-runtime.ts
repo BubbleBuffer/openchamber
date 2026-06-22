@@ -36,14 +36,14 @@ export const createNotificationTemplateRuntime = (deps: {
   eventBus: EventBus;
   readSettingsFromDisk: () => Promise<any>;
   persistSettings: (settings: any) => Promise<void>;
-  openCodeRuntime: any;
+  getOpenCodeRuntime: () => any;
   resolveGitBinaryForSpawn: () => string;
 }): NotificationTemplateRuntime => {
   const {
     eventBus,
     readSettingsFromDisk,
     persistSettings,
-    openCodeRuntime,
+    getOpenCodeRuntime: _getOpenCodeRuntime,
     resolveGitBinaryForSpawn,
   } = deps;
 
@@ -235,12 +235,14 @@ export const createNotificationTemplateRuntime = (deps: {
     if (!sessionId) return "";
 
     try {
-      const url = openCodeRuntime.getUrl(`/session/${encodeURIComponent(sessionId)}/message`, "");
+      const runtime = _getOpenCodeRuntime();
+      if (!runtime) return "";
+      const url = runtime.getUrl(`/session/${encodeURIComponent(sessionId)}/message`, "");
       const response = await fetch(`${url}?limit=5`, {
         method: "GET",
         headers: {
           Accept: "application/json",
-          ...openCodeRuntime.getAuthHeaders(),
+          ...runtime.getAuthHeaders(),
         },
         signal: AbortSignal.timeout(3000),
       });
@@ -298,7 +300,9 @@ export const createNotificationTemplateRuntime = (deps: {
     if (cached) return cached.data;
 
     try {
-      const url = openCodeRuntime.getUrl(`/session/${encodeURIComponent(sessionId)}`, "");
+      const runtime = _getOpenCodeRuntime();
+      if (!runtime) return null;
+      const url = runtime.getUrl(`/session/${encodeURIComponent(sessionId)}`, "");
       const response = await fetch(url, {
         method: "GET",
         headers: { Accept: "application/json" },

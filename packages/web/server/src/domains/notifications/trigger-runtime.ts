@@ -29,7 +29,7 @@ export const createNotificationTriggerRuntime = (deps: {
   fetchLastAssistantMessageText: (sessionId: string, messageId: string, maxLength?: number) => Promise<string>;
   resolveNotificationTemplate: (template: string, variables: Record<string, string>) => string;
   shouldApplyResolvedTemplateMessage: (template: string, resolved: string, variables: any) => boolean;
-  openCodeRuntime: any;
+  getOpenCodeRuntime: () => any;
 }) => {
   const {
     eventBus,
@@ -42,7 +42,7 @@ export const createNotificationTriggerRuntime = (deps: {
     fetchLastAssistantMessageText,
     resolveNotificationTemplate,
     shouldApplyResolvedTemplateMessage,
-    openCodeRuntime,
+    getOpenCodeRuntime: _getOpenCodeRuntime,
   } = deps;
 
   const PUSH_READY_COOLDOWN_MS = 5000;
@@ -94,11 +94,13 @@ export const createNotificationTriggerRuntime = (deps: {
     if (cached !== undefined) return cached;
 
     try {
-      const response = await fetch(openCodeRuntime.getUrl("/session", ""), {
+      const runtime = _getOpenCodeRuntime();
+      if (!runtime) return undefined as any;
+      const response = await fetch(runtime.getUrl("/session", ""), {
         method: "GET",
         headers: {
           Accept: "application/json",
-          ...openCodeRuntime.getAuthHeaders(),
+          ...runtime.getAuthHeaders(),
         },
         signal: AbortSignal.timeout(2000),
       });

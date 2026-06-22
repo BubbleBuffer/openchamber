@@ -351,6 +351,7 @@ export function updateCommand(
 
     if (inJson) {
       if (!config.command) config.command = {};
+      if (!(config.command as Record<string, unknown>)[commandName]) {
         (config.command as Record<string, unknown>)[commandName] = {};
       }
       (

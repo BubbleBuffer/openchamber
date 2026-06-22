@@ -2,7 +2,7 @@ import { createSessionActorKey } from "@openchamber/session-state";
 import type { SessionMachineEffect } from "@openchamber/session-state";
 import type { EffectExecutorDeps, SessionEffectExecutor } from "./types.js";
 
-export function createEffectExecutor(deps: EffectExecutorDeps): SessionEffectExecutor {
+export function createEffectExecutor(deps: EffectExecutorDeps = {} as EffectExecutorDeps): SessionEffectExecutor {
   const { callbacks = {}, publisher = null, registry = null } = deps;
   const cooldownTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const abortControllers = new Map<string, AbortController>();

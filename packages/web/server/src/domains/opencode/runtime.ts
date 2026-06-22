@@ -37,6 +37,7 @@ export async function createOpenCodeDomain(deps: OpenCodeDomainDeps): Promise<Op
     isReady() { return runtime.isReady(); },
     isRestarting() { return runtime.isRestarting(); },
     getPort() { return runtime.getPort(); },
+    getBaseUrl() { return (runtime as any).getBaseUrl?.() ?? null; },
     setApp(app) { runtime.setApp(app); },
     async init() { return runtime.init(); },
     async restart() { return runtime.restart(); },

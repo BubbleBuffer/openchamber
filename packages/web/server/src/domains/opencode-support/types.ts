@@ -142,7 +142,7 @@ export interface OpenCodeResolutionRuntime {
 
 export interface OpenCodeWatcherDeps {
   waitForOpenCodePort: () => Promise<void>;
-  openCodeRuntime: { getUrl(path: string, query: string): string; getAuthHeaders(): Record<string, string> };
+  getOpenCodeRuntime: () => { getUrl(path: string, query: string): string; getAuthHeaders(): Record<string, string> };
   onPayload: (payload: Record<string, unknown>) => void;
   fetchImpl?: typeof fetch;
   upstreamStallTimeoutMs?: number;

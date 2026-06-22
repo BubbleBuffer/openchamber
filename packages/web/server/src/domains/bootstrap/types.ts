@@ -62,7 +62,7 @@ export interface ShutdownDeps {
   getMessageStreamRuntime: () => any;
   setMessageStreamRuntime: (value: any) => void;
   shouldSkipOpenCodeStop: () => boolean;
-  openCodeRuntime: any;
+  getOpenCodeRuntime: () => any;
   killProcessOnPort: (port: number) => void;
   waitForPortRelease: (port: number, ms: number) => Promise<boolean>;
   getServer: () => any;

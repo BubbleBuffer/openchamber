@@ -7,7 +7,7 @@ export interface ServerUtilsRuntimeDeps {
   process: typeof import("process");
   openCodeReadyGraceMs: number;
   longRequestTimeoutMs: number;
-  openCodeRuntime: any;
+  getOpenCodeRuntime: () => any;
   getUiNotificationClients: () => Set<any>;
   getLoginShellPath: () => string | null;
 }

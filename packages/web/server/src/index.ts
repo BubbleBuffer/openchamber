@@ -1,5 +1,5 @@
 // packages/web/server/src/index.ts
-import "./instrument.mjs";
+import "../instrument.mjs";
 import "reflect-metadata";
 import * as Sentry from "@sentry/node";
 import express from "express";
@@ -417,12 +417,30 @@ const getOpenCodeResolutionSnapshot: (...args: any[]) => any = (...args) =>
 const eventBus = createEventBus();
 
 // ── OpenCodeDomain (typed wrapper around OpenCode runtime) ────────
-let openCodeRuntime: any = null;
-let openCodeDomain: any = null;
+const openCodeRuntimeRef: { current: any } = { current: null };
+const openCodeDomainRef: { current: any } = { current: null };
+// `openCodeRuntime` is a Proxy that forwards all property accesses to
+// openCodeRuntimeRef.current. This lets module-init code (`createXxxRuntime`)
+// capture a stable reference that always reflects the current runtime.
+const openCodeRuntime: any = new Proxy(openCodeRuntimeRef, {
+  get(_target, prop) {
+    if (prop === "current") return openCodeRuntimeRef.current;
+    const runtime = openCodeRuntimeRef.current;
+    if (runtime == null) return undefined;
+    const value = (runtime as any)[prop];
+    return typeof value === "function" ? value.bind(runtime) : value;
+  },
+  has(_target, prop) {
+    if (prop === "current") return true;
+    const runtime = openCodeRuntimeRef.current;
+    if (runtime == null) return false;
+    return prop in (runtime as any);
+  },
+});
 
 async function ensureOpenCodeDomain(): Promise<any> {
-  if (openCodeDomain) return openCodeDomain;
-  openCodeDomain = await (createOpenCodeDomain as any)({
+  if (openCodeDomainRef.current) return openCodeDomainRef.current;
+  openCodeDomainRef.current = await (createOpenCodeDomain as any)({
     eventBus,
     env: {
       ENV_CONFIGURED_OPENCODE_PORT,
@@ -452,12 +470,12 @@ async function ensureOpenCodeDomain(): Promise<any> {
     userProvidedPassword: userProvidedOpenCodePassword,
     getServerUtilsRuntime: () => serverUtilsRuntime,
   });
-  openCodeRuntime = openCodeDomain;
-  return openCodeDomain;
+  openCodeRuntimeRef.current = openCodeDomainRef.current;
+  return openCodeDomainRef.current;
 }
 
 function getOpenCodeRuntime(): any {
-  return openCodeRuntime;
+  return openCodeRuntimeRef.current;
 }
 
 // ── SSE notification clients ──────────────────────────────────────
@@ -502,16 +520,16 @@ const serverUtilsRuntime = (createServerUtilsRuntime as any)({
   process,
   openCodeReadyGraceMs: OPEN_CODE_READY_GRACE_MS,
   longRequestTimeoutMs: LONG_REQUEST_TIMEOUT_MS,
-  openCodeRuntime,
+  getOpenCodeRuntime: () => openCodeRuntimeRef.current,
   ensureOpenCodeApiPrefix: () => {
     try {
-      openCodeRuntime.getNetworkRuntime().ensureOpenCodeApiPrefix();
+      openCodeRuntimeRef.current?.getNetworkRuntime().ensureOpenCodeApiPrefix();
     } catch {
       /* best-effort */
     }
   },
   getUiNotificationClients: () => uiNotificationClients,
-  getOpenCodePort: () => openCodeRuntime.getPort(),
+  getOpenCodePort: () => openCodeRuntimeRef.current?.getPort() ?? null,
   getLoginShellPath: () => {
     const snapshot = getLoginShellEnvSnapshot();
     return snapshot && typeof snapshot.PATH === "string" && snapshot.PATH.length > 0
@@ -541,7 +559,7 @@ const fetchModelsSnapshot: (...args: any[]) => any = (...args) =>
 const notificationTemplateRuntime = (createNotificationTemplateRuntime as any)({
   readSettingsFromDisk,
   persistSettings,
-  openCodeRuntime,
+  getOpenCodeRuntime: () => openCodeRuntimeRef.current,
   resolveGitBinaryForSpawn,
 });
 const createTimeoutSignal: (...args: any[]) => any = (...args) =>
@@ -584,7 +602,7 @@ const notificationTriggerRuntime = (createNotificationTriggerRuntime as any)({
   emitDesktopNotification,
   broadcastUiNotification,
   sendPushToAllUiSessions,
-  openCodeRuntime,
+  getOpenCodeRuntime: () => openCodeRuntimeRef.current,
 });
 const maybeSendPushForTrigger: (...args: any[]) => any = (...args) =>
   (notificationTriggerRuntime as any).maybeSendPushForTrigger(...args);
@@ -593,7 +611,7 @@ const setAutoAcceptSession: (...args: any[]) => any = (...args) =>
 
 // ── Event stream (SSE/WS hub) ─────────────────────────────────────
 const globalMessageStreamHub = createGlobalMessageStreamHub({
-  openCodeRuntime,
+  getOpenCodeRuntime: () => openCodeRuntimeRef.current,
 });
 
 globalMessageStreamHub.subscribeStatus((status: any) => {
@@ -603,7 +621,7 @@ globalMessageStreamHub.subscribeStatus((status: any) => {
 // ── Watcher ───────────────────────────────────────────────────────
 const openCodeWatcherRuntime = (createOpenCodeWatcherRuntime as any)({
   waitForOpenCodePort: (...args: any[]) => waitForOpenCodePort(...args),
-  openCodeRuntime,
+  getOpenCodeRuntime: () => openCodeRuntimeRef.current,
   parseSseDataPayload,
   globalEventHub: globalMessageStreamHub,
   onPayload: (payload: any) => {
@@ -682,8 +700,12 @@ const scheduledTasksRuntime = (createScheduledTasksRuntime as any)({
     const settings = await readSettingsFromDiskMigrated();
     return sanitizeProjects(settings?.projects || []);
   },
-  openCodeRuntime,
-  waitForOpenCodeReady: openCodeRuntime.waitForReady,
+  getOpenCodeRuntime: () => openCodeRuntimeRef.current,
+  waitForOpenCodeReady: async (...args: any[]) => {
+    const runtime = openCodeRuntimeRef.current;
+    if (!runtime) return;
+    return runtime.waitForReady(...args);
+  },
   emitTaskRunEvent: (event: any) => {
     for (const client of uiOpenChamberEventClients) {
       try {
@@ -725,15 +747,19 @@ const gracefulShutdownRuntime = (createGracefulShutdownRuntime as any)({
   shutdownTimeoutMs: SHUTDOWN_TIMEOUT,
   getExitOnShutdown: () => exitOnShutdown,
   getIsShuttingDown: () =>
-    openCodeRuntime ? openCodeRuntime.getState().isShuttingDown : false,
+    openCodeRuntimeRef.current
+      ? openCodeRuntimeRef.current.getState().isShuttingDown
+      : false,
   setIsShuttingDown: (value: boolean) => {
-    if (openCodeRuntime) openCodeRuntime.setShuttingDown(value);
+    if (openCodeRuntimeRef.current) openCodeRuntimeRef.current.setShuttingDown(value);
   },
   syncToHmrState,
   openCodeWatcherRuntime,
   sessionRuntime,
   getHealthCheckInterval: () =>
-    openCodeRuntime ? openCodeRuntime.getState().healthCheckInterval : null,
+    openCodeRuntimeRef.current
+      ? openCodeRuntimeRef.current.getState().healthCheckInterval
+      : null,
   clearHealthCheckInterval: (value: any) => clearInterval(value),
   getTerminalRuntime: () => terminalRuntime,
   setTerminalRuntime: (value: any) => {
@@ -744,19 +770,22 @@ const gracefulShutdownRuntime = (createGracefulShutdownRuntime as any)({
     messageStreamRuntime = value;
   },
   shouldSkipOpenCodeStop: () =>
-    ENV_SKIP_OPENCODE_START || (openCodeRuntime && openCodeRuntime.isExternal()),
-  openCodeRuntime,
-  getOpenCodePort: () => (openCodeRuntime ? openCodeRuntime.getPort() : null),
+    ENV_SKIP_OPENCODE_START ||
+    (openCodeRuntimeRef.current && openCodeRuntimeRef.current.isExternal()),
+  getOpenCodeRuntime: () => openCodeRuntimeRef.current,
+  getOpenCodePort: () =>
+    openCodeRuntimeRef.current ? openCodeRuntimeRef.current.getPort() : null,
   getOpenCodeProcess: () =>
-    openCodeRuntime ? openCodeRuntime.getProcess() : null,
+    openCodeRuntimeRef.current ? openCodeRuntimeRef.current.getProcess() : null,
   setOpenCodeProcess: (value: any) => {
-    if (openCodeRuntime) openCodeRuntime.getState().openCodeProcess = value;
+    if (openCodeRuntimeRef.current)
+      openCodeRuntimeRef.current.getState().openCodeProcess = value;
   },
-  killProcessOnPort: openCodeRuntime
-    ? openCodeRuntime.killProcessOnPort
+  killProcessOnPort: openCodeRuntimeRef.current
+    ? openCodeRuntimeRef.current.killProcessOnPort
     : () => {},
-  waitForPortRelease: openCodeRuntime
-    ? openCodeRuntime.waitForPortRelease
+  waitForPortRelease: openCodeRuntimeRef.current
+    ? openCodeRuntimeRef.current.waitForPortRelease
     : async () => true,
   getServer: () => server,
   getUiAuthController: () => uiAuthController,

@@ -7,10 +7,10 @@ export interface ScheduledTaskDeps {
     updateScheduledTaskState(projectID: string, taskID: string, statePatch: Partial<NormalizedTask["state"]>): Promise<{ task?: NormalizedTask | null }>;
   };
   listProjects(): Promise<Array<{ id: string; path: string } | null | undefined>>;
-  openCodeRuntime: {
+  getOpenCodeRuntime: () => {
     getUrl(path: string, query: string): string;
     getAuthHeaders(): Record<string, string>;
-  };
+  } | null;
   waitForOpenCodeReady?: (timeoutMs: number, pollMs: number) => Promise<void>;
   emitTaskRunEvent?: (event: TaskRunEvent) => void;
   logger?: {

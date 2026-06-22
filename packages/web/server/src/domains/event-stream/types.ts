@@ -67,7 +67,7 @@ export interface UpstreamSseReader {
 
 export interface GlobalHubDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  openCodeRuntime: any;
+  getOpenCodeRuntime: () => any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fetchImpl?: any;
   upstreamStallTimeoutMs?: number;

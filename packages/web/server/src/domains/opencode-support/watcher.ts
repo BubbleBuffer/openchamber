@@ -9,7 +9,7 @@ export const createOpenCodeWatcherRuntime = (
 ): OpenCodeWatcherRuntime => {
   const {
     waitForOpenCodePort,
-    openCodeRuntime,
+    getOpenCodeRuntime: _getOpenCodeRuntime,
     onPayload,
     fetchImpl = fetch,
     upstreamStallTimeoutMs,
@@ -77,8 +77,8 @@ export const createOpenCodeWatcherRuntime = (
 
     reader = createUpstreamSseReader({
       signal,
-      buildUrl: () => new URL(openCodeRuntime.getUrl("/global/event", "")),
-      getHeaders: () => openCodeRuntime.getAuthHeaders(),
+      buildUrl: () => new URL(_getOpenCodeRuntime().getUrl("/global/event", "")),
+      getHeaders: () => _getOpenCodeRuntime().getAuthHeaders(),
       fetchImpl,
       stallTimeoutMs: upstreamStallTimeoutMs,
       reconnectDelayMs: upstreamReconnectDelayMs,

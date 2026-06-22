@@ -23,14 +23,10 @@ import { createGlobalMessageStreamWsBridge } from "./global-ws-bridge.js";
 import { acceptDirectoryMessageStreamWsConnection } from "./directory-ws-bridge.js";
 
 // Old JS module imports (lib/ not in tsconfig.server.json include)
-// @ts-expect-error — lib/ path resolution in TS
-import { createNotificationEmitterRuntime } from "../../lib/notifications/emitter-runtime.js";
-// @ts-expect-error — lib/ path resolution in TS
-import { createPushRuntime } from "../../lib/notifications/push-runtime.js";
-// @ts-expect-error — lib/ path resolution in TS
-import { createOpenCodeWatcherRuntime } from "../../lib/opencode/services/watcher.js";
-// @ts-expect-error — lib/ path resolution in TS
-import { EVENTS } from "../../lib/core/events.js";
+import { createNotificationEmitterRuntime } from "../notifications/emitter.js";
+import { createPushRuntime } from "../notifications/push-runtime.js";
+import { createOpenCodeWatcherRuntime } from "../opencode-support/watcher.js";
+import { EVENTS } from "../core/events.js";
 import { createBoundedSet } from "../core/bounded-cache.js";
 
 // web-push is an old JS module — use createRequire to avoid top-level await

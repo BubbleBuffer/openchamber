@@ -266,7 +266,7 @@ export function createScheduledTasksRuntime(
   const {
     projectConfigRuntime,
     listProjects,
-    openCodeRuntime,
+    getOpenCodeRuntime: _getOpenCodeRuntime,
     waitForOpenCodeReady,
     emitTaskRunEvent,
     logger = console,
@@ -590,8 +590,12 @@ export function createScheduledTasksRuntime(
       await waitForOpenCodeReady(10_000, 250);
     }
 
-    const baseUrl = openCodeRuntime.getUrl("/", "").replace(/\/$/, "");
-    const authHeaders = openCodeRuntime.getAuthHeaders();
+    const runtime = _getOpenCodeRuntime();
+    if (!runtime) {
+      throw new Error("OpenCode runtime is unavailable");
+    }
+    const baseUrl = runtime.getUrl("/", "").replace(/\/$/, "");
+    const authHeaders = runtime.getAuthHeaders();
     const client = createOpencodeClient({
       baseUrl,
       headers: authHeaders,
