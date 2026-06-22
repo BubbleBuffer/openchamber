@@ -557,6 +557,7 @@ const fetchModelsSnapshot: (...args: any[]) => any = (...args) =>
 
 // ── Notification template & trigger runtimes ──────────────────────
 const notificationTemplateRuntime = (createNotificationTemplateRuntime as any)({
+  eventBus,
   readSettingsFromDisk,
   persistSettings,
   getOpenCodeRuntime: () => openCodeRuntimeRef.current,
@@ -590,6 +591,7 @@ const getCachedZenModels: (...args: any[]) => any = (...args) =>
   (notificationTemplateRuntime as any).getCachedZenModels(...args);
 
 const notificationTriggerRuntime = (createNotificationTriggerRuntime as any)({
+  eventBus,
   readSettingsFromDisk,
   prepareNotificationLastMessage,
   summarizeText,

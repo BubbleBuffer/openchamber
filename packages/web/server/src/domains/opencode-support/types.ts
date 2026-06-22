@@ -81,7 +81,7 @@ export interface OpenCodeEnvRuntime {
 
 export interface NetworkRuntimeDeps {
   state: { openCodePort: number; openCodeBaseUrl: string; openCodeApiPrefix: string; openCodeApiPrefixDetected: boolean; openCodeApiDetectionTimer: any };
-  getOpenCodeAuthHeaders: () => Record<string, string>;
+  getOpenCodeAuthHeaders: () => Record<string, string> | Promise<Record<string, string>>;
 }
 
 export interface OpenCodeNetworkRuntime {
