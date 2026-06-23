@@ -5,7 +5,7 @@ import {
   applyForwardProxyResponseHeaders,
   collectForwardProxyHeaders,
   shouldForwardProxyResponseHeader,
-} from "../../../proxy-headers.js";
+} from "./proxy-headers.js";
 
 export const waitForSseDrain = (res: any, signal?: AbortSignal): Promise<void> => new Promise((resolve) => {
   if (signal?.aborted || res.writableEnded || res.destroyed) {
