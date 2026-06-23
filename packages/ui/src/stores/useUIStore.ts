@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools, persist, createJSONStorage } from 'zustand/middleware';
-import type { SidebarSection } from '@/constants/sidebar';
+
 import { getSafeStorage } from './utils/safeStorage';
 import type { ShortcutCombo } from '@/lib/shortcuts';
 
@@ -461,10 +461,8 @@ interface UIStore {
   theme: 'light' | 'dark' | 'system';
   isSidebarOpen: boolean;
   sidebarWidth: number;
-  hasManuallyResizedLeftSidebar: boolean;
   isRightSidebarOpen: boolean;
   rightSidebarWidth: number;
-  hasManuallyResizedRightSidebar: boolean;
   rightSidebarTab: RightSidebarTab;
   contextPanelByDirectory: Record<string, ContextPanelDirectoryState>;
   isBottomTerminalOpen: boolean;
@@ -474,21 +472,17 @@ interface UIStore {
   isSessionSwitcherOpen: boolean;
   activeMainTab: MainTab;
   mainTabGuard: MainTabGuard | null;
-  sidebarOpenBeforeFullscreenTab: boolean | null;
   pendingDiffFile: string | null;
   pendingFileNavigation: PendingFileNavigation | null;
   pendingFileFocusPath: string | null;
   isMobile: boolean;
   isKeyboardOpen: boolean;
-  sidebarSection: SidebarSection;
 
   // Settings IA (new shell)
   settingsPage: string;
-  settingsHasOpenedOnce: boolean;
   settingsProjectsSelectedId: string | null;
   settingsRemoteInstancesSelectedId: string | null;
   eventStreamStatus: EventStreamStatus;
-  eventStreamHint: string | null;
   showReasoningTraces: boolean;
   chatRenderMode: ChatRenderMode;
   activityRenderMode: ActivityRenderMode;
@@ -497,7 +491,6 @@ interface UIStore {
   autoDeleteAfterDays: number;
   sessionRetentionAction: SessionRetentionAction;
   autoDeleteLastRunAt: number | null;
-  messageLimit: number;
   fontSize: number;
   terminalFontSize: number;
   padding: number;
@@ -508,7 +501,6 @@ interface UIStore {
   hiddenModels: Array<{ providerID: string; modelID: string }>;
   collapsedModelProviders: string[];
   recentModels: Array<{ providerID: string; modelID: string }>;
-  recentAgents: string[];
   recentEfforts: Record<string, string[]>;
 
   diffLayoutPreference: 'dynamic' | 'inline' | 'side-by-side';
@@ -589,8 +581,6 @@ interface UIStore {
   navigateToDiff: (filePath: string) => void;
   consumePendingDiffFile: () => string | null;
   setIsMobile: (isMobile: boolean) => void;
-  markSettingsOpenedOnce: () => void;
-  setSidebarSection: (section: SidebarSection) => void;
   setSettingsPage: (slug: string) => void;
   setSettingsProjectsSelectedId: (projectId: string | null) => void;
   setSettingsRemoteInstancesSelectedId: (instanceId: string | null) => void;
@@ -603,7 +593,6 @@ interface UIStore {
   setAutoDeleteAfterDays: (days: number) => void;
   setSessionRetentionAction: (value: SessionRetentionAction) => void;
   setAutoDeleteLastRunAt: (timestamp: number | null) => void;
-  setMessageLimit: (value: number) => void;
   setFontSize: (size: number) => void;
   setTerminalFontSize: (size: number) => void;
   setPadding: (size: number) => void;
@@ -618,7 +607,6 @@ interface UIStore {
   toggleModelProviderCollapsed: (providerID: string) => void;
   isFavoriteModel: (providerID: string, modelID: string) => boolean;
   addRecentModel: (providerID: string, modelID: string) => void;
-  addRecentAgent: (agentName: string) => void;
   addRecentEffort: (providerID: string, modelID: string, variant: string | undefined) => void;
   setDiffLayoutPreference: (mode: 'dynamic' | 'inline' | 'side-by-side') => void;
   setDiffFileLayout: (filePath: string, mode: 'inline' | 'side-by-side') => void;
@@ -649,8 +637,6 @@ interface UIStore {
   setStickyUserHeader: (value: boolean) => void;
   setShowMobileSessionStatusBar: (value: boolean) => void;
   setIsMobileSessionStatusBarCollapsed: (value: boolean) => void;
-  viewPagerPage: 'left' | 'center' | 'right';
-  setViewPagerPage: (page: 'left' | 'center' | 'right') => void;
   toggleExpandedInput: () => void;
   setExpandedInput: (value: boolean) => void;
   setReportUsage: (value: boolean) => void;
@@ -668,10 +654,8 @@ export const useUIStore = create<UIStore>()(
         theme: 'system',
         isSidebarOpen: true,
         sidebarWidth: LEFT_SIDEBAR_MIN_WIDTH,
-        hasManuallyResizedLeftSidebar: false,
         isRightSidebarOpen: false,
         rightSidebarWidth: RIGHT_SIDEBAR_MIN_WIDTH,
-        hasManuallyResizedRightSidebar: false,
         rightSidebarTab: 'git',
         contextPanelByDirectory: {},
         isBottomTerminalOpen: false,
@@ -681,19 +665,15 @@ export const useUIStore = create<UIStore>()(
         isSessionSwitcherOpen: false,
         activeMainTab: 'chat',
         mainTabGuard: null,
-        sidebarOpenBeforeFullscreenTab: null,
         pendingDiffFile: null,
         pendingFileNavigation: null,
         pendingFileFocusPath: null,
         isMobile: false,
         isKeyboardOpen: false,
-        sidebarSection: 'sessions',
         settingsPage: 'home',
-        settingsHasOpenedOnce: false,
         settingsProjectsSelectedId: null,
         settingsRemoteInstancesSelectedId: null,
         eventStreamStatus: 'idle',
-        eventStreamHint: null,
         showReasoningTraces: true,
         chatRenderMode: 'live',
         activityRenderMode: 'summary',
@@ -702,7 +682,6 @@ export const useUIStore = create<UIStore>()(
         autoDeleteAfterDays: 30,
         sessionRetentionAction: 'archive',
         autoDeleteLastRunAt: null,
-        messageLimit: 200,
         fontSize: 100,
         terminalFontSize: 13,
         padding: 100,
@@ -712,7 +691,6 @@ export const useUIStore = create<UIStore>()(
         hiddenModels: [],
         collapsedModelProviders: [],
         recentModels: [],
-        recentAgents: [],
         recentEfforts: {},
         diffLayoutPreference: 'inline',
         diffFileLayout: {},
@@ -765,10 +743,9 @@ export const useUIStore = create<UIStore>()(
           set((state) => {
             const newOpen = !state.isSidebarOpen;
 
-            if (newOpen && !state.hasManuallyResizedLeftSidebar) {
+            if (newOpen && state.sidebarWidth === LEFT_SIDEBAR_MIN_WIDTH) {
               return {
                 isSidebarOpen: newOpen,
-                sidebarWidth: LEFT_SIDEBAR_MIN_WIDTH,
               };
             }
             return { isSidebarOpen: newOpen };
@@ -781,7 +758,7 @@ export const useUIStore = create<UIStore>()(
               if (!open) {
                 return state;
               }
-              if (!state.hasManuallyResizedLeftSidebar && state.sidebarWidth !== LEFT_SIDEBAR_MIN_WIDTH) {
+              if (state.sidebarWidth !== LEFT_SIDEBAR_MIN_WIDTH) {
                 return {
                   isSidebarOpen: open,
                   sidebarWidth: LEFT_SIDEBAR_MIN_WIDTH,
@@ -789,10 +766,9 @@ export const useUIStore = create<UIStore>()(
               }
               return state;
             }
-            if (open && !state.hasManuallyResizedLeftSidebar) {
+            if (open && state.sidebarWidth === LEFT_SIDEBAR_MIN_WIDTH) {
               return {
                 isSidebarOpen: open,
-                sidebarWidth: LEFT_SIDEBAR_MIN_WIDTH,
               };
             }
             return { isSidebarOpen: open };
@@ -800,17 +776,16 @@ export const useUIStore = create<UIStore>()(
         },
 
         setSidebarWidth: (width) => {
-          set({ sidebarWidth: width, hasManuallyResizedLeftSidebar: true });
+          set({ sidebarWidth: width });
         },
 
         toggleRightSidebar: () => {
           set((state) => {
             const newOpen = !state.isRightSidebarOpen;
 
-            if (newOpen && !state.hasManuallyResizedRightSidebar) {
+            if (newOpen && state.rightSidebarWidth === RIGHT_SIDEBAR_MIN_WIDTH) {
               return {
                 isRightSidebarOpen: newOpen,
-                rightSidebarWidth: RIGHT_SIDEBAR_MIN_WIDTH,
               };
             }
             return { isRightSidebarOpen: newOpen };
@@ -823,7 +798,7 @@ export const useUIStore = create<UIStore>()(
               if (!open) {
                 return state;
               }
-              if (!state.hasManuallyResizedRightSidebar && state.rightSidebarWidth !== RIGHT_SIDEBAR_MIN_WIDTH) {
+              if (state.rightSidebarWidth !== RIGHT_SIDEBAR_MIN_WIDTH) {
                 return {
                   isRightSidebarOpen: open,
                   rightSidebarWidth: RIGHT_SIDEBAR_MIN_WIDTH,
@@ -831,10 +806,9 @@ export const useUIStore = create<UIStore>()(
               }
               return state;
             }
-            if (open && !state.hasManuallyResizedRightSidebar) {
+            if (open && state.rightSidebarWidth === RIGHT_SIDEBAR_MIN_WIDTH) {
               return {
                 isRightSidebarOpen: open,
-                rightSidebarWidth: RIGHT_SIDEBAR_MIN_WIDTH,
               };
             }
             return { isRightSidebarOpen: open };
@@ -842,7 +816,7 @@ export const useUIStore = create<UIStore>()(
         },
 
         setRightSidebarWidth: (width) => {
-          set({ rightSidebarWidth: width, hasManuallyResizedRightSidebar: true });
+          set({ rightSidebarWidth: width });
         },
 
         setRightSidebarTab: (tab) => {
@@ -1188,14 +1162,6 @@ export const useUIStore = create<UIStore>()(
           set({ isMobile });
         },
 
-        markSettingsOpenedOnce: () => {
-          set({ settingsHasOpenedOnce: true });
-        },
-
-        setSidebarSection: (section) => {
-          set({ sidebarSection: section });
-        },
-
         setSettingsPage: (slug) => {
           set({ settingsPage: slug });
         },
@@ -1208,10 +1174,9 @@ export const useUIStore = create<UIStore>()(
           set({ settingsRemoteInstancesSelectedId: instanceId });
         },
 
-        setEventStreamStatus: (status, hint) => {
+        setEventStreamStatus: (status) => {
           set({
             eventStreamStatus: status,
-            eventStreamHint: hint ?? null,
           });
         },
 
@@ -1246,11 +1211,6 @@ export const useUIStore = create<UIStore>()(
 
         setAutoDeleteLastRunAt: (timestamp) => {
           set({ autoDeleteLastRunAt: timestamp });
-        },
-
-        setMessageLimit: (value) => {
-          const clamped = Math.max(10, Math.min(500, Math.round(value)));
-          set({ messageLimit: clamped });
         },
 
         setFontSize: (size) => {
@@ -1413,22 +1373,6 @@ export const useUIStore = create<UIStore>()(
           });
         },
 
-        addRecentAgent: (agentName) => {
-          const normalized = typeof agentName === 'string' ? agentName.trim() : '';
-          if (!normalized) {
-            return;
-          }
-          set((state) => {
-            if (state.recentAgents.includes(normalized)) {
-              return state;
-            }
-            const filtered = state.recentAgents;
-            return {
-              recentAgents: [normalized, ...filtered].slice(0, 5),
-            };
-          });
-        },
-
         addRecentEffort: (providerID, modelID, variant) => {
           const provider = typeof providerID === 'string' ? providerID.trim() : '';
           const model = typeof modelID === 'string' ? modelID.trim() : '';
@@ -1517,17 +1461,6 @@ export const useUIStore = create<UIStore>()(
         setReportUsage: (value) => {
           set({ reportUsage: value });
         },
-        viewPagerPage: 'center',
-        setViewPagerPage: (page: 'left' | 'center' | 'right') => {
-          set({ viewPagerPage: page });
-          if (page === 'left') {
-            set({ isSessionSwitcherOpen: true, isRightSidebarOpen: false });
-          } else if (page === 'right') {
-            set({ isRightSidebarOpen: true, isSessionSwitcherOpen: false });
-          } else {
-            set({ isSessionSwitcherOpen: false, isRightSidebarOpen: false });
-          }
-        },
 
         setShortcutOverride: (actionId, combo) => {
           set((state) => ({
@@ -1580,22 +1513,9 @@ export const useUIStore = create<UIStore>()(
             }
           }
 
-          // v2 -> v3: collapse 3 memory-limit fields into single messageLimit.
-          // Pick the best user-customised value (prefer historical, fall back to active).
-          // Discard old defaults (90/120/180) — they become the new single default (200).
+          // v2 -> v3: remove obsolete memory-limit fields. messageLimit was
+          // removed in a later cleanup, so we just drop the legacy keys.
           if (version < 3) {
-            const OLD_DEFAULTS = new Set([90, 120, 180, 220]);
-            const hist = state.memoryLimitHistorical as number | undefined;
-            const active = state.memoryLimitActiveSession as number | undefined;
-
-            // If user had a non-default custom value, keep it as the new messageLimit.
-            if (typeof hist === 'number' && !OLD_DEFAULTS.has(hist)) {
-              state.messageLimit = hist;
-            } else if (typeof active === 'number' && !OLD_DEFAULTS.has(active)) {
-              state.messageLimit = active;
-            }
-            // Otherwise leave undefined → Zustand uses the initial default (200).
-
             delete state.memoryLimitHistorical;
             delete state.memoryLimitViewport;
             delete state.memoryLimitActiveSession;
@@ -1654,9 +1574,7 @@ export const useUIStore = create<UIStore>()(
           bottomTerminalHeight: state.bottomTerminalHeight,
           isSessionSwitcherOpen: state.isSessionSwitcherOpen,
           activeMainTab: state.activeMainTab,
-          sidebarSection: state.sidebarSection,
           settingsPage: state.settingsPage,
-          settingsHasOpenedOnce: state.settingsHasOpenedOnce,
           settingsProjectsSelectedId: state.settingsProjectsSelectedId,
           settingsRemoteInstancesSelectedId: state.settingsRemoteInstancesSelectedId,
           showReasoningTraces: state.showReasoningTraces,
@@ -1667,7 +1585,6 @@ export const useUIStore = create<UIStore>()(
           autoDeleteAfterDays: state.autoDeleteAfterDays,
           sessionRetentionAction: state.sessionRetentionAction,
           autoDeleteLastRunAt: state.autoDeleteLastRunAt,
-          messageLimit: state.messageLimit,
           fontSize: state.fontSize,
           terminalFontSize: state.terminalFontSize,
           padding: state.padding,
@@ -1676,7 +1593,6 @@ export const useUIStore = create<UIStore>()(
           hiddenModels: state.hiddenModels,
           collapsedModelProviders: state.collapsedModelProviders,
           recentModels: state.recentModels,
-          recentAgents: state.recentAgents,
           recentEfforts: state.recentEfforts,
           diffLayoutPreference: state.diffLayoutPreference,
           diffWrapLines: state.diffWrapLines,

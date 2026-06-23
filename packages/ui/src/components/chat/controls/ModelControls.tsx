@@ -361,7 +361,6 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
     const collapsedModelProviders = useUIStore((state) => state.collapsedModelProviders);
     const toggleModelProviderCollapsed = useUIStore((state) => state.toggleModelProviderCollapsed);
     const addRecentModel = useUIStore((state) => state.addRecentModel);
-    const addRecentAgent = useUIStore((state) => state.addRecentAgent);
     const addRecentEffort = useUIStore((state) => state.addRecentEffort);
     const isModelSelectorOpen = useDialogStore((state) => state.isModelSelectorOpen);
     const setModelSelectorOpen = useDialogStore((state) => state.setModelSelectorOpen);
@@ -1002,7 +1001,6 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
     const handleAgentChange = (agentName: string) => {
         try {
             setAgent(agentName);
-            addRecentAgent(agentName);
             setAgentMenuOpen(false);
 
             if (currentSessionId) {
