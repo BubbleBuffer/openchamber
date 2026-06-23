@@ -23,16 +23,6 @@ interface MessageListEntriesProps {
   trailingStreamingEntry: RenderEntry | null;
 }
 
-const useStableEvent = <TArgs extends unknown[], TResult>(
-  handler: (...args: TArgs) => TResult,
-) => {
-  const handlerRef = React.useRef(handler);
-  React.useEffect(() => {
-    handlerRef.current = handler;
-  }, [handler]);
-  return React.useCallback((...args: TArgs) => handlerRef.current(...args), []);
-};
-
 export const MessageListEntries = React.memo(function MessageListEntries({
   turnUiStates,
   toggleTurnGroup,
@@ -49,20 +39,12 @@ export const MessageListEntries = React.memo(function MessageListEntries({
   entries,
   trailingStreamingEntry,
 }: MessageListEntriesProps) {
-  const stableGetAnimationHandlers = useStableEvent(getAnimationHandlers);
-  const stableHistoryContentChange = useStableEvent((reason?: ContentChangeReason) => {
-    onMessageContentChange(reason);
-  });
-  const stableTailContentChange = useStableEvent((reason?: ContentChangeReason) => {
-    onMessageContentChange(reason);
-  });
-
   const renderEntry = React.useCallback(
     (entry: RenderEntry, isStreaming: boolean) => (
       <MessageListEntry
         entry={entry}
-        onMessageContentChange={isStreaming ? stableTailContentChange : stableHistoryContentChange}
-        getAnimationHandlers={stableGetAnimationHandlers}
+        onMessageContentChange={onMessageContentChange}
+        getAnimationHandlers={getAnimationHandlers}
         stickyUserHeader={stickyUserHeader}
         sessionIsWorking={isStreaming ? sessionIsWorking : false}
         defaultActivityExpanded={defaultActivityExpanded}
@@ -86,9 +68,8 @@ export const MessageListEntries = React.memo(function MessageListEntries({
       onUserAnimationConsumed,
       activeStreamingMessageId,
       activeStreamingPhase,
-      stableGetAnimationHandlers,
-      stableHistoryContentChange,
-      stableTailContentChange,
+      getAnimationHandlers,
+      onMessageContentChange,
     ],
   );
 
