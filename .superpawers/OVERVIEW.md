@@ -2,7 +2,7 @@
 
 > Living overview of the radical refactor program. Source of truth for "what's done / in flight / next".
 > Deep design lives in `.superpawers/specs/`. Per-task plans live in `.superpawers/plans/`.
-> Last updated: 2026-06-23.
+> Last updated: 2026-06-23 (dead-field audit).
 
 ## Status snapshot
 
@@ -11,7 +11,7 @@
 | 1 — Server runtime extraction | ✅ Complete | OpenCode / EventStream / Tunnel / Notification / Session runtimes; typed EventBus |
 | 2 — Chat adapter modularization | ✅ Complete | Adapter boundary, composer / message-list splits, final commit `17cb29fc` |
 | 3 — Session state machine | 🟡 Partial | 3.0 / 3.1 / 3.2 merged. 3.3–3.6 planned. |
-| 4 — Store consolidation | ⏸ Blocked | Awaits Phase 3.3 hot-path migration |
+| 4 — Store consolidation | 🟡 Partial | Dead-field audit pass done. Blocked on 3.3 for splits. |
 | 5 — Broader UI migration | ⏸ Deferred | Until chat proves the pattern |
 
 ---
@@ -66,6 +66,7 @@ Index: `.superpawers/plans/2026-05-29-phase-3-session-state-machine-index.md`
 
 Goal: remove store fields only after their consumers migrate.
 
+- [x] **Dead-field audit (✅):** Removed 14 dead fields from `useUIStore` + `useSessionUIStore` (Phase 3.3-finish + Phase 4-audit commits). Sweep of sync/ + stores/ found 7 dead selectors, 3 dead type fields, 2 dead hooks, 1 dead counter — all removed.
 - [ ] Migrate config stores to API-backed hooks (`useProviderConfigStore`, `useAgentsStore`, `useProjectsStore`, `useGitStore`, `useGitHubPrStatusStore`, …)
 - [ ] Delete `useUIStore` (1,718 lines) once machine owns session lifecycle / messages / parts / streaming
 - [ ] Delete obsolete sync-store paths (event reducer, child stores)
