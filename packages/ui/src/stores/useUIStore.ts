@@ -584,7 +584,7 @@ interface UIStore {
   setSettingsPage: (slug: string) => void;
   setSettingsProjectsSelectedId: (projectId: string | null) => void;
   setSettingsRemoteInstancesSelectedId: (instanceId: string | null) => void;
-  setEventStreamStatus: (status: EventStreamStatus, hint?: string | null) => void;
+  setEventStreamStatus: (status: EventStreamStatus) => void;
   setShowReasoningTraces: (value: boolean) => void;
   setChatRenderMode: (value: ChatRenderMode) => void;
   setActivityRenderMode: (value: ActivityRenderMode) => void;
@@ -1494,7 +1494,7 @@ export const useUIStore = create<UIStore>()(
       {
         name: 'ui-store',
         storage: createJSONStorage(() => getSafeStorage()),
-        version: 8,
+        version: 9,
         migrate: (persistedState, version) => {
           if (!persistedState || typeof persistedState !== 'object') {
             return persistedState;
@@ -1557,6 +1557,20 @@ export const useUIStore = create<UIStore>()(
             if (state.gitChangesViewMode !== 'flat' && state.gitChangesViewMode !== 'tree') {
               state.gitChangesViewMode = 'flat';
             }
+          }
+
+          // v8 -> v9: drop dead fields removed in Phase 4 audit so they don't
+          // linger as inert properties on existing users' persisted state.
+          if (version < 9) {
+            delete state.hasManuallyResizedLeftSidebar;
+            delete state.hasManuallyResizedRightSidebar;
+            delete state.sidebarOpenBeforeFullscreenTab;
+            delete state.sidebarSection;
+            delete state.settingsHasOpenedOnce;
+            delete state.eventStreamHint;
+            delete state.messageLimit;
+            delete state.recentAgents;
+            delete state.viewPagerPage;
           }
 
           return state;
