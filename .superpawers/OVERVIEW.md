@@ -2,7 +2,7 @@
 
 > Living overview of the radical refactor program. Source of truth for "what's done / in flight / next".
 > Deep design lives in `.superpawers/specs/`. Per-task plans live in `.superpawers/plans/`.
-> Last updated: 2026-06-23.
+> Last updated: 2026-06-23 (Phase 3.3 hot-path message migration completed).
 
 ## Status snapshot
 
@@ -10,8 +10,8 @@
 |-------|--------|-------|
 | 1 — Server runtime extraction | ✅ Complete | OpenCode / EventStream / Tunnel / Notification / Session runtimes; typed EventBus |
 | 2 — Chat adapter modularization | ✅ Complete | Adapter boundary, composer / message-list splits, final commit `17cb29fc` |
-| 3 — Session state machine | 🟡 Partial | 3.0 / 3.1 / 3.2 merged. 3.3–3.6 planned. |
-| 4 — Store consolidation | ⏸ Blocked | Awaits Phase 3.3 hot-path migration |
+| 3 — Session state machine | 🟡 Partial | 3.0 / 3.1 / 3.2 / **3.3** merged. 3.4–3.6 planned. |
+| 4 — Store consolidation | ⟢ Unblocked | Phase 3.3 hot-path migration complete; safe to start |
 | 5 — Broader UI migration | ⏸ Deferred | Until chat proves the pattern |
 
 ---
@@ -53,7 +53,7 @@ Package: `packages/session-state/` (XState v5, typed events, snapshots, fixture 
 - [x] **3.0** Prework + dependencies — `.superpawers/plans/2026-05-29-phase-3-0-prework-dependencies.md`
 - [x] **3.1** Shared canonical machine — `.superpawers/plans/2026-05-29-phase-3-1-shared-canonical-machine.md`
 - [x] **3.2** Client bridge — non-hot adapters (identity, lifecycle, activity, retry, interruptions) — `.superpawers/plans/2026-05-29-phase-3-2-client-bridge-non-hot-adapters.md`
-- [ ] **3.3** Hot-path message migration — make sync stores read from machine actors / selectors — `.superpawers/plans/2026-05-29-phase-3-3-hot-path-message-migration.md`
+- [x] **3.3** Hot-path message migration — `useChatMessages` now sources from machine hooks internally (no prop drilling from `useChatSessionData`); `useChatTimelineState` deleted as zero-callers dead code; `useStreamingStore` reads reduced to compatibility consumers (mount pool eviction, debug logging) — `.superpawers/plans/2026-05-29-phase-3-3-hot-path-message-migration.md`
 - [ ] **3.4** Server bridge SessionRuntime — `.superpawers/plans/2026-05-29-phase-3-4-server-bridge-sessionruntime.md`
 - [ ] **3.5** Canonical snapshot transport — `openchamber:session-snapshot` — `.superpawers/plans/2026-05-29-phase-3-5-canonical-snapshot-transport.md`
 - [ ] **3.6** Deprecation + final verification — `.superpawers/plans/2026-05-29-phase-3-6-deprecation-final-verification.md`
@@ -62,7 +62,7 @@ Index: `.superpawers/plans/2026-05-29-phase-3-session-state-machine-index.md`
 
 ---
 
-## Phase 4 — Store consolidation (blocked on 3.3)
+## Phase 4 — Store consolidation
 
 Goal: remove store fields only after their consumers migrate.
 

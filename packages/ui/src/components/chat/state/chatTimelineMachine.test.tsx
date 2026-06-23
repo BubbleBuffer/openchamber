@@ -494,10 +494,10 @@ describe('newestLoadedMessageId tracking', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Tests: useChatTimelineState History Domain Integration
+// Tests: Machine History Domain Integration
 // ---------------------------------------------------------------------------
 
-describe('useChatTimelineState history domain exposure', () => {
+describe('machine history domain', () => {
   test('timeline state exposes isLoadingOlder from machine', () => {
     const machine = makeMachine()
     const actor = createActor(machine)
