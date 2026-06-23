@@ -23,8 +23,6 @@ import {
   RiCloudLine,
   RiFoldersLine,
   RiGitBranchLine,
-  RiGlobalLine,
-  RiMicLine,
   RiListUnordered,
   RiNotification3Line,
   RiPaletteLine,
