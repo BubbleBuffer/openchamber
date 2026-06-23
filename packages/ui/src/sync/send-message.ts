@@ -144,14 +144,6 @@ export async function sendMessage(
 ): Promise<void> {
   const store = useSessionUIStore.getState()
 
-  // Clear non-Git changed-files bar on new user message for current session
-  const sid = store.currentSessionId;
-  if (sid) {
-    const map = new Map(store.pendingChangesBarDismissed);
-    map.delete(sid);
-    useSessionUIStore.setState({ pendingChangesBarDismissed: map });
-  }
-
   const draft = store.newSessionDraft
   const trimmedAgent = typeof agent === "string" && agent.trim().length > 0 ? agent.trim() : undefined
 

@@ -92,24 +92,16 @@ export type SessionUIState = {
   currentSessionId: string | null
   newSessionDraft: NewSessionDraftState
   abortPromptSessionId: string | null
-  abortPromptExpiresAt: number | null
-  error: string | null
   worktreeMetadata: Map<string, WorktreeMetadata>
   availableWorktrees: WorktreeMetadata[]
   availableWorktreesByProject: Map<string, WorktreeMetadata[]>
   webUICreatedSessions: Set<string>
   sessionAbortFlags: Map<string, { timestamp: number; acknowledged: boolean }>
-  abortControllers: Map<string, AbortController>
   isLoading: boolean
-  lastLoadedDirectory: string | null
   // Plan mode - per-session plan file availability (set when plan_enter tool creates a plan)
   sessionPlanAvailable: Map<string, boolean>
   markSessionPlanAvailable: (sessionId: string) => void
   isSessionPlanAvailable: (sessionId: string) => boolean
-
-  // Non-Git mode: dismissed signature hash per session, hides bar until new turn arrives
-  pendingChangesBarDismissed: Map<string, string>
-  dismissPendingChangesBar: (sessionId: string, signature: string | null) => void
 
   // Actions — UI state management
   setCurrentSession: (id: string | null, directoryHint?: string | null) => void
@@ -121,7 +113,6 @@ export type SessionUIState = {
   cleanupSession: (sessionId: string) => void
   clearAbortPrompt: () => void
   armAbortPrompt: (durationMs?: number) => number | null
-  clearError: () => void
   markSessionAsOpenChamberCreated: (sessionId: string) => void
   isOpenChamberCreatedSession: (sessionId: string) => boolean
   getContextUsage: (contextLimit: number, outputLimit: number) => SessionContextUsage | null
@@ -257,18 +248,13 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
   currentSessionId: null,
   newSessionDraft: { ...DEFAULT_DRAFT },
   abortPromptSessionId: null,
-  abortPromptExpiresAt: null,
-  error: null,
   worktreeMetadata: new Map(),
   availableWorktrees: [],
   availableWorktreesByProject: new Map(),
   webUICreatedSessions: new Set(),
   sessionAbortFlags: new Map(),
-  abortControllers: new Map(),
   isLoading: false,
-  lastLoadedDirectory: null,
   sessionPlanAvailable: new Map(),
-  pendingChangesBarDismissed: new Map(),
 
   // ---------------------------------------------------------------------------
   // setCurrentSession
@@ -382,7 +368,6 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
         targetFolderId: options?.targetFolderId,
       },
       currentSessionId: null,
-      error: null,
     })
 
     if (options?.initialPrompt) {
@@ -446,24 +431,19 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
     set((state) => {
       const nextAbortFlags = new Map(state.sessionAbortFlags)
       nextAbortFlags.delete(sessionId)
-      const nextAbortControllers = new Map(state.abortControllers)
-      const controller = nextAbortControllers.get(sessionId)
-      if (controller) { try { controller.abort() } catch { /* ignore */ } nextAbortControllers.delete(sessionId) }
-      return { sessionAbortFlags: nextAbortFlags, abortControllers: nextAbortControllers }
+      return { sessionAbortFlags: nextAbortFlags }
     })
   },
 
-  clearAbortPrompt: () => set({ abortPromptSessionId: null, abortPromptExpiresAt: null }),
+  clearAbortPrompt: () => set({ abortPromptSessionId: null }),
 
   armAbortPrompt: (durationMs = 5000) => {
     const { currentSessionId } = get()
     if (!currentSessionId) return null
     const expiresAt = Date.now() + durationMs
-    set({ abortPromptSessionId: currentSessionId, abortPromptExpiresAt: expiresAt })
+    set({ abortPromptSessionId: currentSessionId })
     return expiresAt
   },
-
-  clearError: () => set({ error: null }),
 
   markSessionAsOpenChamberCreated: (sessionId) =>
     set((s) => {
@@ -586,16 +566,6 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
     }),
 
   getWorktreeMetadata: (sessionId) => get().worktreeMetadata.get(sessionId),
-
-  dismissPendingChangesBar: (sessionId, signature) => {
-    const map = new Map(get().pendingChangesBarDismissed);
-    if (signature === null) {
-      map.delete(sessionId);
-    } else {
-      map.set(sessionId, signature);
-    }
-    set({ pendingChangesBarDismissed: map });
-  },
 
   // ---------------------------------------------------------------------------
   // sendMessage — delegates to standalone module

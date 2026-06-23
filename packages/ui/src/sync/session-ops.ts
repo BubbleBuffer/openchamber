@@ -35,7 +35,7 @@ export async function createSession(
     if (!session) return null
 
     if (targetFolderId) {
-      const scopeKey = directoryOverride || useSessionUIStore.getState().lastLoadedDirectory || session.directory
+      const scopeKey = directoryOverride || session.directory
       if (scopeKey) {
         useSessionFoldersStore.getState().addSessionToFolder(scopeKey, targetFolderId, session.id)
       }

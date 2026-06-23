@@ -156,7 +156,6 @@ export interface SessionStore {
     archivedSessions: Session[];
     sessionsByDirectory: Map<string, Session[]>;
     currentSessionId: string | null;
-    lastLoadedDirectory: string | null;
     messages: Map<string, { info: Message; parts: Part[] }[]>;
     sessionMemoryState: Map<string, SessionMemoryState>;
     sessionHistoryMeta: Map<string, SessionHistoryMeta>;
@@ -167,11 +166,8 @@ export interface SessionStore {
     sessionAbortFlags: Map<string, { timestamp: number; acknowledged: boolean }>;
     attachedFiles: AttachedFile[];
     abortPromptSessionId: string | null;
-    abortPromptExpiresAt: number | null;
     isLoading: boolean;
-    error: string | null;
     streamingMessageIds: Map<string, string | null>;
-    abortControllers: Map<string, AbortController>;
     lastUsedProvider: { providerID: string; modelID: string } | null;
     isSyncing: boolean;
 
@@ -264,7 +260,6 @@ export interface SessionStore {
     respondToQuestion: (sessionId: string, requestId: string, answers: string[] | string[][]) => Promise<void>;
     rejectQuestion: (sessionId: string, requestId: string) => Promise<void>;
 
-    clearError: () => void;
     getSessionsByDirectory: (directory: string) => Session[];
     getDirectoryForSession: (sessionId: string) => string | null;
     getLastUserChoice: (sessionId: string) => { agent?: string; providerID?: string; modelID?: string; variant?: string } | null;

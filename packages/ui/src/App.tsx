@@ -187,8 +187,6 @@ function App({ apis }: AppProps) {
   const agentsCount = useAgentConfigStore((state) => state.agents.length);
   const loadProviders = useProviderConfigStore((state) => state.loadProviders);
   const loadAgents = useAgentConfigStore((state) => state.loadAgents);
-  const error = useSessionUIStore((s) => s.error);
-  const clearError = useSessionUIStore((s) => s.clearError);
   const currentDirectory = useDirectoryStore((state) => state.currentDirectory);
   const setDirectory = useDirectoryStore((state) => state.setDirectory);
   const isSwitchingDirectory = useDirectoryStore((state) => state.isSwitchingDirectory);
@@ -612,17 +610,6 @@ function App({ apis }: AppProps) {
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [embeddedSessionChat]);
-
-  React.useEffect(() => {
-    if (embeddedSessionChat) {
-      return;
-    }
-
-    if (error) {
-
-      setTimeout(() => clearError(), 5000);
-    }
-  }, [clearError, embeddedSessionChat, error]);
 
   // Poll for the injected boot outcome until it becomes available (desktop only).
   // The Rust backend sets window.__OPENCHAMBER_DESKTOP_BOOT_OUTCOME__ once the
