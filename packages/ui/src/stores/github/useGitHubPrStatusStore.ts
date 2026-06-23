@@ -76,7 +76,6 @@ type PersistedPrStatusEntry = Pick<
 
 type GitHubPrStatusStore = {
   entries: Record<string, PrStatusEntry>;
-  activeRequestCount: number;
   totalRequestCount: number;
   ensureEntry: (key: string) => void;
   setParams: (key: string, params: PrRuntimeParams) => void;
@@ -221,7 +220,6 @@ export const useGitHubPrStatusStore = create<GitHubPrStatusStore>()(
   persist(
     (set, get) => ({
       entries: {},
-      activeRequestCount: 0,
       totalRequestCount: 0,
 
       ensureEntry: (key) => {
@@ -483,7 +481,6 @@ export const useGitHubPrStatusStore = create<GitHubPrStatusStore>()(
         try {
           set((prev) => ({
             ...prev,
-            activeRequestCount: prev.activeRequestCount + 1,
             totalRequestCount: prev.totalRequestCount + 1,
           }));
           const next = await params.github.prStatus(params.directory, params.branch, params.remoteName ?? undefined);
@@ -563,7 +560,6 @@ export const useGitHubPrStatusStore = create<GitHubPrStatusStore>()(
           });
         } finally {
           inFlightBySignature.delete(signature);
-          set((prev) => ({ ...prev, activeRequestCount: Math.max(0, prev.activeRequestCount - 1) }));
         }
       },
 
