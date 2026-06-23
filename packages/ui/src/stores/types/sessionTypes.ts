@@ -39,18 +39,15 @@ export interface MessageStreamLifecycle {
 export interface SessionMemoryState {
     viewportAnchor: number;
     isStreaming: boolean;
-    streamStartTime?: number;
     lastAccessedAt: number;
     backgroundMessageCount: number;
     isZombie?: boolean;
-    totalAvailableMessages?: number;
     loadedTurnCount?: number;
     hasMoreAbove?: boolean;
     hasMoreTurnsAbove?: boolean;
     historyLoading?: boolean;
     historyComplete?: boolean;
     historyLimit?: number;
-    streamingCooldownUntil?: number;
     lastUserMessageAt?: number; // Timestamp when user last sent a message
 }
 

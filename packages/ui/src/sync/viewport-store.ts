@@ -8,7 +8,6 @@ import { create } from "zustand"
 export type SessionMemoryState = {
   viewportAnchor: number
   isStreaming: boolean
-  streamStartTime?: number
   lastAccessedAt: number
   backgroundMessageCount: number
   loadedTurnCount?: number
@@ -17,8 +16,6 @@ export type SessionMemoryState = {
   historyLoading?: boolean
   historyComplete?: boolean
   historyLimit?: number
-  totalAvailableMessages?: number
-  streamingCooldownUntil?: number
   isZombie?: boolean
   lastUserMessageAt?: number
 }
