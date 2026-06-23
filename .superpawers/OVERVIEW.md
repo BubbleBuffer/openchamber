@@ -66,7 +66,8 @@ Index: `.superpawers/plans/2026-05-29-phase-3-session-state-machine-index.md`
 
 Goal: remove store fields only after their consumers migrate.
 
-- [x] **Dead-field audit (✅):** Removed 14 dead fields from `useUIStore` + `useSessionUIStore` (Phase 3.3-finish + Phase 4-audit commits). Sweep of sync/ + stores/ found 7 dead selectors, 3 dead type fields, 2 dead hooks, 1 dead counter — all removed.
+- [x] **Dead-field audit (✅):** Removed 14 dead fields from `useUIStore` + `useSessionUIStore` (Phase 3.3-finish + Phase 4-audit commits). Sweep of sync/ + stores/ found 7 dead selectors, 3 dead type fields, 2 dead hooks, 1 dead counter — all removed. Total: **26 dead symbols across 6 stores**.
+- [ ] **Pending — persisted-dead field** (`useAgentConfigStore.settingsAutoCreateWorktree`): defined + setter + persisted via `partialize`, but no UI reads/writes it. Skipped during audit per AGENTS.md (no data loss without consent). **Decision needed later:** (a) build UI for the worktree auto-create toggle, (b) add a persist-migration that drops it, or (c) leave dormant. See `packages/ui/src/stores/agents/useAgentConfigStore.ts:186`.
 - [ ] Migrate config stores to API-backed hooks (`useProviderConfigStore`, `useAgentsStore`, `useProjectsStore`, `useGitStore`, `useGitHubPrStatusStore`, …)
 - [ ] Delete `useUIStore` (1,718 lines) once machine owns session lifecycle / messages / parts / streaming
 - [ ] Delete obsolete sync-store paths (event reducer, child stores)
