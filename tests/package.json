@@ -1,0 +1,25 @@
+{
+  "name": "@openchamber/tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "type-check": "tsc --noEmit",
+    "test:integration": "vitest run opencode web",
+    "test:opencode": "vitest run opencode",
+    "test:web": "vitest run web",
+    "test:react": "vitest run react --config react/vitest.config.ts",
+    "bench": "vitest bench perf --config perf/vitest.config.ts"
+  },
+  "dependencies": {
+    "@opencode-ai/sdk": "^1.14.39",
+    "@openchamber/web": "workspace:*",
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "@types/ws": "^8.18.1",
+    "typescript": "~5.8.3",
+    "vitest": "^4.1.5"
+  }
+}
