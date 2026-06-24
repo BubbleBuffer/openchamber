@@ -127,7 +127,7 @@ Specs:
 - [x] `packages/web/server/proxy-headers.d.ts` (stale artifact) → removed
 
 ### Branches — current state
-- [ ] `feature/streaming-refactor` — **kept, not merged**. 13 commits extracting event pipeline from `sync-context.tsx` (event-coalescer, backoff, fanout, client-registry, directory-router, active-session store) + dual liveness monitoring (socket vs data, stall / resume signals). Decision needed: merge into main or fold into Phase 3.3 work.
+- [x] `feature/streaming-refactor` — **folded into `feature/streaming-liveness-fix`**, then dropped. 13 commits of decomposition superseded by the focused liveness fix shipped on 2026-06-24. Frozen-chat bug closed: server emits explicit `data_stalled` / `data_resumed` frames when upstream stalls; browser dual-timer monitor (`markDataEvent` vs `markSocketActivity`) detects stalls and reconnects with `lastEventId` for replay. Masking `openchamber:heartbeat` data frames removed; `socket.ping()` retained for NAT keepalive. Spec: `.superpawers/specs/2026-06-24-streaming-liveness-fix-design.md`.
 
 ---
 
