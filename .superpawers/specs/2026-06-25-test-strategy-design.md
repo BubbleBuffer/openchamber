@@ -53,7 +53,7 @@ Future surfaces (deferred — see §6):
 
 ```
 tests/
-├── package.json                          # vitest, no shared deps with main packages
+├── package.json                          # private test workspace, outside packages/*
 ├── vitest.config.ts                      # slow annotation handling, surfaces
 ├── tsconfig.json
 ├── README.md
@@ -129,24 +129,7 @@ Slow tests (anything that depends on model completion, deep I/O, or large-scale 
 test("live prompt streams model response @slow", async () => { ... });
 ```
 
-**Mechanism:** A custom vitest matcher excludes `@slow` tests by default. The harness provides a `slow` flag that tests can read.
-
-```ts
-import { test, isSlowEnabled } from "../helpers/vitest";
-
-test.skipIf(!isSlowEnabled())("live prompt @slow", async () => { ... });
-```
-
-Or simply:
-
-```ts
-test("live prompt @slow", async ({ skip }) => {
-  skip(); // vitest's built-in skip
-  // ...
-});
-```
-
-**Recommended form** (cleaner): A custom `slowTest` export that respects the env var:
+**Mechanism:** The harness exposes a `slowTest` wrapper that respects the env var:
 
 ```ts
 // helpers/vitest.ts
@@ -270,10 +253,10 @@ These require model completion, deep I/O, or large state. Marked `@slow`. Defaul
 
 ```bash
 # Fast lane
-bun test
+bun run --cwd tests test
 
 # Full lane
-RUN_SLOW_TESTS=1 bun test
+RUN_SLOW_TESTS=1 bun run --cwd tests test
 ```
 
 **Required CI environment:**
@@ -317,7 +300,7 @@ RUN_SLOW_TESTS=1 bun test
 11. `tests/web/connection-lifecycle.test.ts` — Tier 1 OC web server tests
 12. `tests/web/liveness-fix.test.ts` — Tier 1 liveness regression test (the highest-value test)
 
-**Exit criteria:** All 12 tasks done. `bun test` (fast lane) runs <30s locally. Liveness test reliably catches `data_stalled`/`data_resumed` against a real OC.
+**Exit criteria:** All 12 tasks done. `bun run --cwd tests test` (fast lane) runs <30s locally. Liveness test reliably catches `data_stalled`/`data_resumed` against a real OC.
 
 ### 1.14 Subsequent integration plans
 
@@ -483,12 +466,12 @@ The liveness fix added data flow to the wire protocol but no UI feedback. When U
 
 **Tasks:**
 
-1. Add `happy-dom`, `@testing-library/react`, `@testing-library/dom` to root `package.json` (or `tests/package.json` if we keep tests isolated)
+1. Add `happy-dom`, `@testing-library/react`, `@testing-library/dom` to `tests/package.json`
 2. Create `tests/react/setup.ts` — happy-dom setup, RTL cleanup
 3. Create `tests/react/vitest.config.ts` — separate vitest config for the React surface (different environment from opencode/web)
 4. Create `tests/react/helpers/render.tsx` — `renderWithProviders` helper that wires up the minimum context (XState machine provider, theme, etc.)
 5. Create `tests/react/render-fanout.test.tsx` — THE render fanout test
-6. Wire `tests/react/vitest.config.ts` into root `package.json` test script
+6. Wire `tests/react/vitest.config.ts` into `tests/package.json` and explicit root wrapper scripts
 
 **Exit criteria:** Render fanout test passes. Setup is reusable for subsequent React tests.
 
@@ -556,7 +539,7 @@ The liveness fix added data flow to the wire protocol but no UI feedback. When U
 2. Create `tests/perf/helpers/chat-fixture.ts` — generate 1800-message fixture
 3. Create `tests/perf/chat-load-1800.bench.ts` — first benchmark
 4. Run locally, capture baseline, commit `perf-snapshot.json`
-5. Add `bun run bench` script to root `package.json`
+5. Add `bench` script to `tests/package.json` and `test:perf` wrapper to root `package.json`
 
 **Exit criteria:** Benchmark runs locally. Baseline captured. CI integration deferred until pattern is proven.
 
@@ -580,22 +563,39 @@ Three options:
 - **B. Multi-package monorepo** (`tests-opencode`, `tests-web`, `tests-react`, `tests-perf`)
 - **C. One package per surface, all under `tests/`**
 
-**Decision: A.** Single top-level `tests/` package with surface subdirectories. Vitest can run specific surfaces via `vitest --project opencode` etc. Avoids workspace churn, keeps helpers shared, easy to add surfaces.
+**Decision: A.** Single top-level `tests/` package with surface subdirectories. It lives outside `packages/*` but is listed as a root workspace member for dependency installation and lockfile hygiene. Vitest can run specific surfaces via package-local scripts. This keeps tests structurally separate from packages while avoiding a second lockfile.
 
 ### 4.2 Test commands
 
-Root `package.json`:
+Root `package.json` wrappers (do **not** add a generic `test` script; root currently has none and package-local tests already exist):
 
 ```json
 {
   "scripts": {
+    "test:integration": "bun run --cwd tests test:integration",
+    "test:opencode": "bun run --cwd tests test:opencode",
+    "test:web": "bun run --cwd tests test:web",
+    "test:react": "bun run --cwd tests test:react",
+    "test:perf": "bun run --cwd tests bench",
+    "test:integration:slow": "RUN_SLOW_TESTS=1 bun run --cwd tests test:integration"
+  }
+}
+```
+
+`tests/package.json` owns the actual vitest commands:
+
+```json
+{
+  "name": "@openchamber/tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
     "test": "vitest run",
-    "test:opencode": "vitest run --project opencode",
-    "test:web": "vitest run --project web",
-    "test:react": "vitest run --project react",
-    "test:perf": "vitest bench",
-    "test:watch": "vitest",
-    "test:slow": "RUN_SLOW_TESTS=1 vitest run"
+    "test:integration": "vitest run opencode web",
+    "test:opencode": "vitest run opencode",
+    "test:web": "vitest run web",
+    "test:react": "vitest run react --config react/vitest.config.ts",
+    "bench": "vitest bench perf --config perf/vitest.config.ts"
   }
 }
 ```
@@ -604,9 +604,9 @@ Root `package.json`:
 
 **Production (zero):** None. Tests are dev-only.
 
-**Dev:**
+**Dev (in `tests/package.json`, not root):**
 
-- `vitest` (already a dev dep at root)
+- `vitest` (already used in `packages/web`, but added explicitly for the top-level test workspace)
 - `happy-dom`
 - `@testing-library/react`
 - `@testing-library/dom`
@@ -626,9 +626,9 @@ Root `package.json`:
 
 These are deferred to the planning phase, not blocking the spec:
 
-- **Q1:** Should `tests/` be a workspace member in the root `package.json` workspaces, or a standalone package? (Leaning: standalone, with its own lockfile.)
-- **Q2:** Should `@slow` tests share a single `RUN_SLOW_TESTS` flag, or have per-test annotations? (Leaning: single flag for simplicity.)
-- **Q3:** Should the perf suite be vitest bench or a separate tool like `tinybench`? (Leaning: vitest bench — already in the toolchain.)
+- **Q1:** Should root verification eventually include `test:integration`? Initial answer: no; keep explicit until stability is proven.
+- **Q2:** Should `@slow` eventually split into `@model`, `@mcp`, `@large-state`? Initial answer: no; single `RUN_SLOW_TESTS` flag until pain appears.
+- **Q3:** Should the perf suite stay on vitest bench or move to a separate tool like `tinybench`? Initial answer: vitest bench — already in the toolchain.
 
 ---
 
