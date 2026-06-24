@@ -34,7 +34,6 @@ export function acceptDirectoryMessageStreamWsConnection({
   fetchImpl,
 }: DirectoryWsConnectionDeps): void {
   const controller = new AbortController();
-  let upstreamConnected = false;
   let streamReady = false;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let reader: any = null;
@@ -59,18 +58,8 @@ export function acceptDirectoryMessageStreamWsConnection({
     }
   }, heartbeatIntervalMs);
 
-  const heartbeatInterval = setInterval(() => {
-    if (!upstreamConnected) {
-      return;
-    }
-
-    sendMessageStreamWsEvent(socket, { type: "openchamber:heartbeat", timestamp: Date.now() }, { directory: "global" });
-  }, heartbeatIntervalMs);
-
   socket.on("close", () => {
     clearInterval(pingInterval);
-    clearInterval(heartbeatInterval);
-    upstreamConnected = false;
     cleanup();
   });
 
@@ -144,11 +133,6 @@ export function acceptDirectoryMessageStreamWsConnection({
             });
             streamReady = true;
           }
-
-          upstreamConnected = true;
-        },
-        onDisconnect() {
-          upstreamConnected = false;
         },
         onEvent: forwardEvent,
         onError(error) {
