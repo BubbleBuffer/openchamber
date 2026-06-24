@@ -126,6 +126,19 @@ export function createGlobalMessageStreamWsBridge({
     void processForwardedEventPayload;
   });
 
+  const handleDataStalled = (duration: number | undefined) => {
+    for (const client of readyClients) {
+      sendMessageStreamWsFrame(client, { type: "data_stalled", duration });
+    }
+  };
+
+  const handleDataResumed = (lastEventId: string | undefined) => {
+    for (const client of readyClients) {
+      sendMessageStreamWsFrame(client, { type: "data_resumed", lastEventId });
+    }
+  };
+
+  // eslint-disable-next-line complexity -- pre-existing; accepts many status types
   const unsubscribeStatus = globalHub.subscribeStatus((status) => {
     if (status.type === "connect") {
       for (const socket of Array.from(clients)) {
@@ -157,6 +170,17 @@ export function createGlobalMessageStreamWsBridge({
 
     if (status.type === "error" && status.error?.type === "stream_error") {
       console.warn("Message stream WS proxy error:", status.error.error);
+      return;
+    }
+
+    if (status.type === "data_stalled") {
+      handleDataStalled(status.duration);
+      return;
+    }
+
+    if (status.type === "data_resumed") {
+      handleDataResumed(status.lastEventId);
+      return;
     }
   });
 
@@ -173,17 +197,8 @@ export function createGlobalMessageStreamWsBridge({
       }
     }, heartbeatIntervalMs);
 
-    const heartbeatInterval = setInterval(() => {
-      if (!globalHub.isConnected()) {
-        return;
-      }
-
-      sendMessageStreamWsEvent(socket, { type: "openchamber:heartbeat", timestamp: Date.now() }, { directory: "global" });
-    }, heartbeatIntervalMs);
-
     socket.on("close", () => {
       clearInterval(pingInterval);
-      clearInterval(heartbeatInterval);
       removeClient(socket);
       stopHubIfUnused();
     });
