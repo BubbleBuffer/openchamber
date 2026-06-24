@@ -5,7 +5,6 @@ export { useChatInterruptions } from './useChatInterruptions';
 export { useChatMessages } from './useChatMessages';
 export { useChatSelection } from './useChatSelection';
 export { useChatSessionState } from './useChatSessionState';
-export { useChatTimelineState } from './useChatTimelineState';
 export type {
   ChatActivityState,
   ChatComposerActions,

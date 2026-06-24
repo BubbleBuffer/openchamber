@@ -1,4 +1,8 @@
 import React from 'react';
+// useStreamingStore kept as a compatibility consumer (Phase 3.3 plan §2).
+// The eviction check below reads session-level streaming state imperatively
+// inside a state updater; it cannot subscribe via a hook. Phase 3.4 (server
+// bridge SessionRuntime) is the planned cutover.
 import { useStreamingStore } from '@/sync/streaming';
 
 const MAX_MOUNTED_SESSIONS = 10;

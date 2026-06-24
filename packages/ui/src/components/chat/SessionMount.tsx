@@ -60,11 +60,9 @@ export const SessionMount = React.memo(({
     });
 
     const messagesState = useChatMessages({
-        messages: data.messages,
+        directory,
+        sessionId,
         renderedMessages: timelineController.renderedMessages,
-        streamingMessageId: data.streamingMessageId ?? undefined,
-        historyMeta: data.historyMeta,
-        retryOverlay: data.retryOverlay,
     });
 
     const activity = useChatActivity({
