@@ -104,6 +104,7 @@ Use this exact initial package manifest:
   "type": "module",
   "scripts": {
     "test": "vitest run",
+    "type-check": "tsc --noEmit",
     "test:integration": "vitest run opencode web",
     "test:opencode": "vitest run opencode",
     "test:web": "vitest run web",
@@ -116,7 +117,7 @@ Use this exact initial package manifest:
     "ws": "^8.20.0"
   },
   "devDependencies": {
-    "@types/node": "^24.12.2",
+    "@types/node": "^25.9.1",
     "@types/ws": "^8.18.1",
     "typescript": "~5.8.3",
     "vitest": "^4.1.5"
@@ -124,26 +125,29 @@ Use this exact initial package manifest:
 }
 ```
 
-If Bun rejects the Node type version because the root/web packages use multiple versions, keep the root version (`^24.12.2`) for this new workspace. Do not add React DOM dependencies in Slice 1; those are Plan 8 in the spec.
+Use the same Node type major as `packages/web` (`^25.9.1`) because this workspace imports `@openchamber/web`. Do not add React DOM dependencies in Slice 1; those are Plan 8 in the spec.
 
 - [ ] **Step 3: Create `tests/tsconfig.json`**
 
 ```json
 {
-  "extends": "../tsconfig.json",
   "compilerOptions": {
-    "types": ["node", "vitest"],
+    "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
     "noEmit": true,
-    "allowJs": false
+    "types": ["node", "vitest"],
+    "allowJs": false,
+    "verbatimModuleSyntax": true
   },
   "include": ["**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules"]
 }
 ```
 
-If root `tsconfig.json` does not exist or does not work as a base, create a standalone config with equivalent strict TypeScript settings from nearby packages. Do not weaken strictness unless type-check fails for test-only Node globals, and document the reason.
+Do not extend the root `tsconfig.json`; it is a project-reference config and is not a useful standalone base for this workspace. Do not weaken strictness unless type-check fails for test-only Node globals, and document the reason.
 
 - [ ] **Step 4: Create `tests/vitest.config.ts`**
 
@@ -154,15 +158,19 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["opencode/**/*.test.ts", "web/**/*.test.ts"],
-    testTimeout: 30_000,
-    hookTimeout: 30_000,
+    testTimeout: 60_000,
+    hookTimeout: 60_000,
     pool: "forks",
     isolate: true,
+    env: {
+      OPENCODE_SKIP_START: "true",
+      OPENCHAMBER_SKIP_OPENCODE_START: "true",
+    },
   },
 })
 ```
 
-Use `pool: "forks"` because these tests spawn child processes and mutate process environment. If vitest version rejects the `pool` option, remove it and document that default workers are used.
+Use `pool: "forks"` because these tests spawn child processes and mutate process environment. The static skip-start env vars must be present before any web server module is imported. `OPENCODE_HOST` is dynamic and is set by `openchamber-process.ts` immediately before a dynamic import of `@openchamber/web`. If vitest version rejects the `pool` option, remove it and document that default workers are used.
 
 - [ ] **Step 5: Create `tests/helpers/vitest.ts`**
 
@@ -198,7 +206,7 @@ These tests use a real `opencode` binary and/or a real OpenChamber web server. T
 ## Instance Modes
 
 - Per-suite: the suite owns an isolated OpenCode process.
-- Per-run: a shared OpenCode process can be reused by tests that do not corrupt global state.
+- Per-run: a shared OpenCode process can be reused by tests that do not corrupt global state. In Slice 1 this is intra-file only because `isolate: true` gives each test file its own worker. Cross-file Mode B requires a future `globalSetup`.
 ```
 
 - [ ] **Step 7: Create `tests/fixtures/README.md`**
@@ -223,7 +231,7 @@ Run:
 bun run --cwd tests test -- --passWithNoTests
 ```
 
-Expected: vitest exits successfully with no tests or reports no matching tests. If this vitest version does not support `--passWithNoTests`, run `bun run --cwd tests test:opencode -- --passWithNoTests` after Task 3 adds tests and document the behavior in the implementation report. Do not add Jest-only flags such as `--runInBand`.
+Expected: vitest exits successfully with no tests or reports no matching tests. If this vitest version does not support `--passWithNoTests`, run `bun run --cwd tests test:opencode -- --passWithNoTests` after Task 3 adds tests and document the behavior in the implementation report. Do not add test-runner flags from other frameworks.
 
 - [ ] **Step 10: Commit**
 
@@ -347,7 +355,14 @@ Complete target content:
 
 ```ts
 export function getOpencodeBinary(): string {
-  return (process.env.TEST_OPENCODE_BINARY || process.env.OPENCODE_BINARY || "opencode").trim() || "opencode"
+  return (
+    process.env.TEST_OPENCODE_BINARY ||
+    process.env.OPENCODE_BINARY ||
+    process.env.OPENCODE_PATH ||
+    process.env.OPENCHAMBER_OPENCODE_PATH ||
+    process.env.OPENCHAMBER_OPENCODE_BIN ||
+    "opencode"
+  ).trim() || "opencode"
 }
 
 export function getTestModel(): string | null {
@@ -477,7 +492,9 @@ async function waitForHttp(baseUrl: string, timeoutMs: number): Promise<void> {
 
 - [ ] **Step 6: Create `tests/helpers/openchamber-process.ts`**
 
-Use in-process `startWebUiServer` from `@openchamber/web/server/index.js` rather than spawning the CLI. Existing pattern: `packages/web/server/src/__tests__/bootstrap.test.ts` imports `startWebUiServer` and starts with `{ port: 0, attachSignals: false, exitOnShutdown: false }`.
+Use in-process `startWebUiServer` from the `@openchamber/web` package rather than spawning the CLI. Existing pattern: `packages/web/server/src/__tests__/bootstrap.test.ts` imports `startWebUiServer` and starts with `{ port: 0, attachSignals: false, exitOnShutdown: false }`.
+
+Important env timing rule: do **not** statically import `@openchamber/web` in this helper or anywhere in the tests workspace. `packages/web/server/src/index.ts` reads `OPENCODE_SKIP_START`, `OPENCHAMBER_SKIP_OPENCODE_START`, and `OPENCODE_HOST` at module load time. `startOpenChamberAgainstOpenCode()` must set env vars first, then dynamically import `@openchamber/web` with `await import("@openchamber/web")`.
 
 Target behavior:
 - Accept `opencodeHost`, optional `port`, `host`.
@@ -489,8 +506,6 @@ Target behavior:
 Target-state sketch:
 
 ```ts
-import { startWebUiServer } from "@openchamber/web/server/index.js"
-
 export type StartedOpenChamber = {
   baseUrl: string
   port: number
@@ -505,8 +520,11 @@ export async function startOpenChamberAgainstOpenCode(options: { opencodeHost: s
   }
   process.env.OPENCODE_SKIP_START = "true"
   process.env.OPENCHAMBER_SKIP_OPENCODE_START = "true"
+  // OPENCODE_HOST must include http:// and an explicit port, e.g. http://127.0.0.1:4096.
+  // The web server env validation rejects host-only URLs.
   process.env.OPENCODE_HOST = options.opencodeHost
   try {
+    const { startWebUiServer } = await import("@openchamber/web")
     const controller = await startWebUiServer({
       port: options.port ?? 0,
       host: options.host ?? "127.0.0.1",
@@ -567,35 +585,67 @@ Target tests:
 import { afterEach, describe, expect, test } from "vitest"
 import { getOpencodeBinary } from "../helpers/env"
 
-const original = { TEST_OPENCODE_BINARY: process.env.TEST_OPENCODE_BINARY, OPENCODE_BINARY: process.env.OPENCODE_BINARY }
+const BINARY_ENV_KEYS = [
+  "TEST_OPENCODE_BINARY",
+  "OPENCODE_BINARY",
+  "OPENCODE_PATH",
+  "OPENCHAMBER_OPENCODE_PATH",
+  "OPENCHAMBER_OPENCODE_BIN",
+] as const
+
+const original = Object.fromEntries(BINARY_ENV_KEYS.map((key) => [key, process.env[key]])) as Record<(typeof BINARY_ENV_KEYS)[number], string | undefined>
+
+function clearBinaryEnv(): void {
+  for (const key of BINARY_ENV_KEYS) delete process.env[key]
+}
 
 afterEach(() => {
-  if (original.TEST_OPENCODE_BINARY === undefined) delete process.env.TEST_OPENCODE_BINARY
-  else process.env.TEST_OPENCODE_BINARY = original.TEST_OPENCODE_BINARY
-  if (original.OPENCODE_BINARY === undefined) delete process.env.OPENCODE_BINARY
-  else process.env.OPENCODE_BINARY = original.OPENCODE_BINARY
+  for (const key of BINARY_ENV_KEYS) {
+    if (original[key] === undefined) delete process.env[key]
+    else process.env[key] = original[key]
+  }
 })
 
 describe("OpenCode binary resolution", () => {
   test("uses TEST_OPENCODE_BINARY first", () => {
+    clearBinaryEnv()
     process.env.TEST_OPENCODE_BINARY = "/tmp/test-opencode"
     process.env.OPENCODE_BINARY = "/tmp/opencode"
     expect(getOpencodeBinary()).toBe("/tmp/test-opencode")
   })
 
   test("falls back to OPENCODE_BINARY", () => {
-    delete process.env.TEST_OPENCODE_BINARY
+    clearBinaryEnv()
     process.env.OPENCODE_BINARY = "/tmp/opencode"
     expect(getOpencodeBinary()).toBe("/tmp/opencode")
   })
 
+  test("falls back to OPENCODE_PATH", () => {
+    clearBinaryEnv()
+    process.env.OPENCODE_PATH = "/tmp/opencode-path"
+    expect(getOpencodeBinary()).toBe("/tmp/opencode-path")
+  })
+
+  test("falls back to OPENCHAMBER_OPENCODE_PATH", () => {
+    clearBinaryEnv()
+    process.env.OPENCHAMBER_OPENCODE_PATH = "/tmp/openchamber-opencode-path"
+    expect(getOpencodeBinary()).toBe("/tmp/openchamber-opencode-path")
+  })
+
+  test("falls back to OPENCHAMBER_OPENCODE_BIN", () => {
+    clearBinaryEnv()
+    process.env.OPENCHAMBER_OPENCODE_BIN = "/tmp/openchamber-opencode-bin"
+    expect(getOpencodeBinary()).toBe("/tmp/openchamber-opencode-bin")
+  })
+
   test("defaults to opencode", () => {
-    delete process.env.TEST_OPENCODE_BINARY
-    delete process.env.OPENCODE_BINARY
+    clearBinaryEnv()
     expect(getOpencodeBinary()).toBe("opencode")
   })
 })
 ```
+
+Common install path parity (`~/.opencode/bin/opencode`, `~/.bun/bin/opencode`, etc.) belongs to OpenChamber's production resolver and is intentionally deferred from Slice 1. Slice 1 covers env-var precedence in the test harness helper; a future parity test can import or expose the production resolver directly.
 
 - [ ] **Step 2: Create `sdk-connect.test.ts`**
 
@@ -750,6 +800,55 @@ Use `ws` from `tests/package.json`. Helper:
 - Collects parsed JSON frames.
 - Exposes `waitForFrame(type, timeoutMs)`.
 
+Minimal helper sketch:
+
+```ts
+import WebSocket from "ws"
+
+type WsFrame = { type?: string; payload?: { type?: string }; [key: string]: unknown }
+
+async function connectGlobalWs(baseUrl: string): Promise<{
+  socket: WebSocket
+  frames: WsFrame[]
+  waitForFrame(type: string, timeoutMs?: number): Promise<WsFrame>
+}> {
+  const url = new URL(baseUrl)
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:"
+  url.pathname = "/api/global/event/ws"
+  const frames: WsFrame[] = []
+  const waiters = new Map<string, Array<(frame: WsFrame) => void>>()
+  const socket = new WebSocket(url)
+
+  socket.on("message", (raw) => {
+    const frame = JSON.parse(String(raw)) as WsFrame
+    frames.push(frame)
+    const callbacks = waiters.get(String(frame.type)) ?? []
+    waiters.delete(String(frame.type))
+    for (const callback of callbacks) callback(frame)
+  })
+
+  await new Promise<void>((resolve, reject) => {
+    socket.once("open", () => resolve())
+    socket.once("error", reject)
+  })
+
+  const waitForFrame = (type: string, timeoutMs = 10_000) => new Promise<WsFrame>((resolve, reject) => {
+    const existing = frames.find((frame) => frame.type === type)
+    if (existing) return resolve(existing)
+    const timeout = setTimeout(() => reject(new Error(`Timed out waiting for WS frame ${type}`)), timeoutMs)
+    const callbacks = waiters.get(type) ?? []
+    callbacks.push((frame) => {
+      clearTimeout(timeout)
+      resolve(frame)
+    })
+    waiters.set(type, callbacks)
+  })
+
+  await waitForFrame("ready")
+  return { socket, frames, waitForFrame }
+}
+```
+
 - [ ] **Step 3: Implement the regression test**
 
 Initial target behavior:
@@ -758,13 +857,13 @@ Initial target behavior:
 - Connect global WS to OpenChamber and wait for `ready`.
 - Wait up to 30s for either `data_stalled`/`data_resumed` during an idle upstream OR, if real OpenCode sends keepalive chunks and no stall occurs, record that no natural idle stall is observable in this environment.
 - Stop OpenCode process, leaving OpenChamber running.
-- Assert that the WS connection remains controlled (either receives a status/error frame or stays open without `openchamber:heartbeat` data frames). Do not assert `data_stalled` on kill unless observed.
+- Assert that the WS connection remains controlled (either receives a `data_stalled`/`error` frame or stays open without unexpected close). Also assert that no WS `event` frame has `payload.type === "openchamber:heartbeat"`. Do not assert `data_stalled` on kill unless observed.
 - Restart OpenCode on the same port and same cwd so OpenChamber's upstream reconnect target is valid.
 - If a prior `data_stalled` was observed, wait up to 30s for `data_resumed`. Otherwise assert OpenChamber remains healthy after restart and document the behavior.
 
 Important implementation detail: `startOpenCodeInstance({ cwd, port })` must support reusing both cwd and port. If Task 2 helper lacks this, extend it locally and commit the helper change with this task.
 
-If the test cannot reliably cause a real upstream-silence stall with a real OpenCode binary, commit the strongest deterministic regression available in Slice 1: **global WS connects, no `openchamber:heartbeat` data frames are emitted for 20s, OpenCode restart does not crash OpenChamber, and any `data_stalled`/`data_resumed` frames observed have the expected shape.** Add a static skipped test for the stronger `data_stalled` assertion, with an explicit reason in the test name or adjacent comment: "requires controllable real upstream silence; future slice may add an OpenCode plugin/model-hold fixture".
+If the test cannot reliably cause a real upstream-silence stall with a real OpenCode binary, commit the strongest deterministic regression available in Slice 1: **global WS connects, no WS `event` frame with `payload.type === "openchamber:heartbeat"` is emitted for 20s, OpenCode restart does not crash OpenChamber, and any `data_stalled`/`data_resumed` frames observed have the expected shape.** Add a static skipped test for the stronger `data_stalled` assertion, with an explicit reason in the test name or adjacent comment: "requires controllable real upstream silence; future slice may add an OpenCode plugin/model-hold fixture".
 
 - [ ] **Step 4: Account for platform/process timing**
 
@@ -774,7 +873,7 @@ If OpenCode exits too slowly or restart binds before the old process fully close
 
 Run: `bun run --cwd tests test:web -- liveness-fix.test.ts`
 
-Expected: deterministic assertions pass. If real idle OpenCode naturally triggers upstream silence, the test observes valid `data_stalled` and `data_resumed` frames. If not, the test still proves the global WS path is alive, no `openchamber:heartbeat` data frames are emitted, and OpenChamber remains healthy across OpenCode restart; the stronger stall assertion is skipped with a clear reason.
+Expected: deterministic assertions pass. If real idle OpenCode naturally triggers upstream silence, the test observes valid `data_stalled` and `data_resumed` frames. If not, the test still proves the global WS path is alive, no WS `event` frame with `payload.type === "openchamber:heartbeat"` is emitted, and OpenChamber remains healthy across OpenCode restart; the stronger stall assertion is skipped with a clear reason.
 
 - [ ] **Step 6: Commit**
 
