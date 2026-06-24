@@ -25,12 +25,14 @@ export interface NormalizedEvent {
 }
 
 export interface HubStatus {
-  type: "connect" | "disconnect" | "error" | "initial-error";
+  type: "connect" | "disconnect" | "error" | "initial-error" | "data_stalled" | "data_resumed";
   wasReady?: boolean;
   reason?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   error?: any;
   buildUrlFailed?: boolean;
+  duration?: number;
+  lastEventId?: string;
 }
 
 export interface UpstreamSseReaderDeps {

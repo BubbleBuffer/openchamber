@@ -89,6 +89,12 @@ export function createGlobalMessageStreamHub({
           subscriber(normalized);
         }
       },
+      onStall({ duration }) {
+        notifyStatus({ type: "data_stalled", duration });
+      },
+      onResume({ lastEventId }) {
+        notifyStatus({ type: "data_resumed", lastEventId });
+      },
       onError(error) {
         if (controller?.signal.aborted) {
           return;
