@@ -354,6 +354,8 @@ export async function removeTempDir(path: string | null | undefined): Promise<vo
 Complete target content:
 
 ```ts
+import { spawn } from "node:child_process"
+
 export function getOpencodeBinary(): string {
   return (
     process.env.TEST_OPENCODE_BINARY ||
@@ -374,7 +376,6 @@ export function isSlowEnabled(): boolean {
 }
 
 export async function checkOpenCodeAvailable(binary = getOpencodeBinary()): Promise<{ available: true } | { available: false; reason: string }> {
-  const { spawn } = await import("node:child_process")
   return new Promise((resolve) => {
     const child = spawn(binary, ["--version"], { stdio: ["ignore", "ignore", "pipe"] })
     let stderr = ""
@@ -811,6 +812,7 @@ async function connectGlobalWs(baseUrl: string): Promise<{
   socket: WebSocket
   frames: WsFrame[]
   waitForFrame(type: string, timeoutMs?: number): Promise<WsFrame>
+  close(): void
 }> {
   const url = new URL(baseUrl)
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:"
@@ -832,7 +834,7 @@ async function connectGlobalWs(baseUrl: string): Promise<{
     socket.once("error", reject)
   })
 
-  const waitForFrame = (type: string, timeoutMs = 10_000) => new Promise<WsFrame>((resolve, reject) => {
+  const waitForFrame = (type: string, timeoutMs = 30_000) => new Promise<WsFrame>((resolve, reject) => {
     const existing = frames.find((frame) => frame.type === type)
     if (existing) return resolve(existing)
     const timeout = setTimeout(() => reject(new Error(`Timed out waiting for WS frame ${type}`)), timeoutMs)
@@ -845,7 +847,7 @@ async function connectGlobalWs(baseUrl: string): Promise<{
   })
 
   await waitForFrame("ready")
-  return { socket, frames, waitForFrame }
+  return { socket, frames, waitForFrame, close: () => socket.close() }
 }
 ```
 
