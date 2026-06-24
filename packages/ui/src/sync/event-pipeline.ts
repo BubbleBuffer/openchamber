@@ -10,6 +10,7 @@
 
 import type { Event, OpencodeClient } from "@/lib/opencode/client"
 import { opencodeClient } from "@/lib/opencode/client"
+import { createLivenessMonitor, type LivenessMonitor } from "./liveness"
 import { syncDebug } from "./debug"
 
 export type QueuedEvent = {
@@ -23,6 +24,7 @@ const FLUSH_FRAME_MS = 33
 const STREAM_YIELD_MS = 8
 const DEFAULT_RECONNECT_DELAY_MS = 250
 const DEFAULT_HEARTBEAT_TIMEOUT_MS = 30_000
+const DEFAULT_DATA_SILENCE_MS = 15_000
 const WS_FALLBACK_WINDOW_MS = 60_000
 const DEFAULT_WS_READY_TIMEOUT_MS = 2_000
 const ABSOLUTE_URL_PATTERN = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//
@@ -39,17 +41,20 @@ export type EventPipelineInput = {
   onTransportSwitch?: () => void
   transport?: "auto" | "ws" | "sse"
   heartbeatTimeoutMs?: number
+  dataSilenceMs?: number
   reconnectDelayMs?: number
   wsReadyTimeoutMs?: number
 }
 
 type MessageStreamWsFrame = {
-  type: "ready" | "event" | "error"
+  type: "ready" | "event" | "error" | "data_stalled" | "data_resumed"
   payload?: unknown
   eventId?: string
   directory?: string
   message?: string
   scope?: "global" | "directory"
+  duration?: number
+  lastEventId?: string
 }
 
 const normalizeEventType = (payload: Event): Event => {
@@ -152,6 +157,8 @@ type AttemptAbortReason =
   | "pipeline_stopped"
   | "ws_heartbeat_timeout"
   | "sse_heartbeat_timeout"
+  | "data_stalled"
+  | "socket_timeout"
   | null
 
 export function createEventPipeline(input: EventPipelineInput) {
@@ -263,9 +270,25 @@ export function createEventPipeline(input: EventPipelineInput) {
   let streamErrorLogged = false
   let attempt: AbortController | undefined
   let lastEventAt = Date.now()
-  let heartbeat: ReturnType<typeof setTimeout> | undefined
   let activeTransport: "ws" | "sse" = transport === "ws" ? "ws" : "sse"
   let attemptAbortReason: AttemptAbortReason = null
+
+  const liveness: LivenessMonitor = createLivenessMonitor({
+    dataSilenceMs: input.dataSilenceMs ?? DEFAULT_DATA_SILENCE_MS,
+    socketTimeoutMs: input.heartbeatTimeoutMs ?? DEFAULT_HEARTBEAT_TIMEOUT_MS,
+    onDataStall: () => {
+      attemptAbortReason = "data_stalled"
+      attempt?.abort()
+    },
+    onDataResumed: () => {
+      // Server's data_resumed signal already provides lastEventId via the WS frame handler.
+      // This callback is for monitor-driven recovery (not currently exercised).
+    },
+    onSocketTimeout: () => {
+      attemptAbortReason = "socket_timeout"
+      attempt?.abort()
+    },
+  })
 
   const notifyDisconnected = (reason: string) => {
     if (disconnected) {
@@ -323,17 +346,7 @@ export function createEventPipeline(input: EventPipelineInput) {
 
   const resetHeartbeat = () => {
     lastEventAt = Date.now()
-    if (heartbeat) clearTimeout(heartbeat)
-    heartbeat = setTimeout(() => {
-      attemptAbortReason = `${activeTransport}_heartbeat_timeout`
-      attempt?.abort()
-    }, heartbeatTimeoutMs)
-  }
-
-  const clearHeartbeat = () => {
-    if (!heartbeat) return
-    clearTimeout(heartbeat)
-    heartbeat = undefined
+    liveness.markDataEvent()
   }
 
   const runSseAttempt = async (signal: AbortSignal) => {
@@ -436,7 +449,7 @@ export function createEventPipeline(input: EventPipelineInput) {
       }
 
       socket.onmessage = (messageEvent) => {
-        resetHeartbeat()
+        liveness.markSocketActivity()
         streamErrorLogged = false
 
         let frame: MessageStreamWsFrame | null = null
@@ -448,6 +461,15 @@ export function createEventPipeline(input: EventPipelineInput) {
         }
 
         if (!frame || typeof frame.type !== "string") {
+          return
+        }
+
+        if (frame.type === "data_stalled") {
+          liveness.handleStallSignal({ duration: frame.duration ?? 0 })
+          return
+        }
+        if (frame.type === "data_resumed") {
+          liveness.handleResumedSignal({ lastEventId: frame.lastEventId })
           return
         }
 
@@ -492,6 +514,8 @@ export function createEventPipeline(input: EventPipelineInput) {
           payload,
         )
         enqueueEvent(directory, payload)
+        lastEventAt = Date.now()
+        liveness.markDataEvent()
       }
 
       socket.onerror = () => {
@@ -587,7 +611,8 @@ export function createEventPipeline(input: EventPipelineInput) {
       } finally {
         abort.signal.removeEventListener("abort", onAbort)
         attempt = undefined
-        clearHeartbeat()
+        liveness.resetSocketTimer()
+        liveness.resetDataTimer()
       }
 
       if (abort.signal.aborted) return
@@ -623,6 +648,7 @@ export function createEventPipeline(input: EventPipelineInput) {
   }
 
   const cleanup = () => {
+    liveness.destroy()
     if (typeof document !== "undefined") {
       document.removeEventListener("visibilitychange", onVisibility)
       window.removeEventListener("pageshow", onPageShow)
