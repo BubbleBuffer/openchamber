@@ -746,7 +746,7 @@ describe('createEventPipeline', () => {
     }
   });
 
-  it('marks the pipeline disconnected on heartbeat timeout and recovers on the next websocket connect', async () => {
+  it('reconnects when server sends data_stalled frame and recovers on data_resumed', async () => {
     installDomStubs();
     globalThis.WebSocket = FakeWebSocket;
 
@@ -765,9 +765,69 @@ describe('createEventPipeline', () => {
       const { cleanup } = createEventPipeline({
         sdk,
         transport: 'ws',
-        heartbeatTimeoutMs: 20,
+        heartbeatTimeoutMs: 5000,
+        dataSilenceMs: 5000,
         reconnectDelayMs: 0,
-        wsReadyTimeoutMs: 20,
+        wsReadyTimeoutMs: 100,
+        onEvent: () => {},
+        onDisconnect: (reason) => {
+          disconnectReasons.push(reason);
+        },
+        onReconnect: () => {
+          reconnectCount += 1;
+          if (reconnectCount === 2) {
+            cleanup();
+            resolve();
+          }
+        },
+      });
+    });
+
+    await Promise.resolve();
+
+    const firstSocket = FakeWebSocket.instances[0];
+    firstSocket.emitOpen();
+    firstSocket.emitMessage({ type: 'ready', scope: 'global' });
+    firstSocket.emitMessage({ type: 'data_stalled', duration: 200 });
+
+    await new Promise((r) => setTimeout(r, 35));
+
+    const secondSocket = FakeWebSocket.instances[1];
+    expect(secondSocket).toBeDefined();
+
+    secondSocket.emitOpen();
+    secondSocket.emitMessage({ type: 'ready', scope: 'global' });
+    secondSocket.emitMessage({ type: 'data_resumed', lastEventId: 'evt-1' });
+
+    await recovered;
+
+    expect(disconnectReasons).toEqual(['data_stalled']);
+    expect(reconnectCount).toBe(2);
+  });
+
+  it('triggers reconnect when data timer expires (no server signal)', async () => {
+    installDomStubs();
+    globalThis.WebSocket = FakeWebSocket;
+
+    const disconnectReasons = [];
+    let reconnectCount = 0;
+
+    const sdk = {
+      global: {
+        event: async () => {
+          throw new Error('SSE should not be used in ws mode');
+        },
+      },
+    };
+
+    const recovered = new Promise((resolve) => {
+      const { cleanup } = createEventPipeline({
+        sdk,
+        transport: 'ws',
+        heartbeatTimeoutMs: 5000,
+        dataSilenceMs: 30,
+        reconnectDelayMs: 0,
+        wsReadyTimeoutMs: 100,
         onEvent: () => {},
         onDisconnect: (reason) => {
           disconnectReasons.push(reason);
@@ -788,17 +848,19 @@ describe('createEventPipeline', () => {
     firstSocket.emitOpen();
     firstSocket.emitMessage({ type: 'ready', scope: 'global' });
 
-    await new Promise((resolve) => setTimeout(resolve, 35));
+    // Wait for data timer to expire without any data frames
+    await new Promise((r) => setTimeout(r, 60));
 
     const secondSocket = FakeWebSocket.instances[1];
     expect(secondSocket).toBeDefined();
 
     secondSocket.emitOpen();
     secondSocket.emitMessage({ type: 'ready', scope: 'global' });
+    secondSocket.emitMessage({ type: 'server.connected' });
 
     await recovered;
 
-    expect(disconnectReasons).toEqual(['ws_heartbeat_timeout']);
+    expect(disconnectReasons).toEqual(['data_stalled']);
     expect(reconnectCount).toBe(2);
   });
 });
