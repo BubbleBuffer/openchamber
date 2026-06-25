@@ -116,3 +116,21 @@ Validation and safety gates MUST live in core command logic, not in prompts. The
 | `scripts/verify.sh`           | Full verification (type-check + lint + build)  |
 
 Run `scripts/verify.sh` before finalising any change. At minimum, run `bun run type-check` and `bun run lint`.
+
+# VAULT
+
+This project is wired to a **private Obsidian vault** via the `vault` MCP server. The vault root is `Projects/openchamber/` inside the user's Obsidian vault — read & write paths are sandboxed to that subtree.
+
+**Rule: when you do meaningful work on this project, write it down in the vault.** A future session should be able to read the vault and reconstruct what was done, why, and what's next — without re-reading the full git history.
+
+Concrete triggers:
+
+- Made a non-trivial code change → note it (`vault.edit` on a topic file, or `vault.write` for new)
+- Starting a non-trivial task → `vault.search` + `vault.get_context` to see what's been recorded
+- Hit a decision point → drop an ADR in `decisions/`
+- Discovered a non-obvious gotcha → `notes/gotchas.md`
+- Need to compare two approaches → `vault.compare` prompt
+- Need to find related prior work → `vault.search` + `vault.get_context`
+- User gave a new direction → capture it in `plans/` or `notes/`
+
+Vault tools are namespaced under `vault.*`. Prefer `edit` over `write` for existing files. `delete` is destructive and irreversible — confirm paths first.
