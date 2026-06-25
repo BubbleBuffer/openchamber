@@ -15,7 +15,9 @@ These tests use a real `opencode` binary and/or a real OpenChamber web server. T
 | `bun run test:opencode` | Root wrapper → delegates to tests workspace |
 | `bun run test:web` | Root wrapper → delegates to tests workspace |
 
-## Slice 1 coverage
+## Coverage
+
+### Slice 1
 
 | File | What it covers |
 |---|---|
@@ -24,6 +26,15 @@ These tests use a real `opencode` binary and/or a real OpenChamber web server. T
 | `opencode/session-crud.test.ts` | Create, list, get, and delete a session via the OpenCode SDK |
 | `web/connection-lifecycle.test.ts` | OpenChamber web server boots against a real external OpenCode, `/health` returns 200 and `{"status":"ok"}` |
 | `web/liveness-fix.test.ts` | Global WS connects and receives `ready` frame; no `openchamber:heartbeat` payload leaks to WS clients; OpenChamber `/health` remains healthy after OpenCode kill + restart; `data_stalled` assertion is skipped (requires a controllable upstream-silence fixture) |
+
+### Slice 2
+
+| File | What it covers |
+|---|---|
+| `opencode/multi-directory.test.ts` | Sessions in different directories are isolated via `session.list` filtering; `session.get` resolves globally by ID (not per-directory) on this OpenCode binary |
+| `opencode/session-archive.test.ts` | Archive a session via `time.archived: <ms>`; `client.experimental.session.list({ archived: true })` filters correctly; archived sessions remain deletable. **Caveat:** this OpenCode binary treats `time.archived = 0` as still-archived (checks `!== undefined`, not `> 0`), so true unarchive is not testable. |
+| `opencode/session-errors.test.ts` | 404 (or sane fallback) for `session.get`/`delete`/`update` on unknown IDs; `messages` endpoint handles unknown session; `session.create` accepts empty title with auto-generated fallback |
+| `opencode/concurrent-sessions.test.ts` | Parallel session creation yields distinct IDs; parallel updates to distinct sessions don't cross-contaminate; parallel `session.list` calls return consistent snapshots containing all recently-created sessions |
 
 ## Required Environment
 
@@ -53,9 +64,18 @@ Each test file runs in its own vitest fork worker (`pool: "forks"`, `isolate: tr
 - OpenCode processes are started via `startOpenCodeInstance()` and stopped via the returned `stop()` method.
 - OpenChamber servers are started via `startOpenChamberAgainstOpenCode()` and stopped via the returned `stop()` method.
 - OpenChamber must be stopped before OpenCode to allow a graceful disconnect.
-- The `stop()` methods use SIGKILL + cleanup. No global `killall`, `pkill`, or process-name-based kills are used anywhere in the test helpers or tests.
+- The `stop()` methods use SIGKILL + cleanup targeted at the tracked child PID. **No `killall`, `pkill`, `pgrep`, or process-name-based kills exist anywhere in the test helpers or tests.** Cleanup is PID-targeted only.
 - File-level `afterAll` hooks are wrapped in try/catch so cleanup runs even after test failure.
-- An `process.on("exit")` safety net in `startOpenCodeInstance()` kills orphaned children if the parent exits abnormally.
+
+### Defense-in-depth against leaks
+
+When a vitest fork worker dies before `afterAll` can run (e.g. SIGKILL on timeout/OOM), the spawned OpenCode child would normally be reparented to init and leak. Three mechanisms prevent this — all PID-targeted, no name matching:
+
+1. **PID recording** (`tests/helpers/opencode-process.ts`): each spawn writes its PID to `<tempdir>/pid`.
+2. **Orphan reaper** (called at the start of every `startOpenCodeInstance()`): scans `/tmp/openchamber-opencode-*/pid`, liveness-checks each PID with `process.kill(pid, 0)`, and `process.kill(pid, "SIGKILL")` any that are still alive. Targets only PIDs we recorded.
+3. **Sibling watchdog** (`tests/helpers/opencode-watchdog.cjs`): a tiny Node.js process spawned alongside each OpenCode instance. Polls `process.ppid` every 250ms; if the recorded parent dies (ppid changes — happens on SIGKILL too), it sends SIGKILL to the OpenCode PID and exits. Detection latency: ≤250ms.
+
+User-spawned `opencode` sessions (e.g. `opencode --continue` from a terminal) never have a pid file under `/tmp/openchamber-opencode-*/`, so the reaper cannot touch them. The watchdog only kills a PID it was explicitly told to.
 
 ## Liveness test notes
 

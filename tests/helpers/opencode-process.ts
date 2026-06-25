@@ -30,7 +30,7 @@ export class OpenCodeUnavailableError extends Error {
 // parent (a vitest fork worker) died before stop() could run. Reaper is
 // PID-targeted only — it reads each PID from a pid file we wrote on spawn
 // and uses process.kill(pid, 0) to liveness-check, then process.kill(pid, ...)
-// to terminate. No name matching, no pkill/killall. User-spawned opencode
+// to terminate. No name matching, no process-name-based kill commands. User-spawned opencode
 // sessions never have a pid file in this directory, so they are untouched.
 async function reapOrphanedInstances(): Promise<void> {
   let entries: string[]
