@@ -7,9 +7,13 @@ import { checkOpenCodeAvailable, getOpencodeBinary } from "./env"
 import { createProcessLogBuffer } from "./logs"
 import { getAvailablePort } from "./ports"
 
+const TEMP_DIR_PREFIX = path.join(os.tmpdir(), "openchamber-opencode-")
+const WATCHDOG_SCRIPT = path.join(import.meta.dirname, "opencode-watchdog.cjs")
+
 export type StartedOpenCode = {
   baseUrl: string
   port: number
+  pid: number
   cwd: string
   logs: { dump(): string }
   stop(): Promise<void>
@@ -22,11 +26,58 @@ export class OpenCodeUnavailableError extends Error {
   }
 }
 
+// Kill any opencode PIDs that this harness previously spawned but whose
+// parent (a vitest fork worker) died before stop() could run. Reaper is
+// PID-targeted only — it reads each PID from a pid file we wrote on spawn
+// and uses process.kill(pid, 0) to liveness-check, then process.kill(pid, ...)
+// to terminate. No name matching, no pkill/killall. User-spawned opencode
+// sessions never have a pid file in this directory, so they are untouched.
+async function reapOrphanedInstances(): Promise<void> {
+  let entries: string[]
+  try {
+    entries = await fs.readdir(TEMP_DIR_PREFIX)
+  } catch {
+    return
+  }
+  for (const entry of entries) {
+    const dir = path.join(TEMP_DIR_PREFIX, entry)
+    const pidFile = path.join(dir, "pid")
+    let pidStr: string
+    try {
+      pidStr = (await fs.readFile(pidFile, "utf8")).trim()
+    } catch {
+      continue
+    }
+    const pid = Number(pidStr)
+    if (!Number.isInteger(pid) || pid <= 0) continue
+    let alive = false
+    try {
+      process.kill(pid, 0)
+      alive = true
+    } catch {
+      alive = false
+    }
+    if (alive) {
+      try {
+        process.kill(pid, "SIGKILL")
+      } catch {
+        // already dead or no permission; ignore
+      }
+    }
+    try {
+      await fs.rm(dir, { recursive: true, force: true })
+    } catch {
+      // best-effort cleanup
+    }
+  }
+}
+
 export async function startOpenCodeInstance(options: { cwd?: string; port?: number; timeoutMs?: number } = {}): Promise<StartedOpenCode> {
+  await reapOrphanedInstances()
   const availability = await checkOpenCodeAvailable()
   if (!availability.available) throw new OpenCodeUnavailableError(availability.reason)
   const port = options.port ?? await getAvailablePort()
-  const cwd = options.cwd ?? await fs.mkdtemp(path.join(os.tmpdir(), "openchamber-opencode-"))
+  const cwd = options.cwd ?? await fs.mkdtemp(`${TEMP_DIR_PREFIX}`)
   const ownsCwd = !options.cwd
   const baseUrl = `http://127.0.0.1:${port}`
   const logs = createProcessLogBuffer("opencode")
@@ -35,6 +86,28 @@ export async function startOpenCodeInstance(options: { cwd?: string; port?: numb
     env: { ...process.env },
     stdio: ["ignore", "pipe", "pipe"],
   })
+
+  // Record the spawned PID to <cwd>/pid so the reaper can find it if the
+  // parent dies unexpectedly. Only place we ever write a process identifier
+  // for later targeted cleanup.
+  if (child.pid !== undefined) {
+    try {
+      await fs.writeFile(path.join(cwd, "pid"), String(child.pid))
+    } catch {
+      // best-effort
+    }
+  }
+
+  // Sibling watchdog: a tiny Node.js process that polls process.ppid every
+  // 250ms. If our parent (this vitest fork) dies for any reason — including
+  // SIGKILL, which skips process.on("exit") — the watchdog detects the
+  // ppid change and sends SIGKILL to the opencode child. PID-targeted only.
+  let watchdog: ReturnType<typeof spawn> | undefined
+  if (child.pid !== undefined) {
+    watchdog = spawn(process.execPath, [WATCHDOG_SCRIPT, String(child.pid)], {
+      stdio: "ignore",
+    })
+  }
 
   child.stdout.on("data", (chunk) => logs.pushStdout(chunk))
   child.stderr.on("data", (chunk) => logs.pushStderr(chunk))
@@ -74,6 +147,7 @@ export async function startOpenCodeInstance(options: { cwd?: string; port?: numb
   return {
     baseUrl,
     port,
+    pid: child.pid ?? -1,
     cwd,
     logs,
     async stop() {
@@ -82,6 +156,9 @@ export async function startOpenCodeInstance(options: { cwd?: string; port?: numb
       // the .killed flag) instead of process.kill so that the safety-net
       // process.on("exit") handler knows the child was already dealt with.
       try { child.kill("SIGKILL") } catch { /* best-effort */ }
+      // Kill the sibling watchdog. It will detect the child is dead on its
+      // next poll and exit; sending SIGKILL here is a fast path.
+      try { watchdog?.kill("SIGKILL") } catch { /* best-effort */ }
       if (ownsCwd) await removeTempDir(cwd)
     },
   }
