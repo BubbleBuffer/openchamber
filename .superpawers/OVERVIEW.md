@@ -2,7 +2,7 @@
 
 > Living overview of the radical refactor program. Source of truth for "what's done / in flight / next".
 > Deep design lives in `.superpawers/specs/`. Per-task plans live in `.superpawers/plans/`.
-> Last updated: 2026-06-23 (Phase 3.3 merged into main; Phase 4 dead-field audit landed).
+> Last updated: 2026-06-25 (Slice 1 integration test workspace complete).
 
 ## Status snapshot
 
@@ -101,7 +101,7 @@ Specs:
 
 ---
 
-## Housekeeping — recent cleanup (2026-06-23)
+## Housekeeping — recent cleanup (2026-06-25)
 
 ### Branches dropped (14)
 - [x] feature/chat-adapter-modularization-spec
@@ -128,6 +128,16 @@ Specs:
 
 ### Branches — current state
 - [x] `feature/streaming-refactor` — **folded into `feature/streaming-liveness-fix`**, then dropped. 13 commits of decomposition superseded by the focused liveness fix shipped on 2026-06-24. Frozen-chat bug closed: server emits explicit `data_stalled` / `data_resumed` frames when upstream stalls; browser dual-timer monitor (`markDataEvent` vs `markSocketActivity`) detects stalls and reconnects with `lastEventId` for replay. Masking `openchamber:heartbeat` data frames removed; `socket.ping()` retained for NAT keepalive. Spec: `.superpawers/specs/2026-06-24-streaming-liveness-fix-design.md`.
+
+### Integration test workspace (`tests/`)
+- [x] **Slice 1 (2026-06-25) — complete.**
+  - Workspace scaffolding (`tests/package.json`, `tsconfig.json`, `vitest.config.ts`, helpers, README)
+  - Process harness helpers: `ports.ts`, `logs.ts`, `cleanup.ts`, `env.ts`, `opencode-process.ts`, `openchamber-process.ts`, `vitest.ts`
+  - OpenCode Tier 1: binary resolution (6 tests), SDK connectivity (2 tests), session CRUD (1 test)
+  - Web Tier 1: connection lifecycle (OpenChamber health against real OpenCode), streaming liveness regression (WS connect, OpenCode kill/restart, heartbeat-gap verification)
+  - 11 tests total, ~30s to run, no orphan processes left behind
+  - Spec: `.superpawers/specs/2026-06-25-test-strategy-design.md`
+  - Plan: `.superpawers/plans/2026-06-25-test-strategy-slice-1.md`
 
 ---
 
