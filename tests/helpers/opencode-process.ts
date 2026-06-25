@@ -38,6 +38,26 @@ export async function startOpenCodeInstance(options: { cwd?: string; port?: numb
 
   child.stdout.on("data", (chunk) => logs.pushStdout(chunk))
   child.stderr.on("data", (chunk) => logs.pushStderr(chunk))
+  // Unref so the child's stdio doesn't keep the parent's event loop alive.
+  // Without this, vitest fork workers may not exit cleanly after the child
+  // is killed, and the process.on("exit") cleanup may not fire in time.
+  ;(child.stdout as { unref?: () => void }).unref?.()
+  ;(child.stderr as { unref?: () => void }).unref?.()
+
+  // Safety net: kill the child when the parent process exits normally.
+  // Must NOT use signal handlers (SIGTERM, SIGHUP, etc.) because they
+  // override Node.js's default behavior and can prevent the worker from
+  // exiting when vitest expects it to.
+  const killOnExit = (): void => {
+    try {
+      if (child.pid !== undefined && !child.killed && child.exitCode === null) {
+        process.kill(child.pid, "SIGKILL")
+      }
+    } catch {
+      // best-effort during process shutdown
+    }
+  }
+  process.on("exit", killOnExit)
 
   try {
     await Promise.race([
@@ -45,7 +65,8 @@ export async function startOpenCodeInstance(options: { cwd?: string; port?: numb
       waitForChildFailure(child),
     ])
   } catch (error) {
-    await killProcess(child)
+    process.off("exit", killOnExit)
+    try { child.kill("SIGKILL") } catch { /* best-effort */ }
     if (ownsCwd) await removeTempDir(cwd)
     throw new Error(`OpenCode failed to start at ${baseUrl}: ${String(error)}\n${logs.dump()}`)
   }
@@ -56,7 +77,11 @@ export async function startOpenCodeInstance(options: { cwd?: string; port?: numb
     cwd,
     logs,
     async stop() {
-      await killProcess(child)
+      process.off("exit", killOnExit)
+      // Kill the child process synchronously. Use child.kill (which updates
+      // the .killed flag) instead of process.kill so that the safety-net
+      // process.on("exit") handler knows the child was already dealt with.
+      try { child.kill("SIGKILL") } catch { /* best-effort */ }
       if (ownsCwd) await removeTempDir(cwd)
     },
   }
