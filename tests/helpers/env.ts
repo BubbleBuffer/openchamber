@@ -1,6 +1,8 @@
 import { spawn } from "node:child_process"
 
 export function getOpencodeBinary(): string {
+  // Test harness control only. OpenChamber's production resolver also checks
+  // PATH/common install locations and may evolve independently.
   return (
     process.env.TEST_OPENCODE_BINARY ||
     process.env.OPENCODE_BINARY ||

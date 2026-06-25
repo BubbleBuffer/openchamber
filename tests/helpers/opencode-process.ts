@@ -40,7 +40,10 @@ export async function startOpenCodeInstance(options: { cwd?: string; port?: numb
   child.stderr.on("data", (chunk) => logs.pushStderr(chunk))
 
   try {
-    await waitForHttp(baseUrl, options.timeoutMs ?? 15_000)
+    await Promise.race([
+      waitForHttp(baseUrl, options.timeoutMs ?? 15_000),
+      waitForChildFailure(child),
+    ])
   } catch (error) {
     await killProcess(child)
     if (ownsCwd) await removeTempDir(cwd)
@@ -57,6 +60,15 @@ export async function startOpenCodeInstance(options: { cwd?: string; port?: numb
       if (ownsCwd) await removeTempDir(cwd)
     },
   }
+}
+
+async function waitForChildFailure(child: ReturnType<typeof spawn>): Promise<never> {
+  return new Promise((_, reject) => {
+    child.once("error", reject)
+    child.once("exit", (code, signal) => {
+      reject(new Error(`OpenCode exited before becoming ready (code=${code ?? "null"}, signal=${signal ?? "null"})`))
+    })
+  })
 }
 
 async function waitForHttp(baseUrl: string, timeoutMs: number): Promise<void> {
