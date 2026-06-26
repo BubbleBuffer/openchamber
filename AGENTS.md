@@ -119,18 +119,24 @@ Run `scripts/verify.sh` before finalising any change. At minimum, run `bun run t
 
 # VAULT
 
-This project is wired to a **private Obsidian vault** via the `vault` MCP server. The vault root is `Projects/openchamber/` inside the user's Obsidian vault — read & write paths are sandboxed to that subtree.
+This project has a private Obsidian vault mounted via the `vault` MCP server. The vault root is `Projects/openchamber/` inside the user's Obsidian vault, and all vault paths are sandboxed to that subtree.
 
-**Rule: when you do meaningful work on this project, write it down in the vault.** A future session should be able to read the vault and reconstruct what was done, why, and what's next — without re-reading the full git history.
+Use the vault for durable project memory and high-level roadmap context:
 
-Concrete triggers:
+- long-term direction and product/architecture principles
+- high-level roadmap notes, not step-by-step implementation plans
+- architectural rationale, tradeoffs, and decisions worth remembering
+- constraints, invariants, and non-obvious project/domain context
+- general progress summaries and milestone notes
+- follow-up ideas worth preserving across sessions
 
-- Made a non-trivial code change → note it (`vault.edit` on a topic file, or `vault.write` for new)
-- Starting a non-trivial task → `vault.search` + `vault.get_context` to see what's been recorded
-- Hit a decision point → drop an ADR in `decisions/`
-- Discovered a non-obvious gotcha → `notes/gotchas.md`
-- Need to compare two approaches → `vault.compare` prompt
-- Need to find related prior work → `vault.search` + `vault.get_context`
-- User gave a new direction → capture it in `plans/` or `notes/`
+Do not use the vault for active execution planning. Concrete specs, implementation plans, task breakdowns, TDD notes, verification checklists, and session scratchpads belong in `.superpawers/`.
 
-Vault tools are namespaced under `vault.*`. Prefer `edit` over `write` for existing files. `delete` is destructive and irreversible — confirm paths first.
+When meaningful work completes, do a quick vault hygiene pass:
+
+- skim relevant vault notes with `vault.search` / `vault.get_context`
+- decide whether the completed work changed durable project memory
+- if yes, update a short note in `summaries/`, `roadmap.md`, `direction.md`, `decisions/`, or `context/`
+- if no durable memory changed, do nothing
+
+A small completion-update agent may be dispatched for this pass. Its job is only to check whether the vault needs a durable-memory update, not to create execution plans. Prefer `vault.edit` over `vault.write` for existing files. `vault.delete` is destructive and irreversible — confirm paths first.
