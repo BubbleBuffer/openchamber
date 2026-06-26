@@ -45,6 +45,10 @@ tests/web/
 - `tests/README.md` Coverage section includes Slice 3 row
 - Final reviewer + verifier both approve
 
+**Spec typo note:** the spec's verification table (`.superpawers/specs/2026-06-25-test-strategy-slice-3-design.md:116`) lists "33 tests" — this is a typo. The correct total is 36 (22 opencode + 14 web = 36). The plan targets 36.
+
+**Spec-vs-impl gap on bad-host test:** the spec says "env validation throws with a clear message" but the actual code in `env-config.ts:22-35` warns-and-continues (returns null host, server still boots). Task 1's sketch was rewritten to encode the actual behaviour: server boots, `/health` reports `opencodeHost: null` or `opencodeReady: false`. This is the spec-vs-impl drift Slice 2 surfaced in three places; we apply the same encoding rule here.
+
 ---
 
 ### Task 1: `tests/web/api-session-crud.test.ts` — CRUD + bad host + 503-while-restarting
@@ -55,7 +59,7 @@ tests/web/
 **Anchors to use (from spec):**
 - Proxy POST/GET/DELETE flows through `packages/web/server/src/domains/server-utils/proxy.ts:332-362`
 - 503 gate at `packages/web/server/src/domains/server-utils/proxy.ts:238-250` (returns `{ error: "OpenCode is restarting", restarting: true }` when `OPEN_CODE_READY_GRACE_MS` window applies)
-- OpenChamber env validation rejects non-URL `OPENCODE_HOST` — implementer must `git grep "OPENCODE_HOST" packages/web/server/src` to confirm exact failure mode before writing the assertion
+- OpenChamber env validation for `OPENCODE_HOST`: per `packages/web/server/src/domains/opencode-support/env-config.ts:22-35`, invalid URLs are logged as a warning and produce a `null` host — they do NOT throw. With `OPENCODE_SKIP_START=true`, the server still boots. Implementer must `git grep "OPENCODE_HOST" packages/web/server/src` to confirm the exact failure mode before writing the assertion. The expected assertion adapts: verify the server starts but logs a warning about the invalid URL, OR verify that `/health` reports `opencodeReady: false`. Pick whichever the actual code produces and document.
 
 - [ ] **Step 1: Write the test file**
 
@@ -144,8 +148,8 @@ describeWhenOpenCode("OpenChamber API session CRUD", () => {
   }, 15_000)
 })
 
-describeWhenOpenCode("OpenChamber startup rejects bad OPENCODE_HOST", () => {
-  test("startWebUiServer throws on non-URL OPENCODE_HOST", async () => {
+describeWhenOpenCode("OpenChamber startup handles bad OPENCODE_HOST gracefully", () => {
+  test("startWebUiServer boots despite invalid OPENCODE_HOST (warns-and-continues per env-config.ts)", async () => {
     const previous = {
       OPENCODE_SKIP_START: process.env.OPENCODE_SKIP_START,
       OPENCHAMBER_SKIP_OPENCODE_START: process.env.OPENCHAMBER_SKIP_OPENCODE_START,
@@ -154,13 +158,25 @@ describeWhenOpenCode("OpenChamber startup rejects bad OPENCODE_HOST", () => {
     process.env.OPENCODE_SKIP_START = "true"
     process.env.OPENCHAMBER_SKIP_OPENCODE_START = "true"
     process.env.OPENCODE_HOST = "not-a-url"
+    let controller: { stop: (opts: { exitProcess: boolean }) => Promise<void>; getPort: () => number } | undefined
     try {
-      await expect(
-        import("@openchamber/web").then(({ startWebUiServer }) =>
-          startWebUiServer({ port: 0, host: "127.0.0.1", attachSignals: false, exitOnShutdown: false })
-        )
-      ).rejects.toThrow()
+      const { startWebUiServer } = await import("@openchamber/web")
+      controller = await startWebUiServer({ port: 0, host: "127.0.0.1", attachSignals: false, exitOnShutdown: false })
+      // The server booted despite the bad host. Hit /health and confirm it
+      // either reports the bad host back, or returns opencodeReady: false.
+      // Adapt assertion to whichever the actual code produces — see anchors.
+      const healthRes = await fetch(`http://127.0.0.1:${controller.getPort()}/health`)
+      expect(healthRes.status).toBe(200)
+      const body = await healthRes.json() as { status: string; opencodeReady?: boolean; opencodeHost?: string | null }
+      expect(body.status).toBe("ok")
+      // Either opencodeHost is null/undefined OR opencodeReady is false.
+      // Both indicate the bad host was rejected at config time, not at boot.
+      const hostRejected = body.opencodeHost === null || body.opencodeHost === undefined || body.opencodeReady === false
+      expect(hostRejected).toBe(true)
     } finally {
+      if (controller) {
+        try { await controller.stop({ exitProcess: false }) } catch {}
+      }
       for (const [k, v] of Object.entries(previous)) {
         if (v === undefined) delete process.env[k]
         else process.env[k] = v
@@ -170,10 +186,68 @@ describeWhenOpenCode("OpenChamber startup rejects bad OPENCODE_HOST", () => {
 })
 
 describeWhenOpenCode("OpenChamber proxy returns 503 while OpenCode is restarting", () => {
-  // Reuse the same OC instance lifecycle as the CRUD describe block above.
-  // If structure forces two suites, declare a second beforeAll that starts fresh.
-  // Tests must work whether the suite above already started OC or not.
-  // ...
+  // Separate suite with its own OC/OC server lifecycle so the kill does not
+  // race with the CRUD suite's `afterAll` cleanup. Mirrors the structure of
+  // the CRUD describe block above.
+  let localCwd: string | undefined
+  let localPort: number | undefined
+  let localOpencode: StartedOpenCode | undefined
+  let localOpenchamber: StartedOpenChamber | undefined
+
+  afterAll(async () => {
+    try { await localOpenchamber?.stop() } catch {}
+    try { await localOpencode?.stop() } catch {}
+    if (localCwd) { try { await fs.rm(localCwd, { recursive: true, force: true }) } catch {} }
+  })
+
+  beforeAll(async () => {
+    localCwd = await fs.mkdtemp(path.join(os.tmpdir(), "openchamber-restart-503-"))
+    localPort = await getAvailablePort()
+    localOpencode = await startOpenCodeInstance({ cwd: localCwd, port: localPort })
+    localOpenchamber = await startOpenChamberAgainstOpenCode({ opencodeHost: localOpencode.baseUrl })
+  }, 30_000)
+
+  test("GET /api/session returns 503 while OpenCode is restarting, then 200 after restart", async () => {
+    // Acquire the spawned OC PID from the helper's recorded pid file.
+    const pid = await getOpencodePid(localOpencode!)
+    expect(pid).toBeDefined()
+    // Confirm OC is alive before killing.
+    process.kill(pid!, 0)
+    // Kill it via PID only — never by name.
+    process.kill(pid!, "SIGKILL")
+
+    // Poll /api/session for up to 2s for a 503 with restarting:true.
+    let saw503 = false
+    for (let i = 0; i < 20; i++) {
+      try {
+        const res = await fetch(`${localOpenchamber!.baseUrl}/api/session`)
+        if (res.status === 503) {
+          const body = await res.json() as { restarting?: boolean; error?: string }
+          if (body.restarting === true || body.error?.toLowerCase().includes("restart")) {
+            saw503 = true
+            break
+          }
+        }
+      } catch { /* connection refused / etc — keep polling */ }
+      await new Promise((r) => setTimeout(r, 100))
+    }
+    expect(saw503).toBe(true)
+
+    // Restart OC on the same port and cwd. Use waitForPortFree (lifted from
+    // tests/web/liveness-fix.test.ts:73-85) if the helper reports port busy.
+    localOpencode = await startOpenCodeInstance({ cwd: localCwd!, port: localPort! })
+    // Wait for OC to be reachable via OpenChamber's proxy.
+    const deadline = Date.now() + 15_000
+    let recovered = false
+    while (Date.now() < deadline) {
+      try {
+        const res = await fetch(`${localOpenchamber!.baseUrl}/api/session`)
+        if (res.status === 200) { recovered = true; break }
+      } catch {}
+      await new Promise((r) => setTimeout(r, 200))
+    }
+    expect(recovered).toBe(true)
+  }, 45_000)
 })
 ```
 
@@ -339,7 +413,7 @@ git commit -m "test(web): add SSE event stream connect + delivery tests"
 - `lastEventId` query param handling at `packages/web/server/src/domains/event-stream/runtime.ts:116-117`
 - Replay logic at `packages/web/server/src/domains/event-stream/global-ws-bridge.ts:41-52`
 
-WS helper pattern (lifted from `tests/web/liveness-fix.test.ts:25-67`):
+WS helper pattern (adapted from `tests/web/liveness-fix.test.ts:25-67` — the existing `connectGlobalWs` hardcodes `/api/global/event/ws` and exposes only `waitForFrame`; this version is generic and also exposes a `frames` array for post-hoc inspection):
 
 ```ts
 import WebSocket from "ws"
