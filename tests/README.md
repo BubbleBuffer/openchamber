@@ -48,6 +48,18 @@ These tests use a real `opencode` binary and/or a real OpenChamber web server. T
 | **OpenCode total** | **22** |
 | **Total** | **36** |
 
+### Slice 4
+
+| File | Tests |
+|---|---|
+| `opencode/prompt-async-events.test.ts` | 5 |
+| `web/prompt-async-proxy.test.ts` | 2 |
+| **Slice 4 opencode** | **5** |
+| **Slice 4 web** | **2** |
+| **OpenCode total** | **27** |
+| **Web total** | **16** |
+| **Total** | **43** |
+
 ## Required Environment
 
 - `opencode` must be on `PATH`, or set `TEST_OPENCODE_BINARY` / `OPENCODE_BINARY`.
