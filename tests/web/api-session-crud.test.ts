@@ -151,7 +151,7 @@ describeWhenOpenCode("OpenChamber startup handles bad OPENCODE_HOST gracefully",
       const { startWebUiServer } = await import("@openchamber/web")
       controller = await startWebUiServer({ port: 0, host: "127.0.0.1", attachSignals: false, exitOnShutdown: false })
       // Server booted despite bad env. Hit /health and confirm it returns 200.
-      const healthRes = await fetch(`http://127.0.0.1:${controller.getPort()}/health`)
+      const healthRes = await fetch(`http://127.0.0.1:${controller!.getPort()}/health`)
       expect(healthRes.status).toBe(200)
       const body = await healthRes.json() as { status: string }
       expect(body.status).toBe("ok")
