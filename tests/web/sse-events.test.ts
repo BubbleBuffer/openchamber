@@ -20,7 +20,7 @@ let ocPort: number | undefined
 afterAll(async () => {
   try { await openchamber?.stop() } catch { /* best-effort */ }
   try { await opencode?.stop() } catch { /* best-effort */ }
-  if (ocCwd) { try { await fs.rm(ocCwd, { recursive: true, force: true }) } catch {} }
+  if (ocCwd) { try { await fs.rm(ocCwd, { recursive: true, force: true }) } catch { /* best-effort */ } }
 })
 
 /**

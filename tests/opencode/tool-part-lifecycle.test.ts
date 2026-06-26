@@ -56,7 +56,6 @@ async function openSseStream(baseUrl: string): Promise<{
   let buffer = ""
   const reader = res.body!.getReader()
   const decoder = new TextDecoder()
-  // eslint-disable-next-line @typescript-eslint/no-floating-promises
   ;(async () => {
     try {
       while (true) {

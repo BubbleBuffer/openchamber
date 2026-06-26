@@ -91,7 +91,7 @@ let ocPort: number | undefined
 afterAll(async () => {
   try { await openchamber?.stop() } catch { /* best-effort */ }
   try { await opencode?.stop() } catch { /* best-effort */ }
-  if (ocCwd) { try { await fs.rm(ocCwd, { recursive: true, force: true }) } catch {} }
+  if (ocCwd) { try { await fs.rm(ocCwd, { recursive: true, force: true }) } catch { /* best-effort */ } }
 })
 
 const describeWhenOpenCode = availability.available ? describe : describe.skip
@@ -265,8 +265,8 @@ describeWhenOpenCode("OpenChamber WS event stream upgrades", () => {
         const deadline = Date.now() + 5_000
         while (!capturedEventId && Date.now() < deadline) {
           const matching = wsA.frames.find((f) => JSON.stringify(f).includes(created.id))
-          if (matching && typeof (matching as any).eventId === "string") {
-            capturedEventId = (matching as any).eventId as string
+          if (matching && typeof (matching as { eventId?: unknown }).eventId === "string") {
+            capturedEventId = (matching as { eventId?: string }).eventId
             break
           }
           await new Promise((r) => setTimeout(r, 100))
