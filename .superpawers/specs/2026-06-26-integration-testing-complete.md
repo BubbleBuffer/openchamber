@@ -156,8 +156,8 @@ Per-slice plans in `.superpawers/plans/`.
 
 ### Immediate (optional polish)
 - Port-contention flake on full-suite `test:web` — see "Flake note" above. Worth a small fix if you care about CI runs.
-- Add `tests/package.json` lint script — Slice 1 didn't add one. Not blocking but recommended.
-- Decide on push strategy — `main` is 276 commits ahead of `origin/main` and **unpushed**. No release artifact will exist until pushed.
+- ~~Add `tests/package.json` lint script — Slice 1 didn't add one. Not blocking but recommended.~~ **DONE** (commit `418b78e9`).
+- Decide on push strategy — `main` is 277 commits ahead of `origin/main` and **unpushed**. No release artifact will exist until pushed.
 
 ### Future scope (separate branch)
 1. **React DOM testing branch** — `packages/ui/src/components/` + `packages/ui/src/stores/` + `packages/ui/src/sync/`. jsdom + Testing Library + happy-dom. Fresh brainstorming recommended — scope is large (~50+ components, sync layer with DOCUMENTATION.md).
