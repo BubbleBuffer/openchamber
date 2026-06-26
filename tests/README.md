@@ -60,6 +60,19 @@ These tests use a real `opencode` binary and/or a real OpenChamber web server. T
 | **Web total** | **16** |
 | **Total** | **43** |
 
+### Slice 5
+
+| File | Tests |
+|---|---|
+| `opencode/tool-registry.test.ts` | 3 |
+| `opencode/tool-part-lifecycle.test.ts` | 4 |
+| `web/tool-part-proxy.test.ts` | 3 |
+| **Slice 5 opencode** | **7** |
+| **Slice 5 web** | **3** |
+| **OpenCode total** | **34** |
+| **Web total** | **19** |
+| **Total** | **53** |
+
 ## Required Environment
 
 - `opencode` must be on `PATH`, or set `TEST_OPENCODE_BINARY` / `OPENCODE_BINARY`.
