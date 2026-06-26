@@ -367,29 +367,51 @@ const waitForBufferText = async (
   return { matched: false, text: handle.buffer }
 }
 
-// Mirror the bootstrap used by tests/web/api-session-crud.test.ts:
-// import the web server, start it against the spawned OpenCode instance, and
-// capture its controller for shutdown in afterAll. The exact module path is
-// "@openchamber/web" via tests/web/_helpers/oc-bootstrap.ts (or inline
-// import("@openchamber/web") at the top of the file — match what the
-// existing api-session-crud.test.ts does, do not invent a new helper).
-import { startOpenChamberAgainstOpenCode } from "./_helpers/oc-bootstrap"
+// Mirror the bootstrap used by tests/web/api-session-crud.test.ts: import the
+// web server via dynamic import (matches that file's pattern to avoid
+// module-cache surprises), start it against the spawned OpenCode instance,
+// and capture the returned handle (with baseUrl/port) for shutdown.
+// Do not invent a new helper. The Slice 3 implementation chose inline
+// import("@openchamber/web"); copy that exact pattern.
+// import("@openchamber/web") returns { startWebUiServer, ... }.
+// `startWebUiServer` returns a handle whose .port is the listener port and
+// whose stop() shuts the server down; use those, not a controller object.
 
 let opencode: StartedOpenCode
-let web: Awaited<ReturnType<typeof startOpenChamberAgainstOpenCode>>
 let webBaseUrl: string
+let webStop: () => Promise<void> | void
 let sse: SseHandle | undefined
 
 beforeAll(async () => {
   opencode = await startOpenCodeInstance()
-  web = await startOpenChamberAgainstOpenCode({ opencodeBaseUrl: opencode.baseUrl })
-  webBaseUrl = `http://127.0.0.1:${web.controller.getPort()}`
+  const { startWebUiServer } = await import("@openchamber/web")
+  const envBackups = {
+    OPENCODE_SKIP_START: process.env.OPENCODE_SKIP_START,
+    OPENCHAMBER_SKIP_OPENCODE_START: process.env.OPENCHAMBER_SKIP_OPENCODE_START,
+    OPENCODE_HOST: process.env.OPENCODE_HOST,
+  }
+  process.env.OPENCODE_SKIP_START = "true"
+  process.env.OPENCHAMBER_SKIP_OPENCODE_START = "true"
+  process.env.OPENCODE_HOST = opencode.baseUrl
+  let handle: { port: number; stop(): void | Promise<void> } | undefined
+  try {
+    handle = await startWebUiServer({ port: 0 }) as unknown as { port: number; stop(): void | Promise<void> }
+  } finally {
+    if (envBackups.OPENCODE_SKIP_START === undefined) delete process.env.OPENCODE_SKIP_START
+    else process.env.OPENCODE_SKIP_START = envBackups.OPENCODE_SKIP_START
+    if (envBackups.OPENCHAMBER_SKIP_OPENCODE_START === undefined) delete process.env.OPENCHAMBER_SKIP_OPENCODE_START
+    else process.env.OPENCHAMBER_SKIP_OPENCODE_START = envBackups.OPENCHAMBER_SKIP_OPENCODE_START
+    if (envBackups.OPENCODE_HOST === undefined) delete process.env.OPENCODE_HOST
+    else process.env.OPENCODE_HOST = envBackups.OPENCODE_HOST
+  }
+  webBaseUrl = `http://127.0.0.1:${handle!.port}`
+  webStop = handle!.stop
   sse = await openSseStream(webBaseUrl, "/api/global/event")
 }, 45_000)
 
 afterAll(async () => {
   try { sse?.close() } catch { /* ignore */ }
-  try { await web?.controller.stop() } catch { /* ignore */ }
+  try { await webStop?.() } catch { /* ignore */ }
   try { await opencode?.stop() } catch { /* ignore */ }
 })
 
@@ -445,7 +467,7 @@ describe("OpenChamber proxy: prompt_async", () => {
 })
 ```
 
-**Note for implementer:** If `tests/web/_helpers/oc-bootstrap.ts` does not exist, copy the bootstrap block directly from `tests/web/api-session-crud.test.ts:1-50` (the inline `import("@openchamber/web")` + controller lifecycle pattern). The Slice 3 spec called for a shared helper but the implementer chose inline import instead — match whatever that file does, do not introduce a new helper.
+**Note for implementer:** The sketch uses inline `import("@openchamber/web")` + `startWebUiServer({ port: 0 })` to match `tests/web/api-session-crud.test.ts`'s bootstrap. The exact return shape (`controller` vs `port`/`stop`) may differ from the sketch; resolve by reading that file before writing, do not invent a new helper.
 
 - [ ] **Step 2: Run the file to verify it passes**
 
