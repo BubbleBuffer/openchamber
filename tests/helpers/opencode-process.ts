@@ -81,9 +81,16 @@ export async function startOpenCodeInstance(options: { cwd?: string; port?: numb
   const ownsCwd = !options.cwd
   const baseUrl = `http://127.0.0.1:${port}`
   const logs = createProcessLogBuffer("opencode")
+  // Strip inherited env that would change opencode's behaviour or lock the
+  // spawned server behind auth. Tests run against a no-auth local instance;
+  // the user's shell commonly has OPENCODE_SERVER_PASSWORD set (their
+  // OpenChamber web server sets it for its own managed instance), and
+  // inheriting it would force every test request to send basic-auth headers.
+  const childEnv = { ...process.env }
+  delete childEnv.OPENCODE_SERVER_PASSWORD
   const child = spawn(getOpencodeBinary(), ["serve", "--hostname", "127.0.0.1", "--port", String(port)], {
     cwd,
-    env: { ...process.env },
+    env: childEnv,
     stdio: ["ignore", "pipe", "pipe"],
   })
 
