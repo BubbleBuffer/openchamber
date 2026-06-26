@@ -117,6 +117,22 @@ Validation and safety gates MUST live in core command logic, not in prompts. The
 
 Run `scripts/verify.sh` before finalising any change. At minimum, run `bun run type-check` and `bun run lint`.
 
+## Test process safety (HARD RULES)
+
+The test harness spawns `opencode serve` instances. Cleanup is **already handled by two layers** in `tests/helpers/opencode-process.ts` and `tests/helpers/opencode-watchdog.cjs`:
+
+1. **PID recording** — every spawn writes `child.pid` to `<tempdir>/pid`.
+2. **Sibling watchdog** — a tiny Node child of the test process polls `process.ppid`; on parent death (including SIGKILL), it SIGKILLs the recorded opencode PID.
+3. **Orphan reaper** — `startOpenCodeInstance()` scans `/tmp/openchamber-opencode-*/pid` and kills any recorded PID that is still alive.
+
+**Therefore:**
+
+- **NEVER** add a "verify stoppage" step that runs `pgrep`, `killall`, `pkill`, or any name-based process match. The two layers above are sufficient and self-healing; a third layer cannot distinguish test-spawned from user-spawned processes and will kill the user's own `opencode` sessions.
+- **NEVER** include `pgrep`/`killall`/`pkill` in subagent prompts (verifier, reviewer, implementer, researcher). Subagents follow instructions literally and will match the user's opencode.
+- **NEVER** dispatch a subagent to "check for orphan opencode processes" or "verify cleanup." Cleanup verification is pid-file-based only: every `pid` file under `/tmp/openchamber-opencode-*/` must reference a dead PID.
+
+If a test leak is suspected, debug by reading the pid files and checking `process.kill(pid, 0)` for liveness — never by name.
+
 # VAULT
 
 This project is wired to a **private Obsidian vault** via the `vault` MCP server. The vault root is `Projects/openchamber/` inside the user's Obsidian vault — read & write paths are sandboxed to that subtree.
