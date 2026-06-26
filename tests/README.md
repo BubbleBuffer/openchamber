@@ -36,6 +36,18 @@ These tests use a real `opencode` binary and/or a real OpenChamber web server. T
 | `opencode/session-errors.test.ts` | 404 (or sane fallback) for `session.get`/`delete`/`update` on unknown IDs; `messages` endpoint handles unknown session; `session.create` accepts empty title with auto-generated fallback |
 | `opencode/concurrent-sessions.test.ts` | Parallel session creation yields distinct IDs; parallel updates to distinct sessions don't cross-contaminate; parallel `session.list` calls return consistent snapshots containing all recently-created sessions |
 
+### Slice 3
+
+| File | Tests |
+|---|---|
+| `web/api-session-crud.test.ts` | 6 |
+| `web/sse-events.test.ts` | 3 |
+| `web/ws-upgrades.test.ts` | 3 |
+| **Slice 3 web** | **12** |
+| **Web total** | **14** |
+| **OpenCode total** | **22** |
+| **Total** | **36** |
+
 ## Required Environment
 
 - `opencode` must be on `PATH`, or set `TEST_OPENCODE_BINARY` / `OPENCODE_BINARY`.
