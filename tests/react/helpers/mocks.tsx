@@ -13,6 +13,6 @@ export function MockSessionSidebar({ mobileVariant = false }: { mobileVariant?: 
   )
 }
 
-export function passthroughProvider({ children }: { children: ReactNode }): ReactElement {
+export function PassthroughProvider({ children }: { children: ReactNode }): ReactElement {
   return <>{children}</>
 }

@@ -11,6 +11,7 @@ export function renderWithApp(ui: ReactElement, options: RenderWithAppOptions = 
     resetTopLevelStores()
   }
 
-  const { resetStores: _resetStores, ...renderOptions } = options
+  const renderOptions: RenderOptions = { ...options }
+  delete (renderOptions as RenderWithAppOptions).resetStores
   return render(ui, renderOptions)
 }

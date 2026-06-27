@@ -19,7 +19,7 @@ vi.mock("motion/react", async () => {
       { children, ...props },
       ref,
     ) {
-      return React.createElement(tag, { ...props, ref }, children)
+      return React.createElement(tag, { ...props, ref }, children as ReactNode)
     })
 
   return {
