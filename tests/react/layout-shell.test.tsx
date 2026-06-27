@@ -55,6 +55,7 @@ vi.mock("@/components/ui/OfflineIndicator", () => ({ OfflineIndicator: () => <di
 vi.mock("@/components/multirun", () => ({ MultiRunLauncher: () => null }))
 vi.mock("@/components/layout/RightSidebarTabs", () => ({ RightSidebarTabs: () => <section aria-label="Right sidebar tabs">Right sidebar tabs</section> }))
 vi.mock("@/components/layout/ContextPanel", () => ({ ContextPanel: () => <section aria-label="Context panel">Context panel</section> }))
+vi.mock("@/stores/files/useDirectoryStore", () => ({ useDirectoryStore: { getState: () => ({ currentDirectory: "/workspace/openchamber" }), subscribe: () => () => {}, setState: () => {} } }))
 vi.mock("@/stores/useUpdateStore", () => ({ useUpdateStore: (selector: (state: { checkForUpdates: () => Promise<null> }) => unknown) => selector({ checkForUpdates: async () => null }) }))
 
 import { MainLayout } from "@/components/layout/MainLayout"
