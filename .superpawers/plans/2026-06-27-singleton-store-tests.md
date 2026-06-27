@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpawers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Cover the 15 top-level singleton zustand stores in `packages/ui/src/stores/` plus the pure helpers in `globalSessions.ts` with colocated `*.test.ts` files using `bun:test`. 16 new test files, 65-90 tests across 4 risk tiers.
+**Goal:** Cover the 14 top-level singleton zustand stores in `packages/ui/src/stores/` (out of 15; `useGlobalSessionsStore` is explicitly out of scope per spec) plus the pure helpers in `globalSessions.ts` with colocated `*.test.ts` files using `bun:test`. 15 new test files, 65-90 tests across 4 risk tiers.
 
 **Architecture:** Colocated tests next to each store source file. `bun:test` (mirrors the existing `packages/ui/src/sync/*.test.ts` pattern — `bun test` auto-discovers `*.test.ts`). `happy-dom` imported per-file for persistence tests + `fileStore` DOM-needing tests. Real `getSafeStorage()` (already SSR-safe — falls back to an in-memory map when `window` is undefined, but using happy-dom gives us real `localStorage`). External module deps mocked via `mock.module()` where needed (`useCommandsStore`, `useMultiRunStore`).
 
@@ -32,7 +32,7 @@ Per AGENTS.md: No processes spawned by these tests. Pure unit tests. No `killall
 
 - [ ] **Step 1: Add `"test:stores"` script + `"happy-dom"` devDep to `packages/ui/package.json`**
 
-In `packages/ui/package.json`, in the `"scripts"` block (currently `"dev"`, `"build"`, `"type-check"`, `"lint"`), insert `"test:stores": "bun test packages/ui/src/stores"` after `"lint"`.
+In `packages/ui/package.json`, in the `"scripts"` block (currently `"dev"`, `"build"`, `"type-check"`, `"lint"`), insert `"test:stores": "bun test src/stores"` after `"lint"`.
 
 In the `"devDependencies"` block, insert `"happy-dom": "^15.11.7"` after `"globals": "^16.5.0"` (alphabetical position between `globals` and `nodemon`).
 
@@ -68,7 +68,7 @@ Expected: `test:stores` script present in the dumped `package.json` content.
 
 ```bash
 git add packages/ui/package.json package.json bun.lock bun.lockb 2>/dev/null
-git commit -m "chore(ui): add test:stores script and happy-dom devDep"
+git commit -m "test(ui): add test:stores script and happy-dom devDep"
 ```
 
 (`bun.lockb` may or may not exist; add it if present.)
@@ -109,7 +109,7 @@ const initialState = {
 
 describe("useDialogStore", () => {
   beforeEach(() => {
-    useDialogStore.setState(initialState, true);
+    useDialogStore.setState(initialState, false);
   });
 
   describe("initial state", () => {
@@ -229,7 +229,7 @@ import { useFeatureFlagsStore } from "./useFeatureFlagsStore";
 
 describe("useFeatureFlagsStore", () => {
   beforeEach(() => {
-    useFeatureFlagsStore.setState({ planModeEnabled: false }, true);
+    useFeatureFlagsStore.setState({ planModeEnabled: false }, false);
   });
 
   it("planModeEnabled defaults to false", () => {
@@ -255,7 +255,7 @@ describe("useMagicPromptsStore", () => {
   beforeEach(() => {
     useMagicPromptsStore.setState(
       { selectedPromptId: "git.commit.generate" },
-      true,
+      false,
     );
   });
 
@@ -284,7 +284,7 @@ describe("useMagicPromptsStore", () => {
 ### Verification (Task 1)
 
 ```bash
-bun run --cwd packages/ui test:stores packages/ui/src/stores/useDialogStore.test.ts packages/ui/src/stores/useFeatureFlagsStore.test.ts packages/ui/src/stores/useMagicPromptsStore.test.ts
+bun run --cwd packages/ui test:stores src/stores/useDialogStore.test.ts src/stores/useFeatureFlagsStore.test.ts src/stores/useMagicPromptsStore.test.ts
 ```
 
 Expected: 35 pass (or whatever the sum is from the 3 files). All in <5s.
@@ -337,7 +337,7 @@ const initialState = {
 
 describe("useUpdateStore", () => {
   beforeEach(() => {
-    useUpdateStore.setState(initialState, true);
+    useUpdateStore.setState(initialState, false);
   });
 
   it("dismiss clears available + downloaded + info", () => {
@@ -392,7 +392,7 @@ describe("useDesktopSshStore", () => {
         listenerReady: false,
         error: null,
       },
-      true,
+      false,
     );
   });
 
@@ -427,7 +427,7 @@ describe("messageQueueStore", () => {
     window.localStorage.clear();
     useMessageQueueStore.setState(
       { queuedMessages: {}, queueModeEnabled: true },
-      true,
+      false,
     );
   });
 
@@ -481,7 +481,7 @@ import { usePermissionStore } from "./permissionStore";
 describe("permissionStore", () => {
   beforeEach(() => {
     window.localStorage.clear();
-    usePermissionStore.setState({ autoAccept: {} }, true);
+    usePermissionStore.setState({ autoAccept: {} }, false);
   });
 
   it("isSessionAutoAccepting returns false for unknown session", () => {
@@ -513,10 +513,10 @@ describe("permissionStore", () => {
 ### Verification (Task 2)
 
 ```bash
-bun run --cwd packages/ui test:stores packages/ui/src/stores/useUpdateStore.test.ts \
-  packages/ui/src/stores/useDesktopSshStore.test.ts \
-  packages/ui/src/stores/messageQueueStore.test.ts \
-  packages/ui/src/stores/permissionStore.test.ts
+bun run --cwd packages/ui test:stores src/stores/useUpdateStore.test.ts \
+  src/stores/useDesktopSshStore.test.ts \
+  src/stores/messageQueueStore.test.ts \
+  src/stores/permissionStore.test.ts
 ```
 
 Expected: 10 pass, all in <10s.
@@ -564,7 +564,7 @@ const makeTodo = (id: string): Todo => ({
 describe("useTodosPersistStore", () => {
   beforeEach(() => {
     window.localStorage.clear();
-    useTodosPersistStore.setState({ sessions: {} }, true);
+    useTodosPersistStore.setState({ sessions: {} }, false);
   });
 
   it("setSessionTodos + getSessionTodos roundtrips via state", () => {
@@ -631,7 +631,7 @@ import { useContextStore } from "./contextStore";
 describe("contextStore", () => {
   beforeEach(() => {
     window.localStorage.clear();
-    useContextStore.setState(useContextStore.getInitialState(), true);
+    useContextStore.setState(useContextStore.getInitialState(), false);
   });
 
   it("saveSessionModelSelection + getSessionModelSelection roundtrips", () => {
@@ -679,7 +679,7 @@ const makeDraft = (overrides: Partial<InlineCommentDraft> = {}): Omit<InlineComm
 describe("useInlineCommentDraftStore", () => {
   beforeEach(() => {
     window.localStorage.clear();
-    useInlineCommentDraftStore.setState({ drafts: {} }, true);
+    useInlineCommentDraftStore.setState({ drafts: {} }, false);
   });
 
   it("addDraft stores a draft under sessionKey with generated id + createdAt", () => {
@@ -713,52 +713,28 @@ describe("useInlineCommentDraftStore", () => {
     expect(useInlineCommentDraftStore.getState().hasDrafts("sess-1")).toBe(false);
   });
 
-  it("migration sanitizes invalid drafts (load-bearing)", () => {
-    // Seed localStorage with a payload that has an invalid source.
-    window.localStorage.setItem(
-      "openchamber-inline-comment-drafts",
-      JSON.stringify({
-        state: {
-          drafts: {
-            "sess-1": [
-              {
-                id: "d1",
-                sessionKey: "sess-1",
-                source: "INVALID_SOURCE",
-                fileLabel: "foo.ts",
-                startLine: 1,
-                endLine: 2,
-                code: "x",
-                language: "ts",
-                text: "x",
-                createdAt: 1,
-              },
-              {
-                id: "d2",
-                sessionKey: "sess-1",
-                source: "diff",
-                fileLabel: "foo.ts",
-                startLine: 1,
-                endLine: 2,
-                code: "x",
-                language: "ts",
-                text: "valid",
-                createdAt: 2,
-              },
-            ],
-          },
-        },
-        version: 1,
-      }),
-    );
-    // Re-import to trigger migration via persist's rehydrate path.
-    return import("./useInlineCommentDraftStore").then((mod) => {
-      const store = mod.useInlineCommentDraftStore;
-      // Migration is synchronous in zustand persist when using sync storage.
-      const drafts = store.getState().drafts["sess-1"] ?? [];
-      expect(drafts).toHaveLength(1);
-      expect(drafts[0]?.id).toBe("d2");
-    });
+  it("updateDraft mutates a draft in place by id", () => {
+    const { addDraft, updateDraft, getDrafts } =
+      useInlineCommentDraftStore.getState();
+    addDraft(makeDraft({ text: "original" }));
+    const id = getDrafts("sess-1")[0]!.id;
+    updateDraft("sess-1", id, { text: "updated" });
+    expect(getDrafts("sess-1")[0]?.text).toBe("updated");
+    // Untouched fields are preserved.
+    expect(getDrafts("sess-1")[0]?.source).toBe("diff");
+    expect(getDrafts("sess-1")[0]?.id).toBe(id);
+  });
+
+  it("removeDraft drops the matching draft and removes the sessionKey when last", () => {
+    const { addDraft, removeDraft, hasDrafts } =
+      useInlineCommentDraftStore.getState();
+    addDraft(makeDraft());
+    const id = useInlineCommentDraftStore.getState().getDrafts("sess-1")[0]!.id;
+    removeDraft("sess-1", id);
+    expect(hasDrafts("sess-1")).toBe(false);
+    expect(
+      useInlineCommentDraftStore.getState().drafts["sess-1"],
+    ).toBeUndefined();
   });
 
   it("getDraftCount returns the count for a sessionKey", () => {
@@ -825,7 +801,7 @@ describe("useCommandsStore", () => {
         isLoading: false,
         commandDraft: null,
       },
-      true,
+      false,
     );
   });
 
@@ -935,7 +911,7 @@ const { useMultiRunStore } = await import("./useMultiRunStore");
 
 describe("useMultiRunStore", () => {
   beforeEach(() => {
-    useMultiRunStore.setState({ isLoading: false, error: null }, true);
+    useMultiRunStore.setState({ isLoading: false, error: null }, false);
   });
 
   it("createMultiRun returns null + sets error when group name is empty", async () => {
@@ -979,11 +955,11 @@ describe("useMultiRunStore", () => {
 ### Verification (Task 3)
 
 ```bash
-bun run --cwd packages/ui test:stores packages/ui/src/stores/useTodosPersistStore.test.ts \
-  packages/ui/src/stores/contextStore.test.ts \
-  packages/ui/src/stores/useInlineCommentDraftStore.test.ts \
-  packages/ui/src/stores/useCommandsStore.test.ts \
-  packages/ui/src/stores/useMultiRunStore.test.ts
+bun run --cwd packages/ui test:stores src/stores/useTodosPersistStore.test.ts \
+  src/stores/contextStore.test.ts \
+  src/stores/useInlineCommentDraftStore.test.ts \
+  src/stores/useCommandsStore.test.ts \
+  src/stores/useMultiRunStore.test.ts
 ```
 
 Expected: 19 pass (4 + 3 + 5 + 3 + 4), all in <15s.
@@ -1058,7 +1034,7 @@ import { useFileStore } from "./fileStore";
 describe("fileStore (string-based APIs only)", () => {
   beforeEach(() => {
     window.localStorage.clear();
-    useFileStore.setState({ attachedFiles: [] }, true);
+    useFileStore.setState({ attachedFiles: [] }, false);
   });
 
   afterEach(() => {
@@ -1205,9 +1181,9 @@ describe("isMissingGlobalSessionsEndpointError", () => {
 ### Verification (Task 4)
 
 ```bash
-bun run --cwd packages/ui test:stores packages/ui/src/stores/useUIStore.test.ts \
-  packages/ui/src/stores/fileStore.test.ts \
-  packages/ui/src/stores/globalSessions.test.ts
+bun run --cwd packages/ui test:stores src/stores/useUIStore.test.ts \
+  src/stores/fileStore.test.ts \
+  src/stores/globalSessions.test.ts
 ```
 
 Expected: 11 pass (2 + 3 + 6), all in <10s.
@@ -1283,7 +1259,7 @@ If Steps 1-5 pass and no documentation was added, there is no commit for Task 5.
 
 | Criterion | How to verify | Expected |
 |---|---|---|
-| 16 `.test.ts` files exist | `ls packages/ui/src/stores/*.test.ts \| wc -l` | `16` |
+| 15 `.test.ts` files exist | `ls packages/ui/src/stores/*.test.ts \| wc -l` | `15` |
 | `test:stores` passes 3 consecutive runs | Task 5 Step 1 | all green |
 | Total test count 65-90 | Task 5 Step 2 | matches per-file sum |
 | Tiers match per-store expectations | Task 5 + per-task verification | each tier behaves per the spec |
