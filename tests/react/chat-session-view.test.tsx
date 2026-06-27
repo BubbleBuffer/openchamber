@@ -33,6 +33,8 @@ vi.mock("@/components/chat/ChatViewport", () => ({
   ),
 }))
 
+import type { ChatMessagesState, ChatInterruptionsState } from "@/components/chat/state/types"
+import type { AnimationHandlers } from "@/components/chat/timeline/types"
 import { ChatSessionView } from "@/components/chat/ChatSessionView"
 import { useUIStore } from "@/stores/useUIStore"
 
@@ -53,7 +55,7 @@ function buildProps(overrides: Partial<SessionViewProps> = {}): SessionViewProps
       messageCount: 1,
       renderedMessages: [{ id: "msg-1", role: "assistant", text: "Hello" }],
       streamingMessageId: undefined,
-    } as SessionViewProps["messages"],
+    } as unknown as ChatMessagesState,
     activity: {
       isWorking: false,
       isStreaming: false,
@@ -61,7 +63,7 @@ function buildProps(overrides: Partial<SessionViewProps> = {}): SessionViewProps
       showAbortStatus: false,
       needsAttention: false,
     } as SessionViewProps["activity"],
-    interruptions: { questions: [], permissions: [] } as SessionViewProps["interruptions"],
+    interruptions: { questions: [], permissions: [] } as unknown as ChatInterruptionsState,
     currentSessionId: "sess-1",
     isDesktopExpandedInput: false,
     stickyUserHeader: false,
@@ -73,7 +75,7 @@ function buildProps(overrides: Partial<SessionViewProps> = {}): SessionViewProps
     hasMoreAboveTurns: false,
     isLoadingOlder: false,
     handleMessageContentChange: vi.fn(),
-    getAnimationHandlers: vi.fn(() => ({})),
+    getAnimationHandlers: vi.fn(() => ({ onChunk: vi.fn(), onComplete: vi.fn() })) as unknown as (messageId: string) => AnimationHandlers,
     handleLoadOlder: vi.fn(),
     ...overrides,
   }
@@ -95,7 +97,7 @@ describe("ChatSessionView", () => {
         isDraftOpen: false,
         parentSessionId: null,
       } as SessionViewProps["session"],
-      messages: { messageCount: 0, renderedMessages: [], streamingMessageId: undefined } as SessionViewProps["messages"],
+      messages: { messageCount: 0, renderedMessages: [], streamingMessageId: undefined } as unknown as ChatMessagesState,
     })
 
     const { container } = renderWithApp(<ChatSessionView {...props} />, { resetStores: false })
@@ -107,7 +109,7 @@ describe("ChatSessionView", () => {
 
   test("renders the empty state when the loaded session has no messages", () => {
     const props = buildProps({
-      messages: { messageCount: 0, renderedMessages: [], streamingMessageId: undefined } as SessionViewProps["messages"],
+      messages: { messageCount: 0, renderedMessages: [], streamingMessageId: undefined } as unknown as ChatMessagesState,
     })
 
     renderWithApp(<ChatSessionView {...props} />, { resetStores: false })
@@ -118,7 +120,7 @@ describe("ChatSessionView", () => {
 
   test("renders the active viewport with message and interruption counts", () => {
     const props = buildProps({
-      interruptions: { questions: [{ id: "q-1" }], permissions: [{ id: "p-1" }] } as SessionViewProps["interruptions"],
+      interruptions: { questions: [{ id: "q-1" }], permissions: [{ id: "p-1" }] } as unknown as ChatInterruptionsState,
     })
 
     renderWithApp(<ChatSessionView {...props} />, { resetStores: false })
@@ -142,7 +144,7 @@ describe("ChatSessionView", () => {
         isDraftOpen: false,
         parentSessionId: null,
       } as SessionViewProps["session"],
-      messages: { messageCount: 0, renderedMessages: [], streamingMessageId: undefined } as SessionViewProps["messages"],
+      messages: { messageCount: 0, renderedMessages: [], streamingMessageId: undefined } as unknown as ChatMessagesState,
     })
 
     const { container, rerender } = renderWithApp(<ChatSessionView {...loadingProps} />, { resetStores: false })
@@ -151,7 +153,7 @@ describe("ChatSessionView", () => {
 
     const emptyProps = buildProps({
       isDesktopExpandedInput: true,
-      messages: { messageCount: 0, renderedMessages: [], streamingMessageId: undefined } as SessionViewProps["messages"],
+      messages: { messageCount: 0, renderedMessages: [], streamingMessageId: undefined } as unknown as ChatMessagesState,
     })
     rerender(<ChatSessionView {...emptyProps} />)
 

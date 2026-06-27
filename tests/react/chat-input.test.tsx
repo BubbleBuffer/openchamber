@@ -7,7 +7,7 @@ import { renderWithApp } from "./helpers/render"
 import { createCommitCollector, createProfiledElement, expectNoUpdateCommits, expectUpdateCommitsAtMost } from "./helpers/renderMetrics"
 import { seedUIStore } from "./helpers/stores"
 
-const sendMessage = vi.fn(async () => undefined)
+const sendMessage = vi.fn<(text: string) => Promise<void>>(async () => undefined)
 const addToQueue = vi.fn()
 const clearAttachedFiles = vi.fn()
 const consumeDrafts = vi.fn(() => [])

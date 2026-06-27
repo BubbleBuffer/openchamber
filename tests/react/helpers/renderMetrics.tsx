@@ -15,6 +15,7 @@ export type CommitCollector = {
   reset: () => void
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function createCommitCollector(id: string): CommitCollector {
   const commits: CommitRecord[] = []
   const onRender: ProfilerOnRenderCallback = (profilerId, phase, actualDuration, baseDuration) => {
