@@ -57,7 +57,7 @@ export const isMissingGlobalSessionsEndpointError = (error: unknown): boolean =>
         ?? value.cause?.status
         ?? value.cause?.response?.status;
 
-    return status === 404;
+    return status === 404 || status === 405;
 };
 
 export async function listGlobalSessionPages(
