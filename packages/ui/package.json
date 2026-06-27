@@ -9,7 +9,7 @@
     "build": "tsc --noEmit",
     "type-check": "tsc --noEmit",
     "lint": "eslint \"./src/**/*.{ts,tsx}\" --config ../../eslint.config.js",
-    "test:stores": "bun test src/stores"
+    "test:stores": "bun test --isolate src/stores"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
