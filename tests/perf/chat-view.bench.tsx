@@ -1,4 +1,3 @@
-import { screen } from "@testing-library/react"
 import { act } from "react"
 import { bench, describe, vi } from "vitest"
 import { seedUIStore } from "../react/helpers/stores"
