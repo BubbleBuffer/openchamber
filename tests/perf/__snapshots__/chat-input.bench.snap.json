@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "frozen": true,
+  "samples": {
+    "singleKeystroke": [
+      2,
+      2,
+      2
+    ],
+    "burst50": [
+      2,
+      2,
+      2
+    ],
+    "unrelatedStore": 0
+  }
+}
