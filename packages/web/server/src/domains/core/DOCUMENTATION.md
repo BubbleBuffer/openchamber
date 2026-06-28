@@ -4,11 +4,11 @@
 This module provides shared text transformation helpers that are not owned by a single product surface. Today it contains the shared summarization pipeline used by TTS, notifications, and note distillation flows.
 
 ## Entrypoints and structure
-- `packages/web/server/lib/text/summarization.js`: Shared summarize + sanitize helpers backed by opencode.ai zen API.
+- `packages/web/server/src/domains/core/summarize.ts`: Shared summarize + sanitize helpers backed by opencode.ai zen API.
 
 ## Public exports
 
-### Summarization (summarization.js)
+### Summarization (`summarize.ts`)
 - `summarizeText({ text, threshold, maxLength, zenModel, mode })`: Shared summarization entrypoint.
 - `sanitizeForTTS(text)`: Sanitizes text for speech output.
 - `sanitizeForNotification(text)`: Sanitizes text for compact notification output.

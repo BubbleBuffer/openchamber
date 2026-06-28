@@ -4,43 +4,43 @@
 This module provides skill discovery, scanning, and installation capabilities for OpenCode. It supports multiple skill sources including GitHub repositories and the ClawdHub registry, with caching and conflict resolution for skill installation.
 
 ## Entrypoints and structure
-- `packages/web/server/lib/skills-catalog/`: Skills catalog module directory containing all skill-related functionality.
-  - `cache.js`: In-memory cache for scan results with TTL support.
-  - `curated-sources.js`: Predefined skill sources (Anthropic, ClawdHub).
-  - `git.js`: Git operations helpers for cloning and auth error detection.
-  - `install.js`: Skills installation from GitHub repositories.
-  - `scan.js`: Skills scanning from GitHub repositories.
-  - `source.js`: Source string parsing for GitHub repositories.
+- `packages/web/server/src/domains/skills-catalog/`: Skills catalog module directory containing all skill-related functionality.
+  - `cache.ts`: In-memory cache for scan results with TTL support.
+  - `curated-sources.ts`: Predefined skill sources (Anthropic, ClawdHub).
+  - `git.ts`: Git operations helpers for cloning and auth error detection.
+  - `install.ts`: Skills installation from GitHub repositories.
+  - `scan.ts`: Skills scanning from GitHub repositories.
+  - `source.ts`: Source string parsing for GitHub repositories.
   - `clawdhub/`: ClawdHub registry integration.
-    - `index.js`: Public API exports for ClawdHub.
-    - `scan.js`: Scanning ClawdHub registry with pagination.
-    - `install.js`: Installation from ClawdHub (ZIP download).
-    - `api.js`: ClawdHub API client with rate limiting.
+    - `index.ts`: Public API exports for ClawdHub.
+    - `scan.ts`: Scanning ClawdHub registry with pagination.
+    - `install.ts`: Installation from ClawdHub (ZIP download).
+    - `api.ts`: ClawdHub API client with rate limiting.
 
 ## Public API
 
 The following functions are exported and used by the web server:
 
-### Cache (`cache.js`)
+### Cache (`cache.ts`)
 - `getCacheKey({ normalizedRepo, subpath, identityId })`: Generate cache key for scan results.
 - `getCachedScan(key)`: Retrieve cached scan result if not expired.
 - `setCachedScan(key, value, ttlMs)`: Store scan result with TTL (default 30 minutes).
 - `clearCache()`: Clear all cached scan results.
 
-### Curated Sources (`curated-sources.js`)
+### Curated Sources (`curated-sources.ts`)
 - `getCuratedSkillsSources()`: Return list of curated skill sources (Anthropic, ClawdHub).
 - `CURATED_SKILLS_SOURCES`: Constant array of predefined sources.
 
-### Source Parsing (`source.js`)
+### Source Parsing (`source.ts`)
 - `parseSkillRepoSource(source, { subpath })`: Parse GitHub repository source string into structured object with SSH/HTTPS clone URLs, normalized repo, and effective subpath. Supports SSH URLs, HTTPS URLs, and shorthand `owner/repo[/subpath]` format.
 
-### Git Repository Scanning (`scan.js`)
+### Git Repository Scanning (`scan.ts`)
 - `scanSkillsRepository({ source, subpath, defaultSubpath, identity })`: Scan GitHub repository for skills by cloning and analyzing SKILL.md files. Returns array of skill items with metadata.
 
-### Git Repository Installation (`install.js`)
+### Git Repository Installation (`install.ts`)
 - `installSkillsFromRepository({ source, subpath, defaultSubpath, identity, scope, targetSource, workingDirectory, userSkillDir, selections, conflictPolicy, conflictDecisions })`: Install skills from GitHub repository. Supports user/project scopes, opencode/agents targets, conflict resolution (prompt/skipAll/overwriteAll), and sparse checkout for efficiency.
 
-### ClawdHub Integration (`clawdhub/index.js`)
+### ClawdHub Integration (`clawdhub/index.ts`)
 - `isClawdHubSource(source)`: Check if source string refers to ClawdHub.
 - `scanClawdHub()`: Scan entire ClawdHub registry for all skills (paginated, max 20 pages).
 - `scanClawdHubPage({ cursor })`: Scan a single page of ClawdHub results with cursor-based pagination.
@@ -50,7 +50,7 @@ The following functions are exported and used by the web server:
 - `fetchClawdHubSkillInfo(slug)`: Fetch skill metadata without version details.
 - `downloadClawdHubSkill(slug, version)`: Download skill package as ZIP buffer.
 
-### ClawdHub Constants (`clawdhub/index.js`)
+### ClawdHub Constants (`clawdhub/index.ts`)
 - `CLAWDHUB_SOURCE_ID`: Source identifier for curated sources.
 - `CLAWDHUB_SOURCE_STRING`: Source string format.
 
@@ -58,31 +58,31 @@ The following functions are exported and used by the web server:
 
 The following functions are internal helpers used by exported functions:
 
-### Git Helpers (`git.js`)
+### Git Helpers (`git.ts`)
 - `runGit(args, options)`: Execute git command with optional SSH identity, timeout, and max buffer. Returns `{ ok, stdout, stderr, message, code, signal }`.
 - `looksLikeAuthError(message)`: Detect if error message indicates authentication failure (permission denied, publickey, etc.).
 - `assertGitAvailable()`: Check if git is available in PATH.
 
-### Skill Name Validation (used in `install.js`, `scan.js`, `clawdhub/install.js`)
+### Skill Name Validation (used in `install.ts`, `scan.ts`, `clawdhub/install.ts`)
 - `validateSkillName(skillName)`: Validate skill name against pattern `/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/` (1-64 chars, lowercase alphanumeric with hyphens).
 
-### File System Helpers (`install.js`, `scan.js`, `clawdhub/install.js`)
+### File System Helpers (`install.ts`, `scan.ts`, `clawdhub/install.ts`)
 - `safeRm(dir)`: Safely remove directory recursively (ignores errors).
 - `ensureDir(dirPath)`: Ensure directory exists with recursive creation.
 - `copyDirectoryNoSymlinks(srcDir, dstDir)`: Copy directory contents without symlinks, with path traversal protection.
 - `normalizeUserSkillDir(userSkillDir)`: Normalize user skill directory path (handles legacy `~/.config/opencode/skill` → `~/.config/opencode/skills` migration).
 
-### Git Clone Helpers (`install.js`, `scan.js`)
+### Git Clone Helpers (`install.ts`, `scan.ts`)
 - `cloneRepo({ cloneUrl, identity, tempDir })`: Clone GitHub repository with preferred partial clone (`--filter=blob:none`) and fallback. Uses non-interactive mode.
 
-### SKILL.md Parsing (`scan.js`)
+### SKILL.md Parsing (`scan.ts`)
 - `parseSkillMd(content)`: Parse YAML frontmatter from SKILL.md content. Returns `{ ok, frontmatter, warnings }`.
 
-### Path Helpers (`install.js`)
+### Path Helpers (`install.ts`)
 - `toFsPath(repoDir, repoRelPosixPath)`: Convert POSIX path to filesystem path.
 - `getTargetSkillDir({ scope, targetSource, workingDirectory, userSkillDir, skillName })`: Determine target installation directory based on scope (user/project), targetSource (opencode/agents), and skill name.
 
-### ClawdHub API Helpers (`clawdhub/api.js`)
+### ClawdHub API Helpers (`clawdhub/api.ts`)
 - `rateLimitedFetch(url, options)`: Fetch with rate limiting (120 req/min limit, 100ms delay between requests, exponential backoff on 429/500 errors).
 - `mapClawdHubItem(item)`: Transform ClawdHub API response to SkillsCatalogItem format.
 
@@ -121,11 +121,11 @@ The following functions are internal helpers used by exported functions:
 ## Notes for Contributors
 
 ### Adding a New Skill Source
-1. Create a new subdirectory under `packages/web/server/lib/skills-catalog/` (e.g., `newsource/`).
-2. Implement `scan.js` with a function that returns `{ ok, items, error? }` matching the SkillsCatalogItem contract.
-3. Implement `install.js` with a function that accepts selections and returns `{ ok, installed, skipped, error? }`.
-4. Add the source to `CURATED_SKILLS_SOURCES` in `curated-sources.js` if it should appear in the default catalog.
-5. Update `packages/web/server/index.js` to import and wire up the new source.
+1. Create a new subdirectory under `packages/web/server/src/domains/skills-catalog/` (e.g., `newsource/`).
+2. Implement `scan.ts` with a function that returns `{ ok, items, error? }` matching the SkillsCatalogItem contract.
+3. Implement `install.ts` with a function that accepts selections and returns `{ ok, installed, skipped, error? }`.
+4. Add the source to `CURATED_SKILLS_SOURCES` in `curated-sources.ts` if it should appear in the default catalog.
+5. Update the server composition root to import and wire up the new source.
 
 ### Skill Name Validation
 - All skill names must match `/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/` (1-64 chars).
@@ -159,7 +159,7 @@ The following functions are internal helpers used by exported functions:
 ### Security Considerations
 - Path traversal protection in `copyDirectoryNoSymlinks`: resolves real paths and checks containment.
 - Symlinks are explicitly rejected to prevent escape from skill directory.
-- SSH key paths are trimmed but not escaped in `git.js` (assumes safe input from profiles).
+- SSH key paths are trimmed but not escaped in `git.ts` (assumes safe input from profiles).
 - Temporary directories are cleaned up in `finally` blocks.
 
 ### Error Handling

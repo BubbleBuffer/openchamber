@@ -7,13 +7,13 @@
 
 ## Entrypoints and structure
 
-- `packages/web/server/lib/github/index.js`: public server entrypoint.
-- `packages/web/server/lib/github/routes.js`: Express route registration for `/api/github/*` endpoints.
-- `packages/web/server/lib/github/auth.js`: auth storage, multi-account support, client id, scope config.
-- `packages/web/server/lib/github/device-flow.js`: OAuth device flow.
-- `packages/web/server/lib/github/octokit.js`: Octokit factory for the current auth.
-- `packages/web/server/lib/github/repo/index.js`: remote URL parsing and directory-to-repo resolution.
-- `packages/web/server/lib/github/pr-status.js`: PR lookup across remotes, forks, and upstreams.
+- `packages/web/server/src/domains/github/index.ts`: public server entrypoint.
+- `packages/web/server/src/domains/github/routes.ts`: Express route registration for `/api/github/*` endpoints.
+- `packages/web/server/src/domains/github/auth.ts`: auth storage, multi-account support, client id, scope config.
+- `packages/web/server/src/domains/github/device-flow.ts`: OAuth device flow.
+- `packages/web/server/src/domains/github/octokit.ts`: Octokit factory for the current auth.
+- `packages/web/server/src/domains/github/repo/index.ts`: remote URL parsing and directory-to-repo resolution.
+- `packages/web/server/src/domains/github/pr-status.ts`: PR lookup across remotes, forks, and upstreams.
 - `packages/web/server/index.js`: API route layer that calls this module.
 - `packages/web/src/api/github.ts`: web client wrapper for GitHub endpoints.
 
@@ -56,7 +56,7 @@
 
 - The UI asks `github.prStatus(directory, branch, remote?)` from `packages/web/src/api/github.ts`.
 - That hits `GET /api/github/pr/status` in `packages/web/server/index.js`.
-- The route calls `resolveGitHubPrStatus(...)` in `packages/web/server/lib/github/pr-status.js`.
+- The route calls `resolveGitHubPrStatus(...)` in `packages/web/server/src/domains/github/pr-status.ts`.
 - The resolver finds the most likely repo and PR for a local branch.
 - The route then enriches that result with checks, mergeability, and permission-related fields.
 - The client caches and shares the result between sidebar and Git view.

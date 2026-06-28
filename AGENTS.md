@@ -39,7 +39,7 @@ Skills live in `.opencode/skills/<name>/SKILL.md`. Load the matching skill befor
 - New shared component → `packages/ui/src/components/`. Mobile variant if applicable (`Mobile<Name>` paired with the desktop one).
 - New zustand store → `packages/ui/src/stores/`. Split by change frequency and subscriber set; do not bolt onto an existing broad store.
 - New sync-layer state (live session/message/streaming) → `packages/ui/src/sync/`. Read `packages/ui/src/sync/DOCUMENTATION.md` first.
-- New server route or server-side module → `packages/web/server/lib/<domain>/` with a `DOCUMENTATION.md`.
+- New server route or server-side module → `packages/web/server/src/domains/<domain>/` with a `DOCUMENTATION.md`.
 - New desktop IPC handler → `packages/electron/main.mjs` + `preload.mjs` (preserve the `__TAURI__` shim).
 - New VS Code bridge → `packages/vscode/src/bridge-*-runtime.ts`.
 
@@ -77,14 +77,13 @@ Read the relevant `DOCUMENTATION.md` before modifying that module.
 | Module                              | Docs                                                          |
 | ----------------------------------- | ------------------------------------------------------------- |
 | Sync layer (live session / streaming) | `packages/ui/src/sync/DOCUMENTATION.md`                     |
-| quota                               | `packages/web/server/lib/quota/DOCUMENTATION.md`              |
-| git                                 | `packages/web/server/lib/git/DOCUMENTATION.md`                |
-| github                              | `packages/web/server/lib/github/DOCUMENTATION.md`             |
-| opencode                            | `packages/web/server/lib/opencode/DOCUMENTATION.md`           |
-| notifications                       | `packages/web/server/lib/notifications/DOCUMENTATION.md`      |
-| terminal                            | `packages/web/server/lib/terminal/DOCUMENTATION.md`           |
-| tts                                 | `packages/web/server/lib/tts/DOCUMENTATION.md`                |
-| skills-catalog                      | `packages/web/server/lib/skills-catalog/DOCUMENTATION.md`     |
+| quota                               | `packages/web/server/src/domains/quota/DOCUMENTATION.md`      |
+| git                                 | `packages/web/server/src/domains/git/DOCUMENTATION.md`        |
+| github                              | `packages/web/server/src/domains/github/DOCUMENTATION.md`     |
+| opencode                            | `packages/web/server/src/domains/opencode/DOCUMENTATION.md`   |
+| fs                                  | `packages/web/server/src/domains/fs/DOCUMENTATION.md`         |
+| ui-auth                             | `packages/web/server/src/domains/ui-auth/DOCUMENTATION.md`    |
+| skills-catalog                      | `packages/web/server/src/domains/skills-catalog/DOCUMENTATION.md` |
 
 ## Styling rules
 

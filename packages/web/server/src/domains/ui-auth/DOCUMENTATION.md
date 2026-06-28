@@ -4,10 +4,10 @@
 This module owns OpenChamber UI authentication for browser access, including password session auth, WebAuthn passkeys, and trusted-device session handling.
 
 ## Entrypoints and structure
-- `packages/web/server/lib/ui-auth/ui-auth.js`: UI auth controller runtime, cookie/session issuance, rate limiting, and auth route handlers.
-- `packages/web/server/lib/ui-auth/ui-passkeys.js`: passkey store and WebAuthn registration/authentication verification helpers.
+- `packages/web/server/src/domains/ui-auth/ui-auth.ts`: UI auth controller runtime, cookie/session issuance, rate limiting, and auth route handlers.
+- `packages/web/server/src/domains/ui-auth/ui-passkeys.ts`: passkey store and WebAuthn registration/authentication verification helpers.
 
-## Public exports (ui-auth.js)
+## Public exports (`ui-auth.ts`)
 - `createUiAuth({ password, cookieName, sessionTtlMs, readSettingsFromDiskMigrated })`: creates UI auth controller with methods:
   - `enabled`
   - `requireAuth(req, res, next)`
@@ -24,7 +24,7 @@ This module owns OpenChamber UI authentication for browser access, including pas
   - `ensureSessionToken(req, res)`
   - `dispose()`
 
-## Public exports (ui-passkeys.js)
+## Public exports (`ui-passkeys.ts`)
 - `createUiPasskeys({ passwordBinding, readSettingsFromDiskMigrated, storeFile, rpName, challengeTtlMs })`: creates passkey runtime with methods:
   - `enabled`
   - `getStatus(req)`
