@@ -276,7 +276,7 @@ describe("ChatMessage", () => {
     renderWithApp(
       <ChatMessage
         message={assistantMsg({
-          error: { data: { message: "API key authentication failed" } },
+          error: { name: "APIError", data: { message: "API key authentication failed", isRetryable: true } } as any,
         })}
       />,
     )
