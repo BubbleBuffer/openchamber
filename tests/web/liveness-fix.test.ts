@@ -4,10 +4,9 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import WebSocket from "ws"
-import { checkOpenCodeAvailable } from "../helpers/env"
-import { startOpenCodeInstance, type StartedOpenCode } from "../helpers/opencode-process"
-import { startOpenChamberAgainstOpenCode, type StartedOpenChamber } from "../helpers/openchamber-process"
+import { describeWhenOpenCode } from "../helpers/integration-suite"
 import { getAvailablePort } from "../helpers/ports"
+import { startOpenCodeInstance } from "../helpers/opencode-process"
 
 // ── Wire-format helpers ──────────────────────────────────────────
 
@@ -85,26 +84,26 @@ async function waitForPortFree(port: number, host = "127.0.0.1", waitMs = 8_000)
 }
 
 // ── Test suite ───────────────────────────────────────────────────
+// NOTE: This suite uses describeWhenOpenCode + manual lifecycle (not
+// describeWithOpenChamber) because it restarts OpenCode on the same cwd/port
+// inside a single test. The helper's `start` option runs once at suite
+// startup and its `afterAll` teardown cannot be interleaved with the in-test
+// restart. The manual lifecycle gives us precise control over when to stop
+// and restart the OpenCode instance.
 
-const availability = await checkOpenCodeAvailable()
-
-let opencode: StartedOpenCode | undefined
-let openchamber: StartedOpenChamber | undefined
 let livenessCwd: string | undefined
 let livenessPort: number | undefined
 
-// File-level afterAll ensures cleanup runs even if describe hooks are
-// inconsistent in certain vitest fork pool edge cases.
+let opencode: Awaited<ReturnType<typeof startOpenCodeInstance>> | undefined
+let openchamber: { baseUrl: string; port: number; stop(): Promise<void> } | undefined
+
 afterAll(async () => {
   try { await openchamber?.stop() } catch { /* best-effort */ }
   try { await opencode?.stop() } catch { /* best-effort */ }
-  // Clean up manually-created temp dir if it still exists
   if (livenessCwd) {
     try { await fs.rm(livenessCwd, { recursive: true, force: true }) } catch { /* best-effort */ }
   }
 })
-
-const describeWhenOpenCode = availability.available ? describe : describe.skip
 
 describeWhenOpenCode("OpenChamber streaming liveness regression", () => {
   beforeAll(async () => {
@@ -113,7 +112,40 @@ describeWhenOpenCode("OpenChamber streaming liveness regression", () => {
     livenessCwd = await fs.mkdtemp(path.join(os.tmpdir(), "openchamber-liveness-"))
     livenessPort = await getAvailablePort()
     opencode = await startOpenCodeInstance({ cwd: livenessCwd, port: livenessPort })
-    openchamber = await startOpenChamberAgainstOpenCode({ opencodeHost: opencode.baseUrl })
+
+    const envBackups = {
+      OPENCODE_SKIP_START: process.env.OPENCODE_SKIP_START,
+      OPENCHAMBER_SKIP_OPENCODE_START: process.env.OPENCHAMBER_SKIP_OPENCODE_START,
+      OPENCODE_HOST: process.env.OPENCODE_HOST,
+    }
+    process.env.OPENCODE_SKIP_START = "true"
+    process.env.OPENCHAMBER_SKIP_OPENCODE_START = "true"
+    process.env.OPENCODE_HOST = opencode.baseUrl
+
+    let controller: { getPort(): number | null; stop(opts?: { exitProcess?: boolean }): Promise<void> } | undefined
+
+    try {
+      const mod = await import("@openchamber/web")
+      const startWebUiServer = mod.startWebUiServer as (
+        opts?: Record<string, unknown>,
+      ) => Promise<{ getPort(): number | null; stop(opts?: { exitProcess?: boolean }): Promise<void> }>
+      controller = await startWebUiServer({ port: 0, host: "127.0.0.1", attachSignals: false, exitOnShutdown: false })
+    } finally {
+      if (envBackups.OPENCODE_SKIP_START === undefined) delete process.env.OPENCODE_SKIP_START
+      else process.env.OPENCODE_SKIP_START = envBackups.OPENCODE_SKIP_START
+      if (envBackups.OPENCHAMBER_SKIP_OPENCODE_START === undefined) delete process.env.OPENCHAMBER_SKIP_OPENCODE_START
+      else process.env.OPENCHAMBER_SKIP_OPENCODE_START = envBackups.OPENCHAMBER_SKIP_OPENCODE_START
+      if (envBackups.OPENCODE_HOST === undefined) delete process.env.OPENCODE_HOST
+      else process.env.OPENCODE_HOST = envBackups.OPENCODE_HOST
+    }
+
+    const port = controller!.getPort()
+    if (typeof port !== "number") throw new Error("OpenChamber started without a bound port")
+    openchamber = {
+      baseUrl: `http://127.0.0.1:${port}`,
+      port,
+      async stop() { await controller!.stop({ exitProcess: false }) },
+    }
   }, 30_000)
 
   test(
@@ -153,7 +185,7 @@ describeWhenOpenCode("OpenChamber streaming liveness regression", () => {
       const disconnectFrame = ws.frames.find((f) => f.type === "disconnect")
 
       // ── 5. Restart OpenCode on the same port and cwd ────────────
-      opencode = await startOpenCodeInstance({ cwd: livenessCwd, port: savedPort })
+      opencode = await startOpenCodeInstance({ cwd: livenessCwd!, port: savedPort })
 
       // ── 6. Wait for the new OpenCode to be visible upstream ─────
       // The upstream reader should reconnect automatically. Wait

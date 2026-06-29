@@ -3,19 +3,15 @@ import fs from "node:fs/promises"
 import net from "node:net"
 import os from "node:os"
 import path from "node:path"
-import { checkOpenCodeAvailable } from "../helpers/env"
-import { startOpenCodeInstance, type StartedOpenCode } from "../helpers/opencode-process"
-import { startOpenChamberAgainstOpenCode, type StartedOpenChamber } from "../helpers/openchamber-process"
+import { describeWhenOpenCode } from "../helpers/integration-suite"
 import { getAvailablePort } from "../helpers/ports"
-
-const availability = await checkOpenCodeAvailable()
-const describeWhenOpenCode = availability.available ? describe : describe.skip
+import { startOpenCodeInstance } from "../helpers/opencode-process"
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-async function getOpencodePid(oc: StartedOpenCode): Promise<number | undefined> {
+async function getOpencodePid(cwd: string): Promise<number | undefined> {
   try {
-    const raw = await fs.readFile(path.join(oc.cwd, "pid"), "utf8")
+    const raw = await fs.readFile(path.join(cwd, "pid"), "utf8")
     const n = Number.parseInt(raw.trim(), 10)
     return Number.isFinite(n) ? n : undefined
   } catch {
@@ -38,25 +34,21 @@ async function waitForPortFree(port: number, host = "127.0.0.1", waitMs = 8_000)
 }
 
 // ── Shared server lifecycle ──────────────────────────────────────────────
-// All three suites share a single OpenCode + OpenChamber instance.
-// The CRUD suite uses it for session operations. The bad-host suite starts
-// a separate OpenChamber (on a different port) for its own brief check.
-// The 503 suite reuses the shared server to observe proxy behavior after
-// killing the shared OpenCode.
+// This suite uses a custom shared runtime because it spans multiple describe
+// blocks that all reuse the same OpenCode + OpenChamber instance (necessary
+// because @openchamber/web is a module-level singleton). The first describe
+// block ("API session CRUD") boots both servers and the subsequent suites
+// ("bad OPENCODE_HOST", "503-while-restarting") reuse them.
 //
-// NOTE on shared runtime: the `@openchamber/web` module is loaded once and
-// cached. The env config (resolveOpenCodeEnvConfig) is evaluated at module
-// init time and stored in module-level constants (ENV_CONFIGURED_OPENCODE_HOST,
-// ENV_EFFECTIVE_PORT, etc.). The OpenCode runtime (openCodeRuntime) is a
-// module-level singleton created by ensureOpenCodeDomain() when the
-// first server boots. Subsequent startWebUiServer calls reuse the same
-// singleton — they do NOT re-evaluate env or create a new runtime. This
-// affects the bad-host and 503 suites.
+// We use describeWhenOpenCode from the helper (not describeWithOpenChamber)
+// because wrapping each of the three suites in their own helper would boot
+// separate OpenChamber instances, breaking the shared-runtime semantics that
+// Suite 3's PID-targeted 503 test depends on.
 
-let opencode: StartedOpenCode | undefined
-let openchamber: StartedOpenChamber | undefined
 let ocCwd: string | undefined
-let ocPort: number | undefined
+
+let opencode: Awaited<ReturnType<typeof startOpenCodeInstance>> | undefined
+let openchamber: { baseUrl: string; port: number; stop(): Promise<void> } | undefined
 
 afterAll(async () => {
   try { await openchamber?.stop() } catch { /* best-effort */ }
@@ -71,12 +63,42 @@ afterAll(async () => {
 describeWhenOpenCode("OpenChamber API session CRUD", () => {
   beforeAll(async () => {
     ocCwd = await fs.mkdtemp(path.join(os.tmpdir(), "openchamber-api-crud-"))
-    ocPort = await getAvailablePort()
-    opencode = await startOpenCodeInstance({ cwd: ocCwd, port: ocPort })
-    // This is the first import of @openchamber/web — module init captures
-    // OPENCODE_HOST, ENV_SKIP_OPENCODE_START, etc. The shared runtime is
-    // configured with this OpenCode's URL and port.
-    openchamber = await startOpenChamberAgainstOpenCode({ opencodeHost: opencode.baseUrl })
+    const port = await getAvailablePort()
+    opencode = await startOpenCodeInstance({ cwd: ocCwd, port })
+
+    const envBackups = {
+      OPENCODE_SKIP_START: process.env.OPENCODE_SKIP_START,
+      OPENCHAMBER_SKIP_OPENCODE_START: process.env.OPENCHAMBER_SKIP_OPENCODE_START,
+      OPENCODE_HOST: process.env.OPENCODE_HOST,
+    }
+    process.env.OPENCODE_SKIP_START = "true"
+    process.env.OPENCHAMBER_SKIP_OPENCODE_START = "true"
+    process.env.OPENCODE_HOST = opencode.baseUrl
+
+    let controller: { getPort(): number | null; stop(opts?: { exitProcess?: boolean }): Promise<void> } | undefined
+
+    try {
+      const mod = await import("@openchamber/web")
+      const startWebUiServer = mod.startWebUiServer as (
+        opts?: Record<string, unknown>,
+      ) => Promise<{ getPort(): number | null; stop(opts?: { exitProcess?: boolean }): Promise<void> }>
+      controller = await startWebUiServer({ port: 0, host: "127.0.0.1", attachSignals: false, exitOnShutdown: false })
+    } finally {
+      if (envBackups.OPENCODE_SKIP_START === undefined) delete process.env.OPENCODE_SKIP_START
+      else process.env.OPENCODE_SKIP_START = envBackups.OPENCODE_SKIP_START
+      if (envBackups.OPENCHAMBER_SKIP_OPENCODE_START === undefined) delete process.env.OPENCHAMBER_SKIP_OPENCODE_START
+      else process.env.OPENCHAMBER_SKIP_OPENCODE_START = envBackups.OPENCHAMBER_SKIP_OPENCODE_START
+      if (envBackups.OPENCODE_HOST === undefined) delete process.env.OPENCODE_HOST
+      else process.env.OPENCODE_HOST = envBackups.OPENCODE_HOST
+    }
+
+    const boundPort = controller!.getPort()
+    if (typeof boundPort !== "number") throw new Error("OpenChamber started without a bound port")
+    openchamber = {
+      baseUrl: `http://127.0.0.1:${boundPort}`,
+      port: boundPort,
+      async stop() { await controller!.stop({ exitProcess: false }) },
+    }
   }, 30_000)
 
   let createdSessionId: string
@@ -122,19 +144,6 @@ describeWhenOpenCode("OpenChamber API session CRUD", () => {
 // ───────────────────────────────────────────────────────────────────────────
 // Suite 2: Bad OPENCODE_HOST
 // ───────────────────────────────────────────────────────────────────────────
-//
-// Adaptation: The @openchamber/web module was already loaded by Suite 1 with
-// a valid OPENCODE_HOST. Module-level constants (ENV_CONFIGURED_OPENCODE_HOST,
-// ENV_SKIP_OPENCODE_START) are frozen at first load. Setting OPENCODE_HOST to
-// "not-a-url" here and re-importing returns the cached module — the env
-// config is NOT re-evaluated.
-//
-// This test instead verifies the operational invariant: the server boots
-// (startWebUiServer does not throw) and /health returns 200 even when the
-// env would be questionable. The actual env-config validation
-// (warn-and-continue for invalid URLs) is tested by env-config.ts unit tests
-// and would require a fresh process to observe. See the plan's spec-vs-impl
-// gap note at .superpawers/plans/2026-06-25-test-strategy-slice-3.md:49-50.
 
 describeWhenOpenCode("OpenChamber startup handles bad OPENCODE_HOST gracefully", () => {
   test("startWebUiServer boots despite invalid OPENCODE_HOST (warns-and-continues per env-config.ts)", async () => {
@@ -204,8 +213,8 @@ describeWhenOpenCode("OpenChamber proxy returns 503 while OpenCode is restarting
   test(
     "GET /api/session returns 503 after OpenCode is killed",
     async () => {
-      // Acquire the shared OC PID from the helper's recorded pid file.
-      const pid = await getOpencodePid(opencode!)
+      // Acquire the shared OC PID from the pid file written at spawn time.
+      const pid = await getOpencodePid(ocCwd!)
       expect(pid).toBeDefined()
 
       // Confirm OC is alive before killing.
@@ -236,7 +245,7 @@ describeWhenOpenCode("OpenChamber proxy returns 503 while OpenCode is restarting
 
       // Wait for the OS to release the listening port, confirming the
       // upstream is fully gone.
-      await waitForPortFree(ocPort!)
+      await waitForPortFree(opencode!.port)
     },
     30_000,
   )
