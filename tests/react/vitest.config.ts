@@ -14,6 +14,7 @@ export default defineConfig({
     alias: {
       "@": uiSrc,
       "@openchamber/ui": uiSrc,
+      "@tanstack/react-virtual": path.resolve(reactDir, "mocks/tanstack-react-virtual.ts"),
     },
   },
   test: {
