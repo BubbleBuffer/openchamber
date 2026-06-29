@@ -1,33 +1,22 @@
-import { afterAll, beforeAll, describe, expect, test } from "vitest"
+import { beforeAll, describe, expect, test } from "vitest"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { createOpencodeClient } from "@opencode-ai/sdk/v2"
-import { checkOpenCodeAvailable } from "../helpers/env"
-import { startOpenCodeInstance, type StartedOpenCode } from "../helpers/opencode-process"
+import { describeWithOpenCode } from "../helpers/integration-suite"
 
-const availability = await checkOpenCodeAvailable()
+describeWithOpenCode("OpenCode multi-directory routing", { timeoutMs: 20_000 }, (ctx) => {
+  let dirA = ""
+  let dirB = ""
 
-let opencode: StartedOpenCode | undefined
-let dirA = ""
-let dirB = ""
-
-afterAll(async () => {
-  await opencode?.stop()
-})
-
-const describeWhenOpenCode = availability.available ? describe : describe.skip
-
-describeWhenOpenCode("OpenCode multi-directory routing", () => {
   beforeAll(async () => {
-    opencode = await startOpenCodeInstance()
-    dirA = path.join(opencode.cwd, "project-a")
-    dirB = path.join(opencode.cwd, "project-b")
+    dirA = path.join(ctx.opencode.cwd, "project-a")
+    dirB = path.join(ctx.opencode.cwd, "project-b")
     await fs.mkdir(dirA, { recursive: true })
     await fs.mkdir(dirB, { recursive: true })
-  }, 20_000)
+  })
 
   test("sessions in different directories are isolated", async () => {
-    const client = createOpencodeClient({ baseUrl: opencode!.baseUrl })
+    const client = createOpencodeClient({ baseUrl: ctx.opencode.baseUrl })
 
     const inA = await client.session.create({ title: "session-a", directory: dirA })
     const inB = await client.session.create({ title: "session-b", directory: dirB })
@@ -49,7 +38,7 @@ describeWhenOpenCode("OpenCode multi-directory routing", () => {
   })
 
   test("session.get returns session from its own directory", async () => {
-    const client = createOpencodeClient({ baseUrl: opencode!.baseUrl })
+    const client = createOpencodeClient({ baseUrl: ctx.opencode.baseUrl })
 
     const created = await client.session.create({ title: "scope-check", directory: dirA })
     const id = created.data!.id

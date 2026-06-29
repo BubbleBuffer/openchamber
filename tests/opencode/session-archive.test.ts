@@ -1,42 +1,28 @@
-import { afterAll, beforeAll, describe, expect, test } from "vitest"
+import { describe, expect, test } from "vitest"
 import { createOpencodeClient } from "@opencode-ai/sdk/v2"
-import { checkOpenCodeAvailable } from "../helpers/env"
-import { startOpenCodeInstance, type StartedOpenCode } from "../helpers/opencode-process"
+import { describeWithOpenCode } from "../helpers/integration-suite"
 
-const availability = await checkOpenCodeAvailable()
-
-let opencode: StartedOpenCode | undefined
 const archivedAt = Date.now()
 
-afterAll(async () => {
-  await opencode?.stop()
-})
-
-const describeWhenOpenCode = availability.available ? describe : describe.skip
-
-describeWhenOpenCode("OpenCode session archive", () => {
-  beforeAll(async () => {
-    opencode = await startOpenCodeInstance()
-  }, 20_000)
-
+describeWithOpenCode("OpenCode session archive", { timeoutMs: 20_000 }, (ctx) => {
   test("archive moves a session out of the default list and into the archived list", async () => {
-    const client = createOpencodeClient({ baseUrl: opencode!.baseUrl })
+    const client = createOpencodeClient({ baseUrl: ctx.opencode.baseUrl })
 
-    const created = await client.session.create({ title: "to-archive", directory: opencode!.cwd })
+    const created = await client.session.create({ title: "to-archive", directory: ctx.opencode.cwd })
     const id = created.data!.id
 
-    const beforeDefault = await client.experimental.session.list({ directory: opencode!.cwd })
+    const beforeDefault = await client.experimental.session.list({ directory: ctx.opencode.cwd })
     expect((beforeDefault.data ?? []).some((s) => s.id === id)).toBe(true)
 
     const archived = await client.session.update({ sessionID: id, time: { archived: archivedAt } })
     expect(archived.data?.id).toBe(id)
     expect(archived.data?.time?.archived).toBe(archivedAt)
 
-    const afterDefault = await client.experimental.session.list({ directory: opencode!.cwd })
+    const afterDefault = await client.experimental.session.list({ directory: ctx.opencode.cwd })
     expect((afterDefault.data ?? []).some((s) => s.id === id)).toBe(false)
 
     const archivedList = await client.experimental.session.list({
-      directory: opencode!.cwd,
+      directory: ctx.opencode.cwd,
       archived: true,
     })
     expect((archivedList.data ?? []).some((s) => s.id === id)).toBe(true)
@@ -47,15 +33,15 @@ describeWhenOpenCode("OpenCode session archive", () => {
   })
 
   test("archive is reversible by setting time.archived to 0", async () => {
-    const client = createOpencodeClient({ baseUrl: opencode!.baseUrl })
+    const client = createOpencodeClient({ baseUrl: ctx.opencode.baseUrl })
 
-    const created = await client.session.create({ title: "to-unarchive", directory: opencode!.cwd })
+    const created = await client.session.create({ title: "to-unarchive", directory: ctx.opencode.cwd })
     const id = created.data!.id
 
     await client.session.update({ sessionID: id, time: { archived: archivedAt + 1 } })
 
     const archived = await client.experimental.session.list({
-      directory: opencode!.cwd,
+      directory: ctx.opencode.cwd,
       archived: true,
     })
     expect((archived.data ?? []).some((s) => s.id === id)).toBe(true)
@@ -68,9 +54,9 @@ describeWhenOpenCode("OpenCode session archive", () => {
   })
 
   test("archived session is still deletable", async () => {
-    const client = createOpencodeClient({ baseUrl: opencode!.baseUrl })
+    const client = createOpencodeClient({ baseUrl: ctx.opencode.baseUrl })
 
-    const created = await client.session.create({ title: "archived-then-deleted", directory: opencode!.cwd })
+    const created = await client.session.create({ title: "archived-then-deleted", directory: ctx.opencode.cwd })
     const id = created.data!.id
 
     await client.session.update({ sessionID: id, time: { archived: archivedAt + 2 } })
