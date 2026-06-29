@@ -1,20 +1,14 @@
-import { afterAll, beforeAll, describe, expect, test } from "vitest"
+import { beforeAll, describe, expect, test } from "vitest"
 import { createOpencodeClient, type OpencodeClient } from "@opencode-ai/sdk/v2"
-import { startOpenCodeInstance, type StartedOpenCode } from "../helpers/opencode-process"
+import { describeWithOpenCode } from "../helpers/integration-suite"
 
-let opencode: StartedOpenCode
-let client: OpencodeClient
+describeWithOpenCode("OpenCode tool registry", { timeoutMs: 30_000 }, (ctx) => {
+  let client: OpencodeClient
 
-beforeAll(async () => {
-  opencode = await startOpenCodeInstance()
-  client = createOpencodeClient({ baseUrl: opencode.baseUrl })
-}, 30_000)
+  beforeAll(() => {
+    client = createOpencodeClient({ baseUrl: ctx.opencode.baseUrl })
+  }, 30_000)
 
-afterAll(async () => {
-  await opencode.stop()
-})
-
-describe("OpenCode tool registry", () => {
   test("tool.ids returns non-empty list containing common built-ins", async () => {
     const result = await client.tool.ids({})
     const ids = result.data ?? []

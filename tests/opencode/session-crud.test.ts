@@ -1,27 +1,10 @@
-import { afterAll, beforeAll, describe, expect, test } from "vitest"
+import { describe, expect, test } from "vitest"
 import { createOpencodeClient } from "@opencode-ai/sdk/v2"
-import { checkOpenCodeAvailable } from "../helpers/env"
-import { startOpenCodeInstance, type StartedOpenCode } from "../helpers/opencode-process"
+import { describeWithOpenCode } from "../helpers/integration-suite"
 
-const availability = await checkOpenCodeAvailable()
-
-let opencode: StartedOpenCode | undefined
-
-// File-level afterAll ensures cleanup runs even if describe block hooks
-// are inconsistent in certain vitest fork pool edge cases.
-afterAll(async () => {
-  await opencode?.stop()
-})
-
-const describeWhenOpenCode = availability.available ? describe : describe.skip
-
-describeWhenOpenCode("OpenCode session CRUD", () => {
-  beforeAll(async () => {
-    opencode = await startOpenCodeInstance()
-  }, 20_000)
-
+describeWithOpenCode("OpenCode session CRUD", { timeoutMs: 20_000 }, (ctx) => {
   test("create, list, get, and delete a session", async () => {
-    const client = createOpencodeClient({ baseUrl: opencode!.baseUrl })
+    const client = createOpencodeClient({ baseUrl: ctx.opencode.baseUrl })
 
     // Create
     const title = "integration test session"
