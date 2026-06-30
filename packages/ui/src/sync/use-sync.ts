@@ -2,7 +2,7 @@ import { useCallback, useRef, useMemo } from "react"
 import type { Message, Part } from "@/lib/opencode/client"
 import { Binary } from "./binary"
 import { retry } from "./retry"
-import { SESSION_CACHE_LIMIT } from "./types"
+import { SESSION_CACHE_LIMIT, type State } from "./types"
 import { pickSessionCacheEvictions } from "./session-cache"
 import {
   mergeOptimisticPage,
@@ -29,8 +29,59 @@ function sortParts(parts: Part[]) {
 }
 
 // ---------------------------------------------------------------------------
+// evictSessionCaches — extracted for testability
+// ---------------------------------------------------------------------------
+
+type ChildStoresForEvict = {
+  getChild: (dir: string) => {
+    getState: () => State
+    setState: (partial: Partial<State>) => void
+  } | undefined
+}
+type MetaMap = Map<string, { limit: number; cursor: string | undefined; complete: boolean; loading: boolean }>
+type OptimisticMap = Map<string, Map<string, OptimisticItem>>
+
+/**
+ * Evict cached session data for `sessionIDs` from directory `dir`'s store.
+ * Exported for unit-testing; prefer `useSync().touch()` / `syncSession()` in product.
+ */
+export function evictSessionCaches(
+  dir: string,
+  sessionIDs: string[],
+  childStores: ChildStoresForEvict,
+  meta: MetaMap,
+  optimistic: OptimisticMap,
+  clearSessionPrefetchFn: (dir: string, sessionIDs: string[]) => void,
+): void {
+  if (sessionIDs.length === 0) return
+  const dirStore = childStores.getChild(dir)
+  if (!dirStore) return
+
+  const current = dirStore.getState()
+  const draft = {
+    message: { ...current.message },
+    part: { ...current.part },
+    // Pass direct references: dropSessionCaches mutates these in-place (delete),
+    // no need to clone — only message and part trigger Zustand subscriber updates.
+    session_status: current.session_status,
+    session_diff: current.session_diff,
+    todo: current.todo,
+    permission: current.permission,
+    question: current.question,
+  }
+  dropSessionCaches(draft, sessionIDs)
+  dirStore.setState(draft)
+
+  // Clear meta + optimistic + prefetch cache for evicted sessions
+  for (const id of sessionIDs) {
+    optimistic.delete(`${dir}\n${id}`)
+    meta.delete(`${dir}\n${id}`)
+  }
+  clearSessionPrefetchFn(dir, sessionIDs)
+}
+
+// ---------------------------------------------------------------------------
 // useSync — message loading, pagination, optimistic updates
-// Message loading, pagination, optimistic updates
 // ---------------------------------------------------------------------------
 
 export function useSync() {
@@ -78,29 +129,14 @@ export function useSync() {
   // Evict all cached session data for given IDs from a directory's store
   const evict = useCallback(
     (dir: string, sessionIDs: string[]) => {
-      if (sessionIDs.length === 0) return
-      const dirStore = childStores.getChild(dir)
-      if (!dirStore) return
-
-      const current = dirStore.getState()
-      const draft = {
-        message: { ...current.message },
-        part: { ...current.part },
-        session_status: { ...current.session_status },
-        session_diff: { ...current.session_diff },
-        todo: { ...current.todo },
-        permission: { ...current.permission },
-        question: { ...current.question },
-      }
-      dropSessionCaches(draft, sessionIDs)
-      dirStore.setState(draft)
-
-      // Clear meta + optimistic + prefetch cache for evicted sessions
-      for (const id of sessionIDs) {
-        optimistic.current.delete(`${dir}\n${id}`)
-        meta.current.delete(`${dir}\n${id}`)
-      }
-      clearSessionPrefetch(dir, sessionIDs)
+      evictSessionCaches(
+        dir,
+        sessionIDs,
+        childStores,
+        meta.current,
+        optimistic.current,
+        clearSessionPrefetch,
+      )
     },
     [childStores],
   )

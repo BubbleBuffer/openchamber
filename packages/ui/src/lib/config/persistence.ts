@@ -1,6 +1,7 @@
 import type { DesktopSettings } from '@/lib/desktop/desktop';
 import { createProjectIdFromPath } from '@/lib/project/projectId';
 import { useUIStore } from '@/stores/useUIStore';
+import { useModelPreferencesStore } from '@/stores/useModelPreferencesStore';
 import { useMessageQueueStore } from '@/stores/messageQueueStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { setDirectoryShowHidden } from '@/lib/files/directoryShowHidden';
@@ -404,24 +405,24 @@ const applyDesktopUiPreferences = (settings: DesktopSettings) => {
   }
 
   if (Array.isArray(settings.favoriteModels)) {
-    const current = store.favoriteModels;
+    const current = useModelPreferencesStore.getState().favoriteModels;
     const next = settings.favoriteModels;
     const same =
       current.length === next.length &&
       current.every((item, idx) => item.providerID === next[idx]?.providerID && item.modelID === next[idx]?.modelID);
     if (!same) {
-      useUIStore.setState({ favoriteModels: next });
+      useModelPreferencesStore.setState({ favoriteModels: next });
     }
   }
 
   if (Array.isArray(settings.recentModels)) {
-    const current = store.recentModels;
+    const current = useModelPreferencesStore.getState().recentModels;
     const next = settings.recentModels;
     const same =
       current.length === next.length &&
       current.every((item, idx) => item.providerID === next[idx]?.providerID && item.modelID === next[idx]?.modelID);
     if (!same) {
-      useUIStore.setState({ recentModels: next });
+      useModelPreferencesStore.setState({ recentModels: next });
     }
   }
   if (typeof settings.diffLayoutPreference === 'string'

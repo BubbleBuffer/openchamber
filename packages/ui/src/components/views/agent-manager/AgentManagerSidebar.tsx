@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useAgentGroupsStore, type AgentGroup } from '@/stores/agents/useAgentGroupsStore';
-import { useAllSessionStatuses } from '@/sync/sync-context';
+import { useAnyGlobalSessionBusy } from '@/sync/sync-context';
 
 const formatRelativeTime = (timestamp: number): string => {
   const now = Date.now();
@@ -156,6 +156,27 @@ const AgentGroupItem: React.FC<AgentGroupItemProps> = ({ group, isSelected, isBu
   );
 };
 
+// Wrapper component that uses narrow hook for busy status — avoids hooks-in-map
+interface GroupBusyWrapperProps {
+  group: AgentGroup;
+  isSelected: boolean;
+  onSelect: () => void;
+}
+
+const GroupBusyWrapper: React.FC<GroupBusyWrapperProps> = ({ group, isSelected, onSelect }) => {
+  // Only subscribe to status changes for this group's sessions
+  const sessionIds = React.useMemo(() => group.sessions.map((s) => s.id), [group.sessions])
+  const isBusy = useAnyGlobalSessionBusy(sessionIds)
+  return (
+    <AgentGroupItem
+      group={group}
+      isSelected={isSelected}
+      isBusy={isBusy}
+      onSelect={onSelect}
+    />
+  )
+}
+
 interface AgentManagerSidebarProps {
   className?: string;
   groups: AgentGroup[];
@@ -174,18 +195,6 @@ export const AgentManagerSidebar: React.FC<AgentManagerSidebarProps> = ({
   const [searchQuery, setSearchQuery] = React.useState('');
   const [showAll, setShowAll] = React.useState(false);
   const isLoading = useAgentGroupsStore((s) => s.isLoading);
-
-  // Session statuses for busy indicators
-  const allStatuses = useAllSessionStatuses();
-  const busyGroups = React.useMemo(() => {
-    const set = new Set<string>();
-    for (const group of groups) {
-      if (group.sessions.some((s) => allStatuses[s.id]?.type === 'busy')) {
-        set.add(group.name);
-      }
-    }
-    return set;
-  }, [groups, allStatuses]);
 
   const MAX_VISIBLE = 5;
 
@@ -246,11 +255,10 @@ export const AgentManagerSidebar: React.FC<AgentManagerSidebarProps> = ({
         className="space-y-0.5 px-2.5 pb-2"
       >
         {visibleGroups.map((group) => (
-          <AgentGroupItem
+          <GroupBusyWrapper
             key={group.name}
             group={group}
             isSelected={selectedGroupName === group.name}
-            isBusy={busyGroups.has(group.name)}
             onSelect={() => onGroupSelect?.(group.name)}
           />
         ))}

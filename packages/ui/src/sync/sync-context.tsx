@@ -115,6 +115,29 @@ export function useAllSessionStatuses(): Record<string, SessionStatus> {
   )
 }
 
+/**
+ * Returns true if any of the given session IDs have a "busy" status.
+ * Narrow subscription: only re-renders when statuses for the specified sessions change.
+ * Preserves original behavior: only 'busy' type triggers busy indication (not 'retry').
+ */
+export function useAnyGlobalSessionBusy(sessionIds: readonly string[]): boolean {
+  const signature = React.useMemo(() => [...sessionIds].sort().join('\0'), [sessionIds])
+  return useLiveSyncSelector(
+    useCallback(
+      (states) => {
+        if (!signature) return false
+        const ids = signature.split('\0')
+        for (const id of ids) {
+          const status = findLiveSessionStatus(states, id)
+          if (status?.type === 'busy') return true
+        }
+        return false
+      },
+      [signature],
+    ),
+  )
+}
+
 export function useAllLiveSessions(): Session[] {
   return useLiveSyncSelector(
     useCallback((states) => aggregateLiveSessions(states), []),

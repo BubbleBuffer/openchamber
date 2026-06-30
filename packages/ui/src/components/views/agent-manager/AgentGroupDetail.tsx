@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { ProviderLogo } from '@/components/ui/ProviderLogo';
 import { useAgentGroupsStore, type AgentGroup, type AgentGroupSession } from '@/stores/agents/useAgentGroupsStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
-import { useGlobalSessionStatus, useAllSessionStatuses } from '@/sync/sync-context';
+import { useGlobalSessionStatus, useAnyGlobalSessionBusy } from '@/sync/sync-context';
 import { ChatContainer } from '@/components/chat/ChatContainer';
 import { ChatErrorBoundary } from '@/components/chat/ChatErrorBoundary';
 import {
@@ -143,11 +143,8 @@ export const AgentGroupDetail: React.FC<AgentGroupDetailProps> = ({
   }, [deleteGroupSessions, group.sessions, isProcessing, worktreeDialog]);
 
   // Group-level status: show if any session is busy
-  const allStatuses = useAllSessionStatuses();
-  const groupBusy = React.useMemo(
-    () => group.sessions.some((s) => allStatuses[s.id]?.type === 'busy'),
-    [group.sessions, allStatuses],
-  );
+  const sessionIds = React.useMemo(() => group.sessions.map((s) => s.id), [group.sessions])
+  const groupBusy = useAnyGlobalSessionBusy(sessionIds);
 
   return (
     <div className={cn('flex h-full flex-col bg-background', className)}>

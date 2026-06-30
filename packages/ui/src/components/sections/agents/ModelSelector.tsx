@@ -9,6 +9,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useModelPreferencesStore } from '@/stores/useModelPreferencesStore';
 import { useDeviceInfo } from '@/lib/device';
 import { RiArrowDownSLine, RiArrowRightSLine, RiCheckLine, RiCloseLine, RiPencilAiLine, RiSearchLine, RiStarFill, RiStarLine, RiTimeLine } from '@remixicon/react';
 import { cn } from '@/lib/utils';
@@ -58,10 +59,10 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
     const providers = useProviderConfigStore((state) => state.providers);
     const modelsMetadata = useProviderConfigStore((state) => state.modelsMetadata);
     const isMobile = useUIStore(state => state.isMobile);
-    const hiddenModels = useUIStore(state => state.hiddenModels);
-    const toggleFavoriteModel = useUIStore((state) => state.toggleFavoriteModel);
-    const isFavoriteModel = useUIStore((state) => state.isFavoriteModel);
-    const addRecentModel = useUIStore((state) => state.addRecentModel);
+    const hiddenModels = useModelPreferencesStore((state) => state.hiddenModels);
+    const toggleFavoriteModel = useModelPreferencesStore((state) => state.toggleFavoriteModel);
+    const isFavoriteModel = useModelPreferencesStore((state) => state.isFavoriteModel);
+    const addRecentModel = useModelPreferencesStore((state) => state.addRecentModel);
     const { favoriteModelsList, recentModelsList } = useModelLists();
     const { isMobile: deviceIsMobile } = useDeviceInfo();
     const isActuallyMobile = isMobile || deviceIsMobile;
