@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
-import { useSessions, useAllSessionStatuses } from '@/sync/sync-context';
+import { useSessions, useAllSessionStatuses, useGlobalSessionStatus } from '@/sync/sync-context';
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
@@ -75,18 +75,21 @@ function useSessionGrouping(
 ) {
   const unseenCounts = useNotificationStore((s) => s.index.session.unseenCount);
 
+  // Memoize allSessionIds once per sessions change to avoid recomputing
+  // new Set(sessions.map(...)) inside per-session filters
+  const allSessionIds = React.useMemo(() => new Set(sessions.map((s) => s.id)), [sessions]);
+
   const parentChildMap = React.useMemo(() => {
     const map = new Map<string, Session[]>();
-    const allIds = new Set(sessions.map((s) => s.id));
 
     sessions.forEach((session) => {
       const parentID = (session as { parentID?: string }).parentID;
-      if (parentID && allIds.has(parentID)) {
+      if (parentID && allSessionIds.has(parentID)) {
         map.set(parentID, [...(map.get(parentID) || []), session]);
       }
     });
     return map;
-  }, [sessions]);
+  }, [sessions, allSessionIds]);
 
   const getStatusType = React.useCallback((sessionId: string): 'busy' | 'retry' | 'idle' => {
     const status = sessionStatus?.[sessionId];
@@ -115,7 +118,7 @@ function useSessionGrouping(
   const processedSessions = React.useMemo(() => {
     const topLevel = sessions.filter((session) => {
       const parentID = (session as { parentID?: string }).parentID;
-      return !parentID || !new Set(sessions.map((s) => s.id)).has(parentID);
+      return !parentID || !allSessionIds.has(parentID);
     });
 
     const running: SessionWithStatus[] = [];
@@ -153,7 +156,7 @@ function useSessionGrouping(
     viewed.sort(sortByUpdated);
 
     return [...running, ...viewed];
-  }, [sessions, getStatusType, hasRunningChildren, getRunningChildrenCount, getChildIndicators, unseenCounts]);
+  }, [sessions, allSessionIds, getStatusType, hasRunningChildren, getRunningChildrenCount, getChildIndicators, unseenCounts]);
 
   const totalRunning = processedSessions.reduce((sum, s) => {
     const selfRunning = s._statusType !== 'idle' ? 1 : 0;
@@ -1005,6 +1008,99 @@ function ProjectBar({
   );
 }
 
+// Expanded-only child: all subscription-heavy hooks live here so the
+// collapsed path never subscribes to the full status map.
+function ExpandedMobileSessionStatusBarContent({
+  sessions,
+  currentSessionId,
+  currentSessionTitle,
+  currentProjectLabel,
+  currentProjectIcon,
+  currentProjectIconImageUrl,
+  currentProjectIconBackground,
+  currentProjectColor,
+  isExpanded,
+  onToggleCollapse,
+  onNewSession,
+  onSessionClick,
+  onSessionDoubleClick,
+  onProjectSwitch,
+  onAddProject,
+  onRemoveProject,
+  contextUsage,
+  projects,
+  activeProjectId,
+  homeDirectory,
+  agents,
+}: {
+  sessions: Session[];
+  currentSessionId: string;
+  currentSessionTitle: string;
+  currentProjectLabel?: string;
+  currentProjectIcon?: string | null;
+  currentProjectIconImageUrl?: string | null;
+  currentProjectIconBackground?: string | null;
+  currentProjectColor?: string | null;
+  isExpanded: boolean;
+  onToggleCollapse: () => void;
+  onNewSession: () => void;
+  onSessionClick: (id: string) => void;
+  onSessionDoubleClick?: () => void;
+  onProjectSwitch: (projectId: string) => void;
+  onAddProject: () => void;
+  onRemoveProject?: (projectId: string) => void;
+  contextUsage: SessionContextUsage | null;
+  projects: ProjectEntry[];
+  activeProjectId: string | null;
+  homeDirectory: string | null;
+  agents: Array<{ name: string }>;
+}) {
+  // Heavy subscriptions — only called when expanded
+  const sessionStatus = useAllSessionStatuses();
+  const { sessions: sortedSessions, totalRunning, totalUnread, totalCount } = useSessionGrouping(sessions, sessionStatus);
+  const { getSessionAgentName, getSessionTitle, needsAttention } = useSessionHelpers(agents, sessionStatus);
+  const getProjectStatus = useProjectStatus(sessions, sessionStatus, currentSessionId);
+
+  const currentSessionWithStatus = sortedSessions.find((s) => s.id === currentSessionId);
+  const childIndicators = currentSessionWithStatus?._childIndicators ?? [];
+
+  if (totalCount === 0) {
+    return null;
+  }
+
+  return (
+    <ExpandedView
+      sessions={sortedSessions}
+      currentSessionId={currentSessionId}
+      runningCount={totalRunning}
+      unreadCount={totalUnread}
+      currentSessionTitle={currentSessionTitle}
+      currentProjectLabel={currentProjectLabel}
+      currentProjectIcon={currentProjectIcon}
+      currentProjectIconImageUrl={currentProjectIconImageUrl}
+      currentProjectIconBackground={currentProjectIconBackground}
+      currentProjectColor={currentProjectColor}
+      isExpanded={isExpanded}
+      onToggleCollapse={onToggleCollapse}
+      onNewSession={onNewSession}
+      onSessionClick={onSessionClick}
+      onSessionDoubleClick={onSessionDoubleClick}
+      onProjectSwitch={onProjectSwitch}
+      onAddProject={onAddProject}
+      onRemoveProject={onRemoveProject}
+      getSessionAgentName={getSessionAgentName}
+      getSessionTitle={getSessionTitle}
+      needsAttention={needsAttention}
+      contextUsage={contextUsage}
+      projects={projects}
+      activeProjectId={activeProjectId}
+      getProjectStatus={getProjectStatus}
+      homeDirectory={homeDirectory}
+      childIndicators={childIndicators}
+    />
+  );
+}
+
 function CollapsedView({
   runningCount,
   unreadCount,
@@ -1283,7 +1379,7 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
   const { currentTheme } = useThemeSystem();
   const sessions = useSessions();
   const currentSessionId = useSessionUIStore((state) => state.currentSessionId);
-  const sessionStatus = useAllSessionStatuses();
+  const currentGlobalStatus = useGlobalSessionStatus(currentSessionId ?? '');
   const setCurrentSession = useSessionUIStore((state) => state.setCurrentSession);
   const openNewSessionDraft = useSessionUIStore((state) => state.openNewSessionDraft);
   const getContextUsage = useSessionUIStore((state) => state.getContextUsage);
@@ -1306,18 +1402,39 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
   // Directory store
   const homeDirectory = useDirectoryStore((state) => state.homeDirectory);
 
-  const { sessions: sortedSessions, totalRunning, totalUnread, totalCount } = useSessionGrouping(sessions, sessionStatus);
-  const { getSessionAgentName, getSessionTitle, needsAttention } = useSessionHelpers(agents, sessionStatus);
-  const getProjectStatus = useProjectStatus(sessions, sessionStatus, currentSessionId);
-
+  // Compute current session info from sessions directly (no status subscription needed)
   const currentSession = sessions.find((s) => s.id === currentSessionId);
-  const currentSessionTitle = currentSession
-    ? getSessionTitle(currentSession)
-    : '← Swipe here to open sidebars →';
 
-  // Calculate current session's child indicators
-  const currentSessionWithStatus = sortedSessions.find((s) => s.id === currentSessionId);
-  const currentSessionChildIndicators = currentSessionWithStatus?._childIndicators ?? [];
+  // Derive current session's child session IDs for narrow collapsed view
+  const currentSessionChildren = React.useMemo(() => {
+    if (!currentSessionId) return [];
+    return sessions.filter((s) => (s as { parentID?: string }).parentID === currentSessionId);
+  }, [sessions, currentSessionId]);
+
+  // For collapsed view: compute child indicators without status subscription
+  // (showing child indicators without running status in collapsed mode to avoid extra subscriptions)
+  const narrowChildIndicators = React.useMemo(() => {
+    return currentSessionChildren.slice(0, 3).map((child) => ({
+      session: child,
+      isRunning: false,
+    }));
+  }, [currentSessionChildren]);
+
+  // Narrow aggregates for collapsed view: only current session counts
+  const currentSessionIsRunning = currentGlobalStatus?.type === 'busy' || currentGlobalStatus?.type === 'retry';
+  const unseenCounts = useNotificationStore((s) => s.index.session.unseenCount);
+  const currentSessionHasUnread = (unseenCounts[currentSessionId ?? ''] ?? 0) > 0;
+  const narrowRunningCount = currentSessionIsRunning ? 1 : 0;
+  const narrowUnreadCount = currentSessionHasUnread ? 1 : 0;
+
+  // NOTE: useAllSessionStatuses(), useSessionGrouping(), useSessionHelpers(), and
+  // useProjectStatus() are called inside ExpandedMobileSessionStatusBarContent
+  // (expanded-only child) to avoid subscription in the collapsed path.
+
+  // Guard: nothing to show
+  if (sessions.length === 0) {
+    return null;
+  }
 
   const activeProject = getActiveProject();
   const currentProjectLabel = activeProject?.label || formatDirectoryName(activeProject?.path || '', homeDirectory);
@@ -1343,7 +1460,18 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
   const [isExpanded, setIsExpanded] = React.useState(false);
   const tauriIpcAvailable = React.useMemo(() => isTauriShell(), []);
 
-  if (!isMobile || !showMobileSessionStatusBar || totalCount === 0) {
+  // Helper for session title
+  const getSessionTitleHelper = (session: Session): string => {
+    const title = session.title;
+    if (title && title.trim()) return title;
+    return 'New session';
+  };
+  const currentSessionTitle = currentSession
+    ? getSessionTitleHelper(currentSession)
+    : '← Swipe here to open sidebars →';
+
+  // Early return for non-mobile or hidden bar
+  if (!isMobile || !showMobileSessionStatusBar) {
     return null;
   }
 
@@ -1354,7 +1482,6 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
   };
 
   const handleSessionDoubleClick = () => {
-    // On double-tap, switch to the Chat tab
     setActiveMainTab('chat');
   };
 
@@ -1397,8 +1524,8 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
   if (isMobileSessionStatusBarCollapsed) {
     return (
       <CollapsedView
-        runningCount={totalRunning}
-        unreadCount={totalUnread}
+        runningCount={narrowRunningCount}
+        unreadCount={narrowUnreadCount}
         currentSessionTitle={currentSessionTitle}
         currentProjectLabel={currentProjectLabel}
         currentProjectIcon={currentProjectIcon}
@@ -1408,17 +1535,16 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
         onToggle={() => setIsMobileSessionStatusBarCollapsed(false)}
         onNewSession={handleCreateSession}
         contextUsage={contextUsage}
-        childIndicators={currentSessionChildIndicators}
+        childIndicators={narrowChildIndicators}
       />
     );
   }
 
+  // Expanded path: use the expanded child which calls useAllSessionStatuses() and related hooks
   return (
-    <ExpandedView
-      sessions={sortedSessions}
+    <ExpandedMobileSessionStatusBarContent
+      sessions={sessions}
       currentSessionId={currentSessionId ?? ''}
-      runningCount={totalRunning}
-      unreadCount={totalUnread}
       currentSessionTitle={currentSessionTitle}
       currentProjectLabel={currentProjectLabel}
       currentProjectIcon={currentProjectIcon}
@@ -1436,15 +1562,11 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
       onProjectSwitch={handleProjectSwitch}
       onAddProject={handleAddProject}
       onRemoveProject={removeProject}
-      getSessionAgentName={getSessionAgentName}
-      getSessionTitle={getSessionTitle}
-      needsAttention={needsAttention}
       contextUsage={contextUsage}
       projects={projects}
       activeProjectId={activeProjectId}
-      getProjectStatus={getProjectStatus}
       homeDirectory={homeDirectory}
-      childIndicators={currentSessionChildIndicators}
+      agents={agents}
     />
   );
 };

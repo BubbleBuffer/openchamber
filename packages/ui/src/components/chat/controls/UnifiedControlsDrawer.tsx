@@ -7,6 +7,7 @@ import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
 import { useContextStore } from '@/stores/contextStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useModelPreferencesStore } from '@/stores/useModelPreferencesStore';
 import { useModelLists } from '@/hooks/useModelLists';
 import {
     formatEffortLabel,
@@ -52,9 +53,9 @@ export const UnifiedControlsDrawer: React.FC<UnifiedControlsDrawerProps> = ({
     const setCurrentVariant = useProviderConfigStore((state) => state.setCurrentVariant);
     const getCurrentModelVariants = useProviderConfigStore((state) => state.getCurrentModelVariants);
     const getModelMetadata = useProviderConfigStore((state) => state.getModelMetadata);
-    const addRecentModel = useUIStore((state) => state.addRecentModel);
-    const addRecentEffort = useUIStore((state) => state.addRecentEffort);
-    const recentEfforts = useUIStore((state) => state.recentEfforts);
+    const addRecentModel = useModelPreferencesStore((state) => state.addRecentModel);
+    const addRecentEffort = useModelPreferencesStore((state) => state.addRecentEffort);
+    const recentEfforts = useModelPreferencesStore((state) => state.recentEfforts);
     const { recentModelsList } = useModelLists();
     const currentSessionId = useSessionUIStore((s) => s.currentSessionId);
     const saveAgentModelForSession = useSelectionStore((state) => state.saveAgentModelForSession);

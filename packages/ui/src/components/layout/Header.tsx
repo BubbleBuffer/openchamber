@@ -23,7 +23,7 @@ import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSessionWorktreeStore } from '@/sync/session-worktree-store';
 import { formatSessionWorktreeBadge } from '@/sync/session-worktree-contract';
-import { useAllLiveSessions, useSession, useSessionMessagesResolved } from '@/sync/sync-context';
+import { useSession, useSessionMessagesResolved } from '@/sync/sync-context';
 import { getAllSyncSessions } from '@/sync/sync-refs';
 import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { useQuotaAutoRefresh, useQuotaStore } from '@/stores/quota/useQuotaStore';
@@ -645,7 +645,6 @@ export const Header: React.FC<HeaderProps> = ({
   const currentSessionMessagesResolved = useSessionMessagesResolved(currentSessionId ?? '');
   const currentSyncedSession = useSession(currentSessionId ?? null);
   const globalActiveSessions = useGlobalSessionsStore((state) => state.activeSessions);
-  const liveSessions = useAllLiveSessions();
   const activeProject = useProjectsStore((state) => {
     if (!state.activeProjectId) {
       return null;
@@ -946,12 +945,11 @@ export const Header: React.FC<HeaderProps> = ({
 
   const currentSessionLive = React.useMemo(() => {
     if (!currentSessionId) return null;
-    return liveSessions.find((s) => s.id === currentSessionId)
+    return currentSyncedSession
       ?? globalActiveSessions.find((s) => s.id === currentSessionId)
-      ?? currentSyncedSession
       ?? getAllSyncSessions().find((s) => s.id === currentSessionId)
       ?? null;
-  }, [currentSessionId, currentSyncedSession, globalActiveSessions, liveSessions]);
+  }, [currentSessionId, currentSyncedSession, globalActiveSessions]);
 
   const lastResolvedSessionRef = React.useRef<{
     sessionId: string;

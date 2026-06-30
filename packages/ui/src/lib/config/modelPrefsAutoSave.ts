@@ -1,4 +1,4 @@
-import { useUIStore } from '@/stores/useUIStore';
+import { useModelPreferencesStore } from '@/stores/useModelPreferencesStore';
 import { updateDesktopSettings } from '@/lib/config/persistence';
 import { asReporter } from '@/lib/errors/reportError';
 import { isVSCodeRuntime } from '@/lib/desktop/desktop';
@@ -29,7 +29,7 @@ export const startModelPrefsAutoSave = () => {
 
   const flush = () => {
     timer = null;
-    const state = useUIStore.getState();
+    const state = useModelPreferencesStore.getState();
     const payload = { favoriteModels: state.favoriteModels, recentModels: state.recentModels };
 
     if (
@@ -61,7 +61,7 @@ export const startModelPrefsAutoSave = () => {
     timer = window.setTimeout(flush, 1200);
   };
 
-  const unsubscribe = useUIStore.subscribe((state, prevState) => {
+  const unsubscribe = useModelPreferencesStore.subscribe((state, prevState) => {
     const next = { favoriteModels: state.favoriteModels, recentModels: state.recentModels };
     const prev = { favoriteModels: prevState.favoriteModels, recentModels: prevState.recentModels };
     if (refsEqual(next.favoriteModels, prev.favoriteModels) && refsEqual(next.recentModels, prev.recentModels)) {

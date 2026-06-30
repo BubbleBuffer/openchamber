@@ -11,6 +11,11 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import updaterPkg from 'electron-updater';
 import { ElectronSshManager } from './ssh-manager.mjs';
+import {
+  COMMANDS_SAFE_FOR_REMOTE,
+  assertIpcAvailableForOrigin,
+  isLocalSender,
+} from './src/ipc-gate.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -2190,45 +2195,12 @@ contextMenu({
 // shell.openPath, installed-app scans, app relaunch, and file dialogs
 // are gated to local senders — even the user's own remote UI shouldn't
 // need them, and a compromised remote can't use them either.
-const isLocalSender = (webContents) => {
-  try {
-    const raw = typeof webContents?.getURL === 'function' ? webContents.getURL() : '';
-    if (!raw) return false;
-    if (raw.startsWith('file://') || raw === 'about:blank') return true;
-    const url = new URL(raw);
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
-    const hostname = url.hostname;
-    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') return true;
-    if (state.localOrigin) {
-      try {
-        const allowed = new URL(state.localOrigin);
-        if (allowed.origin === url.origin) return true;
-      } catch {
-      }
-    }
-    return false;
-  } catch {
-    return false;
-  }
-};
-
-const COMMANDS_SAFE_FOR_REMOTE = new Set([
-  'desktop_hosts_get',
-  'desktop_host_probe',
-  'desktop_new_window',
-  'desktop_new_window_at_url',
-  'desktop_set_window_title',
-  'desktop_set_window_theme',
-  'desktop_is_window_fullscreen',
-  'desktop_start_window_drag',
-  'desktop_get_app_version',
-  'desktop_get_lan_address',
-]);
-
 ipcMain.handle('openchamber:invoke', async (event, command, args) => {
-  if (!isLocalSender(event.sender) && !COMMANDS_SAFE_FOR_REMOTE.has(command)) {
-    log.warn(`[ipc] rejected ${command} from non-local origin: ${event.sender?.getURL?.() || '(unknown)'}`);
-    throw new Error('IPC not available for this origin');
+  try {
+    assertIpcAvailableForOrigin(event.sender, command, state.localOrigin);
+  } catch (error) {
+    log.warn(`[ipc] rejected ${command} from non-local origin: ${typeof event.sender?.getURL === 'function' ? event.sender.getURL() : 'unknown'}`);
+    throw error;
   }
   const browserWindow = BrowserWindow.fromWebContents(event.sender);
   return handleInvoke(browserWindow, command, args);
@@ -2236,8 +2208,8 @@ ipcMain.handle('openchamber:invoke', async (event, command, args) => {
 
 ipcMain.handle('openchamber:dialog:open', async (event, options) => {
   // Native file dialogs expose absolute local paths; never grant to remote.
-  if (!isLocalSender(event.sender)) {
-    log.warn(`[ipc] rejected dialog:open from non-local origin: ${event.sender?.getURL?.() || '(unknown)'}`);
+  if (!isLocalSender(event.sender, state.localOrigin)) {
+    log.warn(`[ipc] rejected dialog:open from non-local origin: ${typeof event.sender?.getURL === 'function' ? event.sender.getURL() : 'unknown'}`);
     throw new Error('IPC not available for this origin');
   }
   const browserWindow = BrowserWindow.fromWebContents(event.sender);

@@ -61,7 +61,6 @@ import { useSessionMultiSelectStore } from '@/stores/session/useSessionMultiSele
 import { type SessionGroup, type SessionNode } from './sidebar/types';
 import {
   type ActiveNowEntry,
-  addActiveNowSession,
   deriveActiveNowSessions,
   deriveLiveActiveNowSessions,
   persistActiveNowEntries,
@@ -77,6 +76,33 @@ import { refreshGlobalSessions, useGlobalSessionsStore } from '@/stores/useGloba
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { useGitHubAuthStore } from '@/stores/github/useGitHubAuthStore';
 import { subscribeOpenchamberEvents } from '@/lib/config/openchamberEvents';
+
+/**
+ * Owns the useAllSessionStatuses() subscription for active-now live session detection.
+ * Isolates the broad status-map subscription to this leaf component so the parent
+ * SessionSidebar does not re-render on every session status change.
+ */
+function ActiveNowLiveSessions({
+  sessions,
+  safeStorage,
+  onLiveSessionsDerived,
+}: {
+  sessions: Session[];
+  safeStorage: Storage;
+  onLiveSessionsDerived: (liveSessions: Session[]) => void;
+}): null {
+  const allStatuses = useAllSessionStatuses();
+  const liveActiveSessions = React.useMemo(
+    () => deriveLiveActiveNowSessions(sessions, allStatuses),
+    [sessions, allStatuses],
+  );
+
+  React.useEffect(() => {
+    onLiveSessionsDerived(liveActiveSessions);
+  }, [liveActiveSessions, onLiveSessionsDerived]);
+
+  return null;
+}
 
 const PROJECT_COLLAPSE_STORAGE_KEY = 'oc.sessions.projectCollapse';
 const GROUP_ORDER_STORAGE_KEY = 'oc.sessions.groupOrder';
@@ -275,7 +301,6 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
 
   const sync = useSync();
   const liveSessions = useAllLiveSessions();
-  const liveSessionStatuses = useAllSessionStatuses();
   const hasLoadedGlobalSessions = useGlobalSessionsStore((state) => state.hasLoaded);
   const globalActiveSessions = useGlobalSessionsStore((state) => state.activeSessions);
   const archivedSessions = useGlobalSessionsStore((state) => state.archivedSessions);
@@ -988,25 +1013,33 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
     [activeNowEntries, sessions],
   );
 
-  const liveActiveSessions = React.useMemo(
-    () => deriveLiveActiveNowSessions(sessions, liveSessionStatuses),
-    [liveSessionStatuses, sessions],
-  );
-
-  React.useEffect(() => {
+  // Callback for ActiveNowLiveSessions child to update activeNowEntries when live sessions are derived
+  const handleLiveSessionsDerived = React.useCallback((liveActiveSessions: Session[]) => {
     if (liveActiveSessions.length === 0) {
       return;
     }
 
     setActiveNowEntries((prev) => {
-      const next = liveActiveSessions.reduce((entries, session) => addActiveNowSession(entries, session.id), prev);
-      if (next === prev) {
+      // Build new entries: prepend any live session IDs not already tracked,
+      // preserving the same ordering semantics as the prior reduce + addActiveNowSession.
+      const next = [...prev];
+      for (const session of liveActiveSessions) {
+        if (!session.id || next.some((entry) => entry.sessionId === session.id)) {
+          continue;
+        }
+        next.unshift({ sessionId: session.id });
+      }
+
+      // Shallow structural equivalence check: preserve reference identity when
+      // the derived entries are effectively the same as the current state.
+      if (next.length === prev.length && next.every((entry, i) => entry.sessionId === prev[i].sessionId)) {
         return prev;
       }
+
       persistActiveNowEntries(safeStorage, next);
       return next;
     });
-  }, [liveActiveSessions, safeStorage]);
+  }, [safeStorage]);
 
   React.useEffect(() => {
     const allKnownSessionsById = new Map<string, Session>();
@@ -1563,6 +1596,12 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
         mobileVariant ? '' : 'bg-transparent',
       )}
     >
+      {/* ActiveNowLiveSessions owns the useAllSessionStatuses() subscription for active-now detection */}
+      <ActiveNowLiveSessions
+        sessions={sessions}
+        safeStorage={safeStorage}
+        onLiveSessionsDerived={handleLiveSessionsDerived}
+      />
       {showDesktopSidebarChrome ? (
         <div
           onMouseDown={handleDesktopSidebarDragStart}

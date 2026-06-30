@@ -55,6 +55,7 @@ import { useSelectionStore } from '@/sync/selection-store';
 import { useDirectorySync, useSessionMessages } from '@/sync/sync-context';
 import { useSync } from '@/sync/use-sync';
 import { useUIStore } from '@/stores/useUIStore';
+import { useModelPreferencesStore } from '@/stores/useModelPreferencesStore';
 import { useModelLists } from '@/hooks/useModelLists';
 import { useIsTextTruncated } from '@/hooks/useIsTextTruncated';
 import type { MobileControlsPanel } from './mobileControlsUtils';
@@ -356,17 +357,17 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
         ? (sessionSavedAgentName || stickySessionAgentName || currentAgentName)
         : currentAgentName;
 
-    const toggleFavoriteModel = useUIStore((state) => state.toggleFavoriteModel);
-    const isFavoriteModel = useUIStore((state) => state.isFavoriteModel);
-    const collapsedModelProviders = useUIStore((state) => state.collapsedModelProviders);
-    const toggleModelProviderCollapsed = useUIStore((state) => state.toggleModelProviderCollapsed);
-    const addRecentModel = useUIStore((state) => state.addRecentModel);
-    const addRecentEffort = useUIStore((state) => state.addRecentEffort);
+    const toggleFavoriteModel = useModelPreferencesStore((state) => state.toggleFavoriteModel);
+    const isFavoriteModel = useModelPreferencesStore((state) => state.isFavoriteModel);
+    const collapsedModelProviders = useModelPreferencesStore((state) => state.collapsedModelProviders);
+    const toggleModelProviderCollapsed = useModelPreferencesStore((state) => state.toggleModelProviderCollapsed);
+    const addRecentModel = useModelPreferencesStore((state) => state.addRecentModel);
+    const addRecentEffort = useModelPreferencesStore((state) => state.addRecentEffort);
     const isModelSelectorOpen = useDialogStore((state) => state.isModelSelectorOpen);
     const setModelSelectorOpen = useDialogStore((state) => state.setModelSelectorOpen);
     const setSettingsDialogOpen = useDialogStore((state) => state.setSettingsDialogOpen);
     const setSettingsPage = useUIStore((state) => state.setSettingsPage);
-    const hiddenModels = useUIStore((state) => state.hiddenModels);
+    const hiddenModels = useModelPreferencesStore((state) => state.hiddenModels);
     const collapsedProviderSet = React.useMemo(
         () => new Set(collapsedModelProviders.map((providerId) => providerId.trim()).filter(Boolean)),
         [collapsedModelProviders]

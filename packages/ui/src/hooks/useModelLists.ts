@@ -1,6 +1,6 @@
 import React from 'react';
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
-import { useUIStore } from '@/stores/useUIStore';
+import { useModelPreferencesStore } from '@/stores/useModelPreferencesStore';
 import type { Provider } from '@/lib/opencode/client';
 
 type ProviderModel = Provider["models"][string];
@@ -15,9 +15,9 @@ export interface ModelListItem {
 
 export const useModelLists = () => {
   const providers = useProviderConfigStore((state) => state.providers);
-  const favoriteModels = useUIStore((state) => state.favoriteModels);
-  const recentModels = useUIStore((state) => state.recentModels);
-  const hiddenModels = useUIStore((state) => state.hiddenModels);
+  const favoriteModels = useModelPreferencesStore((state) => state.favoriteModels);
+  const recentModels = useModelPreferencesStore((state) => state.recentModels);
+  const hiddenModels = useModelPreferencesStore((state) => state.hiddenModels);
 
   const isHidden = React.useCallback((providerID: string, modelID: string) => {
     return hiddenModels.some((item) => item.providerID === providerID && item.modelID === modelID);

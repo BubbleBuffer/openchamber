@@ -2,7 +2,7 @@ import React from 'react';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { ProviderLogo } from '@/components/ui/ProviderLogo';
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
-import { useUIStore } from '@/stores/useUIStore';
+import { useModelPreferencesStore } from '@/stores/useModelPreferencesStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -143,10 +143,10 @@ export const ProvidersPage: React.FC = () => {
   const selectedProviderId = useProviderConfigStore((state) => state.selectedProviderId);
   const setSelectedProvider = useProviderConfigStore((state) => state.setSelectedProvider);
   const getModelMetadata = useProviderConfigStore((state) => state.getModelMetadata);
-  const hiddenModels = useUIStore((state) => state.hiddenModels);
-  const toggleHiddenModel = useUIStore((state) => state.toggleHiddenModel);
-  const hideAllModels = useUIStore((state) => state.hideAllModels);
-  const showAllModels = useUIStore((state) => state.showAllModels);
+  const hiddenModels = useModelPreferencesStore((state) => state.hiddenModels);
+  const toggleHiddenModel = useModelPreferencesStore((state) => state.toggleHiddenModel);
+  const hideAllModels = useModelPreferencesStore((state) => state.hideAllModels);
+  const showAllModels = useModelPreferencesStore((state) => state.showAllModels);
 
   const [authMethodsByProvider, setAuthMethodsByProvider] = React.useState<Record<string, AuthMethod[]>>({});
   const [authLoading, setAuthLoading] = React.useState(false);

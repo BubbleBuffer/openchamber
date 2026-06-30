@@ -497,12 +497,6 @@ interface UIStore {
   cornerRadius: number;
   inputBarOffset: number;
 
-  favoriteModels: Array<{ providerID: string; modelID: string }>;
-  hiddenModels: Array<{ providerID: string; modelID: string }>;
-  collapsedModelProviders: string[];
-  recentModels: Array<{ providerID: string; modelID: string }>;
-  recentEfforts: Record<string, string[]>;
-
   diffLayoutPreference: 'dynamic' | 'inline' | 'side-by-side';
   diffFileLayout: Record<string, 'inline' | 'side-by-side'>;
   diffWrapLines: boolean;
@@ -599,15 +593,6 @@ interface UIStore {
   setCornerRadius: (radius: number) => void;
   setInputBarOffset: (offset: number) => void;
   setKeyboardOpen: (open: boolean) => void;
-  toggleFavoriteModel: (providerID: string, modelID: string) => void;
-  toggleHiddenModel: (providerID: string, modelID: string) => void;
-  isHiddenModel: (providerID: string, modelID: string) => boolean;
-  hideAllModels: (providerID: string, modelIDs: string[]) => void;
-  showAllModels: (providerID: string) => void;
-  toggleModelProviderCollapsed: (providerID: string) => void;
-  isFavoriteModel: (providerID: string, modelID: string) => boolean;
-  addRecentModel: (providerID: string, modelID: string) => void;
-  addRecentEffort: (providerID: string, modelID: string, variant: string | undefined) => void;
   setDiffLayoutPreference: (mode: 'dynamic' | 'inline' | 'side-by-side') => void;
   setDiffFileLayout: (filePath: string, mode: 'inline' | 'side-by-side') => void;
   setDiffWrapLines: (wrap: boolean) => void;
@@ -687,11 +672,6 @@ export const useUIStore = create<UIStore>()(
         padding: 100,
         cornerRadius: 18,
         inputBarOffset: 0,
-        favoriteModels: [],
-        hiddenModels: [],
-        collapsedModelProviders: [],
-        recentModels: [],
-        recentEfforts: {},
         diffLayoutPreference: 'inline',
         diffFileLayout: {},
         diffWrapLines: false,
@@ -1268,134 +1248,6 @@ export const useUIStore = create<UIStore>()(
           set((state) => state.isKeyboardOpen === open ? state : { isKeyboardOpen: open });
         },
 
-        toggleFavoriteModel: (providerID, modelID) => {
-          set((state) => {
-            const exists = state.favoriteModels.some(
-              (fav) => fav.providerID === providerID && fav.modelID === modelID
-            );
-            
-            if (exists) {
-              // Remove from favorites
-              return {
-                favoriteModels: state.favoriteModels.filter(
-                  (fav) => !(fav.providerID === providerID && fav.modelID === modelID)
-                ),
-              };
-            } else {
-              // Add to favorites (newest first)
-              return {
-                favoriteModels: [{ providerID, modelID }, ...state.favoriteModels],
-              };
-            }
-          });
-        },
-
-        toggleHiddenModel: (providerID, modelID) => {
-          set((state) => {
-            const exists = state.hiddenModels.some(
-              (item) => item.providerID === providerID && item.modelID === modelID
-            );
-
-            if (exists) {
-              return {
-                hiddenModels: state.hiddenModels.filter(
-                  (item) => !(item.providerID === providerID && item.modelID === modelID)
-                ),
-              };
-            }
-
-            return {
-              hiddenModels: [{ providerID, modelID }, ...state.hiddenModels],
-            };
-          });
-        },
-
-        isHiddenModel: (providerID, modelID) => {
-          const { hiddenModels } = get();
-          return hiddenModels.some(
-            (item) => item.providerID === providerID && item.modelID === modelID
-          );
-        },
-
-        hideAllModels: (providerID, modelIDs) => {
-          set((state) => {
-            const current = state.hiddenModels.filter((item) => item.providerID !== providerID);
-            const additions = modelIDs
-              .filter((modelID) => typeof modelID === 'string' && modelID.length > 0)
-              .map((modelID) => ({ providerID, modelID }));
-            return { hiddenModels: [...additions, ...current] };
-          });
-        },
-
-        showAllModels: (providerID) => {
-          set((state) => ({
-            hiddenModels: state.hiddenModels.filter((item) => item.providerID !== providerID),
-          }));
-        },
-
-        toggleModelProviderCollapsed: (providerID) => {
-          const normalizedProviderID = typeof providerID === 'string' ? providerID.trim() : '';
-          if (!normalizedProviderID) {
-            return;
-          }
-
-          set((state) => {
-            const isCollapsed = state.collapsedModelProviders.includes(normalizedProviderID);
-            if (isCollapsed) {
-              return {
-                collapsedModelProviders: state.collapsedModelProviders.filter((id) => id !== normalizedProviderID),
-              };
-            }
-
-            return {
-              collapsedModelProviders: [...state.collapsedModelProviders, normalizedProviderID],
-            };
-          });
-        },
-
-        isFavoriteModel: (providerID, modelID) => {
-          const { favoriteModels } = get();
-          return favoriteModels.some(
-            (fav) => fav.providerID === providerID && fav.modelID === modelID
-          );
-        },
-
-        addRecentModel: (providerID, modelID) => {
-          set((state) => {
-            // Remove existing instance if any
-            const filtered = state.recentModels.filter(
-              (m) => !(m.providerID === providerID && m.modelID === modelID)
-            );
-            // Add to front, limit to 5
-            return {
-              recentModels: [{ providerID, modelID }, ...filtered].slice(0, 5),
-            };
-          });
-        },
-
-        addRecentEffort: (providerID, modelID, variant) => {
-          const provider = typeof providerID === 'string' ? providerID.trim() : '';
-          const model = typeof modelID === 'string' ? modelID.trim() : '';
-          if (!provider || !model) {
-            return;
-          }
-          const key = `${provider}/${model}`;
-          const normalizedVariant = typeof variant === 'string' && variant.trim().length > 0 ? variant.trim() : 'default';
-          set((state) => {
-            const current = state.recentEfforts[key] ?? [];
-            if (current.includes(normalizedVariant)) {
-              return state;
-            }
-            const filtered = current;
-            return {
-              recentEfforts: {
-                ...state.recentEfforts,
-                [key]: [normalizedVariant, ...filtered].slice(0, 5),
-              },
-            };
-          });
-        },
-
         setNativeNotificationsEnabled: (value) => {
           set({ nativeNotificationsEnabled: value });
         },
@@ -1494,7 +1346,7 @@ export const useUIStore = create<UIStore>()(
       {
         name: 'ui-store',
         storage: createJSONStorage(() => getSafeStorage()),
-        version: 9,
+        version: 10,
         migrate: (persistedState, version) => {
           if (!persistedState || typeof persistedState !== 'object') {
             return persistedState;
@@ -1573,6 +1425,17 @@ export const useUIStore = create<UIStore>()(
             delete state.viewPagerPage;
           }
 
+          // v9 -> v10: model preferences moved to useModelPreferencesStore.
+          // The new store copies valid values from the legacy ui-store envelope
+          // before this cleanup deletes the stale keys from persisted state.
+          if (version < 10) {
+            delete state.favoriteModels;
+            delete state.hiddenModels;
+            delete state.collapsedModelProviders;
+            delete state.recentModels;
+            delete state.recentEfforts;
+          }
+
           return state;
         },
         partialize: (state) => ({
@@ -1603,11 +1466,6 @@ export const useUIStore = create<UIStore>()(
           terminalFontSize: state.terminalFontSize,
           padding: state.padding,
           cornerRadius: state.cornerRadius,
-          favoriteModels: state.favoriteModels,
-          hiddenModels: state.hiddenModels,
-          collapsedModelProviders: state.collapsedModelProviders,
-          recentModels: state.recentModels,
-          recentEfforts: state.recentEfforts,
           diffLayoutPreference: state.diffLayoutPreference,
           diffWrapLines: state.diffWrapLines,
           diffViewMode: state.diffViewMode,
@@ -1645,4 +1503,3 @@ export const useUIStore = create<UIStore>()(
     }
   )
 );
-

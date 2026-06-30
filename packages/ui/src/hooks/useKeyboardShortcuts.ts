@@ -3,6 +3,7 @@ import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
 import * as sessionActions from '@/sync/session-actions';
 import { useUIStore } from '@/stores/useUIStore';
+import { useModelPreferencesStore } from '@/stores/useModelPreferencesStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
@@ -300,10 +301,9 @@ export const useKeyboardShortcuts = () => {
       ) {
         const {
           activeMainTab,
-          favoriteModels,
-          addRecentModel,
           isSessionSwitcherOpen,
         } = useUIStore.getState();
+        const { favoriteModels, addRecentModel } = useModelPreferencesStore.getState();
         const {
           isSettingsDialogOpen,
           isCommandPaletteOpen,
