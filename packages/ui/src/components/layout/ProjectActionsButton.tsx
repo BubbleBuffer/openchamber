@@ -18,6 +18,8 @@ import { cn } from '@/lib/utils';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { useDeviceInfo } from '@/lib/device';
 import { isDesktopShell } from '@/lib/desktop/desktop';
+import { useLayoutStore } from '@/stores/useLayoutStore';
+import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { useTerminalStore } from '@/stores/terminal/useTerminalStore';
@@ -188,8 +190,8 @@ export const ProjectActionsButton = ({
   const desktopSshInstances = useDesktopSshStore((state) => state.instances);
   const loadDesktopSsh = useDesktopSshStore((state) => state.load);
 
-  const setBottomTerminalOpen = useUIStore((state) => state.setBottomTerminalOpen);
-  const setActiveMainTab = useUIStore((state) => state.setActiveMainTab);
+  const setBottomTerminalOpen = useLayoutStore((state) => state.setBottomTerminalOpen);
+  const setActiveMainTab = useNavigationStore((state) => state.setActiveMainTab);
   const setSettingsPage = useUIStore((state) => state.setSettingsPage);
   const setSettingsDialogOpen = useDialogStore((state) => state.setSettingsDialogOpen);
   const setSettingsProjectsSelectedId = useUIStore((state) => state.setSettingsProjectsSelectedId);

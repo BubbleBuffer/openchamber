@@ -17,6 +17,7 @@ import {
 import { toast } from '@/components/ui';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useInputStore } from '@/sync/input-store';
+import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { execCommand } from '@/lib/tools/execCommands';
 import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
@@ -58,7 +59,7 @@ export const IntegrateCommitsSection: React.FC<{
   onRefresh,
 }) => {
   const currentSessionId = useSessionUIStore((s) => s.currentSessionId);
-  const setActiveMainTab = useUIStore((s) => s.setActiveMainTab);
+  const setActiveMainTab = useNavigationStore((s) => s.setActiveMainTab);
   const [branchDropdownOpen, setBranchDropdownOpen] = React.useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 

@@ -1,5 +1,6 @@
 // packages/ui/src/components/layout/MobileShell.tsx
 import React from 'react';
+import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { cn } from '@/lib/utils';
@@ -20,8 +21,8 @@ export const MobileShell: React.FC<MobileShellProps> = ({
   header,
   showHeader = true,
 }) => {
-  const activeMainTab = useUIStore((s) => s.activeMainTab);
-  const setActiveMainTab = useUIStore((s) => s.setActiveMainTab);
+  const activeMainTab = useNavigationStore((s) => s.activeMainTab);
+  const setActiveMainTab = useNavigationStore((s) => s.setActiveMainTab);
   const setSettingsDialogOpen = useDialogStore((s) => s.setSettingsDialogOpen);
 
   const handleTabChange = React.useCallback((tab: MainTab) => {

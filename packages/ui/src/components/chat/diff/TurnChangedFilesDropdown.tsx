@@ -4,7 +4,9 @@ import type { ToolPart } from '@/lib/opencode/client';
 import { Popover } from '@base-ui/react/popover';
 import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { useIsGitRepo } from '@/stores/git/useGitStore';
+import { useLayoutStore } from '@/stores/useLayoutStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useRuntimeStore } from '@/stores/useRuntimeStore';
 import { RuntimeAPIContext } from '@/contexts/runtimeAPIContext';
 import {
     type ChangedFile,
@@ -62,13 +64,14 @@ export const TurnChangedFilesDropdown: React.FC<TurnChangedFilesDropdownProps> =
         }
 
         const store = useUIStore.getState();
-        if (!store.isMobile) {
+        const isMobile = useRuntimeStore.getState().isMobile;
+        if (!isMobile) {
             store.openContextFile(currentDirectory, absolutePath);
             setIsExpanded(false);
             return;
         }
         store.navigateToDiff(toRelativePath(file.path, currentDirectory));
-        store.setRightSidebarOpen(false);
+        useLayoutStore.getState().setRightSidebarOpen(false);
         setIsExpanded(false);
     };
 

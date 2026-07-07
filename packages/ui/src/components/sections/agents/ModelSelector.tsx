@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
-import { useUIStore } from '@/stores/useUIStore';
+import { useRuntimeStore } from '@/stores/useRuntimeStore';
 import { useModelPreferencesStore } from '@/stores/useModelPreferencesStore';
 import { useDeviceInfo } from '@/lib/device';
 import { RiArrowDownSLine, RiArrowRightSLine, RiCheckLine, RiCloseLine, RiPencilAiLine, RiSearchLine, RiStarFill, RiStarLine, RiTimeLine } from '@remixicon/react';
@@ -58,7 +58,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
 }) => {
     const providers = useProviderConfigStore((state) => state.providers);
     const modelsMetadata = useProviderConfigStore((state) => state.modelsMetadata);
-    const isMobile = useUIStore(state => state.isMobile);
+    const isMobile = useRuntimeStore(state => state.isMobile);
     const hiddenModels = useModelPreferencesStore((state) => state.hiddenModels);
     const toggleFavoriteModel = useModelPreferencesStore((state) => state.toggleFavoriteModel);
     const isFavoriteModel = useModelPreferencesStore((state) => state.isFavoriteModel);

@@ -4,6 +4,7 @@ import { seedUIStore } from "../react/helpers/stores"
 import { createCommitCollector, createProfiledElement } from "../react/helpers/renderMetrics"
 import { renderWithApp } from "../react/helpers/render"
 import { ChatView } from "@/components/views/ChatView"
+import { useLayoutStore } from "@/stores/useLayoutStore"
 import { useVisualPreferencesStore } from "@/stores/useVisualPreferencesStore"
 
 let currentSessionId: string | null = null
@@ -29,7 +30,8 @@ describe("chat view render perf", () => {
   bench(
     "session id change commit count",
     () => {
-      seedUIStore({ isRightSidebarOpen: false, settingsPage: "home" })
+      seedUIStore({ settingsPage: "home" })
+      useLayoutStore.setState({ isRightSidebarOpen: false }, false)
       currentSessionId = null
       const collector = createCommitCollector("ChatView")
       const { rerender, unmount } = renderWithApp(createProfiledElement("ChatView", collector, <ChatView />), { resetStores: false })
@@ -48,7 +50,8 @@ describe("chat view render perf", () => {
   bench(
     "60-message streaming burst commit count",
     () => {
-      seedUIStore({ isRightSidebarOpen: false, settingsPage: "home" })
+      seedUIStore({ settingsPage: "home" })
+      useLayoutStore.setState({ isRightSidebarOpen: false }, false)
       currentSessionId = "sess-stream"
       const collector = createCommitCollector("ChatView")
       const { unmount } = renderWithApp(createProfiledElement("ChatView", collector, <ChatView />), { resetStores: false })

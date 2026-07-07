@@ -13,6 +13,8 @@ import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { useSync } from '@/sync/use-sync';
 import { useSessionPrefetch } from './sidebar/hooks/useSessionPrefetch';
 import { useProjectsStore } from '@/stores/projects/useProjectsStore';
+import { useLayoutStore } from '@/stores/useLayoutStore';
+import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useNotificationSettingsStore } from '@/stores/useNotificationSettingsStore';
 import { useDialogStore } from '@/stores/useDialogStore';
@@ -255,10 +257,10 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
   const updateProjectMeta = useProjectsStore((state) => state.updateProjectMeta);
   const reorderProjects = useProjectsStore((state) => state.reorderProjects);
 
-  const setActiveMainTab = useUIStore((state) => state.setActiveMainTab);
+  const setActiveMainTab = useNavigationStore((state) => state.setActiveMainTab);
   const openContextPanelTab = useUIStore((state) => state.openContextPanelTab);
-  const setSessionSwitcherOpen = useUIStore((state) => state.setSessionSwitcherOpen);
-  const toggleSidebar = useUIStore((state) => state.toggleSidebar);
+  const setSessionSwitcherOpen = useNavigationStore((state) => state.setSessionSwitcherOpen);
+  const toggleSidebar = useLayoutStore((state) => state.toggleSidebar);
   const setSettingsDialogOpen = useDialogStore((state) => state.setSettingsDialogOpen);
   const toggleHelpDialog = useDialogStore((state) => state.toggleHelpDialog);
   const setAboutDialogOpen = useDialogStore((state) => state.setAboutDialogOpen);

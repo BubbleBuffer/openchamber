@@ -36,13 +36,15 @@ vi.mock("@/components/chat/ChatContainer", () => ({
 }))
 
 import { ChatView } from "@/components/views/ChatView"
+import { useLayoutStore } from "@/stores/useLayoutStore"
 import { useUIStore } from "@/stores/useUIStore"
 
 describe("ChatView", () => {
   beforeEach(() => {
     currentSessionId = null
     throwContainerError = false
-    seedUIStore({ isRightSidebarOpen: false, settingsPage: "home" })
+    seedUIStore({ settingsPage: "home" })
+    useLayoutStore.setState({ isRightSidebarOpen: false }, false)
   })
 
   test("renders the chat container with no active session", () => {
@@ -80,7 +82,7 @@ describe("ChatView", () => {
     collector.reset()
 
     act(() => {
-      useUIStore.setState({ isRightSidebarOpen: true }, false)
+      useLayoutStore.setState({ isRightSidebarOpen: true }, false)
     })
 
     expectNoUpdateCommits(collector.commits)

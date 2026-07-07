@@ -46,7 +46,9 @@ import {
 } from '@/components/ui/command';
 
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
+import { useLayoutStore } from '@/stores/useLayoutStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useRuntimeStore } from '@/stores/useRuntimeStore';
 import { useDetectedWorktreeMetadata } from '@/hooks/useDetectedWorktreeRoot';
 import { useSessionWorktreeStore } from '@/sync/session-worktree-store';
 import { getSessionWorktreeRepairActions, getMutationBlockingReasons } from '@/sync/session-worktree-contract';
@@ -302,10 +304,10 @@ export const GitView: React.FC = () => {
   const fetchIdentity = useGitStore((state) => state.fetchIdentity);
   const prefetchDiffs = useGitStore((state) => state.prefetchDiffs);
   const setLogMaxCount = useGitStore((state) => state.setLogMaxCount);
-  const isMobile = useUIStore((state) => state.isMobile);
+  const isMobile = useRuntimeStore((state) => state.isMobile);
   const openContextDiff = useUIStore((state) => state.openContextDiff);
   const navigateToDiff = useUIStore((state) => state.navigateToDiff);
-  const setRightSidebarOpen = useUIStore((state) => state.setRightSidebarOpen);
+  const setRightSidebarOpen = useLayoutStore((state) => state.setRightSidebarOpen);
   const previousBootstrapStatusRef = React.useRef<'pending' | 'ready' | 'failed' | null>(null);
 
   React.useEffect(() => {

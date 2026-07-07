@@ -2,7 +2,10 @@ import React from 'react';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
 import * as sessionActions from '@/sync/session-actions';
+import { useLayoutStore } from '@/stores/useLayoutStore';
+import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useRuntimeStore } from '@/stores/useRuntimeStore';
 import { useModelPreferencesStore } from '@/stores/useModelPreferencesStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
@@ -23,15 +26,15 @@ export const useKeyboardShortcuts = () => {
   const toggleCommandPalette = useDialogStore((s) => s.toggleCommandPalette);
   const setQuickOpenOpen = useDialogStore((s) => s.setQuickOpenOpen);
   const toggleHelpDialog = useDialogStore((s) => s.toggleHelpDialog);
-  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
-  const toggleRightSidebar = useUIStore((s) => s.toggleRightSidebar);
-  const setRightSidebarOpen = useUIStore((s) => s.setRightSidebarOpen);
-  const setRightSidebarTab = useUIStore((s) => s.setRightSidebarTab);
-  const toggleBottomTerminal = useUIStore((s) => s.toggleBottomTerminal);
-  const setBottomTerminalExpanded = useUIStore((s) => s.setBottomTerminalExpanded);
-  const isMobile = useUIStore((s) => s.isMobile);
-  const setSessionSwitcherOpen = useUIStore((s) => s.setSessionSwitcherOpen);
-  const setActiveMainTab = useUIStore((s) => s.setActiveMainTab);
+  const toggleSidebar = useLayoutStore((s) => s.toggleSidebar);
+  const toggleRightSidebar = useLayoutStore((s) => s.toggleRightSidebar);
+  const setRightSidebarOpen = useLayoutStore((s) => s.setRightSidebarOpen);
+  const setRightSidebarTab = useLayoutStore((s) => s.setRightSidebarTab);
+  const toggleBottomTerminal = useLayoutStore((s) => s.toggleBottomTerminal);
+  const setBottomTerminalExpanded = useLayoutStore((s) => s.setBottomTerminalExpanded);
+  const isMobile = useRuntimeStore((s) => s.isMobile);
+  const setSessionSwitcherOpen = useNavigationStore((s) => s.setSessionSwitcherOpen);
+  const setActiveMainTab = useNavigationStore((s) => s.setActiveMainTab);
   const setSettingsDialogOpen = useDialogStore((s) => s.setSettingsDialogOpen);
   const setModelSelectorOpen = useDialogStore((s) => s.setModelSelectorOpen);
   const toggleExpandedInput = useUIStore((s) => s.toggleExpandedInput);
@@ -131,7 +134,8 @@ export const useKeyboardShortcuts = () => {
 
       if (eventMatchesShortcut(e, combo('toggle_sidebar'))) {
         e.preventDefault();
-        const { isMobile, isSessionSwitcherOpen } = useUIStore.getState();
+        const { isSessionSwitcherOpen } = useNavigationStore.getState();
+        const { isMobile } = useRuntimeStore.getState();
         if (isMobile) {
           setSessionSwitcherOpen(!isSessionSwitcherOpen);
         } else {
@@ -148,7 +152,7 @@ export const useKeyboardShortcuts = () => {
       }
 
       if (eventMatchesShortcut(e, combo('toggle_right_sidebar'))) {
-        const { isMobile } = useUIStore.getState();
+        const { isMobile } = useRuntimeStore.getState();
         if (isMobile) {
           return;
         }
@@ -158,7 +162,7 @@ export const useKeyboardShortcuts = () => {
       }
 
       if (eventMatchesShortcut(e, combo('open_right_sidebar_git'))) {
-        const { isMobile } = useUIStore.getState();
+        const { isMobile } = useRuntimeStore.getState();
         if (isMobile) {
           return;
         }
@@ -169,7 +173,7 @@ export const useKeyboardShortcuts = () => {
       }
 
       if (eventMatchesShortcut(e, combo('open_right_sidebar_files'))) {
-        const { isMobile } = useUIStore.getState();
+        const { isMobile } = useRuntimeStore.getState();
         if (isMobile) {
           return;
         }
@@ -180,11 +184,12 @@ export const useKeyboardShortcuts = () => {
       }
 
       if (eventMatchesShortcut(e, combo('cycle_right_sidebar_tab'))) {
-        const { isMobile, rightSidebarTab } = useUIStore.getState();
+        const { isMobile } = useRuntimeStore.getState();
         if (isMobile) {
           return;
         }
 
+        const rightSidebarTab = useLayoutStore.getState().rightSidebarTab as 'git' | 'files' | 'context';
         const tabs = ['git', 'files', 'context'] as const;
         const currentIndex = tabs.indexOf(rightSidebarTab);
         const nextTab = tabs[(currentIndex + 1) % tabs.length];
@@ -196,7 +201,7 @@ export const useKeyboardShortcuts = () => {
       }
 
       if (eventMatchesShortcut(e, combo('toggle_terminal'))) {
-        const { isMobile } = useUIStore.getState();
+        const { isMobile } = useRuntimeStore.getState();
         if (isMobile) {
           return;
         }
@@ -206,10 +211,11 @@ export const useKeyboardShortcuts = () => {
       }
 
       if (eventMatchesShortcut(e, combo('toggle_terminal_expanded'))) {
-        const { isMobile, isBottomTerminalExpanded } = useUIStore.getState();
+        const { isMobile } = useRuntimeStore.getState();
         if (isMobile) {
           return;
         }
+        const isBottomTerminalExpanded = useLayoutStore.getState().isBottomTerminalExpanded;
         e.preventDefault();
         setBottomTerminalExpanded(!isBottomTerminalExpanded);
         return;
@@ -220,7 +226,7 @@ export const useKeyboardShortcuts = () => {
         const {
           activeMainTab,
           isSessionSwitcherOpen,
-        } = useUIStore.getState();
+        } = useNavigationStore.getState();
         const {
           isSettingsDialogOpen,
           isCommandPaletteOpen,
@@ -252,7 +258,7 @@ export const useKeyboardShortcuts = () => {
         const {
           activeMainTab,
           isSessionSwitcherOpen,
-        } = useUIStore.getState();
+        } = useNavigationStore.getState();
         const {
           isSettingsDialogOpen,
           isCommandPaletteOpen,
@@ -302,7 +308,7 @@ export const useKeyboardShortcuts = () => {
         const {
           activeMainTab,
           isSessionSwitcherOpen,
-        } = useUIStore.getState();
+        } = useNavigationStore.getState();
         const { favoriteModels, addRecentModel } = useModelPreferencesStore.getState();
         const {
           isSettingsDialogOpen,
@@ -360,7 +366,7 @@ export const useKeyboardShortcuts = () => {
         const {
           activeMainTab,
           isSessionSwitcherOpen,
-        } = useUIStore.getState();
+        } = useNavigationStore.getState();
         const {
           isSettingsDialogOpen,
           isCommandPaletteOpen,

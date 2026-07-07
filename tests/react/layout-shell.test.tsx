@@ -60,12 +60,15 @@ vi.mock("@/stores/useUpdateStore", () => ({ useUpdateStore: (selector: (state: {
 
 import { MainLayout } from "@/components/layout/MainLayout"
 import { Sidebar } from "@/components/layout/Sidebar"
+import { useLayoutStore } from "@/stores/useLayoutStore"
+import { useNavigationStore } from "@/stores/useNavigationStore"
 import { useUIStore } from "@/stores/useUIStore"
+import { useRuntimeStore } from "@/stores/useRuntimeStore"
 
 describe("Sidebar", () => {
   beforeEach(() => {
     deviceIsMobile = false
-    seedUIStore({ isSidebarOpen: true, sidebarWidth: 300 })
+    useLayoutStore.setState({ isSidebarOpen: true, sidebarWidth: 300 }, false)
   })
 
   test("renders desktop children and resize handle when open", () => {
@@ -86,14 +89,18 @@ describe("MainLayout", () => {
   beforeEach(() => {
     deviceIsMobile = false
     setViewport(1280)
-    seedUIStore({
+    useLayoutStore.setState({
       isSidebarOpen: true,
       sidebarWidth: 300,
       isRightSidebarOpen: true,
       rightSidebarWidth: 400,
-      activeMainTab: "chat",
       isBottomTerminalOpen: false,
+    }, false)
+    useNavigationStore.setState({
+      activeMainTab: "chat",
       isSessionSwitcherOpen: false,
+    }, false)
+    seedUIStore({
       contextPanelByDirectory: {},
     })
     seedDialogStore({ isSettingsDialogOpen: false, isMultiRunLauncherOpen: false })
@@ -109,7 +116,7 @@ describe("MainLayout", () => {
   })
 
   test("hides the desktop sidebar when isSidebarOpen is false", async () => {
-    seedUIStore({ isSidebarOpen: false })
+    useLayoutStore.setState({ isSidebarOpen: false }, false)
     const { container } = renderWithApp(<MainLayout />, { resetStores: false })
 
     await screen.findByLabelText("Chat content")
@@ -122,21 +129,22 @@ describe("MainLayout", () => {
   test("renders mobile shell with mobile sessions when device is mobile", async () => {
     deviceIsMobile = true
     setViewport(390, 844)
-    seedUIStore({ isSessionSwitcherOpen: true, isRightSidebarOpen: false })
+    useLayoutStore.setState({ isRightSidebarOpen: false }, false)
+    useNavigationStore.setState({ isSessionSwitcherOpen: true }, false)
     renderWithApp(<MainLayout />, { resetStores: false })
 
     expect(await screen.findByLabelText("Mobile sessions")).toBeTruthy()
     expect(screen.getByRole("button", { name: "Close drawer" })).toBeTruthy()
   })
 
-  test("syncs mobile detection into useUIStore", async () => {
+  test("syncs mobile detection into useRuntimeStore", async () => {
     deviceIsMobile = true
     setViewport(390, 844)
     renderWithApp(<MainLayout />, { resetStores: false })
 
     await screen.findByLabelText("Chat content")
 
-    expect(useUIStore.getState().isMobile).toBe(true)
+    expect(useRuntimeStore.getState().isMobile).toBe(true)
   })
 
   test("renders settings window when the settings dialog store is open", async () => {

@@ -3,8 +3,11 @@ import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 
 import { getSafeStorage } from './utils/safeStorage';
 import type { ShortcutCombo } from '@/lib/shortcuts';
+import { useNavigationStore } from './useNavigationStore';
+import type { MainTab, MainTabGuard } from './useNavigationStore';
 
-export type MainTab = 'chat' | 'plan' | 'git' | 'diff' | 'terminal' | 'files';
+export type { MainTab, MainTabGuard } from './useNavigationStore';
+
 export type RightSidebarTab = 'git' | 'files' | 'context';
 export type ContextPanelMode = 'diff' | 'file' | 'context' | 'plan' | 'chat';
 export type MermaidRenderingMode = 'svg' | 'ascii';
@@ -46,7 +49,6 @@ type PendingFileNavigation = {
   column: number;
 };
 
-export type MainTabGuard = (nextTab: MainTab) => boolean;
 export type EventStreamStatus =
   | 'idle'
   | 'connecting'
@@ -96,9 +98,6 @@ const CONTEXT_PANEL_MIN_WIDTH = 360;
 const CONTEXT_PANEL_MAX_WIDTH = 1400;
 const CONTEXT_PANEL_MAX_TABS = 12;
 const CONTEXT_PANEL_MAX_LABEL_LENGTH = 120;
-const LEFT_SIDEBAR_MIN_WIDTH = 300;
-const RIGHT_SIDEBAR_MIN_WIDTH = 400;
-
 const normalizeDirectoryPath = (value: string): string => {
   if (!value) return '';
 
@@ -459,24 +458,10 @@ const clampContextPanelRoots = (
 interface UIStore {
 
   theme: 'light' | 'dark' | 'system';
-  isSidebarOpen: boolean;
-  sidebarWidth: number;
-  isRightSidebarOpen: boolean;
-  rightSidebarWidth: number;
-  rightSidebarTab: RightSidebarTab;
   contextPanelByDirectory: Record<string, ContextPanelDirectoryState>;
-  isBottomTerminalOpen: boolean;
-  isBottomTerminalExpanded: boolean;
-  bottomTerminalHeight: number;
-  hasManuallyResizedBottomTerminal: boolean;
-  isSessionSwitcherOpen: boolean;
-  activeMainTab: MainTab;
-  mainTabGuard: MainTabGuard | null;
   pendingDiffFile: string | null;
   pendingFileNavigation: PendingFileNavigation | null;
   pendingFileFocusPath: string | null;
-  isMobile: boolean;
-  isKeyboardOpen: boolean;
 
   // Settings IA (new shell)
   settingsPage: string;
@@ -510,13 +495,6 @@ interface UIStore {
   shortcutOverrides: Record<string, ShortcutCombo>;
 
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
-  toggleSidebar: () => void;
-  setSidebarOpen: (open: boolean) => void;
-  setSidebarWidth: (width: number) => void;
-  toggleRightSidebar: () => void;
-  setRightSidebarOpen: (open: boolean) => void;
-  setRightSidebarWidth: (width: number) => void;
-  setRightSidebarTab: (tab: RightSidebarTab) => void;
   openContextPanelTab: (directory: string, tab: ContextPanelTabDescriptor) => void;
   openContextDiff: (directory: string, filePath: string) => void;
   openContextFile: (directory: string, filePath: string) => void;
@@ -529,19 +507,11 @@ interface UIStore {
   closeContextPanel: (directory: string) => void;
   toggleContextPanelExpanded: (directory: string) => void;
   setContextPanelWidth: (directory: string, width: number) => void;
-  toggleBottomTerminal: () => void;
-  setBottomTerminalOpen: (open: boolean) => void;
-  setBottomTerminalExpanded: (expanded: boolean) => void;
-  setBottomTerminalHeight: (height: number) => void;
-  setSessionSwitcherOpen: (open: boolean) => void;
-  setActiveMainTab: (tab: MainTab) => void;
-  setMainTabGuard: (guard: MainTabGuard | null) => void;
   setPendingDiffFile: (filePath: string | null) => void;
   setPendingFileNavigation: (navigation: PendingFileNavigation | null) => void;
   setPendingFileFocusPath: (path: string | null) => void;
   navigateToDiff: (filePath: string) => void;
   consumePendingDiffFile: () => string | null;
-  setIsMobile: (isMobile: boolean) => void;
   setSettingsPage: (slug: string) => void;
   setSettingsProjectsSelectedId: (projectId: string | null) => void;
   setSettingsRemoteInstancesSelectedId: (instanceId: string | null) => void;
@@ -554,7 +524,6 @@ interface UIStore {
   setAutoDeleteAfterDays: (days: number) => void;
   setSessionRetentionAction: (value: SessionRetentionAction) => void;
   setAutoDeleteLastRunAt: (timestamp: number | null) => void;
-  setKeyboardOpen: (open: boolean) => void;
   setShowTerminalQuickKeysOnDesktop: (value: boolean) => void;
   setPersistChatDraft: (value: boolean) => void;
   setInputSpellcheckEnabled: (value: boolean) => void;
@@ -583,24 +552,10 @@ export const useUIStore = create<UIStore>()(
       (set, get) => ({
 
         theme: 'system',
-        isSidebarOpen: true,
-        sidebarWidth: LEFT_SIDEBAR_MIN_WIDTH,
-        isRightSidebarOpen: false,
-        rightSidebarWidth: RIGHT_SIDEBAR_MIN_WIDTH,
-        rightSidebarTab: 'git',
         contextPanelByDirectory: {},
-        isBottomTerminalOpen: false,
-        isBottomTerminalExpanded: false,
-        bottomTerminalHeight: 300,
-        hasManuallyResizedBottomTerminal: false,
-        isSessionSwitcherOpen: false,
-        activeMainTab: 'chat',
-        mainTabGuard: null,
         pendingDiffFile: null,
         pendingFileNavigation: null,
         pendingFileFocusPath: null,
-        isMobile: false,
-        isKeyboardOpen: false,
         settingsPage: 'home',
         settingsProjectsSelectedId: null,
         settingsRemoteInstancesSelectedId: null,
@@ -633,90 +588,6 @@ export const useUIStore = create<UIStore>()(
 
         setTheme: (theme) => {
           set({ theme });
-        },
-
-        toggleSidebar: () => {
-          set((state) => {
-            const newOpen = !state.isSidebarOpen;
-
-            if (newOpen && state.sidebarWidth === LEFT_SIDEBAR_MIN_WIDTH) {
-              return {
-                isSidebarOpen: newOpen,
-              };
-            }
-            return { isSidebarOpen: newOpen };
-          });
-        },
-
-        setSidebarOpen: (open) => {
-          set((state) => {
-            if (state.isSidebarOpen === open) {
-              if (!open) {
-                return state;
-              }
-              if (state.sidebarWidth !== LEFT_SIDEBAR_MIN_WIDTH) {
-                return {
-                  isSidebarOpen: open,
-                  sidebarWidth: LEFT_SIDEBAR_MIN_WIDTH,
-                };
-              }
-              return state;
-            }
-            if (open && state.sidebarWidth === LEFT_SIDEBAR_MIN_WIDTH) {
-              return {
-                isSidebarOpen: open,
-              };
-            }
-            return { isSidebarOpen: open };
-          });
-        },
-
-        setSidebarWidth: (width) => {
-          set({ sidebarWidth: width });
-        },
-
-        toggleRightSidebar: () => {
-          set((state) => {
-            const newOpen = !state.isRightSidebarOpen;
-
-            if (newOpen && state.rightSidebarWidth === RIGHT_SIDEBAR_MIN_WIDTH) {
-              return {
-                isRightSidebarOpen: newOpen,
-              };
-            }
-            return { isRightSidebarOpen: newOpen };
-          });
-        },
-
-        setRightSidebarOpen: (open) => {
-          set((state) => {
-            if (state.isRightSidebarOpen === open) {
-              if (!open) {
-                return state;
-              }
-              if (state.rightSidebarWidth !== RIGHT_SIDEBAR_MIN_WIDTH) {
-                return {
-                  isRightSidebarOpen: open,
-                  rightSidebarWidth: RIGHT_SIDEBAR_MIN_WIDTH,
-                };
-              }
-              return state;
-            }
-            if (open && state.rightSidebarWidth === RIGHT_SIDEBAR_MIN_WIDTH) {
-              return {
-                isRightSidebarOpen: open,
-              };
-            }
-            return { isRightSidebarOpen: open };
-          });
-        },
-
-        setRightSidebarWidth: (width) => {
-          set({ rightSidebarWidth: width });
-        },
-
-        setRightSidebarTab: (tab) => {
-          set({ rightSidebarTab: tab });
         },
 
         openContextPanelTab: (directory, tab) => {
@@ -949,83 +820,6 @@ export const useUIStore = create<UIStore>()(
           });
         },
 
-        toggleBottomTerminal: () => {
-          set((state) => {
-            const newOpen = !state.isBottomTerminalOpen;
-
-            if (newOpen && typeof window !== 'undefined') {
-              const proportionalHeight = Math.floor(window.innerHeight * 0.32);
-              return {
-                isBottomTerminalOpen: newOpen,
-                bottomTerminalHeight: proportionalHeight,
-                hasManuallyResizedBottomTerminal: false,
-              };
-            }
-
-            return { isBottomTerminalOpen: newOpen };
-          });
-        },
-
-        setBottomTerminalOpen: (open) => {
-          set((state) => {
-            if (state.isBottomTerminalOpen === open) {
-              if (!open) {
-                return state;
-              }
-              if (!state.hasManuallyResizedBottomTerminal && typeof window !== 'undefined') {
-                const proportionalHeight = Math.floor(window.innerHeight * 0.32);
-                if (state.bottomTerminalHeight === proportionalHeight && state.hasManuallyResizedBottomTerminal === false) {
-                  return state;
-                }
-                return {
-                  isBottomTerminalOpen: open,
-                  bottomTerminalHeight: proportionalHeight,
-                  hasManuallyResizedBottomTerminal: false,
-                };
-              }
-              return state;
-            }
-
-            if (open && typeof window !== 'undefined') {
-              const proportionalHeight = Math.floor(window.innerHeight * 0.32);
-              return {
-                isBottomTerminalOpen: open,
-                bottomTerminalHeight: proportionalHeight,
-                hasManuallyResizedBottomTerminal: false,
-              };
-            }
-
-            return { isBottomTerminalOpen: open };
-          });
-        },
-
-        setBottomTerminalExpanded: (expanded) => {
-          set({ isBottomTerminalExpanded: expanded });
-        },
-
-        setBottomTerminalHeight: (height) => {
-          set({ bottomTerminalHeight: height, hasManuallyResizedBottomTerminal: true });
-        },
-
-        setSessionSwitcherOpen: (open) => {
-          set({ isSessionSwitcherOpen: open });
-        },
-
-        setMainTabGuard: (guard) => {
-          if (get().mainTabGuard === guard) {
-            return;
-          }
-          set({ mainTabGuard: guard });
-        },
-
-        setActiveMainTab: (tab) => {
-          const guard = get().mainTabGuard;
-          if (guard && !guard(tab)) {
-            return;
-          }
-          set({ activeMainTab: tab });
-        },
-
         setPendingDiffFile: (filePath) => {
           set({ pendingDiffFile: filePath });
         },
@@ -1039,11 +833,12 @@ export const useUIStore = create<UIStore>()(
         },
 
         navigateToDiff: (filePath) => {
-          const guard = get().mainTabGuard;
-          if (guard && !guard('diff')) {
+          const { mainTabGuard, setActiveMainTab } = useNavigationStore.getState();
+          if (mainTabGuard && !mainTabGuard('diff')) {
             return;
           }
-          set({ pendingDiffFile: filePath, activeMainTab: 'diff' });
+          set({ pendingDiffFile: filePath });
+          setActiveMainTab('diff');
         },
 
         consumePendingDiffFile: () => {
@@ -1052,10 +847,6 @@ export const useUIStore = create<UIStore>()(
             set({ pendingDiffFile: null });
           }
           return pendingDiffFile;
-        },
-
-        setIsMobile: (isMobile) => {
-          set({ isMobile });
         },
 
         setSettingsPage: (slug) => {
@@ -1107,10 +898,6 @@ export const useUIStore = create<UIStore>()(
 
         setAutoDeleteLastRunAt: (timestamp) => {
           set({ autoDeleteLastRunAt: timestamp });
-        },
-
-        setKeyboardOpen: (open) => {
-          set((state) => state.isKeyboardOpen === open ? state : { isKeyboardOpen: open });
         },
 
         setShowTerminalQuickKeysOnDesktop: (value) => {
@@ -1268,17 +1055,7 @@ export const useUIStore = create<UIStore>()(
         },
         partialize: (state) => ({
           theme: state.theme,
-          isSidebarOpen: state.isSidebarOpen,
-          sidebarWidth: state.sidebarWidth,
-          isRightSidebarOpen: state.isRightSidebarOpen,
-          rightSidebarWidth: state.rightSidebarWidth,
-          rightSidebarTab: state.rightSidebarTab,
           contextPanelByDirectory: state.contextPanelByDirectory,
-          isBottomTerminalOpen: state.isBottomTerminalOpen,
-          isBottomTerminalExpanded: state.isBottomTerminalExpanded,
-          bottomTerminalHeight: state.bottomTerminalHeight,
-          isSessionSwitcherOpen: state.isSessionSwitcherOpen,
-          activeMainTab: state.activeMainTab,
           settingsPage: state.settingsPage,
           settingsProjectsSelectedId: state.settingsProjectsSelectedId,
           settingsRemoteInstancesSelectedId: state.settingsRemoteInstancesSelectedId,

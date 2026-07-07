@@ -24,6 +24,7 @@ import {
 } from '@/lib/config/openchamberConfig';
 import { generateBranchName } from '@/lib/git/branchNameGenerator';
 import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
+import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
@@ -95,8 +96,8 @@ export const ProjectNotesTodoPanel: React.FC<ProjectNotesTodoPanelProps> = ({
   const setPendingInputText = useInputStore((state) => state.setPendingInputText);
   const currentDirectory = useDirectoryStore((state) => state.currentDirectory);
   const openContextPanelTab = useUIStore((state) => state.openContextPanelTab);
-  const setActiveMainTab = useUIStore((state) => state.setActiveMainTab);
-  const setSessionSwitcherOpen = useUIStore((state) => state.setSessionSwitcherOpen);
+  const setActiveMainTab = useNavigationStore((state) => state.setActiveMainTab);
+  const setSessionSwitcherOpen = useNavigationStore((state) => state.setSessionSwitcherOpen);
 
   const persistProjectData = React.useCallback(
     async (nextNotes: string, nextTodos: OpenChamberProjectTodoItem[]) => {

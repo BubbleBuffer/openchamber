@@ -18,6 +18,8 @@ import { SortableTabsStrip, type SortableTabsStripItem } from '@/components/ui/s
 
 import { RiArrowLeftSLine, RiChat4Line, RiChatNewLine, RiCheckLine, RiCloseLine, RiCommandLine, RiFileTextLine, RiFolder6Line, RiGitBranchLine, RiGithubFill, RiLayoutLeftLine, RiLayoutRightLine, RiPlayListAddLine, RiRefreshLine, RiServerLine, RiStackLine, RiTerminalBoxLine, RiTimerLine, RiAlertLine, type RemixiconComponentType } from '@remixicon/react';
 import { DiffIcon } from '@/components/icons/DiffIcon';
+import { useLayoutStore } from '@/stores/useLayoutStore';
+import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore, type MainTab } from '@/stores/useUIStore';
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
@@ -621,18 +623,18 @@ export const Header: React.FC<HeaderProps> = ({
   rightDrawerOpen,
   desktopRightSidebarActionsHost = null,
 }) => {
-  const setSessionSwitcherOpen = useUIStore((state) => state.setSessionSwitcherOpen);
-  const toggleSidebar = useUIStore((state) => state.toggleSidebar);
-  const isSidebarOpen = useUIStore((state) => state.isSidebarOpen);
-  const isRightSidebarOpen = useUIStore((state) => state.isRightSidebarOpen);
-  const toggleBottomTerminal = useUIStore((state) => state.toggleBottomTerminal);
-  const toggleRightSidebar = useUIStore((state) => state.toggleRightSidebar);
+  const setSessionSwitcherOpen = useNavigationStore((state) => state.setSessionSwitcherOpen);
+  const toggleSidebar = useLayoutStore((state) => state.toggleSidebar);
+  const isSidebarOpen = useLayoutStore((state) => state.isSidebarOpen);
+  const isRightSidebarOpen = useLayoutStore((state) => state.isRightSidebarOpen);
+  const toggleBottomTerminal = useLayoutStore((state) => state.toggleBottomTerminal);
+  const toggleRightSidebar = useLayoutStore((state) => state.toggleRightSidebar);
   const openContextOverview = useUIStore((state) => state.openContextOverview);
   const openContextPlan = useUIStore((state) => state.openContextPlan);
   const closeContextPanel = useUIStore((state) => state.closeContextPanel);
   const contextPanelByDirectory = useUIStore((state) => state.contextPanelByDirectory);
-  const activeMainTab = useUIStore((state) => state.activeMainTab);
-  const setActiveMainTab = useUIStore((state) => state.setActiveMainTab);
+  const activeMainTab = useNavigationStore((state) => state.activeMainTab);
+  const setActiveMainTab = useNavigationStore((state) => state.setActiveMainTab);
   const shortcutOverrides = useUIStore((state) => state.shortcutOverrides);
 
   const getCurrentModel = useProviderConfigStore((state) => state.getCurrentModel);
@@ -753,7 +755,7 @@ export const Header: React.FC<HeaderProps> = ({
     }
   }, [contextUsage, currentSessionId, isContextUsageResolvedForSession]);
 
-  const isSessionSwitcherOpen = useUIStore((state) => state.isSessionSwitcherOpen);
+  const isSessionSwitcherOpen = useNavigationStore((state) => state.isSessionSwitcherOpen);
   const githubAvatarUrl = githubAuthStatus?.connected ? (githubAuthStatus.user?.avatarUrl ?? null) : null;
   const githubLogin = githubAuthStatus?.connected ? (githubAuthStatus.user?.login ?? null) : null;
   const githubAccounts = githubAuthStatus?.accounts ?? [];
@@ -1149,8 +1151,8 @@ export const Header: React.FC<HeaderProps> = ({
   // Reset plan tab availability when session changes
   React.useEffect(() => {
     if (!planModeEnabled) {
-      if (useUIStore.getState().activeMainTab === 'plan') {
-        useUIStore.getState().setActiveMainTab('chat');
+      if (useNavigationStore.getState().activeMainTab === 'plan') {
+        useNavigationStore.getState().setActiveMainTab('chat');
       }
       return;
     }
@@ -1163,8 +1165,8 @@ export const Header: React.FC<HeaderProps> = ({
     }
 
     // If plan is not available but user is on plan tab, switch them back to chat
-    if (!planTabAvailable && useUIStore.getState().activeMainTab === 'plan') {
-      useUIStore.getState().setActiveMainTab('chat');
+    if (!planTabAvailable && useNavigationStore.getState().activeMainTab === 'plan') {
+      useNavigationStore.getState().setActiveMainTab('chat');
     }
   }, [
     planModeEnabled,

@@ -17,7 +17,7 @@ import type { Todo } from "@/lib/opencode/client";
 type TodoItem = Todo & { id?: string };
 type TodoStatus = string;
 type TodoPriority = string;
-import { useUIStore } from "@/stores/useUIStore";
+import { useRuntimeStore } from "@/stores/useRuntimeStore";
 import { useTodosPersistStore } from "@/stores/useTodosPersistStore";
 import { WorkingPlaceholder } from "../message/parts/WorkingPlaceholder";
 import { isVSCodeRuntime } from "@/lib/desktop/desktop";
@@ -169,7 +169,7 @@ export const StatusRow: React.FC<StatusRowProps> = ({
     if (live && live.length > 0) return live;
     return persistedSessionTodos ?? EMPTY_TODOS;
   }, [todosRecord, persistedSessionTodos, currentSessionId]);
-  const isMobile = useUIStore((state) => state.isMobile);
+  const isMobile = useRuntimeStore((state) => state.isMobile);
   const isCompact = isMobile || isVSCodeRuntime();
 
   // Filter out cancelled todos for display and keep original order.

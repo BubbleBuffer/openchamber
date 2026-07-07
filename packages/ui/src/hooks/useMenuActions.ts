@@ -1,6 +1,8 @@
 import React from 'react';
 import { toast } from '@/components/ui';
 import { useSessionUIStore } from '@/sync/session-ui-store';
+import { useLayoutStore } from '@/stores/useLayoutStore';
+import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { useProjectsStore } from '@/stores/projects/useProjectsStore';
@@ -96,9 +98,9 @@ export const useMenuActions = (
   const toggleCommandPalette = useDialogStore((s) => s.toggleCommandPalette);
   const setQuickOpenOpen = useDialogStore((s) => s.setQuickOpenOpen);
   const toggleHelpDialog = useDialogStore((s) => s.toggleHelpDialog);
-  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
-  const setSessionSwitcherOpen = useUIStore((s) => s.setSessionSwitcherOpen);
-  const setActiveMainTab = useUIStore((s) => s.setActiveMainTab);
+  const toggleSidebar = useLayoutStore((s) => s.toggleSidebar);
+  const setSessionSwitcherOpen = useNavigationStore((s) => s.setSessionSwitcherOpen);
+  const setActiveMainTab = useNavigationStore((s) => s.setActiveMainTab);
   const setSettingsDialogOpen = useDialogStore((s) => s.setSettingsDialogOpen);
   const setAboutDialogOpen = useDialogStore((s) => s.setAboutDialogOpen);
   const { addProject } = useProjectsStore();
@@ -205,25 +207,25 @@ export const useMenuActions = (
           break;
 
         case 'open-git-tab': {
-          const { activeMainTab } = useUIStore.getState();
+          const { activeMainTab } = useNavigationStore.getState();
           setActiveMainTab(activeMainTab === 'git' ? 'chat' : 'git');
           break;
         }
 
         case 'open-diff-tab': {
-          const { activeMainTab } = useUIStore.getState();
+          const { activeMainTab } = useNavigationStore.getState();
           setActiveMainTab(activeMainTab === 'diff' ? 'chat' : 'diff');
           break;
         }
 
         case 'open-files-tab': {
-          const { activeMainTab } = useUIStore.getState();
+          const { activeMainTab } = useNavigationStore.getState();
           setActiveMainTab(activeMainTab === 'files' ? 'chat' : 'files');
           break;
         }
 
         case 'open-terminal-tab': {
-          const { activeMainTab } = useUIStore.getState();
+          const { activeMainTab } = useNavigationStore.getState();
           setActiveMainTab(activeMainTab === 'terminal' ? 'chat' : 'terminal');
           break;
         }

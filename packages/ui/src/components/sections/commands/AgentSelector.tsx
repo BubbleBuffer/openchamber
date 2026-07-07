@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAgentsStore, filterVisibleAgents } from '@/stores/agents/useAgentsStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
-import { useUIStore } from '@/stores/useUIStore';
+import { useRuntimeStore } from '@/stores/useRuntimeStore';
 import { useDeviceInfo } from '@/lib/device';
 import { RiArrowDownSLine, RiRobot2Line } from '@remixicon/react';
 import { cn } from '@/lib/utils';
@@ -39,7 +39,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
         const visible = filterVisibleAgents(rawAgents);
         return filter ? visible.filter(filter) : visible;
     }, [rawAgents, filter]);
-    const isMobile = useUIStore(state => state.isMobile);
+    const isMobile = useRuntimeStore(state => state.isMobile);
     const { isMobile: deviceIsMobile } = useDeviceInfo();
     const isActuallyMobile = isMobile || deviceIsMobile;
 

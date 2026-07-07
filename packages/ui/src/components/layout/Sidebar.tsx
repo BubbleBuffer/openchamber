@@ -1,7 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
-import { useUIStore } from '@/stores/useUIStore';
+import { useLayoutStore } from '@/stores/useLayoutStore';
 
 export const SIDEBAR_CONTENT_WIDTH = 280;
 const SIDEBAR_MIN_WIDTH = 280;
@@ -15,8 +15,8 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, isMobile, children, className }) => {
-    const sidebarWidth = useUIStore((state) => state.sidebarWidth);
-    const setSidebarWidth = useUIStore((state) => state.setSidebarWidth);
+    const sidebarWidth = useLayoutStore((state) => state.sidebarWidth);
+    const setSidebarWidth = useLayoutStore((state) => state.setSidebarWidth);
     const [isResizing, setIsResizing] = React.useState(false);
     const startXRef = React.useRef(0);
     const startWidthRef = React.useRef(sidebarWidth || SIDEBAR_CONTENT_WIDTH);

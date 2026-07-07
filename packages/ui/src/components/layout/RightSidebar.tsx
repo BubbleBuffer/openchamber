@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { useUIStore } from '@/stores/useUIStore';
+import { useLayoutStore } from '@/stores/useLayoutStore';
 import { isDesktopShell, isVSCodeRuntime, startDesktopWindowDrag } from '@/lib/desktop/desktop';
 
 export const RIGHT_SIDEBAR_CONTENT_WIDTH = 420;
@@ -15,8 +15,8 @@ interface RightSidebarProps {
 }
 
 export const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, children, className, onTopActionsHostChange }) => {
-  const rightSidebarWidth = useUIStore((state) => state.rightSidebarWidth);
-  const setRightSidebarWidth = useUIStore((state) => state.setRightSidebarWidth);
+  const rightSidebarWidth = useLayoutStore((state) => state.rightSidebarWidth);
+  const setRightSidebarWidth = useLayoutStore((state) => state.setRightSidebarWidth);
   const isDesktopApp = React.useMemo(() => isDesktopShell(), []);
   const isVSCode = React.useMemo(() => isVSCodeRuntime(), []);
   const [isResizing, setIsResizing] = React.useState(false);

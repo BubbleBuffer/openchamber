@@ -1,7 +1,7 @@
 import React from 'react';
 import { RiCloseLine, RiFullscreenExitLine, RiFullscreenLine } from '@remixicon/react';
 import { cn } from '@/lib/utils';
-import { useUIStore } from '@/stores/useUIStore';
+import { useLayoutStore } from '@/stores/useLayoutStore';
 
 const BOTTOM_DOCK_MIN_HEIGHT = 180;
 const BOTTOM_DOCK_MAX_HEIGHT = 640;
@@ -14,11 +14,11 @@ interface BottomTerminalDockProps {
 }
 
 export const BottomTerminalDock: React.FC<BottomTerminalDockProps> = ({ isOpen, isMobile, children }) => {
-  const bottomTerminalHeight = useUIStore((state) => state.bottomTerminalHeight);
-  const isFullscreen = useUIStore((state) => state.isBottomTerminalExpanded);
-  const setBottomTerminalHeight = useUIStore((state) => state.setBottomTerminalHeight);
-  const setBottomTerminalOpen = useUIStore((state) => state.setBottomTerminalOpen);
-  const setBottomTerminalExpanded = useUIStore((state) => state.setBottomTerminalExpanded);
+  const bottomTerminalHeight = useLayoutStore((state) => state.bottomTerminalHeight);
+  const isFullscreen = useLayoutStore((state) => state.isBottomTerminalExpanded);
+  const setBottomTerminalHeight = useLayoutStore((state) => state.setBottomTerminalHeight);
+  const setBottomTerminalOpen = useLayoutStore((state) => state.setBottomTerminalOpen);
+  const setBottomTerminalExpanded = useLayoutStore((state) => state.setBottomTerminalExpanded);
   const [fullscreenHeight, setFullscreenHeight] = React.useState<number | null>(null);
   const [isResizing, setIsResizing] = React.useState(false);
   const dockRef = React.useRef<HTMLElement | null>(null);
@@ -83,7 +83,7 @@ export const BottomTerminalDock: React.FC<BottomTerminalDockProps> = ({ isOpen, 
 
     const handlePointerUp = () => {
       setIsResizing(false);
-      const latestState = useUIStore.getState();
+      const latestState = useLayoutStore.getState();
       if (latestState.bottomTerminalHeight <= BOTTOM_DOCK_COLLAPSE_THRESHOLD) {
         setBottomTerminalOpen(false);
       }

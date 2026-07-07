@@ -4,7 +4,9 @@ import { useSelectionStore } from '@/sync/selection-store';
 import { useSessions, useAllSessionStatuses, useGlobalSessionStatus } from '@/sync/sync-context';
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
+import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useRuntimeStore } from '@/stores/useRuntimeStore';
 import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import type { Session } from '@/lib/opencode/client';
 import type { ProjectEntry } from '@/lib/api/types';
@@ -1385,11 +1387,11 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
   const getContextUsage = useSessionUIStore((state) => state.getContextUsage);
   const agents = useAgentConfigStore((state) => state.agents);
   const getCurrentModel = useProviderConfigStore((state) => state.getCurrentModel);
-  const isMobile = useUIStore((state) => state.isMobile);
+  const isMobile = useRuntimeStore((state) => state.isMobile);
   const showMobileSessionStatusBar = useUIStore((state) => state.showMobileSessionStatusBar);
   const isMobileSessionStatusBarCollapsed = useUIStore((state) => state.isMobileSessionStatusBarCollapsed);
   const setIsMobileSessionStatusBarCollapsed = useUIStore((state) => state.setIsMobileSessionStatusBarCollapsed);
-  const setActiveMainTab = useUIStore((state) => state.setActiveMainTab);
+  const setActiveMainTab = useNavigationStore((state) => state.setActiveMainTab);
 
   // Project store
   const projects = useProjectsStore((state) => state.projects);

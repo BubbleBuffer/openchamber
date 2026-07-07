@@ -18,6 +18,7 @@ import { FileMentionAutocomplete, type FileMentionHandle } from '@/components/ch
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useRuntimeStore } from '@/stores/useRuntimeStore';
 import type { ScheduledTask } from '@/lib/scheduledTasksApi';
 
 const WEEKDAY_INDEXES = [0, 1, 2, 3, 4, 5, 6] as const;
@@ -587,7 +588,7 @@ export function ScheduledTaskEditorDialog(props: {
   const currentAgentName = useAgentConfigStore((state) => state.currentAgentName || '');
   const timeFormatPreference = useUIStore((state) => state.timeFormatPreference);
   const weekStartPreference = useUIStore((state) => state.weekStartPreference);
-  const isMobile = useUIStore((state) => state.isMobile);
+  const isMobile = useRuntimeStore((state) => state.isMobile);
 
   const [draft, setDraft] = React.useState<ScheduledTaskDraft>(() =>
     toDraft(task, {

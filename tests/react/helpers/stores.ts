@@ -1,21 +1,40 @@
+import { useNavigationStore } from "@/stores/useNavigationStore"
+import { useLayoutStore } from "@/stores/useLayoutStore"
 import { useDialogStore } from "@/stores/useDialogStore"
-import { useUIStore, type MainTab } from "@/stores/useUIStore"
+import { useUIStore } from "@/stores/useUIStore"
+import { useRuntimeStore } from "@/stores/useRuntimeStore"
 
 type UIStatePatch = Partial<ReturnType<typeof useUIStore.getState>>
 type DialogStatePatch = Partial<ReturnType<typeof useDialogStore.getState>>
 
 export function resetTopLevelStores(): void {
-  useUIStore.setState(
+  useLayoutStore.setState(
     {
       isSidebarOpen: true,
       sidebarWidth: 300,
       isRightSidebarOpen: false,
       rightSidebarWidth: 400,
       isBottomTerminalOpen: false,
-      activeMainTab: "chat" as MainTab,
+    },
+    false,
+  )
+  useNavigationStore.setState(
+    {
+      activeMainTab: "chat",
       isSessionSwitcherOpen: false,
-      settingsPage: "home",
+    },
+    false,
+  )
+  useRuntimeStore.setState(
+    {
       isMobile: false,
+      isKeyboardOpen: false,
+    },
+    false,
+  )
+  useUIStore.setState(
+    {
+      settingsPage: "home",
       contextPanelByDirectory: {},
     },
     false,

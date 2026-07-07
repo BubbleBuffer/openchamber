@@ -18,7 +18,7 @@ import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { RiCloseLine } from '@remixicon/react';
 
 import { cn } from '@/lib/utils';
-import { useUIStore } from '@/stores/useUIStore';
+import { useRuntimeStore } from '@/stores/useRuntimeStore';
 
 export type SortableTabsStripItem = {
   id: string;
@@ -96,7 +96,7 @@ export const SortableTabsStrip: React.FC<SortableTabsStripProps> = ({
   activePillLowercase = true,
   className,
 }) => {
-  const isMobile = useUIStore((state) => state.isMobile);
+  const isMobile = useRuntimeStore((state) => state.isMobile);
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const [overflow, setOverflow] = React.useState<{ left: boolean; right: boolean }>({ left: false, right: false });
   const itemIDs = React.useMemo(() => items.map((item) => item.id), [items]);

@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { RiAlertLine, RiLoader4Line, RiChat1Line, RiAddLine } from '@remixicon/react';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useInputStore } from '@/sync/input-store';
+import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { toast } from '@/components/ui';
 import { getConflictDetails, type MergeConflictDetails } from '@/lib/git/gitApi';
@@ -39,7 +40,7 @@ export const ConflictDialog: React.FC<ConflictDialogProps> = ({
   const currentSessionId = useSessionUIStore((state) => state.currentSessionId);
   const setPendingInputText = useInputStore((state) => state.setPendingInputText);
   const setPendingSyntheticParts = useInputStore((state) => state.setPendingSyntheticParts);
-  const setActiveMainTab = useUIStore((state) => state.setActiveMainTab);
+  const setActiveMainTab = useNavigationStore((state) => state.setActiveMainTab);
 
   const [isLoading, setIsLoading] = React.useState(false);
   const [conflictDetails, setConflictDetails] = React.useState<MergeConflictDetails | null>(null);

@@ -11,19 +11,19 @@ When you build or change a UI surface, decide explicitly what it does on mobile.
 
 ## Viewport detection
 
-`isMobile` lives in `useUIStore`. Read it the right way:
+`isMobile` lives in `useRuntimeStore`. Read it the right way:
 
 - **Components that depend on layout switching:** subscribe with a leaf selector.
   ```ts
-  const isMobile = useUIStore((s) => s.isMobile);
+  const isMobile = useRuntimeStore((s) => s.isMobile);
   ```
 - **Effect/handler bodies (no re-render needed):** read imperatively.
   ```ts
-  const { isMobile } = useUIStore.getState();
+  const { isMobile } = useRuntimeStore.getState();
   ```
   See `packages/ui/src/hooks/useKeyboardShortcuts.ts` for the canonical pattern.
 
-Do **not** plumb `isMobile` through props — it creates extra re-render paths. Do **not** use `window.innerWidth` checks; `useUIStore.isMobile` is the single source of truth.
+Do **not** plumb `isMobile` through props — it creates extra re-render paths. Do **not** use `window.innerWidth` checks; `useRuntimeStore.isMobile` is the single source of truth.
 
 ## The mobile shell
 

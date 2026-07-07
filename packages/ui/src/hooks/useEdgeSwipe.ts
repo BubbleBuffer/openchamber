@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { useUIStore } from '@/stores/useUIStore';
+import { useNavigationStore } from '@/stores/useNavigationStore';
+import { useRuntimeStore } from '@/stores/useRuntimeStore';
 
 interface EdgeSwipeOptions {
   edgeThreshold?: number;
@@ -16,9 +17,9 @@ export const useEdgeSwipe = (options: EdgeSwipeOptions = {}) => {
     enabled = true,
   } = options;
 
-  const isMobile = useUIStore((state) => state.isMobile);
-  const setSessionSwitcherOpen = useUIStore((state) => state.setSessionSwitcherOpen);
-  const isSessionSwitcherOpen = useUIStore((state) => state.isSessionSwitcherOpen);
+  const isMobile = useRuntimeStore((state) => state.isMobile);
+  const setSessionSwitcherOpen = useNavigationStore((state) => state.setSessionSwitcherOpen);
+  const isSessionSwitcherOpen = useNavigationStore((state) => state.isSessionSwitcherOpen);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const touchEndRef = useRef<{ x: number; y: number; time: number } | null>(null);
 

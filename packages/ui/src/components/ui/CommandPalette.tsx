@@ -9,6 +9,8 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from '@/components/ui/command';
+import { useLayoutStore } from '@/stores/useLayoutStore';
+import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
@@ -44,17 +46,17 @@ export const CommandPalette: React.FC = () => {
   const setCommandPaletteOpen = useDialogStore((s) => s.setCommandPaletteOpen);
   const setHelpDialogOpen = useDialogStore((s) => s.setHelpDialogOpen);
   const setQuickOpenOpen = useDialogStore((s) => s.setQuickOpenOpen);
-  const setActiveMainTab = useUIStore((s) => s.setActiveMainTab);
+  const setActiveMainTab = useNavigationStore((s) => s.setActiveMainTab);
   const setSettingsDialogOpen = useDialogStore((s) => s.setSettingsDialogOpen);
   const setSettingsPage = useUIStore((s) => s.setSettingsPage);
-  const setSessionSwitcherOpen = useUIStore((s) => s.setSessionSwitcherOpen);
-  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
-  const toggleRightSidebar = useUIStore((s) => s.toggleRightSidebar);
-  const setRightSidebarOpen = useUIStore((s) => s.setRightSidebarOpen);
-  const setRightSidebarTab = useUIStore((s) => s.setRightSidebarTab);
-  const toggleBottomTerminal = useUIStore((s) => s.toggleBottomTerminal);
-  const setBottomTerminalExpanded = useUIStore((s) => s.setBottomTerminalExpanded);
-  const isBottomTerminalExpanded = useUIStore((s) => s.isBottomTerminalExpanded);
+  const setSessionSwitcherOpen = useNavigationStore((s) => s.setSessionSwitcherOpen);
+  const toggleSidebar = useLayoutStore((s) => s.toggleSidebar);
+  const toggleRightSidebar = useLayoutStore((s) => s.toggleRightSidebar);
+  const setRightSidebarOpen = useLayoutStore((s) => s.setRightSidebarOpen);
+  const setRightSidebarTab = useLayoutStore((s) => s.setRightSidebarTab);
+  const toggleBottomTerminal = useLayoutStore((s) => s.toggleBottomTerminal);
+  const setBottomTerminalExpanded = useLayoutStore((s) => s.setBottomTerminalExpanded);
+  const isBottomTerminalExpanded = useLayoutStore((s) => s.isBottomTerminalExpanded);
   const openContextOverview = useUIStore((s) => s.openContextOverview);
   const openContextPlan = useUIStore((s) => s.openContextPlan);
   const shortcutOverrides = useUIStore((s) => s.shortcutOverrides);
@@ -88,7 +90,7 @@ export const CommandPalette: React.FC = () => {
 
   const handleOpenSessionList = run(() => {
     if (isMobile) {
-      const { isSessionSwitcherOpen } = useUIStore.getState();
+      const { isSessionSwitcherOpen } = useNavigationStore.getState();
       setSessionSwitcherOpen(!isSessionSwitcherOpen);
     } else {
       toggleSidebar();

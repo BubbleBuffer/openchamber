@@ -6,6 +6,7 @@ import {
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useRuntimeStore } from '@/stores/useRuntimeStore';
 import { useVisualPreferencesStore } from '@/stores/useVisualPreferencesStore';
 import { useMessageQueueStore, type QueuedMessage } from '@/stores/messageQueueStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
@@ -154,8 +155,8 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
     const getVisibleAgents = useAgentConfigStore((state) => state.getVisibleAgents);
     const agents = getVisibleAgents();
     const primaryAgents = React.useMemo(() => agents.filter((agent) => agent.mode === 'primary'), [agents]);
-    const isMobile = useUIStore((state) => state.isMobile);
-    const isKeyboardOpen = useUIStore((state) => state.isKeyboardOpen);
+    const isMobile = useRuntimeStore((state) => state.isMobile);
+    const isKeyboardOpen = useRuntimeStore((state) => state.isKeyboardOpen);
     const inputBarOffset = useVisualPreferencesStore((state) => state.inputBarOffset);
     const inputSpellcheckEnabled = useUIStore((state) => state.inputSpellcheckEnabled);
     const isExpandedInput = useUIStore((state) => state.isExpandedInput);

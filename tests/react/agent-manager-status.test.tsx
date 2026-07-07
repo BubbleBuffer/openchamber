@@ -298,7 +298,7 @@ describe("AgentGroupDetail", () => {
       selectedGroupName: "group-1",
       selectedSessionId: "a1",
     })
-    seedUIStore({ isMobile: false })
+    // isMobile removed — was only a type-narrowing reference; components don't consume it
   })
 
   test("uses narrow subscription with only the group's session IDs", () => {
@@ -443,7 +443,7 @@ describe("AgentManagerSidebar", () => {
     useAnyGlobalSessionBusyCalls.length = 0
     useAnyGlobalSessionBusyResults.length = 0
 
-    seedUIStore({ isMobile: false })
+    // isMobile removed — was only a type-narrowing reference; components don't consume it
   })
 
   test("each group item uses narrow subscription with only its own session IDs", () => {

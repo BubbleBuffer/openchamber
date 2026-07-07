@@ -24,7 +24,7 @@ import {
   RiErrorWarningLine,
   RiPulseLine,
 } from '@remixicon/react';
-import { useUIStore } from '@/stores/useUIStore';
+import { useRuntimeStore } from '@/stores/useRuntimeStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
@@ -144,7 +144,7 @@ const toneStyle = (tone: StatusTone): React.CSSProperties => {
 export function ScheduledTasksDialog() {
   const open = useDialogStore((state) => state.isScheduledTasksDialogOpen);
   const setOpen = useDialogStore((state) => state.setScheduledTasksDialogOpen);
-  const isMobile = useUIStore((state) => state.isMobile);
+  const isMobile = useRuntimeStore((state) => state.isMobile);
   const projects = useProjectsStore((state) => state.projects);
   const activeProject = useProjectsStore((state) => state.getActiveProject());
   const homeDirectory = useDirectoryStore((state) => state.homeDirectory);
