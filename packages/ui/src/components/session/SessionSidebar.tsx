@@ -14,6 +14,7 @@ import { useSync } from '@/sync/use-sync';
 import { useSessionPrefetch } from './sidebar/hooks/useSessionPrefetch';
 import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useNotificationSettingsStore } from '@/stores/useNotificationSettingsStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { getSafeStorage } from '@/stores/utils/safeStorage';
 import { useGitStore, useGitAllBranches, useGitRepoStatusMap } from '@/stores/git/useGitStore';
@@ -263,7 +264,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
   const setAboutDialogOpen = useDialogStore((state) => state.setAboutDialogOpen);
   const setScheduledTasksDialogOpen = useDialogStore((state) => state.setScheduledTasksDialogOpen);
   const openMultiRunLauncher = useDialogStore((state) => state.openMultiRunLauncher);
-  const notifyOnSubtasks = useUIStore((state) => state.notifyOnSubtasks);
+  const notifyOnSubtasks = useNotificationSettingsStore((state) => state.notifyOnSubtasks);
   const showDeletionDialog = useUIStore((state) => state.showDeletionDialog);
   const setShowDeletionDialog = useUIStore((state) => state.setShowDeletionDialog);
 

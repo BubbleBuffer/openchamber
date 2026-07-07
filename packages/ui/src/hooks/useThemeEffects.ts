@@ -1,5 +1,6 @@
 import { useLayoutEffect } from 'react';
 import { useUIStore } from '@/stores/useUIStore';
+import { useVisualPreferencesStore } from '@/stores/useVisualPreferencesStore';
 import { SEMANTIC_TYPOGRAPHY, getTypographyVariable, type SemanticTypographyKey } from '@/lib/theme/typography';
 
 /**
@@ -27,7 +28,7 @@ export function useThemeEffects() {
   }, [theme]);
 
   // --- Typography ---
-  const fontSize = useUIStore((s) => s.fontSize);
+  const fontSize = useVisualPreferencesStore((s) => s.fontSize);
 
   useLayoutEffect(() => {
     const root = document.documentElement;
@@ -51,7 +52,7 @@ export function useThemeEffects() {
   }, [fontSize]);
 
   // --- Padding ---
-  const padding = useUIStore((s) => s.padding);
+  const padding = useVisualPreferencesStore((s) => s.padding);
 
   useLayoutEffect(() => {
     const root = document.documentElement;

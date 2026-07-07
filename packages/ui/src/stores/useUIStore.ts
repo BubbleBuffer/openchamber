@@ -491,39 +491,6 @@ interface UIStore {
   autoDeleteAfterDays: number;
   sessionRetentionAction: SessionRetentionAction;
   autoDeleteLastRunAt: number | null;
-  fontSize: number;
-  terminalFontSize: number;
-  padding: number;
-  cornerRadius: number;
-  inputBarOffset: number;
-
-  diffLayoutPreference: 'dynamic' | 'inline' | 'side-by-side';
-  diffFileLayout: Record<string, 'inline' | 'side-by-side'>;
-  diffWrapLines: boolean;
-  diffViewMode: 'single' | 'stacked';
-  gitChangesViewMode: 'flat' | 'tree';
-  nativeNotificationsEnabled: boolean;
-  notificationMode: 'always' | 'hidden-only';
-  notifyOnSubtasks: boolean;
-
-  // Event toggles (which events trigger notifications)
-  notifyOnCompletion: boolean;
-  notifyOnError: boolean;
-  notifyOnQuestion: boolean;
-
-  // Per-event notification templates
-  notificationTemplates: {
-    completion: { title: string; message: string };
-    error: { title: string; message: string };
-    question: { title: string; message: string };
-    subtask: { title: string; message: string };
-  };
-
-  // Summarization settings
-  summarizeLastMessage: boolean;
-  summaryThreshold: number;   // chars — messages longer than this get summarized
-  summaryLength: number;      // chars — target length for summary
-  maxLastMessageLength: number; // chars — truncate {last_message} when summarization is off
 
   showTerminalQuickKeysOnDesktop: boolean;
   persistChatDraft: boolean;
@@ -587,29 +554,8 @@ interface UIStore {
   setAutoDeleteAfterDays: (days: number) => void;
   setSessionRetentionAction: (value: SessionRetentionAction) => void;
   setAutoDeleteLastRunAt: (timestamp: number | null) => void;
-  setFontSize: (size: number) => void;
-  setTerminalFontSize: (size: number) => void;
-  setPadding: (size: number) => void;
-  setCornerRadius: (radius: number) => void;
-  setInputBarOffset: (offset: number) => void;
   setKeyboardOpen: (open: boolean) => void;
-  setDiffLayoutPreference: (mode: 'dynamic' | 'inline' | 'side-by-side') => void;
-  setDiffFileLayout: (filePath: string, mode: 'inline' | 'side-by-side') => void;
-  setDiffWrapLines: (wrap: boolean) => void;
-  setDiffViewMode: (mode: 'single' | 'stacked') => void;
-  setGitChangesViewMode: (mode: 'flat' | 'tree') => void;
-  setNativeNotificationsEnabled: (value: boolean) => void;
-  setNotificationMode: (mode: 'always' | 'hidden-only') => void;
   setShowTerminalQuickKeysOnDesktop: (value: boolean) => void;
-  setNotifyOnSubtasks: (value: boolean) => void;
-  setNotifyOnCompletion: (value: boolean) => void;
-  setNotifyOnError: (value: boolean) => void;
-  setNotifyOnQuestion: (value: boolean) => void;
-  setNotificationTemplates: (templates: UIStore['notificationTemplates']) => void;
-  setSummarizeLastMessage: (value: boolean) => void;
-  setSummaryThreshold: (value: number) => void;
-  setSummaryLength: (value: number) => void;
-  setMaxLastMessageLength: (value: number) => void;
   setPersistChatDraft: (value: boolean) => void;
   setInputSpellcheckEnabled: (value: boolean) => void;
   setShowToolFileIcons: (value: boolean) => void;
@@ -667,36 +613,6 @@ export const useUIStore = create<UIStore>()(
         autoDeleteAfterDays: 30,
         sessionRetentionAction: 'archive',
         autoDeleteLastRunAt: null,
-        fontSize: 100,
-        terminalFontSize: 13,
-        padding: 100,
-        cornerRadius: 18,
-        inputBarOffset: 0,
-        diffLayoutPreference: 'inline',
-        diffFileLayout: {},
-        diffWrapLines: false,
-        diffViewMode: 'stacked',
-        gitChangesViewMode: 'flat',
-        nativeNotificationsEnabled: false,
-        notificationMode: 'hidden-only',
-        notifyOnSubtasks: true,
-
-        // Event toggles (which events trigger notifications)
-        notifyOnCompletion: true,
-        notifyOnError: true,
-        notifyOnQuestion: true,
-        notificationTemplates: {
-          completion: { ...EMPTY_NOTIFICATION_TEMPLATES.completion },
-          error: { ...EMPTY_NOTIFICATION_TEMPLATES.error },
-          question: { ...EMPTY_NOTIFICATION_TEMPLATES.question },
-          subtask: { ...EMPTY_NOTIFICATION_TEMPLATES.subtask },
-        },
-
-        // Summarization settings
-        summarizeLastMessage: false,
-        summaryThreshold: 200,
-        summaryLength: 100,
-        maxLastMessageLength: 250,
 
         showTerminalQuickKeysOnDesktop: false,
         persistChatDraft: true,
@@ -1193,85 +1109,14 @@ export const useUIStore = create<UIStore>()(
           set({ autoDeleteLastRunAt: timestamp });
         },
 
-        setFontSize: (size) => {
-          // Clamp between 50% and 200%
-          const clampedSize = Math.max(50, Math.min(200, size));
-          set({ fontSize: clampedSize });
-        },
-
-        setTerminalFontSize: (size) => {
-          const rounded = Math.round(size);
-          const clamped = Math.max(9, Math.min(52, rounded));
-          set({ terminalFontSize: clamped });
-        },
-
-        setPadding: (size) => {
-          // Clamp between 50% and 200%
-          const clampedSize = Math.max(50, Math.min(200, size));
-          set({ padding: clampedSize });
-        },
-
-        setCornerRadius: (radius) => {
-          set({ cornerRadius: radius });
-        },
-
-        setDiffLayoutPreference: (mode) => {
-          set({ diffLayoutPreference: mode });
-        },
-
-        setDiffFileLayout: (filePath, mode) => {
-          set((state) => ({
-            diffFileLayout: {
-              ...state.diffFileLayout,
-              [filePath]: mode,
-            },
-          }));
-        },
-
-        setDiffWrapLines: (wrap) => {
-          set({ diffWrapLines: wrap });
-        },
-
-        setDiffViewMode: (mode) => {
-          set({ diffViewMode: mode });
-        },
-
-        setGitChangesViewMode: (mode) => {
-          set({ gitChangesViewMode: mode });
-        },
- 
-        setInputBarOffset: (offset) => {
-          set({ inputBarOffset: offset });
-        },
-
         setKeyboardOpen: (open) => {
           set((state) => state.isKeyboardOpen === open ? state : { isKeyboardOpen: open });
-        },
-
-        setNativeNotificationsEnabled: (value) => {
-          set({ nativeNotificationsEnabled: value });
-        },
-
-        setNotificationMode: (mode) => {
-          set({ notificationMode: mode });
         },
 
         setShowTerminalQuickKeysOnDesktop: (value) => {
           set({ showTerminalQuickKeysOnDesktop: value });
         },
 
-        setNotifyOnSubtasks: (value) => {
-          set({ notifyOnSubtasks: value });
-        },
-
-        setNotifyOnCompletion: (value) => { set({ notifyOnCompletion: value }); },
-        setNotifyOnError: (value) => { set({ notifyOnError: value }); },
-        setNotifyOnQuestion: (value) => { set({ notifyOnQuestion: value }); },
-        setNotificationTemplates: (templates) => { set({ notificationTemplates: templates }); },
-        setSummarizeLastMessage: (value) => { set({ summarizeLastMessage: value }); },
-        setSummaryThreshold: (value) => { set({ summaryThreshold: value }); },
-        setSummaryLength: (value) => { set({ summaryLength: value }); },
-        setMaxLastMessageLength: (value) => { set({ maxLastMessageLength: value }); },
         setPersistChatDraft: (value) => {
           set({ persistChatDraft: value });
         },
@@ -1405,12 +1250,6 @@ export const useUIStore = create<UIStore>()(
             state.contextPanelByDirectory = sanitizeContextPanelByDirectory(state.contextPanelByDirectory);
           }
 
-          if (version < 8) {
-            if (state.gitChangesViewMode !== 'flat' && state.gitChangesViewMode !== 'tree') {
-              state.gitChangesViewMode = 'flat';
-            }
-          }
-
           // v8 -> v9: drop dead fields removed in Phase 4 audit so they don't
           // linger as inert properties on existing users' persisted state.
           if (version < 9) {
@@ -1423,17 +1262,6 @@ export const useUIStore = create<UIStore>()(
             delete state.messageLimit;
             delete state.recentAgents;
             delete state.viewPagerPage;
-          }
-
-          // v9 -> v10: model preferences moved to useModelPreferencesStore.
-          // The new store copies valid values from the legacy ui-store envelope
-          // before this cleanup deletes the stale keys from persisted state.
-          if (version < 10) {
-            delete state.favoriteModels;
-            delete state.hiddenModels;
-            delete state.collapsedModelProviders;
-            delete state.recentModels;
-            delete state.recentEfforts;
           }
 
           return state;
@@ -1462,26 +1290,7 @@ export const useUIStore = create<UIStore>()(
           autoDeleteAfterDays: state.autoDeleteAfterDays,
           sessionRetentionAction: state.sessionRetentionAction,
           autoDeleteLastRunAt: state.autoDeleteLastRunAt,
-          fontSize: state.fontSize,
-          terminalFontSize: state.terminalFontSize,
-          padding: state.padding,
-          cornerRadius: state.cornerRadius,
-          diffLayoutPreference: state.diffLayoutPreference,
-          diffWrapLines: state.diffWrapLines,
-          diffViewMode: state.diffViewMode,
-          gitChangesViewMode: state.gitChangesViewMode,
-          nativeNotificationsEnabled: state.nativeNotificationsEnabled,
-          notificationMode: state.notificationMode,
           showTerminalQuickKeysOnDesktop: state.showTerminalQuickKeysOnDesktop,
-          notifyOnSubtasks: state.notifyOnSubtasks,
-          notifyOnCompletion: state.notifyOnCompletion,
-          notifyOnError: state.notifyOnError,
-          notifyOnQuestion: state.notifyOnQuestion,
-          notificationTemplates: state.notificationTemplates,
-          summarizeLastMessage: state.summarizeLastMessage,
-          summaryThreshold: state.summaryThreshold,
-          summaryLength: state.summaryLength,
-          maxLastMessageLength: state.maxLastMessageLength,
           persistChatDraft: state.persistChatDraft,
           inputSpellcheckEnabled: state.inputSpellcheckEnabled,
           showToolFileIcons: state.showToolFileIcons,

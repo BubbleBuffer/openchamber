@@ -547,7 +547,6 @@ vi.mock("@/stores/useUIStore", () => ({
         openContextPanelTab: vi.fn(),
         setSessionSwitcherOpen: vi.fn(),
         toggleSidebar: vi.fn(),
-        notifyOnSubtasks: false,
         showDeletionDialog: false,
         setShowDeletionDialog: vi.fn(),
         isSidebarOpen: true,
@@ -561,6 +560,22 @@ vi.mock("@/stores/useUIStore", () => ({
         setActiveMainTab: vi.fn(),
         toggleSidebar: vi.fn(),
         isSidebarOpen: true,
+      }),
+      setState: vi.fn(),
+      subscribe: () => () => {},
+    },
+  ),
+}))
+
+vi.mock("@/stores/useNotificationSettingsStore", () => ({
+  useNotificationSettingsStore: Object.assign(
+    (selector: (state: Record<string, unknown>) => unknown) =>
+      selector({
+        notifyOnSubtasks: false,
+      }),
+    {
+      getState: () => ({
+        notifyOnSubtasks: false,
       }),
       setState: vi.fn(),
       subscribe: () => () => {},

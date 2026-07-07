@@ -4,7 +4,7 @@ import { seedUIStore } from "../react/helpers/stores"
 import { createCommitCollector, createProfiledElement } from "../react/helpers/renderMetrics"
 import { renderWithApp } from "../react/helpers/render"
 import { ChatView } from "@/components/views/ChatView"
-import { useUIStore } from "@/stores/useUIStore"
+import { useVisualPreferencesStore } from "@/stores/useVisualPreferencesStore"
 
 let currentSessionId: string | null = null
 
@@ -55,7 +55,7 @@ describe("chat view render perf", () => {
       collector.reset()
       act(() => {
         for (let i = 0; i < 60; i++) {
-          useUIStore.setState({ inputBarOffset: i }, false)
+          useVisualPreferencesStore.setState({ inputBarOffset: i }, false)
         }
       })
       const sample = collector.commits.filter((c) => c.phase !== "mount").length

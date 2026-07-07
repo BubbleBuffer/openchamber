@@ -18,10 +18,4 @@ describe("useUIStore (smoke — sidebar toggle + clamp)", () => {
     expect(useUIStore.getState().isSidebarOpen).toBe(!before);
   });
 
-  it("setFontSize clamps to [50, 200]", () => {
-    useUIStore.getState().setFontSize(500);
-    expect(useUIStore.getState().fontSize).toBe(200);
-    useUIStore.getState().setFontSize(10);
-    expect(useUIStore.getState().fontSize).toBe(50);
-  });
 });

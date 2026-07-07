@@ -11,6 +11,7 @@ import { createCommitCollector, createProfiledElement } from "../react/helpers/r
 import { renderWithApp } from "../react/helpers/render"
 import { ChatInput } from "@/components/chat/ChatInput"
 import { useUIStore } from "@/stores/useUIStore"
+import { useVisualPreferencesStore } from "@/stores/useVisualPreferencesStore"
 
 const SNAPSHOT_DIR = resolve(import.meta.dirname, "__snapshots__")
 const SNAPSHOT_PATH = resolve(SNAPSHOT_DIR, "chat-input.bench.snap.json")
@@ -100,7 +101,8 @@ describe("chat input render perf", () => {
     "single keystroke commit count",
     () => {
       resetChatInputState()
-      seedUIStore({ isMobile: false, isKeyboardOpen: false, inputBarOffset: 0, inputSpellcheckEnabled: true, isExpandedInput: false, settingsPage: "home" })
+      seedUIStore({ isMobile: false, isKeyboardOpen: false, inputSpellcheckEnabled: true, isExpandedInput: false, settingsPage: "home" })
+      useVisualPreferencesStore.setState({ inputBarOffset: 0 }, false)
       const collector = createCommitCollector("ChatInput")
       const { unmount } = renderWithApp(createProfiledElement("ChatInput", collector, <ChatInput />), { resetStores: false })
       collector.reset()
@@ -117,7 +119,8 @@ describe("chat input render perf", () => {
     "50-character burst commit count",
     () => {
       resetChatInputState()
-      seedUIStore({ isMobile: false, isKeyboardOpen: false, inputBarOffset: 0, inputSpellcheckEnabled: true, isExpandedInput: false, settingsPage: "home" })
+      seedUIStore({ isMobile: false, isKeyboardOpen: false, inputSpellcheckEnabled: true, isExpandedInput: false, settingsPage: "home" })
+      useVisualPreferencesStore.setState({ inputBarOffset: 0 }, false)
       const collector = createCommitCollector("ChatInput")
       const { unmount } = renderWithApp(createProfiledElement("ChatInput", collector, <ChatInput />), { resetStores: false })
       collector.reset()
@@ -134,7 +137,8 @@ describe("chat input render perf", () => {
     "unrelated UI store change commits zero updates",
     () => {
       resetChatInputState()
-      seedUIStore({ isMobile: false, isKeyboardOpen: false, inputBarOffset: 0, inputSpellcheckEnabled: true, isExpandedInput: false, settingsPage: "home" })
+      seedUIStore({ isMobile: false, isKeyboardOpen: false, inputSpellcheckEnabled: true, isExpandedInput: false, settingsPage: "home" })
+      useVisualPreferencesStore.setState({ inputBarOffset: 0 }, false)
       const collector = createCommitCollector("ChatInput")
       renderWithApp(createProfiledElement("ChatInput", collector, <ChatInput />), { resetStores: false })
       collector.reset()
