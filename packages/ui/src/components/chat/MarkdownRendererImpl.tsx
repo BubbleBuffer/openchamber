@@ -23,6 +23,8 @@ import { getDefaultTheme } from '@/lib/theme/themes';
 import { generateSyntaxTheme } from '@/lib/theme/syntaxThemeGenerator';
 import type { ToolPopupContent } from './message/types';
 import { useUIStore } from '@/stores/useUIStore';
+import { useContextPanelStore } from '@/stores/useContextPanelStore';
+import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
 import { useDeviceInfo } from '@/lib/device';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
@@ -827,7 +829,7 @@ const buildMarkdownComponents = ({
     const language = getCodeLanguage(className);
     const code = normalizeCodeBlockText(extractCodeText(child.props.children).replace(/\n$/, ''), language);
     if (language === 'mermaid') {
-      return <MermaidBlock source={code} mode={useUIStore.getState().mermaidRenderingMode} />;
+      return <MermaidBlock source={code} mode={useChatRenderingStore.getState().mermaidRenderingMode} />;
     }
     return <MarkdownCodeBlock code={code} language={language} syntaxTheme={syntaxTheme} {...props} />;
   },
@@ -1232,9 +1234,9 @@ const useFileReferenceInteractions = ({
         return;
       }
 
-      const uiStore = useUIStore.getState();
+      const ctxStore = useContextPanelStore.getState();
       if (Number.isFinite(resolved.line ?? Number.NaN)) {
-        uiStore.openContextFileAtLine(
+        ctxStore.openContextFileAtLine(
           contextDirectory,
           resolved.resolvedPath,
           Math.max(1, Math.trunc(resolved.line as number)),
@@ -1243,7 +1245,7 @@ const useFileReferenceInteractions = ({
             : 1,
         );
       } else {
-        uiStore.openContextFile(contextDirectory, resolved.resolvedPath);
+        ctxStore.openContextFile(contextDirectory, resolved.resolvedPath);
       }
     };
 

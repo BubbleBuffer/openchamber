@@ -598,9 +598,22 @@ vi.mock("@/stores/useUIStore", () => ({
   useUIStore: Object.assign(
     (selector: (state: Record<string, unknown>) => unknown) =>
       selector({
-        openContextPanelTab: vi.fn(),
         showDeletionDialog: false,
         setShowDeletionDialog: vi.fn(),
+      }),
+    {
+      getState: () => ({}),
+      setState: vi.fn(),
+      subscribe: () => () => {},
+    },
+  ),
+}))
+
+vi.mock("@/stores/useContextPanelStore", () => ({
+  useContextPanelStore: Object.assign(
+    (selector: (state: Record<string, unknown>) => unknown) =>
+      selector({
+        openContextPanelTab: vi.fn(),
       }),
     {
       getState: () => ({}),

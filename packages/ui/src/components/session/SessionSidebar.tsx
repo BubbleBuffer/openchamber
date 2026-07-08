@@ -16,6 +16,8 @@ import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { useLayoutStore } from '@/stores/useLayoutStore';
 import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useContextPanelStore } from '@/stores/useContextPanelStore';
+import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
 import { useNotificationSettingsStore } from '@/stores/useNotificationSettingsStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { getSafeStorage } from '@/stores/utils/safeStorage';
@@ -258,7 +260,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
   const reorderProjects = useProjectsStore((state) => state.reorderProjects);
 
   const setActiveMainTab = useNavigationStore((state) => state.setActiveMainTab);
-  const openContextPanelTab = useUIStore((state) => state.openContextPanelTab);
+  const openContextPanelTab = useContextPanelStore((state) => state.openContextPanelTab);
   const setSessionSwitcherOpen = useNavigationStore((state) => state.setSessionSwitcherOpen);
   const toggleSidebar = useLayoutStore((state) => state.toggleSidebar);
   const setSettingsDialogOpen = useDialogStore((state) => state.setSettingsDialogOpen);
@@ -267,8 +269,8 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
   const setScheduledTasksDialogOpen = useDialogStore((state) => state.setScheduledTasksDialogOpen);
   const openMultiRunLauncher = useDialogStore((state) => state.openMultiRunLauncher);
   const notifyOnSubtasks = useNotificationSettingsStore((state) => state.notifyOnSubtasks);
-  const showDeletionDialog = useUIStore((state) => state.showDeletionDialog);
-  const setShowDeletionDialog = useUIStore((state) => state.setShowDeletionDialog);
+  const showDeletionDialog = useChatRenderingStore((state) => state.showDeletionDialog);
+  const setShowDeletionDialog = useChatRenderingStore((state) => state.setShowDeletionDialog);
 
   const debouncedSessionSearchQuery = useDebouncedValue(sessionSearchQuery, 120);
   const normalizedSessionSearchQuery = React.useMemo(

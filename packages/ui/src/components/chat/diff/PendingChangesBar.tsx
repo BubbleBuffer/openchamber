@@ -3,7 +3,7 @@ import { RiFileEditLine, RiArrowDownSLine, RiArrowUpSLine } from '@remixicon/rea
 import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { useGitStore, useIsGitRepo } from '@/stores/git/useGitStore';
 import { useLayoutStore } from '@/stores/useLayoutStore';
-import { useUIStore } from '@/stores/useUIStore';
+import { useContextPanelStore } from '@/stores/useContextPanelStore';
 import { useRuntimeStore } from '@/stores/useRuntimeStore';
 import { RuntimeAPIContext } from '@/contexts/runtimeAPIContext';
 import { sessionEvents } from '@/lib/session/sessionEvents';
@@ -94,7 +94,7 @@ export const PendingChangesBar: React.FC = React.memo(() => {
             return;
         }
 
-        const store = useUIStore.getState();
+        const store = useContextPanelStore.getState();
         const isMobile = useRuntimeStore.getState().isMobile;
         if (!isMobile) {
             store.openContextDiff(currentDirectory, file.relativePath);

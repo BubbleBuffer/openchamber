@@ -20,6 +20,7 @@ import { DrawerProvider } from '@/contexts/DrawerContext';
 import { useLayoutStore } from '@/stores/useLayoutStore';
 import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useContextPanelStore } from '@/stores/useContextPanelStore';
 import { useRuntimeStore } from '@/stores/useRuntimeStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { useUpdateStore } from '@/stores/useUpdateStore';
@@ -94,7 +95,7 @@ export const MainLayout: React.FC = () => {
     const [desktopRightSidebarActionsHost, setDesktopRightSidebarActionsHost] = React.useState<HTMLDivElement | null>(null);
     const effectiveDirectory = useEffectiveDirectory() ?? '';
     const directoryKey = React.useMemo(() => normalizeDirectoryKey(effectiveDirectory), [effectiveDirectory]);
-    const isContextPanelOpen = useUIStore((state) => {
+    const isContextPanelOpen = useContextPanelStore((state) => {
         if (!directoryKey) {
             return false;
         }

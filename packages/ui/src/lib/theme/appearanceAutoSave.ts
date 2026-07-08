@@ -1,4 +1,6 @@
 import { useUIStore } from '@/stores/useUIStore';
+import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
+import { useSessionRetentionStore } from '@/stores/useSessionRetentionStore';
 import { useDiffPreferencesStore } from '@/stores/useDiffPreferencesStore';
 import { useNotificationSettingsStore } from '@/stores/useNotificationSettingsStore';
 import { useVisualPreferencesStore } from '@/stores/useVisualPreferencesStore';
@@ -7,22 +9,9 @@ import type { DesktopSettings } from '@/lib/desktop/desktop';
 
 // Appearance fields synced from useUIStore.
 type AppearanceSlice = {
-  showReasoningTraces: boolean;
-  showDeletionDialog: boolean;
-  autoDeleteEnabled: boolean;
-  autoDeleteAfterDays: number;
-  sessionRetentionAction: 'archive' | 'delete';
   inputSpellcheckEnabled: boolean;
-  showToolFileIcons: boolean;
-  showExpandedBashTools: boolean;
-  showExpandedEditTools: boolean;
   timeFormatPreference: 'auto' | '12h' | '24h';
   weekStartPreference: 'auto' | 'sunday' | 'monday';
-  chatRenderMode: 'sorted' | 'live';
-  activityRenderMode: 'collapsed' | 'summary';
-  mermaidRenderingMode: 'svg' | 'ascii';
-  userMessageRenderingMode: 'markdown' | 'plain';
-  stickyUserHeader: boolean;
   reportUsage: boolean;
 };
 
@@ -75,24 +64,28 @@ export const startAppearanceAutoSave = (): void => {
   // Initial snapshots
   const uiState = useUIStore.getState();
   let previousAppearance: AppearanceSlice = {
-    showReasoningTraces: uiState.showReasoningTraces,
-    showDeletionDialog: uiState.showDeletionDialog,
-    autoDeleteEnabled: uiState.autoDeleteEnabled,
-    autoDeleteAfterDays: uiState.autoDeleteAfterDays,
-    sessionRetentionAction: uiState.sessionRetentionAction,
     inputSpellcheckEnabled: uiState.inputSpellcheckEnabled,
-    showToolFileIcons: uiState.showToolFileIcons,
-    showExpandedBashTools: uiState.showExpandedBashTools,
-    showExpandedEditTools: uiState.showExpandedEditTools,
     timeFormatPreference: uiState.timeFormatPreference,
     weekStartPreference: uiState.weekStartPreference,
-    chatRenderMode: uiState.chatRenderMode,
-    activityRenderMode: uiState.activityRenderMode,
-    mermaidRenderingMode: uiState.mermaidRenderingMode,
-    userMessageRenderingMode: uiState.userMessageRenderingMode,
-    stickyUserHeader: uiState.stickyUserHeader,
     reportUsage: uiState.reportUsage,
   };
+
+  const chatState = useChatRenderingStore.getState();
+  let prevShowReasoningTraces = chatState.showReasoningTraces;
+  let prevShowDeletionDialog = chatState.showDeletionDialog;
+  let prevShowToolFileIcons = chatState.showToolFileIcons;
+  let prevShowExpandedBashTools = chatState.showExpandedBashTools;
+  let prevShowExpandedEditTools = chatState.showExpandedEditTools;
+  let prevChatRenderMode = chatState.chatRenderMode;
+  let prevActivityRenderMode = chatState.activityRenderMode;
+  let prevMermaidRenderingMode = chatState.mermaidRenderingMode;
+  let prevUserMessageRenderingMode = chatState.userMessageRenderingMode;
+  let prevStickyUserHeader = chatState.stickyUserHeader;
+
+  const retentionState = useSessionRetentionStore.getState();
+  let prevAutoDeleteEnabled = retentionState.autoDeleteEnabled;
+  let prevAutoDeleteAfterDays = retentionState.autoDeleteAfterDays;
+  let prevSessionRetentionAction = retentionState.sessionRetentionAction;
 
   let previousNotification: NotificationSlice = {
     nativeNotificationsEnabled: useNotificationSettingsStore.getState().nativeNotificationsEnabled,
@@ -144,74 +137,22 @@ export const startAppearanceAutoSave = (): void => {
 
   useUIStore.subscribe((state) => {
     const current: AppearanceSlice = {
-      showReasoningTraces: state.showReasoningTraces,
-      showDeletionDialog: state.showDeletionDialog,
-      autoDeleteEnabled: state.autoDeleteEnabled,
-      autoDeleteAfterDays: state.autoDeleteAfterDays,
-      sessionRetentionAction: state.sessionRetentionAction,
       inputSpellcheckEnabled: state.inputSpellcheckEnabled,
-      showToolFileIcons: state.showToolFileIcons,
-      showExpandedBashTools: state.showExpandedBashTools,
-      showExpandedEditTools: state.showExpandedEditTools,
       timeFormatPreference: state.timeFormatPreference,
       weekStartPreference: state.weekStartPreference,
-      chatRenderMode: state.chatRenderMode,
-      activityRenderMode: state.activityRenderMode,
-      mermaidRenderingMode: state.mermaidRenderingMode,
-      userMessageRenderingMode: state.userMessageRenderingMode,
-      stickyUserHeader: state.stickyUserHeader,
       reportUsage: state.reportUsage,
     };
 
     const diff: Partial<DesktopSettings> = {};
 
-    if (current.showReasoningTraces !== previousAppearance.showReasoningTraces) {
-      diff.showReasoningTraces = current.showReasoningTraces;
-    }
-    if (current.showDeletionDialog !== previousAppearance.showDeletionDialog) {
-      diff.showDeletionDialog = current.showDeletionDialog;
-    }
-    if (current.autoDeleteEnabled !== previousAppearance.autoDeleteEnabled) {
-      diff.autoDeleteEnabled = current.autoDeleteEnabled;
-    }
-    if (current.autoDeleteAfterDays !== previousAppearance.autoDeleteAfterDays) {
-      diff.autoDeleteAfterDays = current.autoDeleteAfterDays;
-    }
-    if (current.sessionRetentionAction !== previousAppearance.sessionRetentionAction) {
-      diff.sessionRetentionAction = current.sessionRetentionAction;
-    }
     if (current.inputSpellcheckEnabled !== previousAppearance.inputSpellcheckEnabled) {
       diff.inputSpellcheckEnabled = current.inputSpellcheckEnabled;
-    }
-    if (current.showToolFileIcons !== previousAppearance.showToolFileIcons) {
-      diff.showToolFileIcons = current.showToolFileIcons;
-    }
-    if (current.showExpandedBashTools !== previousAppearance.showExpandedBashTools) {
-      diff.showExpandedBashTools = current.showExpandedBashTools;
-    }
-    if (current.showExpandedEditTools !== previousAppearance.showExpandedEditTools) {
-      diff.showExpandedEditTools = current.showExpandedEditTools;
     }
     if (current.timeFormatPreference !== previousAppearance.timeFormatPreference) {
       diff.timeFormatPreference = current.timeFormatPreference;
     }
     if (current.weekStartPreference !== previousAppearance.weekStartPreference) {
       diff.weekStartPreference = current.weekStartPreference;
-    }
-    if (current.chatRenderMode !== previousAppearance.chatRenderMode) {
-      diff.chatRenderMode = current.chatRenderMode;
-    }
-    if (current.activityRenderMode !== previousAppearance.activityRenderMode) {
-      diff.activityRenderMode = current.activityRenderMode;
-    }
-    if (current.mermaidRenderingMode !== previousAppearance.mermaidRenderingMode) {
-      diff.mermaidRenderingMode = current.mermaidRenderingMode;
-    }
-    if (current.userMessageRenderingMode !== previousAppearance.userMessageRenderingMode) {
-      diff.userMessageRenderingMode = current.userMessageRenderingMode;
-    }
-    if (current.stickyUserHeader !== previousAppearance.stickyUserHeader) {
-      diff.stickyUserHeader = current.stickyUserHeader;
     }
     if (current.reportUsage !== previousAppearance.reportUsage) {
       diff.reportUsage = current.reportUsage;
@@ -222,6 +163,68 @@ export const startAppearanceAutoSave = (): void => {
     if (Object.keys(diff).length > 0) {
       schedule(diff);
     }
+  });
+
+  useChatRenderingStore.subscribe((state) => {
+    const diff: Partial<DesktopSettings> = {};
+    if (state.showReasoningTraces !== prevShowReasoningTraces) {
+      diff.showReasoningTraces = state.showReasoningTraces;
+      prevShowReasoningTraces = state.showReasoningTraces;
+    }
+    if (state.showDeletionDialog !== prevShowDeletionDialog) {
+      diff.showDeletionDialog = state.showDeletionDialog;
+      prevShowDeletionDialog = state.showDeletionDialog;
+    }
+    if (state.showToolFileIcons !== prevShowToolFileIcons) {
+      diff.showToolFileIcons = state.showToolFileIcons;
+      prevShowToolFileIcons = state.showToolFileIcons;
+    }
+    if (state.showExpandedBashTools !== prevShowExpandedBashTools) {
+      diff.showExpandedBashTools = state.showExpandedBashTools;
+      prevShowExpandedBashTools = state.showExpandedBashTools;
+    }
+    if (state.showExpandedEditTools !== prevShowExpandedEditTools) {
+      diff.showExpandedEditTools = state.showExpandedEditTools;
+      prevShowExpandedEditTools = state.showExpandedEditTools;
+    }
+    if (state.chatRenderMode !== prevChatRenderMode) {
+      diff.chatRenderMode = state.chatRenderMode;
+      prevChatRenderMode = state.chatRenderMode;
+    }
+    if (state.activityRenderMode !== prevActivityRenderMode) {
+      diff.activityRenderMode = state.activityRenderMode;
+      prevActivityRenderMode = state.activityRenderMode;
+    }
+    if (state.mermaidRenderingMode !== prevMermaidRenderingMode) {
+      diff.mermaidRenderingMode = state.mermaidRenderingMode;
+      prevMermaidRenderingMode = state.mermaidRenderingMode;
+    }
+    if (state.userMessageRenderingMode !== prevUserMessageRenderingMode) {
+      diff.userMessageRenderingMode = state.userMessageRenderingMode;
+      prevUserMessageRenderingMode = state.userMessageRenderingMode;
+    }
+    if (state.stickyUserHeader !== prevStickyUserHeader) {
+      diff.stickyUserHeader = state.stickyUserHeader;
+      prevStickyUserHeader = state.stickyUserHeader;
+    }
+    if (Object.keys(diff).length > 0) schedule(diff);
+  });
+
+  useSessionRetentionStore.subscribe((state) => {
+    const diff: Partial<DesktopSettings> = {};
+    if (state.autoDeleteEnabled !== prevAutoDeleteEnabled) {
+      diff.autoDeleteEnabled = state.autoDeleteEnabled;
+      prevAutoDeleteEnabled = state.autoDeleteEnabled;
+    }
+    if (state.autoDeleteAfterDays !== prevAutoDeleteAfterDays) {
+      diff.autoDeleteAfterDays = state.autoDeleteAfterDays;
+      prevAutoDeleteAfterDays = state.autoDeleteAfterDays;
+    }
+    if (state.sessionRetentionAction !== prevSessionRetentionAction) {
+      diff.sessionRetentionAction = state.sessionRetentionAction;
+      prevSessionRetentionAction = state.sessionRetentionAction;
+    }
+    if (Object.keys(diff).length > 0) schedule(diff);
   });
 
   useNotificationSettingsStore.subscribe((state) => {

@@ -1,4 +1,4 @@
-import { useUIStore } from '@/stores/useUIStore';
+import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
 
 export interface AppearancePreferences {
   showReasoningTraces?: boolean;
@@ -49,7 +49,7 @@ export const saveAppearancePreferences = (preferences: AppearancePreferences): b
 };
 
 export const applyAppearancePreferences = (preferences: AppearancePreferences): void => {
-  const store = useUIStore.getState();
+  const store = useChatRenderingStore.getState();
 
   if (typeof preferences.showReasoningTraces === 'boolean') {
     store.setShowReasoningTraces(preferences.showReasoningTraces);

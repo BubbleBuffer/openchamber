@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest"
 import type { Part } from "@/lib/opencode/client"
 import { setViewport } from "./helpers/browser"
 import { renderWithApp } from "./helpers/render"
-import { seedUIStore } from "./helpers/stores"
+import { seedUIStore, seedChatRenderingStore } from "./helpers/stores"
 import ChatMessage from "@/components/chat/ChatMessage"
 
 // ---------------------------------------------------------------------------
@@ -225,8 +225,8 @@ describe("ChatMessage", () => {
     deviceState.isMobile = false
     deviceState.hasTouchInput = false
     setViewport(1280)
-    // seedUIStore so the real useUIStore has its defaults
-    seedUIStore({
+    // seedChatRenderingStore so the real useChatRenderingStore has its defaults
+    seedChatRenderingStore({
       showReasoningTraces: true,
       stickyUserHeader: true,
       chatRenderMode: "live",

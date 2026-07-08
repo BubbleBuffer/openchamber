@@ -9,6 +9,7 @@ import { useChatTimelineController } from './hooks/useChatTimelineController';
 import { useChatTurnNavigation } from './hooks/useChatTurnNavigation';
 import { useDeviceInfo } from '@/lib/device';
 import { useUIStore } from '@/stores/useUIStore';
+import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
 import { useSync } from '@/sync/use-sync';
 import { useSyncDirectory } from '@/sync/sync-context';
 import { useChatActivity, useChatInterruptions, useChatMessages, useChatSessionState } from './state';
@@ -26,7 +27,7 @@ export const SessionMount = React.memo(({
 }: SessionMountProps) => {
     const directory = useSyncDirectory();
     const isExpandedInput = useUIStore((state) => state.isExpandedInput);
-    const stickyUserHeader = useUIStore((state) => state.stickyUserHeader);
+    const stickyUserHeader = useChatRenderingStore((state) => state.stickyUserHeader);
     const { isMobile } = useDeviceInfo();
     const isDesktopExpandedInput = isExpandedInput && !isMobile;
 

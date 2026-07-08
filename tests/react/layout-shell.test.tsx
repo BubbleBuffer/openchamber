@@ -3,7 +3,7 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, test, vi } from "vitest"
 import { setViewport } from "./helpers/browser"
 import { renderWithApp } from "./helpers/render"
-import { seedDialogStore, seedUIStore } from "./helpers/stores"
+import { seedContextPanelStore, seedDialogStore, seedUIStore } from "./helpers/stores"
 
 let deviceIsMobile = false
 
@@ -100,7 +100,7 @@ describe("MainLayout", () => {
       activeMainTab: "chat",
       isSessionSwitcherOpen: false,
     }, false)
-    seedUIStore({
+    seedContextPanelStore({
       contextPanelByDirectory: {},
     })
     seedDialogStore({ isSettingsDialogOpen: false, isMultiRunLauncherOpen: false })

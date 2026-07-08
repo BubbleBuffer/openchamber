@@ -5,7 +5,7 @@ import { RiArrowDownSLine, RiArrowRightSLine, RiBrainAi3Line, RiChatAi3Line } fr
 import { cn } from '@/lib/utils';
 import type { ContentChangeReason } from '@/components/chat/timeline/types';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
-import { useUIStore } from '@/stores/useUIStore';
+import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
 import { useDurationTickerNow } from './useDurationTicker';
 import { MarkdownRenderer } from '../../MarkdownRenderer';
 import { useStreamingTextThrottle } from '../../hooks/useStreamingTextThrottle';
@@ -196,7 +196,7 @@ const ReasoningPart: React.FC<ReasoningPartProps> = ({
     onContentChange,
     messageId,
 }) => {
-    const chatRenderMode = useUIStore((state) => state.chatRenderMode);
+    const chatRenderMode = useChatRenderingStore((state) => state.chatRenderMode);
     const partWithText = part as PartWithText;
     const rawText = partWithText.text || partWithText.content || '';
     const textContent = React.useMemo(() => cleanReasoningText(rawText), [rawText]);

@@ -14,7 +14,7 @@ import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useDirectorySync, useSessionMessageRecords, useEnsureSessionMessages } from '@/sync/sync-context';
 import { getSyncChildStores } from '@/sync/sync-refs';
-import { useUIStore } from '@/stores/useUIStore';
+import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
 import { useSessionActivity } from '@/hooks/useSessionActivity';
 import { opencodeClient } from '@/lib/opencode/client';
 import { sessionEvents } from '@/lib/session/sessionEvents';
@@ -1061,7 +1061,7 @@ const TaskToolSummary: React.FC<{
     isActive?: boolean;
 }> = ({ entries, isExpanded, isMobile, output, sessionId, onShowPopup, input, animateTailText = true, isActive = false }) => {
     const setCurrentSession = useSessionUIStore((state) => state.setCurrentSession);
-    const showToolFileIcons = useUIStore((state) => state.showToolFileIcons);
+    const showToolFileIcons = useChatRenderingStore((state) => state.showToolFileIcons);
     const displayEntries = entries;
 
     const trimmedOutput = typeof output === 'string'
@@ -1743,7 +1743,7 @@ const ToolPart: React.FC<ToolPartProps> = ({
     animateTailText = true,
 }) => {
     const state = part.state;
-    const showToolFileIcons = useUIStore((s) => s.showToolFileIcons);
+    const showToolFileIcons = useChatRenderingStore((s) => s.showToolFileIcons);
     const currentDirectory = useDirectoryStore((s) => s.currentDirectory);
     const currentSessionId = useSessionUIStore((s) => s.currentSessionId);
 

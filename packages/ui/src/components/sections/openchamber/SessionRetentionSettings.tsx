@@ -5,7 +5,7 @@ import { toast } from '@/components/ui';
 import { NumberInput } from '@/components/ui/number-input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useUIStore } from '@/stores/useUIStore';
+import { useSessionRetentionStore } from '@/stores/useSessionRetentionStore';
 import { useSessionAutoCleanup } from '@/hooks/useSessionAutoCleanup';
 
 const MIN_DAYS = 1;
@@ -17,12 +17,12 @@ const RETENTION_ACTION_OPTIONS = [
 ] as const;
 
 export const SessionRetentionSettings: React.FC = () => {
-  const autoDeleteEnabled = useUIStore((state) => state.autoDeleteEnabled);
-  const autoDeleteAfterDays = useUIStore((state) => state.autoDeleteAfterDays);
-  const sessionRetentionAction = useUIStore((state) => state.sessionRetentionAction);
-  const setAutoDeleteEnabled = useUIStore((state) => state.setAutoDeleteEnabled);
-  const setAutoDeleteAfterDays = useUIStore((state) => state.setAutoDeleteAfterDays);
-  const setSessionRetentionAction = useUIStore((state) => state.setSessionRetentionAction);
+  const autoDeleteEnabled = useSessionRetentionStore((state) => state.autoDeleteEnabled);
+  const autoDeleteAfterDays = useSessionRetentionStore((state) => state.autoDeleteAfterDays);
+  const sessionRetentionAction = useSessionRetentionStore((state) => state.sessionRetentionAction);
+  const setAutoDeleteEnabled = useSessionRetentionStore((state) => state.setAutoDeleteEnabled);
+  const setAutoDeleteAfterDays = useSessionRetentionStore((state) => state.setAutoDeleteAfterDays);
+  const setSessionRetentionAction = useSessionRetentionStore((state) => state.setSessionRetentionAction);
 
   const { candidates, isRunning, runCleanup, action } = useSessionAutoCleanup({ autoRun: false });
   const pendingCount = candidates.length;

@@ -10,6 +10,7 @@ import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { cn } from '@/lib/utils';
 import { useFilesViewTabsStore } from '@/stores/files/useFilesViewTabsStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useContextPanelStore } from '@/stores/useContextPanelStore';
 import { ContextPanelContent } from './ContextSidebarTab';
 
 const CONTEXT_PANEL_MIN_WIDTH = 360;
@@ -159,14 +160,14 @@ export const ContextPanel: React.FC = () => {
   const effectiveDirectory = useEffectiveDirectory() ?? '';
   const directoryKey = React.useMemo(() => normalizeDirectoryKey(effectiveDirectory), [effectiveDirectory]);
 
-  const panelState = useUIStore((state) => (directoryKey ? state.contextPanelByDirectory[directoryKey] : undefined));
-  const closeContextPanel = useUIStore((state) => state.closeContextPanel);
-  const closeContextPanelTab = useUIStore((state) => state.closeContextPanelTab);
-  const toggleContextPanelExpanded = useUIStore((state) => state.toggleContextPanelExpanded);
-  const setContextPanelWidth = useUIStore((state) => state.setContextPanelWidth);
-  const setActiveContextPanelTab = useUIStore((state) => state.setActiveContextPanelTab);
-  const reorderContextPanelTabs = useUIStore((state) => state.reorderContextPanelTabs);
-  const setPendingDiffFile = useUIStore((state) => state.setPendingDiffFile);
+  const panelState = useContextPanelStore((state) => (directoryKey ? state.contextPanelByDirectory[directoryKey] : undefined));
+  const closeContextPanel = useContextPanelStore((state) => state.closeContextPanel);
+  const closeContextPanelTab = useContextPanelStore((state) => state.closeContextPanelTab);
+  const toggleContextPanelExpanded = useContextPanelStore((state) => state.toggleContextPanelExpanded);
+  const setContextPanelWidth = useContextPanelStore((state) => state.setContextPanelWidth);
+  const setActiveContextPanelTab = useContextPanelStore((state) => state.setActiveContextPanelTab);
+  const reorderContextPanelTabs = useContextPanelStore((state) => state.reorderContextPanelTabs);
+  const setPendingDiffFile = useContextPanelStore((state) => state.setPendingDiffFile);
   const setSelectedFilePath = useFilesViewTabsStore((state) => state.setSelectedPath);
   const { themeMode, lightThemeId, darkThemeId, currentTheme } = useThemeSystem();
 

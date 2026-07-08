@@ -2,6 +2,7 @@ import React from 'react';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useContextPanelStore } from '@/stores/useContextPanelStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { parseRoute, updateBrowserURL, hasRouteParams } from '@/lib/router';
 import type { RouteState, AppRouteState } from '@/lib/router';
@@ -44,7 +45,7 @@ export function useRouter(): void {
   const setActiveMainTab = useNavigationStore((state) => state.setActiveMainTab);
   const setSettingsDialogOpen = useDialogStore((state) => state.setSettingsDialogOpen);
   const setSettingsPage = useUIStore((state) => state.setSettingsPage);
-  const navigateToDiff = useUIStore((state) => state.navigateToDiff);
+  const navigateToDiff = useContextPanelStore((state) => state.navigateToDiff);
 
   /**
    * Apply a parsed route state to the application stores.
@@ -103,13 +104,14 @@ export function useRouter(): void {
     const navState = useNavigationStore.getState();
     const uiState = useUIStore.getState();
     const dialogState = useDialogStore.getState();
+    const ctxState = useContextPanelStore.getState();
 
     return {
       sessionId: sessionState.currentSessionId,
       tab: navState.activeMainTab,
       isSettingsOpen: dialogState.isSettingsDialogOpen,
       settingsPath: uiState.settingsPage,
-      diffFile: uiState.pendingDiffFile,
+      diffFile: ctxState.pendingDiffFile,
     };
   }, []);
 
@@ -201,7 +203,7 @@ export function useRouter(): void {
     return unsubNav;
   }, [isVSCode, syncURLFromState]);
 
-  // Subscribe to UI store changes (settings, diff file)
+  // Subscribe to UI store changes (settings)
   React.useEffect(() => {
     if (isVSCode) {
       return;
@@ -209,7 +211,6 @@ export function useRouter(): void {
 
     let prevSettingsOpen: boolean = useDialogStore.getState().isSettingsDialogOpen;
     let prevSettingsPath: string = useUIStore.getState().settingsPage;
-    let prevDiffFile: string | null = useUIStore.getState().pendingDiffFile;
 
     const unsubUI = useUIStore.subscribe((state) => {
       // Skip if we're currently applying a route
@@ -220,20 +221,42 @@ export function useRouter(): void {
       const currentSettingsOpen = useDialogStore.getState().isSettingsDialogOpen;
       const settingsOpenChanged = currentSettingsOpen !== prevSettingsOpen;
       const settingsPathChanged = state.settingsPage !== prevSettingsPath;
-      const diffFileChanged = state.pendingDiffFile !== prevDiffFile;
 
       // Update tracking vars
       prevSettingsOpen = currentSettingsOpen;
       prevSettingsPath = state.settingsPage;
-      prevDiffFile = state.pendingDiffFile;
 
       // Only sync if something relevant changed
-      if (settingsOpenChanged || settingsPathChanged || diffFileChanged) {
+      if (settingsOpenChanged || settingsPathChanged) {
         syncURLFromState();
       }
     });
 
     return unsubUI;
+  }, [isVSCode, syncURLFromState]);
+
+  // Subscribe to context panel store changes (diff file)
+  React.useEffect(() => {
+    if (isVSCode) {
+      return;
+    }
+
+    let prevDiffFile: string | null = useContextPanelStore.getState().pendingDiffFile;
+
+    const unsubCtx = useContextPanelStore.subscribe((state) => {
+      if (isApplyingRouteRef.current) {
+        return;
+      }
+
+      const diffFileChanged = state.pendingDiffFile !== prevDiffFile;
+      prevDiffFile = state.pendingDiffFile;
+
+      if (diffFileChanged) {
+        syncURLFromState();
+      }
+    });
+
+    return unsubCtx;
   }, [isVSCode, syncURLFromState]);
 
   // Listen for browser back/forward navigation
@@ -294,7 +317,7 @@ export function navigateToRoute(route: Partial<RouteState>): void {
       useNavigationStore.getState().setActiveMainTab(route.tab);
     }
     if (route.diffFile) {
-      useUIStore.getState().navigateToDiff(route.diffFile);
+      useContextPanelStore.getState().navigateToDiff(route.diffFile);
     }
     return;
   }
@@ -333,7 +356,7 @@ export function navigateToRoute(route: Partial<RouteState>): void {
     useNavigationStore.getState().setActiveMainTab(route.tab);
   }
   if (route.diffFile) {
-    useUIStore.getState().navigateToDiff(route.diffFile);
+    useContextPanelStore.getState().navigateToDiff(route.diffFile);
   }
 }
 
@@ -349,6 +372,7 @@ export function getShareableURL(): string {
   const navState = useNavigationStore.getState();
   const uiState = useUIStore.getState();
   const dialogState = useDialogStore.getState();
+  const ctxState = useContextPanelStore.getState();
 
   const params = new URLSearchParams();
 
@@ -362,8 +386,8 @@ export function getShareableURL(): string {
     params.set('tab', navState.activeMainTab);
   }
 
-  if (navState.activeMainTab === 'diff' && uiState.pendingDiffFile) {
-    params.set('file', uiState.pendingDiffFile);
+  if (navState.activeMainTab === 'diff' && ctxState.pendingDiffFile) {
+    params.set('file', ctxState.pendingDiffFile);
   }
 
   const search = params.toString();

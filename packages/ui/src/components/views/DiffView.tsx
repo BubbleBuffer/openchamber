@@ -2,6 +2,7 @@ import React from 'react';
 import { RiArrowDownSLine, RiArrowRightSLine, RiEditLine, RiGitCommitLine, RiLoader4Line, RiTextWrap } from '@remixicon/react';
 
 import { useUIStore } from '@/stores/useUIStore';
+import { useContextPanelStore } from '@/stores/useContextPanelStore';
 import { useDiffPreferencesStore } from '@/stores/useDiffPreferencesStore';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { useGitStore, useGitStatus, useIsGitRepo, useGitFileCount, useGitLoadingStatus } from '@/stores/git/useGitStore';
@@ -957,8 +958,8 @@ export const DiffView: React.FC<DiffViewProps> = ({
     const [diffLoadError, setDiffLoadError] = React.useState<string | null>(null);
     const lastDiffRequestRef = React.useRef<string | null>(null);
 
-    const pendingDiffFile = useUIStore((state) => state.pendingDiffFile);
-    const setPendingDiffFile = useUIStore((state) => state.setPendingDiffFile);
+    const pendingDiffFile = useContextPanelStore((state) => state.pendingDiffFile);
+    const setPendingDiffFile = useContextPanelStore((state) => state.setPendingDiffFile);
     const diffLayoutPreference = useDiffPreferencesStore((state) => state.diffLayoutPreference);
     const diffFileLayout = useDiffPreferencesStore((state) => state.diffFileLayout);
     const setDiffFileLayout = useDiffPreferencesStore((state) => state.setDiffFileLayout);
@@ -966,7 +967,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
     const setDiffWrapLines = useDiffPreferencesStore((state) => state.setDiffWrapLines);
     const diffViewMode = useDiffPreferencesStore((state) => state.diffViewMode);
     const setDiffViewMode = useDiffPreferencesStore((state) => state.setDiffViewMode);
-    const openContextFileAtLine = useUIStore((state) => state.openContextFileAtLine);
+    const openContextFileAtLine = useContextPanelStore((state) => state.openContextFileAtLine);
     const diffWrapLines = diffWrapLinesStore;
 
     const isStackedView = diffViewMode === 'stacked';

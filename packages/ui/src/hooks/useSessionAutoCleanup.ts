@@ -4,6 +4,7 @@ import { opencodeClient } from '@/lib/opencode/client';
 import { ensureGlobalSessionsLoaded, useGlobalSessionsStore, resolveGlobalSessionDirectory } from '@/stores/useGlobalSessionsStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { getAllSyncSessions } from '@/sync/sync-refs';
+import { useSessionRetentionStore } from '@/stores/useSessionRetentionStore';
 import { useUIStore } from '@/stores/useUIStore';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -74,11 +75,11 @@ export const useSessionAutoCleanup = (enabledOrOptions?: boolean | CleanupOption
   const globalSessions = useGlobalSessionsStore((state) => state.activeSessions);
   const hasLoadedGlobalSessions = useGlobalSessionsStore((state) => state.hasLoaded);
 
-  const autoDeleteEnabled = useUIStore((state) => state.autoDeleteEnabled);
-  const autoDeleteAfterDays = useUIStore((state) => state.autoDeleteAfterDays);
-  const sessionRetentionAction = useUIStore((state) => state.sessionRetentionAction);
-  const autoDeleteLastRunAt = useUIStore((state) => state.autoDeleteLastRunAt);
-  const setAutoDeleteLastRunAt = useUIStore((state) => state.setAutoDeleteLastRunAt);
+  const autoDeleteEnabled = useSessionRetentionStore((state) => state.autoDeleteEnabled);
+  const autoDeleteAfterDays = useSessionRetentionStore((state) => state.autoDeleteAfterDays);
+  const sessionRetentionAction = useSessionRetentionStore((state) => state.sessionRetentionAction);
+  const autoDeleteLastRunAt = useSessionRetentionStore((state) => state.autoDeleteLastRunAt);
+  const setAutoDeleteLastRunAt = useSessionRetentionStore((state) => state.setAutoDeleteLastRunAt);
 
   const [isRunning, setIsRunning] = React.useState(false);
   const runningRef = React.useRef(false);

@@ -70,6 +70,7 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useContextPanelStore } from '@/stores/useContextPanelStore';
 import { useFilesViewTabsStore } from '@/stores/files/useFilesViewTabsStore';
 import { useGitStatus } from '@/stores/git/useGitStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
@@ -594,10 +595,10 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
 
   // Session/config for sending comments
   const setMainTabGuard = useNavigationStore((state) => state.setMainTabGuard);
-  const pendingFileNavigation = useUIStore((state) => state.pendingFileNavigation);
-  const setPendingFileNavigation = useUIStore((state) => state.setPendingFileNavigation);
-  const pendingFileFocusPath = useUIStore((state) => state.pendingFileFocusPath);
-  const setPendingFileFocusPath = useUIStore((state) => state.setPendingFileFocusPath);
+  const pendingFileNavigation = useContextPanelStore((state) => state.pendingFileNavigation);
+  const setPendingFileNavigation = useContextPanelStore((state) => state.setPendingFileNavigation);
+  const pendingFileFocusPath = useContextPanelStore((state) => state.pendingFileFocusPath);
+  const setPendingFileFocusPath = useContextPanelStore((state) => state.setPendingFileFocusPath);
   const shortcutOverrides = useUIStore((state) => state.shortcutOverrides);
   const settingsDefaultFileViewerPreview = useAgentConfigStore((state) => state.settingsDefaultFileViewerPreview);
 

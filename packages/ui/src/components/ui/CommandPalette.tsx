@@ -12,6 +12,7 @@ import {
 import { useLayoutStore } from '@/stores/useLayoutStore';
 import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useContextPanelStore } from '@/stores/useContextPanelStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
@@ -57,8 +58,8 @@ export const CommandPalette: React.FC = () => {
   const toggleBottomTerminal = useLayoutStore((s) => s.toggleBottomTerminal);
   const setBottomTerminalExpanded = useLayoutStore((s) => s.setBottomTerminalExpanded);
   const isBottomTerminalExpanded = useLayoutStore((s) => s.isBottomTerminalExpanded);
-  const openContextOverview = useUIStore((s) => s.openContextOverview);
-  const openContextPlan = useUIStore((s) => s.openContextPlan);
+  const openContextOverview = useContextPanelStore((s) => s.openContextOverview);
+  const openContextPlan = useContextPanelStore((s) => s.openContextPlan);
   const shortcutOverrides = useUIStore((s) => s.shortcutOverrides);
 
   const openNewSessionDraft = useSessionUIStore((s) => s.openNewSessionDraft);
