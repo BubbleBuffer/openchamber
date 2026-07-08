@@ -3,6 +3,8 @@ import { useInputStore } from '@/sync/input-store';
 import { useMessageQueueStore } from '@/stores/messageQueueStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useUIStore } from '@/stores/useUIStore';
+import { useRuntimeStore } from '@/stores/useRuntimeStore';
+import { useVisualPreferencesStore } from '@/stores/useVisualPreferencesStore';
 import { usePermissionStore } from '@/stores/permissionStore';
 
 interface UseChatComposerStateOptions {
@@ -27,10 +29,10 @@ export function useChatComposerState({ sessionId }: UseChatComposerStateOptions)
   const clearAbortPrompt = useSessionUIStore((state) => state.clearAbortPrompt);
   const acknowledgeSessionAbort = useSessionUIStore((state) => state.acknowledgeSessionAbort);
 
-  const isMobile = useUIStore((state) => state.isMobile);
-  const isKeyboardOpen = useUIStore((state) => state.isKeyboardOpen);
+  const isMobile = useRuntimeStore((state) => state.isMobile);
+  const isKeyboardOpen = useRuntimeStore((state) => state.isKeyboardOpen);
   const isExpandedInput = useUIStore((state) => state.isExpandedInput);
-  const inputBarOffset = useUIStore((state) => state.inputBarOffset);
+  const inputBarOffset = useVisualPreferencesStore((state) => state.inputBarOffset);
   const inputSpellcheckEnabled = useUIStore((state) => state.inputSpellcheckEnabled);
   const persistChatDraft = useUIStore((state) => state.persistChatDraft);
 

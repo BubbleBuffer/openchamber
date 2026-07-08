@@ -3,7 +3,7 @@ import type { AnimationHandlers, ContentChangeReason } from '@/components/chat/t
 import type { ChatMessageEntry } from './lib/turns/types';
 import type { StreamPhase } from './message/types';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useUIStore } from '@/stores/useUIStore';
+import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
 import { FadeInDisabledProvider } from './message/FadeInOnReveal';
 import { streamPerfCount } from '@/stores/utils/streamDebug';
 import { resolveMessageRole } from './message-list/normalizeMessages';
@@ -82,9 +82,9 @@ const VirtualizedMessageList = React.forwardRef<ChatViewerHandle, VirtualizedMes
   ) => {
     streamPerfCount('ui.virtual_list.render');
     void _disableStaging;
-    const stickyUserHeader = useUIStore((state) => state.stickyUserHeader);
-    const chatRenderMode = useUIStore((state) => state.chatRenderMode);
-    const activityRenderMode = useUIStore((state) => state.activityRenderMode);
+    const stickyUserHeader = useChatRenderingStore((state) => state.stickyUserHeader);
+    const chatRenderMode = useChatRenderingStore((state) => state.chatRenderMode);
+    const activityRenderMode = useChatRenderingStore((state) => state.activityRenderMode);
 
     const { turnUiStates, toggleTurnGroup } = useMessageEntryUiState({ activityRenderMode });
     const { shouldAnimateUserMessage, onUserAnimationConsumed } = useMessageAnimationState({

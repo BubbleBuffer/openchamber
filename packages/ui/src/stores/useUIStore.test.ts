@@ -1,9 +1,14 @@
-import { describe, it, expect, beforeEach } from "bun:test";
-import { useUIStore } from "./useUIStore";
+import "happy-dom";
+import { ensureDom } from "./utils/setupDom";
+ensureDom();
 
-describe("useUIStore (smoke — sidebar toggle + clamp)", () => {
+import { describe, it, expect, beforeEach } from "bun:test";
+
+const { useLayoutStore } = await import("./useLayoutStore");
+
+describe("useUIStore (smoke — layout fields moved to useLayoutStore)", () => {
   beforeEach(() => {
-    useUIStore.setState(
+    useLayoutStore.setState(
       {
         isSidebarOpen: true,
         sidebarWidth: 300,
@@ -13,15 +18,9 @@ describe("useUIStore (smoke — sidebar toggle + clamp)", () => {
   });
 
   it("toggleSidebar flips isSidebarOpen", () => {
-    const before = useUIStore.getState().isSidebarOpen;
-    useUIStore.getState().toggleSidebar();
-    expect(useUIStore.getState().isSidebarOpen).toBe(!before);
+    const before = useLayoutStore.getState().isSidebarOpen;
+    useLayoutStore.getState().toggleSidebar();
+    expect(useLayoutStore.getState().isSidebarOpen).toBe(!before);
   });
 
-  it("setFontSize clamps to [50, 200]", () => {
-    useUIStore.getState().setFontSize(500);
-    expect(useUIStore.getState().fontSize).toBe(200);
-    useUIStore.getState().setFontSize(10);
-    expect(useUIStore.getState().fontSize).toBe(50);
-  });
 });

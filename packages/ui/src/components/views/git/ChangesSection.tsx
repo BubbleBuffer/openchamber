@@ -16,7 +16,7 @@ import { OverlayScrollbar } from '@/components/ui/OverlayScrollbar';
 import { ChangeRow } from './ChangeRow';
 import type { GitStatus } from '@/lib/api/types';
 import { cn } from '@/lib/utils';
-import { useUIStore } from '@/stores/useUIStore';
+import { useDiffPreferencesStore } from '@/stores/useDiffPreferencesStore';
 
 interface ChangesSectionProps {
   changeEntries: GitStatus['files'];
@@ -184,7 +184,7 @@ export const ChangesSection: React.FC<ChangesSectionProps> = ({
   onVisiblePathsChange,
 }) => {
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
-  const gitChangesViewMode = useUIStore((state) => state.gitChangesViewMode);
+  const gitChangesViewMode = useDiffPreferencesStore((state) => state.gitChangesViewMode);
   const isTreeView = gitChangesViewMode === 'tree';
   const selectedCount = selectedPaths.size;
   const totalCount = changeEntries.length;

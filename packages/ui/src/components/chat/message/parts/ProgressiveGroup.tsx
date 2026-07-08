@@ -18,6 +18,8 @@ import { isExpandableTool, isStandaloneTool, isStaticTool } from './toolRenderUt
 import { RuntimeAPIContext } from '@/contexts/runtimeAPIContext';
 import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useContextPanelStore } from '@/stores/useContextPanelStore';
+import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
 import ReasoningPart from './ReasoningPart';
 import JustificationBlock from './JustificationBlock';
 import { areRenderRelevantPartsEqual } from '../renderCompare';
@@ -584,7 +586,7 @@ const StaticToolRowInner: React.FC<{
     activities: TurnActivityPart[];
     animateTailText: boolean;
 }> = ({ toolName, activities, animateTailText }) => {
-    const showToolFileIcons = useUIStore((state) => state.showToolFileIcons);
+    const showToolFileIcons = useChatRenderingStore((state) => state.showToolFileIcons);
     const displayName = getToolMetadata(toolName).displayName;
     const icon = getToolIcon(toolName);
     const isReadGroup = toolName.toLowerCase() === 'read';
@@ -630,13 +632,13 @@ const StaticToolRowInner: React.FC<{
             return;
         }
 
-        const uiStore = useUIStore.getState();
+        const ctxStore = useContextPanelStore.getState();
         const contextDirectory = getContextDirectoryForPath(currentDirectory, absolutePath);
         if (offset && Number.isFinite(offset)) {
-            uiStore.openContextFileAtLine(contextDirectory, absolutePath, Math.max(1, Math.trunc(offset)), 1);
+            ctxStore.openContextFileAtLine(contextDirectory, absolutePath, Math.max(1, Math.trunc(offset)), 1);
             return;
         }
-        uiStore.openContextFile(contextDirectory, absolutePath);
+        ctxStore.openContextFile(contextDirectory, absolutePath);
     }, [currentDirectory, runtime]);
 
     const normalizedToolName = toolName.toLowerCase();

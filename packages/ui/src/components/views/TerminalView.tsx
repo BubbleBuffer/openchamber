@@ -11,7 +11,10 @@ import { CODE_FONT_OPTION_MAP, DEFAULT_MONO_FONT } from '@/lib/fontOptions';
 import { convertThemeToXterm } from '@/lib/terminal/terminalTheme';
 import { TerminalViewport, type TerminalController } from '@/components/terminal/TerminalViewport';
 import { cn } from '@/lib/utils';
+import { useLayoutStore } from '@/stores/useLayoutStore';
+import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useVisualPreferencesStore } from '@/stores/useVisualPreferencesStore';
 import { Button } from '@/components/ui/button';
 import { useDeviceInfo } from '@/lib/device';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
@@ -84,9 +87,9 @@ export const TerminalView: React.FC = () => {
     const { terminal, runtime } = useRuntimeAPIs();
     const { currentTheme } = useThemeSystem();
     const { monoFont } = useFontPreferences();
-    const terminalFontSize = useUIStore(state => state.terminalFontSize);
-    const bottomTerminalHeight = useUIStore((state) => state.bottomTerminalHeight);
-    const isBottomTerminalExpanded = useUIStore((state) => state.isBottomTerminalExpanded);
+    const terminalFontSize = useVisualPreferencesStore(state => state.terminalFontSize);
+    const bottomTerminalHeight = useLayoutStore((state) => state.bottomTerminalHeight);
+    const isBottomTerminalExpanded = useLayoutStore((state) => state.isBottomTerminalExpanded);
     const { isMobile, hasTouchInput } = useDeviceInfo();
     // Tabs are supported for web + desktop runtimes, including mobile (not VSCode).
     const enableTabs = runtime.platform !== 'vscode';
@@ -184,8 +187,8 @@ export const TerminalView: React.FC = () => {
         rehydratedTerminalIdsRef.current = ids;
     }, [terminalHydrated]);
 
-    const activeMainTab = useUIStore((state) => state.activeMainTab);
-    const isBottomTerminalOpen = useUIStore((state) => state.isBottomTerminalOpen);
+    const activeMainTab = useNavigationStore((state) => state.activeMainTab);
+    const isBottomTerminalOpen = useLayoutStore((state) => state.isBottomTerminalOpen);
     const isTerminalActive = activeMainTab === 'terminal';
     const isTerminalVisible = isTerminalActive || isBottomTerminalOpen;
     const [hasOpenedTerminalViewport, setHasOpenedTerminalViewport] = React.useState(isTerminalVisible);

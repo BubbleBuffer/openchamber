@@ -2,7 +2,7 @@ import React, { useRef, memo } from 'react';
 import { RiAttachment2, RiCloseLine, RiFileImageLine, RiFileLine, RiFilePdfLine, RiGithubLine, RiGitPullRequestLine } from '@remixicon/react';
 import { useInputStore } from '@/sync/input-store';
 import type { AttachedFile } from '@/sync/session-ui-store';
-import { useUIStore } from '@/stores/useUIStore';
+import { useRuntimeStore } from '@/stores/useRuntimeStore';
 import { toast } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { openExternalUrl } from '@/lib/url';
@@ -15,7 +15,7 @@ import type { ToolPopupContent } from './message/types';
 export const FileAttachmentButton = memo(() => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const addAttachedFile = useInputStore((state) => state.addAttachedFile);
-  const isMobile = useUIStore((state) => state.isMobile);
+  const isMobile = useRuntimeStore((state) => state.isMobile);
   const isVSCodeRuntime = useIsVSCodeRuntime();
   const buttonSizeClass = isMobile ? 'h-9 w-9' : 'h-7 w-7';
   const iconSizeClass = isMobile ? 'h-5 w-5' : 'h-[18px] w-[18px]';

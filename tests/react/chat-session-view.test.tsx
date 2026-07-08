@@ -36,6 +36,7 @@ vi.mock("@/components/chat/ChatViewport", () => ({
 import type { ChatMessagesState, ChatInterruptionsState } from "@/components/chat/state/types"
 import type { AnimationHandlers } from "@/components/chat/timeline/types"
 import { ChatSessionView } from "@/components/chat/ChatSessionView"
+import { useLayoutStore } from "@/stores/useLayoutStore"
 import { useUIStore } from "@/stores/useUIStore"
 
 type SessionViewProps = ComponentProps<typeof ChatSessionView>
@@ -83,7 +84,8 @@ function buildProps(overrides: Partial<SessionViewProps> = {}): SessionViewProps
 
 describe("ChatSessionView", () => {
   beforeEach(() => {
-    seedUIStore({ settingsPage: "home", isRightSidebarOpen: false })
+    seedUIStore({ settingsPage: "home" })
+    useLayoutStore.setState({ isRightSidebarOpen: false }, false)
   })
 
   test("renders loading skeletons when the session is not loaded and nothing is streaming", () => {
@@ -167,7 +169,7 @@ describe("ChatSessionView", () => {
     collector.reset()
 
     act(() => {
-      useUIStore.setState({ isRightSidebarOpen: true }, false)
+      useLayoutStore.setState({ isRightSidebarOpen: true }, false)
     })
 
     expectNoUpdateCommits(collector.commits)

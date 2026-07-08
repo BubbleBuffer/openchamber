@@ -28,6 +28,7 @@ import { useFeatureFlagsStore } from '@/stores/useFeatureFlagsStore';
 import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { useSelectionStore } from '@/sync/selection-store';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
+import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useGitStore } from '@/stores/git/useGitStore';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
@@ -154,8 +155,8 @@ export const PlanView: React.FC<PlanViewProps> = ({ targetPath = null }) => {
   const activeProjectId = useProjectsStore((state) => state.activeProjectId);
   const gitDirectories = useGitStore((state) => state.directories);
   const effectiveDirectory = useEffectiveDirectory() ?? '';
-  const setActiveMainTab = useUIStore((state) => state.setActiveMainTab);
-  const setSessionSwitcherOpen = useUIStore((state) => state.setSessionSwitcherOpen);
+  const setActiveMainTab = useNavigationStore((state) => state.setActiveMainTab);
+  const setSessionSwitcherOpen = useNavigationStore((state) => state.setSessionSwitcherOpen);
   const runtimeApis = useRuntimeAPIs();
   const { isMobile } = useDeviceInfo();
   const { currentTheme } = useThemeSystem();

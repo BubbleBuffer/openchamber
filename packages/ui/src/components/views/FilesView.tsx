@@ -68,7 +68,9 @@ import { EditorView } from '@codemirror/view';
 import type { Extension } from '@codemirror/state';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
+import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useContextPanelStore } from '@/stores/useContextPanelStore';
 import { useFilesViewTabsStore } from '@/stores/files/useFilesViewTabsStore';
 import { useGitStatus } from '@/stores/git/useGitStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
@@ -592,11 +594,11 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
   const [isDragging, setIsDragging] = React.useState(false);
 
   // Session/config for sending comments
-  const setMainTabGuard = useUIStore((state) => state.setMainTabGuard);
-  const pendingFileNavigation = useUIStore((state) => state.pendingFileNavigation);
-  const setPendingFileNavigation = useUIStore((state) => state.setPendingFileNavigation);
-  const pendingFileFocusPath = useUIStore((state) => state.pendingFileFocusPath);
-  const setPendingFileFocusPath = useUIStore((state) => state.setPendingFileFocusPath);
+  const setMainTabGuard = useNavigationStore((state) => state.setMainTabGuard);
+  const pendingFileNavigation = useContextPanelStore((state) => state.pendingFileNavigation);
+  const setPendingFileNavigation = useContextPanelStore((state) => state.setPendingFileNavigation);
+  const pendingFileFocusPath = useContextPanelStore((state) => state.pendingFileFocusPath);
+  const setPendingFileFocusPath = useContextPanelStore((state) => state.setPendingFileFocusPath);
   const shortcutOverrides = useUIStore((state) => state.shortcutOverrides);
   const settingsDefaultFileViewerPreview = useAgentConfigStore((state) => state.settingsDefaultFileViewerPreview);
 
@@ -1165,7 +1167,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
     setMainTabGuard(guard);
 
     return () => {
-      const currentGuard = useUIStore.getState().mainTabGuard;
+      const currentGuard = useNavigationStore.getState().mainTabGuard;
       if (currentGuard === guard) {
         setMainTabGuard(null);
       }
@@ -1493,7 +1495,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
 
     if (nextTab) {
       setMainTabGuard(null);
-      useUIStore.getState().setActiveMainTab(nextTab);
+      useNavigationStore.getState().setActiveMainTab(nextTab);
     }
   }, [displayedContent, handleSelectFile, isMobile, removeOpenPath, root, selectedFile?.path, setMainTabGuard, setSelectedPath]);
 
@@ -1543,7 +1545,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
 
     if (nextTab) {
       setMainTabGuard(null);
-      useUIStore.getState().setActiveMainTab(nextTab);
+      useNavigationStore.getState().setActiveMainTab(nextTab);
     }
   }, [handleSelectFile, isMobile, removeOpenPath, root, saveDraft, selectedFile?.path, setMainTabGuard, setSelectedPath]);
 

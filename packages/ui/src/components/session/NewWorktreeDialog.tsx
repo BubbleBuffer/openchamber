@@ -38,7 +38,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { useGitHubAuthStore } from '@/stores/github/useGitHubAuthStore';
-import { useUIStore } from '@/stores/useUIStore';
+import { useRuntimeStore } from '@/stores/useRuntimeStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
 import * as sessionActions from '@/sync/session-actions';
@@ -205,7 +205,7 @@ export function NewWorktreeDialog({
   onWorktreeCreated,
 }: NewWorktreeDialogProps) {
   const { github, git } = useRuntimeAPIs();
-  const isMobile = useUIStore((state) => state.isMobile);
+  const isMobile = useRuntimeStore((state) => state.isMobile);
   const githubAuthStatus = useGitHubAuthStore((state) => state.status);
   const githubAuthChecked = useGitHubAuthStore((state) => state.hasChecked);
   const activeProject = useProjectsStore((state) => state.getActiveProject());

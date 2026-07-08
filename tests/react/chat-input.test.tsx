@@ -10,6 +10,7 @@ import { createCommitCollector, createProfiledElement, expectNoUpdateCommits, ex
 import { seedUIStore } from "./helpers/stores"
 import { ChatInput } from "@/components/chat/ChatInput"
 import { useUIStore } from "@/stores/useUIStore"
+import { useRuntimeStore } from "@/stores/useRuntimeStore"
 
 const { sendMessage, addToQueue, abortCurrentOperation } = chatInputTestFns
 
@@ -77,7 +78,7 @@ describe("ChatInput", () => {
   })
 
   test("renders mobile composer controls and status bar when mobile", () => {
-    seedUIStore({ isMobile: true })
+    useRuntimeStore.setState({ isMobile: true }, false)
     setViewport(390, 844)
 
     renderWithApp(<ChatInput />, { resetStores: false })

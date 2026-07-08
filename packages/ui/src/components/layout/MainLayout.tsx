@@ -17,7 +17,11 @@ import { DiffWorkerProvider } from '@/contexts/DiffWorkerProvider';
 import { MultiRunLauncher } from '@/components/multirun';
 import { DrawerProvider } from '@/contexts/DrawerContext';
 
+import { useLayoutStore } from '@/stores/useLayoutStore';
+import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useContextPanelStore } from '@/stores/useContextPanelStore';
+import { useRuntimeStore } from '@/stores/useRuntimeStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useDeviceInfo } from '@/lib/device';
@@ -70,14 +74,14 @@ export const MainLayout: React.FC = () => {
     const RIGHT_SIDEBAR_AUTO_OPEN_WIDTH = 1220;
     const BOTTOM_TERMINAL_AUTO_CLOSE_HEIGHT = 640;
     const BOTTOM_TERMINAL_AUTO_OPEN_HEIGHT = 700;
-    const isSidebarOpen = useUIStore((state) => state.isSidebarOpen);
-    const isRightSidebarOpen = useUIStore((state) => state.isRightSidebarOpen);
-    const isBottomTerminalOpen = useUIStore((state) => state.isBottomTerminalOpen);
-    const setRightSidebarOpen = useUIStore((state) => state.setRightSidebarOpen);
-    const setBottomTerminalOpen = useUIStore((state) => state.setBottomTerminalOpen);
-    const activeMainTab = useUIStore((state) => state.activeMainTab);
-    const setIsMobile = useUIStore((state) => state.setIsMobile);
-    const isSessionSwitcherOpen = useUIStore((state) => state.isSessionSwitcherOpen);
+    const isSidebarOpen = useLayoutStore((state) => state.isSidebarOpen);
+    const isRightSidebarOpen = useLayoutStore((state) => state.isRightSidebarOpen);
+    const isBottomTerminalOpen = useLayoutStore((state) => state.isBottomTerminalOpen);
+    const setRightSidebarOpen = useLayoutStore((state) => state.setRightSidebarOpen);
+    const setBottomTerminalOpen = useLayoutStore((state) => state.setBottomTerminalOpen);
+    const activeMainTab = useNavigationStore((state) => state.activeMainTab);
+    const setIsMobile = useRuntimeStore((state) => state.setIsMobile);
+    const isSessionSwitcherOpen = useNavigationStore((state) => state.isSessionSwitcherOpen);
     const isSettingsDialogOpen = useDialogStore((state) => state.isSettingsDialogOpen);
     const setSettingsDialogOpen = useDialogStore((state) => state.setSettingsDialogOpen);
     const isMultiRunLauncherOpen = useDialogStore((state) => state.isMultiRunLauncherOpen);
@@ -86,12 +90,12 @@ export const MainLayout: React.FC = () => {
 
     const { isMobile } = useDeviceInfo();
     const isDesktopShellRuntime = React.useMemo(() => isDesktopShell(), []);
-    const sidebarWidth = useUIStore((state) => state.sidebarWidth);
-    const rightSidebarWidth = useUIStore((state) => state.rightSidebarWidth);
+    const sidebarWidth = useLayoutStore((state) => state.sidebarWidth);
+    const rightSidebarWidth = useLayoutStore((state) => state.rightSidebarWidth);
     const [desktopRightSidebarActionsHost, setDesktopRightSidebarActionsHost] = React.useState<HTMLDivElement | null>(null);
     const effectiveDirectory = useEffectiveDirectory() ?? '';
     const directoryKey = React.useMemo(() => normalizeDirectoryKey(effectiveDirectory), [effectiveDirectory]);
-    const isContextPanelOpen = useUIStore((state) => {
+    const isContextPanelOpen = useContextPanelStore((state) => {
         if (!directoryKey) {
             return false;
         }
@@ -100,7 +104,7 @@ export const MainLayout: React.FC = () => {
         const activeTab = tabs.find((tab) => tab.id === panelState?.activeTabId) ?? tabs[tabs.length - 1];
         return Boolean(panelState?.isOpen && activeTab);
     });
-    const setSidebarOpen = useUIStore((state) => state.setSidebarOpen);
+    const setSidebarOpen = useLayoutStore((state) => state.setSidebarOpen);
     const rightSidebarAutoClosedRef = React.useRef(false);
     const bottomTerminalAutoClosedRef = React.useRef(false);
     const leftSidebarAutoClosedByContextRef = React.useRef(false);
@@ -165,7 +169,7 @@ export const MainLayout: React.FC = () => {
 
         setMobileLeftDrawerOpen(false);
         if (isSessionSwitcherOpen) {
-            useUIStore.getState().setSessionSwitcherOpen(false);
+            useNavigationStore.getState().setSessionSwitcherOpen(false);
         }
         if (isRightSidebarOpen) {
             setRightSidebarOpen(false);
@@ -216,7 +220,7 @@ export const MainLayout: React.FC = () => {
     }, [checkForUpdates]);
 
     React.useEffect(() => {
-        const previous = useUIStore.getState().isMobile;
+        const previous = useRuntimeStore.getState().isMobile;
         if (previous !== isMobile) {
             setIsMobile(isMobile);
         }
@@ -224,7 +228,7 @@ export const MainLayout: React.FC = () => {
 
     React.useEffect(() => {
         if (isContextPanelOpen) {
-            const currentlyOpen = useUIStore.getState().isSidebarOpen;
+            const currentlyOpen = useLayoutStore.getState().isSidebarOpen;
             if (currentlyOpen) {
                 setSidebarOpen(false);
                 leftSidebarAutoClosedByContextRef.current = true;
@@ -246,7 +250,7 @@ export const MainLayout: React.FC = () => {
         let timeoutId: number | undefined;
 
         const handleResponsivePanels = () => {
-            const state = useUIStore.getState();
+            const state = useLayoutStore.getState();
             const width = window.innerWidth;
             const height = window.innerHeight;
 
@@ -305,7 +309,7 @@ export const MainLayout: React.FC = () => {
             return;
         }
 
-        const unsubscribe = useUIStore.subscribe((state, prevState) => {
+        const unsubscribe = useLayoutStore.subscribe((state, prevState) => {
             const width = window.innerWidth;
             const height = window.innerHeight;
 
@@ -341,7 +345,7 @@ export const MainLayout: React.FC = () => {
         let previousOrientation = '';
         let keyboardAvoidTarget: HTMLElement | null = null;
 
-        const setKeyboardOpen = useUIStore.getState().setKeyboardOpen;
+        const setKeyboardOpen = useRuntimeStore.getState().setKeyboardOpen;
         const userAgent = typeof navigator === 'undefined' ? '' : navigator.userAgent;
         const isAndroid = /Android/i.test(userAgent);
         const isIOS = /iPad|iPhone|iPod/.test(userAgent);

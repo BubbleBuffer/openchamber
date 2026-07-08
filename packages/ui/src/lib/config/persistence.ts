@@ -1,9 +1,14 @@
 import type { DesktopSettings } from '@/lib/desktop/desktop';
 import { createProjectIdFromPath } from '@/lib/project/projectId';
 import { useUIStore } from '@/stores/useUIStore';
+import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
+import { useSessionRetentionStore } from '@/stores/useSessionRetentionStore';
+import { useDiffPreferencesStore } from '@/stores/useDiffPreferencesStore';
 import { useModelPreferencesStore } from '@/stores/useModelPreferencesStore';
 import { useMessageQueueStore } from '@/stores/messageQueueStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
+import { useNotificationSettingsStore } from '@/stores/useNotificationSettingsStore';
+import { useVisualPreferencesStore } from '@/stores/useVisualPreferencesStore';
 import { setDirectoryShowHidden } from '@/lib/files/directoryShowHidden';
 import { setFilesViewShowGitignored } from '@/lib/files/filesViewShowGitignored';
 import { loadAppearancePreferences, applyAppearancePreferences } from '@/lib/theme/appearancePersistence';
@@ -265,24 +270,28 @@ const getRuntimeSettingsAPI = () => getRegisteredRuntimeAPIs()?.settings ?? null
 
 const applyDesktopUiPreferences = (settings: DesktopSettings) => {
   const store = useUIStore.getState();
+  const chatStore = useChatRenderingStore.getState();
+  const notificationStore = useNotificationSettingsStore.getState();
+  const retentionStore = useSessionRetentionStore.getState();
+  const visualStore = useVisualPreferencesStore.getState();
   const configStore = useAgentConfigStore.getState();
   const queueStore = useMessageQueueStore.getState();
 
-  if (typeof settings.showReasoningTraces === 'boolean' && settings.showReasoningTraces !== store.showReasoningTraces) {
-    store.setShowReasoningTraces(settings.showReasoningTraces);
+  if (typeof settings.showReasoningTraces === 'boolean' && settings.showReasoningTraces !== chatStore.showReasoningTraces) {
+    chatStore.setShowReasoningTraces(settings.showReasoningTraces);
   }
-  if (typeof settings.autoDeleteEnabled === 'boolean' && settings.autoDeleteEnabled !== store.autoDeleteEnabled) {
-    store.setAutoDeleteEnabled(settings.autoDeleteEnabled);
+  if (typeof settings.autoDeleteEnabled === 'boolean' && settings.autoDeleteEnabled !== retentionStore.autoDeleteEnabled) {
+    retentionStore.setAutoDeleteEnabled(settings.autoDeleteEnabled);
   }
   if (typeof settings.autoDeleteAfterDays === 'number' && Number.isFinite(settings.autoDeleteAfterDays)) {
     const normalized = Math.max(1, Math.min(365, settings.autoDeleteAfterDays));
-    if (normalized !== store.autoDeleteAfterDays) {
-      store.setAutoDeleteAfterDays(normalized);
+    if (normalized !== retentionStore.autoDeleteAfterDays) {
+      retentionStore.setAutoDeleteAfterDays(normalized);
     }
   }
   if (settings.sessionRetentionAction === 'archive' || settings.sessionRetentionAction === 'delete') {
-    if (settings.sessionRetentionAction !== store.sessionRetentionAction) {
-      store.setSessionRetentionAction(settings.sessionRetentionAction);
+    if (settings.sessionRetentionAction !== retentionStore.sessionRetentionAction) {
+      retentionStore.setSessionRetentionAction(settings.sessionRetentionAction);
     }
   }
 
@@ -290,55 +299,55 @@ const applyDesktopUiPreferences = (settings: DesktopSettings) => {
     queueStore.setQueueMode(settings.queueModeEnabled);
   }
 
-  if (typeof settings.showDeletionDialog === 'boolean' && settings.showDeletionDialog !== store.showDeletionDialog) {
-    store.setShowDeletionDialog(settings.showDeletionDialog);
+  if (typeof settings.showDeletionDialog === 'boolean' && settings.showDeletionDialog !== chatStore.showDeletionDialog) {
+    chatStore.setShowDeletionDialog(settings.showDeletionDialog);
   }
-  if (typeof settings.nativeNotificationsEnabled === 'boolean' && settings.nativeNotificationsEnabled !== store.nativeNotificationsEnabled) {
-    store.setNativeNotificationsEnabled(settings.nativeNotificationsEnabled);
+  if (typeof settings.nativeNotificationsEnabled === 'boolean' && settings.nativeNotificationsEnabled !== notificationStore.nativeNotificationsEnabled) {
+    notificationStore.setNativeNotificationsEnabled(settings.nativeNotificationsEnabled);
   }
   if (typeof settings.notificationMode === 'string' && (settings.notificationMode === 'always' || settings.notificationMode === 'hidden-only')) {
-    if (settings.notificationMode !== store.notificationMode) {
-      store.setNotificationMode(settings.notificationMode);
+    if (settings.notificationMode !== notificationStore.notificationMode) {
+      notificationStore.setNotificationMode(settings.notificationMode);
     }
   }
-  if (typeof settings.notifyOnSubtasks === 'boolean' && settings.notifyOnSubtasks !== store.notifyOnSubtasks) {
-    store.setNotifyOnSubtasks(settings.notifyOnSubtasks);
+  if (typeof settings.notifyOnSubtasks === 'boolean' && settings.notifyOnSubtasks !== notificationStore.notifyOnSubtasks) {
+    notificationStore.setNotifyOnSubtasks(settings.notifyOnSubtasks);
   }
-  if (typeof settings.notifyOnCompletion === 'boolean' && settings.notifyOnCompletion !== store.notifyOnCompletion) {
-    store.setNotifyOnCompletion(settings.notifyOnCompletion);
+  if (typeof settings.notifyOnCompletion === 'boolean' && settings.notifyOnCompletion !== notificationStore.notifyOnCompletion) {
+    notificationStore.setNotifyOnCompletion(settings.notifyOnCompletion);
   }
-  if (typeof settings.notifyOnError === 'boolean' && settings.notifyOnError !== store.notifyOnError) {
-    store.setNotifyOnError(settings.notifyOnError);
+  if (typeof settings.notifyOnError === 'boolean' && settings.notifyOnError !== notificationStore.notifyOnError) {
+    notificationStore.setNotifyOnError(settings.notifyOnError);
   }
-  if (typeof settings.notifyOnQuestion === 'boolean' && settings.notifyOnQuestion !== store.notifyOnQuestion) {
-    store.setNotifyOnQuestion(settings.notifyOnQuestion);
+  if (typeof settings.notifyOnQuestion === 'boolean' && settings.notifyOnQuestion !== notificationStore.notifyOnQuestion) {
+    notificationStore.setNotifyOnQuestion(settings.notifyOnQuestion);
   }
   if (settings.notificationTemplates && typeof settings.notificationTemplates === 'object') {
-    store.setNotificationTemplates(settings.notificationTemplates);
+    notificationStore.setNotificationTemplates(settings.notificationTemplates);
   }
-  if (typeof settings.summarizeLastMessage === 'boolean' && settings.summarizeLastMessage !== store.summarizeLastMessage) {
-    store.setSummarizeLastMessage(settings.summarizeLastMessage);
+  if (typeof settings.summarizeLastMessage === 'boolean' && settings.summarizeLastMessage !== notificationStore.summarizeLastMessage) {
+    notificationStore.setSummarizeLastMessage(settings.summarizeLastMessage);
   }
   if (typeof settings.summaryThreshold === 'number' && Number.isFinite(settings.summaryThreshold)) {
-    store.setSummaryThreshold(settings.summaryThreshold);
+    notificationStore.setSummaryThreshold(settings.summaryThreshold);
   }
   if (typeof settings.summaryLength === 'number' && Number.isFinite(settings.summaryLength)) {
-    store.setSummaryLength(settings.summaryLength);
+    notificationStore.setSummaryLength(settings.summaryLength);
   }
   if (typeof settings.maxLastMessageLength === 'number' && Number.isFinite(settings.maxLastMessageLength)) {
-    store.setMaxLastMessageLength(settings.maxLastMessageLength);
+    notificationStore.setMaxLastMessageLength(settings.maxLastMessageLength);
   }
   if (typeof settings.inputSpellcheckEnabled === 'boolean' && settings.inputSpellcheckEnabled !== store.inputSpellcheckEnabled) {
     store.setInputSpellcheckEnabled(settings.inputSpellcheckEnabled);
   }
-  if (typeof settings.showToolFileIcons === 'boolean' && settings.showToolFileIcons !== store.showToolFileIcons) {
-    store.setShowToolFileIcons(settings.showToolFileIcons);
+  if (typeof settings.showToolFileIcons === 'boolean' && settings.showToolFileIcons !== chatStore.showToolFileIcons) {
+    chatStore.setShowToolFileIcons(settings.showToolFileIcons);
   }
-  if (typeof settings.showExpandedBashTools === 'boolean' && settings.showExpandedBashTools !== store.showExpandedBashTools) {
-    store.setShowExpandedBashTools(settings.showExpandedBashTools);
+  if (typeof settings.showExpandedBashTools === 'boolean' && settings.showExpandedBashTools !== chatStore.showExpandedBashTools) {
+    chatStore.setShowExpandedBashTools(settings.showExpandedBashTools);
   }
-  if (typeof settings.showExpandedEditTools === 'boolean' && settings.showExpandedEditTools !== store.showExpandedEditTools) {
-    store.setShowExpandedEditTools(settings.showExpandedEditTools);
+  if (typeof settings.showExpandedEditTools === 'boolean' && settings.showExpandedEditTools !== chatStore.showExpandedEditTools) {
+    chatStore.setShowExpandedEditTools(settings.showExpandedEditTools);
   }
   if (typeof settings.timeFormatPreference === 'string'
     && (settings.timeFormatPreference === 'auto' || settings.timeFormatPreference === '12h' || settings.timeFormatPreference === '24h')) {
@@ -354,26 +363,26 @@ const applyDesktopUiPreferences = (settings: DesktopSettings) => {
   }
   if (typeof settings.chatRenderMode === 'string'
     && (settings.chatRenderMode === 'sorted' || settings.chatRenderMode === 'live')) {
-    if (settings.chatRenderMode !== store.chatRenderMode) {
-      store.setChatRenderMode(settings.chatRenderMode);
+    if (settings.chatRenderMode !== chatStore.chatRenderMode) {
+      chatStore.setChatRenderMode(settings.chatRenderMode);
     }
   }
   if (typeof settings.activityRenderMode === 'string'
     && (settings.activityRenderMode === 'collapsed' || settings.activityRenderMode === 'summary')) {
-    if (settings.activityRenderMode !== store.activityRenderMode) {
-      store.setActivityRenderMode(settings.activityRenderMode);
+    if (settings.activityRenderMode !== chatStore.activityRenderMode) {
+      chatStore.setActivityRenderMode(settings.activityRenderMode);
     }
   }
   if (typeof settings.mermaidRenderingMode === 'string'
     && (settings.mermaidRenderingMode === 'svg' || settings.mermaidRenderingMode === 'ascii')) {
-    if (settings.mermaidRenderingMode !== store.mermaidRenderingMode) {
-      store.setMermaidRenderingMode(settings.mermaidRenderingMode);
+    if (settings.mermaidRenderingMode !== chatStore.mermaidRenderingMode) {
+      chatStore.setMermaidRenderingMode(settings.mermaidRenderingMode);
     }
   }
   if (typeof settings.userMessageRenderingMode === 'string'
     && (settings.userMessageRenderingMode === 'markdown' || settings.userMessageRenderingMode === 'plain')) {
-    if (settings.userMessageRenderingMode !== store.userMessageRenderingMode) {
-      store.setUserMessageRenderingMode(settings.userMessageRenderingMode);
+    if (settings.userMessageRenderingMode !== chatStore.userMessageRenderingMode) {
+      chatStore.setUserMessageRenderingMode(settings.userMessageRenderingMode);
     }
   }
   if (typeof settings.messageStreamTransport === 'string'
@@ -382,26 +391,26 @@ const applyDesktopUiPreferences = (settings: DesktopSettings) => {
       configStore.setSettingsMessageStreamTransport(settings.messageStreamTransport);
     }
   }
-  if (typeof settings.stickyUserHeader === 'boolean' && settings.stickyUserHeader !== store.stickyUserHeader) {
-    store.setStickyUserHeader(settings.stickyUserHeader);
+  if (typeof settings.stickyUserHeader === 'boolean' && settings.stickyUserHeader !== chatStore.stickyUserHeader) {
+    chatStore.setStickyUserHeader(settings.stickyUserHeader);
   }
   if (typeof settings.reportUsage === 'boolean' && settings.reportUsage !== store.reportUsage) {
     store.setReportUsage(settings.reportUsage);
   }
-  if (typeof settings.fontSize === 'number' && Number.isFinite(settings.fontSize) && settings.fontSize !== store.fontSize) {
-    store.setFontSize(settings.fontSize);
+  if (typeof settings.fontSize === 'number' && Number.isFinite(settings.fontSize) && settings.fontSize !== visualStore.fontSize) {
+    visualStore.setFontSize(settings.fontSize);
   }
-  if (typeof settings.terminalFontSize === 'number' && Number.isFinite(settings.terminalFontSize) && settings.terminalFontSize !== store.terminalFontSize) {
-    store.setTerminalFontSize(settings.terminalFontSize);
+  if (typeof settings.terminalFontSize === 'number' && Number.isFinite(settings.terminalFontSize) && settings.terminalFontSize !== visualStore.terminalFontSize) {
+    visualStore.setTerminalFontSize(settings.terminalFontSize);
   }
-  if (typeof settings.padding === 'number' && Number.isFinite(settings.padding) && settings.padding !== store.padding) {
-    store.setPadding(settings.padding);
+  if (typeof settings.padding === 'number' && Number.isFinite(settings.padding) && settings.padding !== visualStore.padding) {
+    visualStore.setPadding(settings.padding);
   }
-  if (typeof settings.cornerRadius === 'number' && Number.isFinite(settings.cornerRadius) && settings.cornerRadius !== store.cornerRadius) {
-    store.setCornerRadius(settings.cornerRadius);
+  if (typeof settings.cornerRadius === 'number' && Number.isFinite(settings.cornerRadius) && settings.cornerRadius !== visualStore.cornerRadius) {
+    visualStore.setCornerRadius(settings.cornerRadius);
   }
-  if (typeof settings.inputBarOffset === 'number' && Number.isFinite(settings.inputBarOffset) && settings.inputBarOffset !== store.inputBarOffset) {
-    store.setInputBarOffset(settings.inputBarOffset);
+  if (typeof settings.inputBarOffset === 'number' && Number.isFinite(settings.inputBarOffset) && settings.inputBarOffset !== visualStore.inputBarOffset) {
+    visualStore.setInputBarOffset(settings.inputBarOffset);
   }
 
   if (Array.isArray(settings.favoriteModels)) {
@@ -427,20 +436,20 @@ const applyDesktopUiPreferences = (settings: DesktopSettings) => {
   }
   if (typeof settings.diffLayoutPreference === 'string'
     && (settings.diffLayoutPreference === 'dynamic' || settings.diffLayoutPreference === 'inline' || settings.diffLayoutPreference === 'side-by-side')) {
-    if (settings.diffLayoutPreference !== store.diffLayoutPreference) {
-      store.setDiffLayoutPreference(settings.diffLayoutPreference);
+    if (settings.diffLayoutPreference !== useDiffPreferencesStore.getState().diffLayoutPreference) {
+      useDiffPreferencesStore.getState().setDiffLayoutPreference(settings.diffLayoutPreference);
     }
   }
   if (typeof settings.diffViewMode === 'string'
     && (settings.diffViewMode === 'single' || settings.diffViewMode === 'stacked')) {
-    if (settings.diffViewMode !== store.diffViewMode) {
-      store.setDiffViewMode(settings.diffViewMode);
+    if (settings.diffViewMode !== useDiffPreferencesStore.getState().diffViewMode) {
+      useDiffPreferencesStore.getState().setDiffViewMode(settings.diffViewMode);
     }
   }
   if (typeof settings.gitChangesViewMode === 'string'
     && (settings.gitChangesViewMode === 'flat' || settings.gitChangesViewMode === 'tree')) {
-    if (settings.gitChangesViewMode !== store.gitChangesViewMode) {
-      store.setGitChangesViewMode(settings.gitChangesViewMode);
+    if (settings.gitChangesViewMode !== useDiffPreferencesStore.getState().gitChangesViewMode) {
+      useDiffPreferencesStore.getState().setGitChangesViewMode(settings.gitChangesViewMode);
     }
   }
   if (typeof settings.directoryShowHidden === 'boolean') {

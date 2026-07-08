@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { updateDesktopSettings } from '@/lib/config/persistence';
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
-import { useUIStore } from '@/stores/useUIStore';
+import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 import { cn } from '@/lib/utils';
 
@@ -34,8 +34,8 @@ export const DefaultsSettings: React.FC = () => {
   const setSettingsDefaultFileViewerPreview = useAgentConfigStore((state) => state.setSettingsDefaultFileViewerPreview);
   const settingsDefaultFileViewerPreview = useAgentConfigStore((state) => state.settingsDefaultFileViewerPreview);
   const providers = useProviderConfigStore((state) => state.providers);
-  const showDeletionDialog = useUIStore((state) => state.showDeletionDialog);
-  const setShowDeletionDialog = useUIStore((state) => state.setShowDeletionDialog);
+  const showDeletionDialog = useChatRenderingStore((state) => state.showDeletionDialog);
+  const setShowDeletionDialog = useChatRenderingStore((state) => state.setShowDeletionDialog);
 
   const [defaultModel, setDefaultModel] = React.useState<string | undefined>();
   const [defaultVariant, setDefaultVariant] = React.useState<string | undefined>();

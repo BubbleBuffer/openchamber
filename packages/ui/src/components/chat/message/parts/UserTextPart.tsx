@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import type { Part } from '@/lib/opencode/client';
 import type { AgentMentionInfo } from '../types';
 import { SimpleMarkdownRenderer } from '../../MarkdownRenderer';
-import { useUIStore } from '@/stores/useUIStore';
+import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
 
 type PartWithText = Part & { text?: string; content?: string; value?: string };
 
@@ -41,7 +41,7 @@ const UserTextPart: React.FC<UserTextPartProps> = ({ part, messageId, agentMenti
     const [isExpanded, setIsExpanded] = React.useState(false);
     const [isTruncated, setIsTruncated] = React.useState(false);
     const [collapseZoneHeight, setCollapseZoneHeight] = React.useState<number>(0);
-    const userMessageRenderingMode = useUIStore((state) => state.userMessageRenderingMode);
+    const userMessageRenderingMode = useChatRenderingStore((state) => state.userMessageRenderingMode);
     const normalizedRenderingMode = normalizeUserMessageRenderingMode(userMessageRenderingMode);
     const textRef = React.useRef<HTMLDivElement>(null);
 

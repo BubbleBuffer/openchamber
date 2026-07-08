@@ -1,5 +1,7 @@
 import { useLayoutEffect } from 'react';
+import { useLayoutStore } from '@/stores/useLayoutStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useVisualPreferencesStore } from '@/stores/useVisualPreferencesStore';
 import { SEMANTIC_TYPOGRAPHY, getTypographyVariable, type SemanticTypographyKey } from '@/lib/theme/typography';
 
 /**
@@ -27,7 +29,7 @@ export function useThemeEffects() {
   }, [theme]);
 
   // --- Typography ---
-  const fontSize = useUIStore((s) => s.fontSize);
+  const fontSize = useVisualPreferencesStore((s) => s.fontSize);
 
   useLayoutEffect(() => {
     const root = document.documentElement;
@@ -51,7 +53,7 @@ export function useThemeEffects() {
   }, [fontSize]);
 
   // --- Padding ---
-  const padding = useUIStore((s) => s.padding);
+  const padding = useVisualPreferencesStore((s) => s.padding);
 
   useLayoutEffect(() => {
     const root = document.documentElement;
@@ -97,9 +99,9 @@ export function useThemeEffects() {
       }
 
       timeoutId = window.setTimeout(() => {
-        const state = useUIStore.getState();
+        const state = useLayoutStore.getState();
         if (state.isBottomTerminalOpen && !state.hasManuallyResizedBottomTerminal) {
-          useUIStore.setState({ bottomTerminalHeight: Math.floor(window.innerHeight * 0.32) });
+          useLayoutStore.setState({ bottomTerminalHeight: Math.floor(window.innerHeight * 0.32) });
         }
       }, 150);
     };

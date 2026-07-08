@@ -7,7 +7,7 @@ import { MessageFreshnessDetector } from '@/lib/messages/messageFreshness';
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { useFeatureFlagsStore } from '@/stores/useFeatureFlagsStore';
-import { useUIStore } from '@/stores/useUIStore';
+import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
 import { useContextStore } from '@/stores/contextStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
@@ -167,7 +167,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     }
 
     const providers = useProviderConfigStore.getState().providers;
-    const { showReasoningTraces, stickyUserHeader, chatRenderMode, showExpandedBashTools, showExpandedEditTools } = useUIStore(
+    const { showReasoningTraces, stickyUserHeader, chatRenderMode, showExpandedBashTools, showExpandedEditTools } = useChatRenderingStore(
         useShallow((state) => ({
             showReasoningTraces: state.showReasoningTraces,
             stickyUserHeader: state.stickyUserHeader,

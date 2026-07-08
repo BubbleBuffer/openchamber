@@ -3,7 +3,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Radio } from '@/components/ui/radio';
 import { updateDesktopSettings } from '@/lib/config/persistence';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
-import { useUIStore } from '@/stores/useUIStore';
+import { useDiffPreferencesStore } from '@/stores/useDiffPreferencesStore';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 import { setFilesViewShowGitignored, useFilesViewShowGitignored } from '@/lib/files/filesViewShowGitignored';
 
@@ -11,8 +11,8 @@ export const GitSettings: React.FC = () => {
   const settingsGitmojiEnabled = useAgentConfigStore((state) => state.settingsGitmojiEnabled);
   const setSettingsGitmojiEnabled = useAgentConfigStore((state) => state.setSettingsGitmojiEnabled);
   const showGitignored = useFilesViewShowGitignored();
-  const gitChangesViewMode = useUIStore((state) => state.gitChangesViewMode);
-  const setGitChangesViewMode = useUIStore((state) => state.setGitChangesViewMode);
+  const gitChangesViewMode = useDiffPreferencesStore((state) => state.gitChangesViewMode);
+  const setGitChangesViewMode = useDiffPreferencesStore((state) => state.setGitChangesViewMode);
 
   const [isLoading, setIsLoading] = React.useState(true);
 

@@ -7,7 +7,7 @@ import { GitView } from '@/components/views';
 import { useGitStore } from '@/stores/git/useGitStore';
 import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
-import { useUIStore } from '@/stores/useUIStore';
+import { useLayoutStore } from '@/stores/useLayoutStore';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { formatDirectoryName } from '@/lib/utils';
@@ -90,9 +90,9 @@ const ContextSidebarPanel: React.FC = () => {
 };
 
 export const RightSidebarTabs: React.FC = () => {
-  const rightSidebarTab = useUIStore((state) => state.rightSidebarTab);
-  const setRightSidebarTab = useUIStore((state) => state.setRightSidebarTab);
-  const isRightSidebarOpen = useUIStore((state) => state.isRightSidebarOpen);
+  const rightSidebarTab = useLayoutStore((state) => state.rightSidebarTab);
+  const setRightSidebarTab = useLayoutStore((state) => state.setRightSidebarTab);
+  const isRightSidebarOpen = useLayoutStore((state) => state.isRightSidebarOpen);
   const directory = useEffectiveDirectory();
 
   useRightSidebarGitSync(directory, isRightSidebarOpen);

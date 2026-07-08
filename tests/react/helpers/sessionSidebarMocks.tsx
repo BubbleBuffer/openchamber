@@ -539,28 +539,99 @@ vi.mock("@/stores/useUpdateStore", () => ({
   ),
 }))
 
-vi.mock("@/stores/useUIStore", () => ({
-  useUIStore: Object.assign(
+vi.mock("@/stores/useLayoutStore", () => ({
+  useLayoutStore: Object.assign(
     (selector: (state: Record<string, unknown>) => unknown) =>
       selector({
-        setActiveMainTab: vi.fn(),
-        openContextPanelTab: vi.fn(),
-        setSessionSwitcherOpen: vi.fn(),
         toggleSidebar: vi.fn(),
-        notifyOnSubtasks: false,
-        showDeletionDialog: false,
-        setShowDeletionDialog: vi.fn(),
         isSidebarOpen: true,
         sidebarWidth: 300,
         isRightSidebarOpen: false,
-        isMobile: false,
+      }),
+    {
+      getState: () => ({
+        toggleSidebar: vi.fn(),
+        isSidebarOpen: true,
+      }),
+      setState: vi.fn(),
+      subscribe: () => () => {},
+    },
+  ),
+}))
+
+vi.mock("@/stores/useNavigationStore", () => ({
+  useNavigationStore: Object.assign(
+    (selector: (state: Record<string, unknown>) => unknown) =>
+      selector({
+        setActiveMainTab: vi.fn(),
+        setSessionSwitcherOpen: vi.fn(),
         activeMainTab: "chat",
       }),
     {
       getState: () => ({
         setActiveMainTab: vi.fn(),
-        toggleSidebar: vi.fn(),
-        isSidebarOpen: true,
+        activeMainTab: "chat",
+      }),
+      setState: vi.fn(),
+      subscribe: () => () => {},
+    },
+  ),
+}))
+
+vi.mock("@/stores/useRuntimeStore", () => ({
+  useRuntimeStore: Object.assign(
+    (selector: (state: Record<string, unknown>) => unknown) =>
+      selector({
+        isMobile: false,
+      }),
+    {
+      getState: () => ({
+        isMobile: false,
+      }),
+      setState: vi.fn(),
+      subscribe: () => () => {},
+    },
+  ),
+}))
+
+vi.mock("@/stores/useUIStore", () => ({
+  useUIStore: Object.assign(
+    (selector: (state: Record<string, unknown>) => unknown) =>
+      selector({
+        showDeletionDialog: false,
+        setShowDeletionDialog: vi.fn(),
+      }),
+    {
+      getState: () => ({}),
+      setState: vi.fn(),
+      subscribe: () => () => {},
+    },
+  ),
+}))
+
+vi.mock("@/stores/useContextPanelStore", () => ({
+  useContextPanelStore: Object.assign(
+    (selector: (state: Record<string, unknown>) => unknown) =>
+      selector({
+        openContextPanelTab: vi.fn(),
+      }),
+    {
+      getState: () => ({}),
+      setState: vi.fn(),
+      subscribe: () => () => {},
+    },
+  ),
+}))
+
+vi.mock("@/stores/useNotificationSettingsStore", () => ({
+  useNotificationSettingsStore: Object.assign(
+    (selector: (state: Record<string, unknown>) => unknown) =>
+      selector({
+        notifyOnSubtasks: false,
+      }),
+    {
+      getState: () => ({
+        notifyOnSubtasks: false,
       }),
       setState: vi.fn(),
       subscribe: () => () => {},

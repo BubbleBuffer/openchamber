@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest"
 import { renderWithApp } from "./helpers/render"
 import { createCommitCollector, createProfiledElement, expectNoUpdateCommits } from "./helpers/renderMetrics"
 import { seedUIStore } from "./helpers/stores"
+import { useRuntimeStore } from "@/stores/useRuntimeStore"
 import { MobileSessionStatusBar } from "@/components/chat/mobile-session-status-bar/MobileSessionStatusBar"
 import { useSessionUIStore } from "@/sync/session-ui-store"
 import type { Session } from "@/lib/opencode/client"
@@ -110,6 +111,27 @@ const mockUIStoreState = {
   setIsMobileSessionStatusBarCollapsed: vi.fn(),
   setActiveMainTab: vi.fn(),
 }
+
+vi.mock("@/stores/useRuntimeStore", () => ({
+  useRuntimeStore: Object.assign(
+    (selector: (state: Record<string, unknown>) => unknown) => selector({
+      isMobile: mockUIStoreState.isMobile,
+      isKeyboardOpen: false,
+    }),
+    {
+      getState: () => ({
+        isMobile: mockUIStoreState.isMobile,
+        isKeyboardOpen: false,
+      }),
+      setState: (patch: Record<string, unknown>) => {
+        if ("isMobile" in patch) {
+          mockUIStoreState.isMobile = patch.isMobile as boolean
+        }
+      },
+      subscribe: () => () => {},
+    },
+  ),
+}))
 
 vi.mock("@/stores/useUIStore", () => ({
   useUIStore: Object.assign(
@@ -244,10 +266,10 @@ vi.mock("@/dnd-kit/core", () => ({
 describe("MobileSessionStatusBar", () => {
   beforeEach(() => {
     seedUIStore({
-      isMobile: true,
       showMobileSessionStatusBar: true,
       isMobileSessionStatusBarCollapsed: true,
     })
+    useRuntimeStore.setState({ isMobile: true }, false)
     mockData.allStatuses = {
       "session-current": { type: "idle" },
       "session-other": { type: "idle" },
@@ -268,10 +290,10 @@ describe("MobileSessionStatusBar", () => {
   test("expanded path calls useAllSessionStatuses", () => {
     // Seed expanded state so the component renders ExpandedMobileSessionStatusBarContent
     seedUIStore({
-      isMobile: true,
       showMobileSessionStatusBar: true,
       isMobileSessionStatusBarCollapsed: false,
     })
+    useRuntimeStore.setState({ isMobile: true }, false)
     useAllSessionStatusesSpy.mockClear()
     renderWithApp(<MobileSessionStatusBar />, { resetStores: false })
 

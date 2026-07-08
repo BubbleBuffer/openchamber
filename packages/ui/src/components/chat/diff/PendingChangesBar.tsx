@@ -2,7 +2,9 @@ import React from 'react';
 import { RiFileEditLine, RiArrowDownSLine, RiArrowUpSLine } from '@remixicon/react';
 import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { useGitStore, useIsGitRepo } from '@/stores/git/useGitStore';
-import { useUIStore } from '@/stores/useUIStore';
+import { useLayoutStore } from '@/stores/useLayoutStore';
+import { useContextPanelStore } from '@/stores/useContextPanelStore';
+import { useRuntimeStore } from '@/stores/useRuntimeStore';
 import { RuntimeAPIContext } from '@/contexts/runtimeAPIContext';
 import { sessionEvents } from '@/lib/session/sessionEvents';
 import { normalizePath } from '@/components/session/sidebar/utils';
@@ -92,13 +94,14 @@ export const PendingChangesBar: React.FC = React.memo(() => {
             return;
         }
 
-        const store = useUIStore.getState();
-        if (!store.isMobile) {
+        const store = useContextPanelStore.getState();
+        const isMobile = useRuntimeStore.getState().isMobile;
+        if (!isMobile) {
             store.openContextDiff(currentDirectory, file.relativePath);
             return;
         }
         store.navigateToDiff(file.relativePath);
-        store.setRightSidebarOpen(false);
+        useLayoutStore.getState().setRightSidebarOpen(false);
     };
 
     const fileCount = gitChangedFiles.length;

@@ -2,6 +2,8 @@ import React from 'react';
 import { RiArrowDownSLine, RiArrowRightSLine, RiEditLine, RiGitCommitLine, RiLoader4Line, RiTextWrap } from '@remixicon/react';
 
 import { useUIStore } from '@/stores/useUIStore';
+import { useContextPanelStore } from '@/stores/useContextPanelStore';
+import { useDiffPreferencesStore } from '@/stores/useDiffPreferencesStore';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { useGitStore, useGitStatus, useIsGitRepo, useGitFileCount, useGitLoadingStatus } from '@/stores/git/useGitStore';
 import { cn } from '@/lib/utils';
@@ -639,7 +641,7 @@ const MultiFileDiffEntry = React.memo<MultiFileDiffEntryProps>(({
         }, [directory, file.path])
     );
     const setDiff = useGitStore((state) => state.setDiff);
-    const setDiffFileLayout = useUIStore((state) => state.setDiffFileLayout);
+    const setDiffFileLayout = useDiffPreferencesStore((state) => state.setDiffFileLayout);
 
     const [isExpanded, setIsExpanded] = React.useState(!defaultCollapsed);
     const [hasBeenVisible, setHasBeenVisible] = React.useState(false);
@@ -956,16 +958,16 @@ export const DiffView: React.FC<DiffViewProps> = ({
     const [diffLoadError, setDiffLoadError] = React.useState<string | null>(null);
     const lastDiffRequestRef = React.useRef<string | null>(null);
 
-    const pendingDiffFile = useUIStore((state) => state.pendingDiffFile);
-    const setPendingDiffFile = useUIStore((state) => state.setPendingDiffFile);
-    const diffLayoutPreference = useUIStore((state) => state.diffLayoutPreference);
-    const diffFileLayout = useUIStore((state) => state.diffFileLayout);
-    const setDiffFileLayout = useUIStore((state) => state.setDiffFileLayout);
-    const diffWrapLinesStore = useUIStore((state) => state.diffWrapLines);
-    const setDiffWrapLines = useUIStore((state) => state.setDiffWrapLines);
-    const diffViewMode = useUIStore((state) => state.diffViewMode);
-    const setDiffViewMode = useUIStore((state) => state.setDiffViewMode);
-    const openContextFileAtLine = useUIStore((state) => state.openContextFileAtLine);
+    const pendingDiffFile = useContextPanelStore((state) => state.pendingDiffFile);
+    const setPendingDiffFile = useContextPanelStore((state) => state.setPendingDiffFile);
+    const diffLayoutPreference = useDiffPreferencesStore((state) => state.diffLayoutPreference);
+    const diffFileLayout = useDiffPreferencesStore((state) => state.diffFileLayout);
+    const setDiffFileLayout = useDiffPreferencesStore((state) => state.setDiffFileLayout);
+    const diffWrapLinesStore = useDiffPreferencesStore((state) => state.diffWrapLines);
+    const setDiffWrapLines = useDiffPreferencesStore((state) => state.setDiffWrapLines);
+    const diffViewMode = useDiffPreferencesStore((state) => state.diffViewMode);
+    const setDiffViewMode = useDiffPreferencesStore((state) => state.setDiffViewMode);
+    const openContextFileAtLine = useContextPanelStore((state) => state.openContextFileAtLine);
     const diffWrapLines = diffWrapLinesStore;
 
     const isStackedView = diffViewMode === 'stacked';

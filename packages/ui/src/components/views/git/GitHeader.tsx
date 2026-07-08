@@ -24,7 +24,7 @@ import { BranchSelector } from './BranchSelector';
 import { WorktreeBranchDisplay } from './WorktreeBranchDisplay';
 import { SyncActions } from './SyncActions';
 import type { GitStatus, GitIdentityProfile, GitRemote } from '@/lib/api/types';
-import { useUIStore } from '@/stores/useUIStore';
+import { useRuntimeStore } from '@/stores/useRuntimeStore';
 
 type SyncAction = 'fetch' | 'pull' | 'push' | null;
 
@@ -210,7 +210,7 @@ export const GitHeader: React.FC<GitHeaderProps> = ({
   isWorktreeMode,
   onOpenHistory,
 }) => {
-  const isMobile = useUIStore((state) => state.isMobile);
+  const isMobile = useRuntimeStore((state) => state.isMobile);
 
   if (!status) {
     return null;

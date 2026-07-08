@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Part } from '@/lib/opencode/client';
 import type { ContentChangeReason } from '@/components/chat/timeline/types';
-import { useUIStore } from '@/stores/useUIStore';
+import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
 import { ReasoningTimelineBlock } from './ReasoningPart';
 
 type PartWithText = Part & { text?: string; content?: string; time?: { start?: number; end?: number } };
@@ -30,7 +30,7 @@ const JustificationBlock: React.FC<JustificationBlockProps> = ({
     messageId,
     onContentChange,
 }) => {
-    const chatRenderMode = useUIStore((state) => state.chatRenderMode);
+    const chatRenderMode = useChatRenderingStore((state) => state.chatRenderMode);
     const partWithText = part as PartWithText;
     const rawText = partWithText.text || partWithText.content || '';
     const textContent = React.useMemo(() => cleanJustificationText(rawText), [rawText]);
