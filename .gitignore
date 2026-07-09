@@ -27,7 +27,7 @@ local-dev*
 *.njsproj
 *.sln
 *.sw?
-.opencode/plans/*
+.opencode/
 .hive
 docs/personal/*
 scripts/rebuild-and-restart.sh

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "vault": {
+      "type": "local",
+      "command": [
+        "uvx",
+        "--from",
+        "markdown-vault-mcp[all]",
+        "markdown-vault-mcp",
+        "serve"
+      ],
+      "environment": {
+        "MARKDOWN_VAULT_MCP_SOURCE_DIR": "/mnt/c/Users/Admin/Documents/obsidian-vault/Projects/openchamber",
+        "MARKDOWN_VAULT_MCP_READ_ONLY": "false",
+        "MARKDOWN_VAULT_MCP_EXCLUDE": "_templates/**"
+      }
+    }
+  },
+  "instructions": ["AGENTS.md"]
+}
