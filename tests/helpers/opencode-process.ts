@@ -180,13 +180,15 @@ async function waitForChildFailure(child: ReturnType<typeof spawn>): Promise<nev
   })
 }
 
-async function waitForHttp(baseUrl: string, timeoutMs: number): Promise<void> {
+export async function waitForHttp(baseUrl: string, timeoutMs: number): Promise<void> {
   const deadline = Date.now() + timeoutMs
   let lastError: unknown
   while (Date.now() < deadline) {
     for (const urlPath of ["/health", "/"]) {
       try {
-        const response = await fetch(`${baseUrl}${urlPath}`)
+        const response = await fetch(`${baseUrl}${urlPath}`, {
+          signal: AbortSignal.timeout(2_000),
+        })
         if (response.status < 500) return
       } catch (error) {
         lastError = error

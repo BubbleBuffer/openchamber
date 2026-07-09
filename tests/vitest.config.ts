@@ -3,7 +3,7 @@ import { defineConfig } from "vitest/config"
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["opencode/**/*.test.ts", "web/**/*.test.ts"],
+    include: ["opencode/**/*.test.ts", "web/**/*.test.ts", "helpers/**/*.test.ts"],
     testTimeout: 60_000,
     hookTimeout: 60_000,
     pool: "forks",
