@@ -1,8 +1,72 @@
+---
+kind: spec
+status: active
+id: lint-integration-readiness
+created: 2026-07-09
+updated: 2026-07-10
+---
+
 # Lint & Integration Readiness — Design Spec
 
 > **Status:** Approved design (user-approved 2026-07-09). Ready for subplan decomposition.
 > **Branch:** `feature/lint-integration-readiness`
 > **Baseline commit:** `7f82984c` on `main`
+
+---
+
+## Implementation Chunks
+
+### Chunk: integration-startup-readiness
+Status: complete
+Goal: Bound startup readiness polling so a non-responsive OpenCode HTTP socket cannot consume an entire integration-test hook timeout.
+Acceptance:
+- `waitForHttp()` bounds every readiness fetch with `AbortSignal.timeout(2_000)`.
+- `test:opencode`, `test:web`, and `test:integration` pass without startup hook timeouts.
+
+### Chunk: mechanical-route-type-cleanup
+Status: planned
+Goal: Remove low-risk Express handler annotations and local route-runtime type escapes without changing request handling.
+Acceptance:
+- Route app, request, response, and next parameters use Express types.
+- Local runtime objects and error values use concrete, narrowly-scoped types or `unknown` with narrowing.
+- No route handler behavior changes and no new lint suppressions.
+
+### Chunk: local-safe-any-cleanup
+Status: planned
+Goal: Remove isolated `any` usage where concrete local types or `unknown` narrowing are directly derivable.
+Acceptance:
+- Small server-side helpers use concrete types or safe narrowing.
+- Intentional permissive test mocks are not weakened with unsafe substitute types.
+
+### Chunk: git-service-typing
+Status: planned
+Goal: Type internal Git service helpers, callbacks, and result adapters without changing Git behavior.
+Acceptance:
+- `git/service.ts` no longer uses `any` for internal helper contracts where its call sites define the shape.
+
+### Chunk: github-octokit-typing
+Status: planned
+Goal: Replace GitHub API `any` usage with Octokit and local PR metadata types.
+Acceptance:
+- GitHub routes and PR status code use concrete response shapes or safe `unknown` narrowing.
+
+### Chunk: server-bootstrap-typing
+Status: planned
+Goal: Type server bootstrap runtime references and Proxy adapters.
+Acceptance:
+- `index.ts` runtime aggregation and proxy access use explicit adapter interfaces.
+
+### Chunk: auth-settings-boundary-typing
+Status: planned
+Goal: Establish localized WebAuthn and settings API boundary types.
+Acceptance:
+- UI auth and settings code use concrete schema or narrowly-scoped adapter types.
+
+### Chunk: remaining-lint-errors
+Status: planned
+Goal: Remove non-`any` lint errors after type cleanup.
+Acceptance:
+- Remaining blocking lint rules are resolved without blanket rule suppression.
 
 ---
 
@@ -248,13 +312,14 @@ This spec is expected to decompose into multiple implementation plans. Suggested
 
 | Subplan | Phases | Rationale |
 |---------|--------|-----------|
-| **A: Integration Readiness** | Phase 1 | Standalone, unblocks all test runs, small and focused |
-| **B: Mechanical `any` Cleanup** | Phases 2 + 3 + themes.ts + test mocks | Low-risk bulk; ~121 errors; one implementer can do this |
-| **C: Git Service Typing** | Phase 4 | Largest single file (140 errors); isolated to one file; needs call-site analysis |
-| **D: GitHub/Octokit Typing** | Phase 5 | Two files, shared Octokit type knowledge |
-| **E: Server Bootstrap** | Phase 6 | One file, Proxy complexity, may need adapter types |
-| **F: UI Auth + Settings Boundary** | Phases 7 + 8 | Smallest cluster + highest-risk schema work; ~35 errors |
-| **G: Remaining Non-`any` Errors** | Phase 9 | Mechanical sweep to 0 errors |
+| **A: Integration Readiness** | `integration-startup-readiness` | Complete — unblocked all integration test runs |
+| **B: Mechanical Route Types** | `mechanical-route-type-cleanup` | Low-risk Express annotations and local route-runtime types; intentionally excludes dependency interfaces |
+| **C: Local Safe Types** | `local-safe-any-cleanup` | Isolated, directly-derivable types and safe `unknown` narrowing |
+| **D: Git Service Typing** | `git-service-typing` | Largest single file; needs call-site analysis |
+| **E: GitHub/Octokit Typing** | `github-octokit-typing` | Two files, shared Octokit type knowledge |
+| **F: Server Bootstrap** | `server-bootstrap-typing` | Proxy complexity; may need adapter types |
+| **G: Auth + Settings Boundaries** | `auth-settings-boundary-typing` | WebAuthn and settings schema work |
+| **H: Remaining Lint Errors** | `remaining-lint-errors` | Mechanical sweep to 0 blocking errors |
 
 Each subplan should be independently verifiable and committable.
 
