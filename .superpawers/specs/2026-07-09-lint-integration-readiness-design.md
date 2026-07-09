@@ -63,7 +63,7 @@ The work is ordered to unblock the integration feedback loop first, then attack 
 
 ## 5. Phase 1 — Integration Startup Readiness
 
-**Problem:** `tests/helpers/opencode-process.ts:183-197` — `waitForHttp()` calls `fetch()` without a per-request timeout. A single stuck fetch (TCP SYN retransmit while `opencode serve` binds but doesn't yet serve) blocks for 21–127s, making the outer deadline loop ineffective.
+**Problem:** `tests/helpers/opencode-process.ts:183-198` — `waitForHttp()` calls `fetch()` without a per-request timeout. A single stuck fetch (TCP SYN retransmit while `opencode serve` binds but doesn't yet serve) blocks for 21–127s, making the outer deadline loop ineffective.
 
 **Fix:** Add `AbortSignal.timeout(2_000)` to each `fetch()` call. This is a 2-line insertion. `AbortSignal.timeout()` is native in Node ≥19; the project requires ≥20.
 
@@ -202,7 +202,7 @@ async function waitForHttp(baseUrl: string, timeoutMs: number): Promise<void> {
 
 ---
 
-## 13. Phase 9 — Remaining Non-`any` Lint Errors (~131 errors)
+## 13. Phase 9 — Remaining Non-`any` Lint Errors (~154 errors)
 
 After all `any` is eliminated, clear the remaining blocking errors:
 
@@ -211,11 +211,11 @@ After all `any` is eliminated, clear the remaining blocking errors:
 | `no-unused-vars` | 112 | Remove dead imports. ~20 test files + store/component files. | Low (mechanical) |
 | `ban-ts-comment` | 10 | `@ts-ignore` → `@ts-expect-error` in `open-code-runtime.ts` (7), `git/service.ts` (3) | Low |
 | `no-unsafe-function-type` | 10 | `Function` → explicit callback signatures in `bootstrap/types.ts` | Low |
-| `no-empty` | 7 | Add comments or remove empty blocks in `shutdown-runtime.ts`, `openchamber-routes.ts`, `server-utils/proxy.ts` | Low |
+| `no-empty` | 9 | Add comments or remove empty blocks in `shutdown-runtime.ts`, `openchamber-routes.ts`, `server-utils/proxy.ts` | Low |
 | `no-empty-object-type` | 2 | `interface Deps {}` → typed or `Record<string, never>` in `git/routes.ts`, `github/routes.ts` | Low |
 | `no-require-imports` | 2 | Convert to ESM imports | Low |
 | `react-hooks/rules-of-hooks` | 2 | Move `useState`/`useMemo` before early return in `MobileSessionStatusBar.tsx:1462-1463` | Medium (hook ordering correctness) |
-| `prefer-const` | 3 | `let` → `const` | Low |
+| `prefer-const` | 5 | `let` → `const` | Low |
 | `no-extra-boolean-cast` | 1 | Remove redundant `!!` | Low |
 | `no-useless-escape` | 1 | Remove unnecessary escape | Low |
 | `tests/react/mocks/tanstack-react-virtual.ts` (6 `any`) | 6 | Type the mock | Low |
