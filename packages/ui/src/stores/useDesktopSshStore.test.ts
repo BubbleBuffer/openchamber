@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "bun:test";
+import type { DesktopSshInstanceStatus } from "@/lib/desktop/desktopSsh";
 import { useDesktopSshStore } from "./useDesktopSshStore";
 
 describe("useDesktopSshStore", () => {
@@ -27,12 +28,17 @@ describe("useDesktopSshStore", () => {
 
   it("getStatus returns null for unknown id, returns entry for known id", () => {
     expect(useDesktopSshStore.getState().getStatus("nope")).toBe(null);
-    useDesktopSshStore.setState({
-      statusesById: { known: { id: "known", status: "connected" } as never },
-    });
-    expect(useDesktopSshStore.getState().getStatus("known")).toEqual({
+    const status: DesktopSshInstanceStatus = {
       id: "known",
-      status: "connected",
+      phase: "ready",
+      startedByUs: true,
+      retryAttempt: 0,
+      requiresUserAction: false,
+      updatedAtMs: 1,
+    };
+    useDesktopSshStore.setState({
+      statusesById: { known: status },
     });
+    expect(useDesktopSshStore.getState().getStatus("known")).toEqual(status);
   });
 });

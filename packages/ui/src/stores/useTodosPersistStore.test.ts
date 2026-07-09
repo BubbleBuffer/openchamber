@@ -5,10 +5,10 @@ ensureDom();
 import { describe, it, expect, beforeEach } from "bun:test";
 
 const { useTodosPersistStore } = await import("./useTodosPersistStore");
-const { Todo } = await import("@/lib/opencode/client");
+import type * as ClientModule from "@/lib/opencode/client";
+type Todo = ClientModule.Todo;
 
-const makeTodo = (id: string): InstanceType<typeof Todo> | any => ({
-  id,
+const makeTodo = (id: string): Todo => ({
   content: `task ${id}`,
   status: "pending",
   priority: "medium",

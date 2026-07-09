@@ -5,8 +5,11 @@ ensureDom();
 import { describe, it, expect, beforeEach } from "bun:test";
 
 const { useInlineCommentDraftStore } = await import("./useInlineCommentDraftStore");
+import type { InlineCommentDraft } from "./useInlineCommentDraftStore";
 
-const makeDraft = (overrides: Partial<any> = {}): any => ({
+const makeDraft = (
+  overrides: Partial<Omit<InlineCommentDraft, "id" | "createdAt">> = {},
+): Omit<InlineCommentDraft, "id" | "createdAt"> => ({
   sessionKey: "sess-1",
   source: "diff",
   fileLabel: "foo.ts",

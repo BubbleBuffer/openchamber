@@ -69,7 +69,7 @@ describe('resolveDesktopBootView', () => {
         isDesktopShell: true,
         bootOutcome: { target: 'local', status: 'unreachable' },
       }),
-    ).toEqual({ screen: 'recovery', variant: 'local-unreachable' });
+    ).toEqual({ screen: 'recovery', variant: 'local-unavailable' });
   });
 
   test('returns recovery view for remote missing', () => {
@@ -255,11 +255,11 @@ describe('getInjectedBootOutcome', () => {
     }
   });
 
-  test('returns valid outcome for well-formed main-local', () => {
+  test('returns valid outcome for well-formed local ok', () => {
     const w = mockWindow();
-    w.__OPENCHAMBER_DESKTOP_BOOT_OUTCOME__ = { kind: 'main-local' };
+    w.__OPENCHAMBER_DESKTOP_BOOT_OUTCOME__ = { target: 'local', status: 'ok' };
     try {
-      expect(getInjectedBootOutcome()).toEqual({ kind: 'main-local' });
+      expect(getInjectedBootOutcome()).toEqual({ target: 'local', status: 'ok' });
     } finally {
       restoreWindow();
     }

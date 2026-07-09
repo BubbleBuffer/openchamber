@@ -976,7 +976,7 @@ const handleLocalApiRequest = async (url: URL, init?: RequestInit) => {
 };
 
 const originalFetch = window.fetch.bind(window);
-window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+const interceptedFetch: typeof window.fetch = Object.assign(async (input: RequestInfo | URL, init?: RequestInit) => {
   const targetUrl = typeof input === 'string' || input instanceof URL ? normalizeUrl(input) : normalizeUrl((input as Request).url);
   const method = (init?.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
 
@@ -1106,7 +1106,8 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   }
 
   return originalFetch(input as RequestInfo, init);
-};
+}, window.fetch);
+window.fetch = interceptedFetch;
 
 // Listen for addToContext command from extension
 onCommand('addToContext', (payload) => {

@@ -2,7 +2,7 @@
 
 > Living overview of the radical refactor program. Source of truth for "what's done / in flight / next".
 > Deep design lives in `.superpawers/specs/`. Per-task plans live in `.superpawers/plans/`.
-> Last updated: 2026-06-25 (Slice 1 integration test workspace complete).
+> Last updated: 2026-06-28 (testing-expansion cleanup + 68 store tests).
 
 ## Status snapshot
 
@@ -103,6 +103,13 @@ Specs:
 
 ## Housekeeping — recent cleanup (2026-06-25)
 
+### Testing expansion (2026-06-26 → 2026-06-27) — 5 integration slices + 68 store tests + react component tests + perf benchmarks
+- [x] **Integration test slices 2–5** added on top of Slice 1: `web/lifecycle-auth.test.ts`, `web/project-bootstrap.test.ts`, `web/session-mutations.test.ts`, `web/liveness-fix.test.ts` (the last has a pre-existing flake unrelated to this work)
+- [x] **Store unit tests** — 15 new test files under `packages/ui/src/stores/`, exercising persistence, mock-module, draft lifecycle, queue order, multi-run, ssh, dialog, feature flags, magic prompts, update, todos, commands, context, file, sessions, permissions. 68 tests, ~1.1s.
+- [x] **React critical component tests** — ChatErrorBoundary, autocomplete utils, composer slash/submit/draft/drop, turns window, bridge adapters, event normalizer, restoration, machines, onboarding, desktop boot, deprecation, phase3 allowlist.
+- [x] **Perf benchmarks** under `tests/bench/`.
+- [x] **Real Bun test types wired for UI tests** — packages that type-check UI source (`packages/ui`, `packages/web`, VS Code webview) now use real `@types/bun` via their tsconfig `types` allowlists; the local `packages/ui/src/types/bun-test.d.ts` shim was deleted. happy-dom Window/Document cast made structural in `packages/ui/src/stores/utils/setupDom.ts`.
+
 ### Branches dropped (14)
 - [x] feature/chat-adapter-modularization-spec
 - [x] feature/gemini-theme-engine
@@ -144,10 +151,11 @@ Specs:
 ## Verification baseline
 
 ```bash
-bun run type-check           # ✅ clean (all packages + server TS)
+bun run type-check           # ⚠ fails only in @openchamber/tests due pre-existing UI ambient gaps (`__OPENCHAMBER_*__`, `import.meta.env`/`glob`, `?worker&url`, `?raw`); ui/web/electron/vscode/session-state clean
 bun run type-check:server    # ✅ clean
-bun run lint                 # ⚠ 804 pre-existing errors / warnings — none new from this session
-bun run test                 # 199 / 201 pass (2 pre-existing bootstrap failures, unrelated)
+bun run lint                 # ⚠ not clean: UI has 1 pre-existing `activeTransport` error + 787 warnings; VS Code has 0 errors + 113 warnings; web lint currently reports pre-existing server lint debt
+bun run test:stores          # ✅ 68 / 68 pass (15 store test files, ~1.1s)
+bun run test:integration     # ⚠ 50 / 54 pass (1 pre-existing liveness-fix test failure; 4 skipped)
 ```
 
 ## Out of scope for the rework (tracked elsewhere)

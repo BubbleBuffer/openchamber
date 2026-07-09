@@ -8,7 +8,7 @@ describe("ChatErrorBoundary", () => {
     const error = new Error("test chat error")
     const nextState = (ChatErrorBoundary as unknown as { getDerivedStateFromError: (e: Error) => unknown }).getDerivedStateFromError(error)
     expect(nextState).toEqual({ hasError: true, error })
-    const captureSpy = vi.spyOn(Sentry, "captureException").mockImplementation(() => undefined)
+    const captureSpy = vi.spyOn(Sentry, "captureException").mockImplementation(() => "test-event-id")
     boundary.componentDidCatch(error, { componentStack: "\n    at ChatMessage\n    at div" } as React.ErrorInfo)
     expect(captureSpy).toHaveBeenCalledWith(error, expect.objectContaining({
       extra: expect.objectContaining({ source: 'ChatErrorBoundary', sessionId: 'test-session' }),

@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["@types/dom-speech-recognition", "node"],
+    "types": ["@types/dom-speech-recognition", "node", "bun"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "moduleDetection": "force",

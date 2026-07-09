@@ -26,6 +26,6 @@ describe("persist-cache quota recovery", () => {
     }
     writeCache(dir, "vcs", { branch: "main" })
     localStorage.setItem = originalSetItem
-    expect(readCache(dir, "vcs")).toEqual({ branch: "main" })
+    expect(readCache<{ branch: string }>(dir, "vcs")).toEqual({ branch: "main" })
   })
 })
