@@ -965,16 +965,15 @@ export function registerGitRoutes(app: Express): void {
   app.get("/api/git/commit-files", async (req: Request, res: Response) => {
     const { getCommitFiles } = await getGitLibraries();
     try {
-      const queryDirectory = typeof req.query.directory === 'string' ? req.query.directory : '';
-      const queryHash = typeof req.query.hash === 'string' ? req.query.hash : '';
-      if (!queryDirectory) {
+      const { directory, hash } = req.query;
+      if (!directory) {
         return res.status(400).json({ error: "directory parameter is required" });
       }
-      if (!queryHash) {
+      if (!hash) {
         return res.status(400).json({ error: "hash parameter is required" });
       }
 
-      const result = await getCommitFiles(queryDirectory, queryHash);
+      const result = await getCommitFiles(directory as string, hash as string);
       res.json(result);
     } catch (error) {
       console.error("Failed to get commit files:", error);
