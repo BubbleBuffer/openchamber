@@ -1,12 +1,12 @@
 ---
 kind: plan
-status: active
+status: complete
 parent_spec: .superpawers/specs/2026-07-09-lint-integration-readiness-design.md
 covers_chunks:
   - local-safe-any-cleanup
 created: 2026-07-10
 updated: 2026-07-10
-next_action: "Execute Task 1"
+next_action: "Plan the next uncovered chunk (git-service-typing)"
 ---
 
 # Local Safe `any` Cleanup Implementation Plan

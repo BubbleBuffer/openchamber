@@ -32,7 +32,7 @@ Acceptance:
 - No route handler behavior changes and no new lint suppressions.
 
 ### Chunk: local-safe-any-cleanup
-Status: planned
+Status: complete
 Goal: Remove isolated `any` usage where concrete local types or `unknown` narrowing are directly derivable.
 Acceptance:
 - Small server-side helpers use concrete types or safe narrowing.
