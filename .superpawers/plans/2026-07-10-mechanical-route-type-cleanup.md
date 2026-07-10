@@ -1,12 +1,12 @@
 ---
 kind: plan
-status: active
+status: complete
 parent_spec: .superpawers/specs/2026-07-09-lint-integration-readiness-design.md
 covers_chunks:
   - mechanical-route-type-cleanup
 created: 2026-07-10
 updated: 2026-07-10
-next_action: "Execute Task 1"
+next_action: "Plan the remaining mechanical-route subset"
 ---
 
 # Mechanical Route Type Cleanup Implementation Plan
@@ -48,7 +48,7 @@ It does **not** cover `domains/routes/routes.ts`, `feature-routes-runtime.ts`, `
 - Modify: `packages/web/server/src/domains/routes/core-routes.ts` — anchors `registerServerStatusRoutes`, `registerAuthAndAccessRoutes`, `registerSettingsUtilityRoutes`, and `registerCommonRequestMiddleware`.
 - Modify: `packages/web/server/src/domains/routes/static-routes.ts` — anchor `createStaticRoutesRuntime`.
 
-- [ ] **Step 1: Establish the focused lint baseline**
+- [x] **Step 1: Establish the focused lint baseline**
 
 Run from `packages/web`:
 
@@ -60,7 +60,7 @@ npx eslint --config ../../eslint.config.js \
 
 Expected: exit 1 with 50 `@typescript-eslint/no-explicit-any` errors (49 in `core-routes.ts`, 1 in `static-routes.ts`) and warning-only complexity findings.
 
-- [ ] **Step 2: Apply the type-only route signatures**
+- [x] **Step 2: Apply the type-only route signatures**
 
 Add a type-only Express import to `core-routes.ts`. Type the `app` parameters as `Express`; type every handler and middleware argument as `Request`, `Response`, or `NextFunction` matching its existing position. Keep handler bodies and registration order unchanged.
 
@@ -109,7 +109,7 @@ export function createStaticRoutesRuntime(
 }
 ```
 
-- [ ] **Step 3: Inspect the focused diff**
+- [x] **Step 3: Inspect the focused diff**
 
 Run:
 
@@ -119,7 +119,7 @@ git diff -- packages/web/server/src/domains/routes/core-routes.ts packages/web/s
 
 Expected: only the Express type import, function/handler annotations, unknown-safe shutdown error access, and static factory return type changed; route paths, handler bodies, and middleware order remain intact.
 
-- [ ] **Step 4: Verify the focused lint and server type-check pass**
+- [x] **Step 4: Verify the focused lint and server type-check pass**
 
 Run from `packages/web`:
 
@@ -137,7 +137,7 @@ bun run --cwd packages/web type-check:server
 
 Expected: focused lint exits 0 errors (warnings may remain); server type-check exits 0.
 
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
 
 ```bash
 git add packages/web/server/src/domains/routes/core-routes.ts packages/web/server/src/domains/routes/static-routes.ts
@@ -150,7 +150,7 @@ git commit -m "fix(lint): type core route registration"
 - Modify: `packages/web/server/src/domains/routes/openchamber-routes.ts` — anchors `storedOptions`, the two model-metadata `catch` blocks, and empty cleanup catches.
 - Modify: `packages/web/server/src/domains/git/routes.ts` — anchors `GitRoutesDeps`, `registerGitRoutes`, `gitLibraries`, and `/api/git/discover-credentials`.
 
-- [ ] **Step 1: Establish the focused lint baseline**
+- [x] **Step 1: Establish the focused lint baseline**
 
 Run from `packages/web`:
 
@@ -162,7 +162,7 @@ npx eslint --config ../../eslint.config.js \
 
 Expected: exit 1 with the existing `no-explicit-any`, unused destructured local, and empty-catch errors in `openchamber-routes.ts`, plus `no-explicit-any`, empty-object-type, and unused-parameter errors in `git/routes.ts`. Warning-only complexity/max-lines findings may remain.
 
-- [ ] **Step 2: Replace local casts with narrow local types and remove local lint debt**
+- [x] **Step 2: Replace local casts with narrow local types and remove local lint debt**
 
 In `openchamber-routes.ts`, add a module-local `RestartOptions` shape with `port`, `daemon`, optional `host`, and optional `uiPassword`. Declare `storedOptions` as that type, retaining the existing initial values and JSON read flow. Access `host` and `uiPassword` directly through the typed local value.
 
@@ -224,7 +224,7 @@ export function registerGitRoutes(app: Express): void {
 }
 ```
 
-- [ ] **Step 3: Inspect the focused diff**
+- [x] **Step 3: Inspect the focused diff**
 
 Run:
 
@@ -234,7 +234,7 @@ git diff -- packages/web/server/src/domains/routes/openchamber-routes.ts package
 
 Expected: only local type declarations/narrowing, direct typed property access, removal of unused/empty constructs, and typed dynamic module cache changes. No endpoint paths, response payloads, commands, or update/restart control flow changes.
 
-- [ ] **Step 4: Verify the focused lint and server type-check pass**
+- [x] **Step 4: Verify the focused lint and server type-check pass**
 
 Run from `packages/web`:
 
@@ -252,7 +252,7 @@ bun run --cwd packages/web type-check:server
 
 Expected: focused lint exits 0 errors (warnings may remain); server type-check exits 0.
 
-- [ ] **Step 5: Commit Task 2**
+- [x] **Step 5: Commit Task 2**
 
 ```bash
 git add packages/web/server/src/domains/routes/openchamber-routes.ts packages/web/server/src/domains/git/routes.ts
@@ -264,7 +264,7 @@ git commit -m "fix(lint): type local route runtime escapes"
 **Files:**
 - Modify: `.superpawers/plans/2026-07-10-mechanical-route-type-cleanup.md` — after verification, mark this subset plan complete, update `next_action`, and check off completed steps.
 
-- [ ] **Step 1: Run the full four-file focused lint gate**
+- [x] **Step 1: Run the full four-file focused lint gate**
 
 Run from `packages/web`:
 
@@ -278,7 +278,7 @@ npx eslint --config ../../eslint.config.js \
 
 Expected: exit 0 with 0 errors. Existing complexity and max-lines warnings may remain.
 
-- [ ] **Step 2: Run the server and repository type-check gates**
+- [x] **Step 2: Run the server and repository type-check gates**
 
 Run:
 
@@ -289,7 +289,7 @@ bun run type-check
 
 Expected: both commands exit 0.
 
-- [ ] **Step 3: Confirm no route-registration behavior changed**
+- [x] **Step 3: Confirm no route-registration behavior changed**
 
 Run:
 
@@ -299,11 +299,11 @@ git diff 7f82984c..HEAD -- packages/web/server/src/domains/routes/core-routes.ts
 
 Expected: all differences are type annotations, local narrowing helpers/shapes, or removal of unused lint debt; route paths, HTTP methods, response payloads, and handler ordering are unchanged. Do not add a behavior-specific test unless this inspection finds a runtime edit.
 
-- [ ] **Step 4: Mark this subset plan complete**
+- [x] **Step 4: Mark this subset plan complete**
 
 Leave `mechanical-route-type-cleanup` in the parent spec as `Status: planned`: deferred route modules still belong to that chunk. Set this plan frontmatter to `status: complete`, `updated: 2026-07-10`, and `next_action: "Plan the remaining mechanical-route subset"`; check off all plan steps.
 
-- [ ] **Step 5: Commit completion metadata**
+- [x] **Step 5: Commit completion metadata**
 
 ```bash
 git add .superpawers/plans/2026-07-10-mechanical-route-type-cleanup.md
