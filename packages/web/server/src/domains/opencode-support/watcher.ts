@@ -4,6 +4,18 @@ import type {
   OpenCodeWatcherDeps,
 } from "./types.js";
 
+const unknownMessage = (err: unknown): string | undefined => {
+  if (err && typeof err === "object") {
+    const obj = err as Record<string, unknown>;
+    if (obj.error && typeof obj.error === "object") {
+      const nested = obj.error as Record<string, unknown>;
+      if (typeof nested.message === "string") return nested.message;
+    }
+    if (typeof obj.message === "string") return obj.message;
+  }
+  return undefined;
+};
+
 export const createOpenCodeWatcherRuntime = (
   deps: OpenCodeWatcherDeps,
 ): OpenCodeWatcherRuntime => {
@@ -65,9 +77,7 @@ export const createOpenCodeWatcherRuntime = (
         if (status.type === "error" || status.type === "initial-error") {
           console.warn(
             "[PushWatcher] disconnected",
-            (status.error as any)?.error?.message ??
-              (status.error as any)?.message ??
-              status.error,
+            unknownMessage(status.error) ?? status.error,
           );
         }
       });
@@ -98,9 +108,7 @@ export const createOpenCodeWatcherRuntime = (
         }
         console.warn(
           "[PushWatcher] disconnected",
-          (error as any)?.error?.message ??
-            (error as any)?.message ??
-            error,
+          unknownMessage(error) ?? error,
         );
       },
     });

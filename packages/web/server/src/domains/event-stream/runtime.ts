@@ -26,6 +26,7 @@ import { acceptDirectoryMessageStreamWsConnection } from "./directory-ws-bridge.
 import { createNotificationEmitterRuntime } from "../notifications/emitter.js";
 import { createPushRuntime } from "../notifications/push-runtime.js";
 import { createOpenCodeWatcherRuntime } from "../opencode-support/watcher.js";
+import type { OpenCodeWatcherRuntime } from "../opencode-support/types.js";
 import { EVENTS } from "../core/events.js";
 import { createBoundedSet } from "../core/bounded-cache.js";
 
@@ -290,9 +291,8 @@ export const createEventStreamRuntime = (deps: any) => {
   const ensureGlobalWatcherStarted = async (): Promise<any> => {
     if (globalWatcherStartPromise) return globalWatcherStartPromise;
     globalWatcherStartPromise = (async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const watcher: any = createOpenCodeWatcherRuntime({
-        waitForOpenCodePort: null as any,
+      const watcher: OpenCodeWatcherRuntime = createOpenCodeWatcherRuntime({
+        waitForOpenCodePort: async () => {},
         getOpenCodeRuntime: openCodeRuntime,
         globalEventHub: globalMessageStreamHub,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
