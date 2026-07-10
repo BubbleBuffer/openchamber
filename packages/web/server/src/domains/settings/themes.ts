@@ -11,8 +11,9 @@ export function createThemeRuntime(deps: ThemeRuntimeDeps): ThemeRuntime {
       return null;
     }
 
-    const metadata = (raw as any).metadata && typeof (raw as any).metadata === "object" ? (raw as any).metadata : null;
-    const colors = (raw as any).colors && typeof (raw as any).colors === "object" ? (raw as any).colors : null;
+    const r = (raw ?? {}) as Record<string, unknown>;
+    const metadata = r.metadata && typeof r.metadata === "object" ? r.metadata as Record<string, unknown> : null;
+    const colors = r.colors && typeof r.colors === "object" ? r.colors as Record<string, unknown> : null;
     if (!metadata || !colors) {
       return null;
     }
@@ -24,13 +25,13 @@ export function createThemeRuntime(deps: ThemeRuntimeDeps): ThemeRuntime {
       return null;
     }
 
-    const primary = colors.primary;
-    const surface = colors.surface;
-    const interactive = colors.interactive;
-    const status = colors.status;
-    const syntax = colors.syntax;
-    const syntaxBase = syntax && typeof syntax === "object" ? syntax.base : null;
-    const syntaxHighlights = syntax && typeof syntax === "object" ? syntax.highlights : null;
+    const primary = colors.primary as Record<string, unknown>;
+    const surface = colors.surface as Record<string, unknown>;
+    const interactive = colors.interactive as Record<string, unknown>;
+    const status = colors.status as Record<string, unknown>;
+    const syntax = colors.syntax as Record<string, unknown>;
+    const syntaxBase = syntax && typeof syntax === "object" ? syntax.base as Record<string, unknown> : null;
+    const syntaxHighlights = syntax && typeof syntax === "object" ? syntax.highlights as Record<string, unknown> : null;
 
     if (!primary || !surface || !interactive || !status || !syntaxBase || !syntaxHighlights) {
       return null;
@@ -133,13 +134,13 @@ export function createThemeRuntime(deps: ThemeRuntimeDeps): ThemeRuntime {
             continue;
           }
 
-          const id = (normalized as any).metadata?.id;
-          if (seen.has(id)) {
-            logger.warn(`[themes] Skip ${entry.name}: duplicate theme id "${id}"`);
+          const id = (normalized as { metadata?: { id?: string } }).metadata?.id;
+          if (seen.has(id!)) {
+            logger.warn(`[themes] Skip ${entry.name}: duplicate theme id "${id!}"`);
             continue;
           }
 
-          seen.add(id);
+          seen.add(id!);
           themes.push(normalized);
         } catch (error) {
           logger.warn(`[themes] Failed to read ${entry.name}:`, error);
@@ -149,7 +150,7 @@ export function createThemeRuntime(deps: ThemeRuntimeDeps): ThemeRuntime {
       return themes;
     } catch (error) {
       // Missing dir is fine.
-      if (error && typeof error === "object" && (error as any).code === "ENOENT") {
+      if (typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === "ENOENT") {
         return [];
       }
       logger.warn("[themes] Failed to list custom themes dir:", error);
