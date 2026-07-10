@@ -2,7 +2,7 @@ import type { Application, Request, Response } from "express";
 import type { StaticRoutesDeps } from "./types.js";
 import { registerPwaManifestRoute } from "./pwa-manifest.js";
 
-export function createStaticRoutesRuntime(deps: StaticRoutesDeps): any {
+export function createStaticRoutesRuntime(deps: StaticRoutesDeps): { registerStaticRoutes: (app: Application) => void } {
   const {
     fs,
     path,

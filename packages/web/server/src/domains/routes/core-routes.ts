@@ -1,6 +1,7 @@
+import type { Express, NextFunction, Request, Response } from "express";
 import type { CoreRoutesDeps, AuthRoutesDeps, SettingsUtilityRoutesDeps, CommonMiddlewareDeps } from "./types.js";
 
-export function registerServerStatusRoutes(app: any, deps: CoreRoutesDeps): void {
+export function registerServerStatusRoutes(app: Express, deps: CoreRoutesDeps): void {
   const {
     process,
     openchamberVersion,
@@ -10,7 +11,7 @@ export function registerServerStatusRoutes(app: any, deps: CoreRoutesDeps): void
     getHealthSnapshot,
   } = deps;
 
-  app.get('/health', (_req: any, res: any) => {
+  app.get('/health', (_req: Request, res: Response) => {
     res.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -18,14 +19,14 @@ export function registerServerStatusRoutes(app: any, deps: CoreRoutesDeps): void
     });
   });
 
-  app.post('/api/system/shutdown', (_req: any, res: any) => {
+  app.post('/api/system/shutdown', (_req: Request, res: Response) => {
     res.json({ ok: true });
-    gracefulShutdown({ exitProcess: true }).catch((error: any) => {
-      console.error('Shutdown request failed:', error?.message || error);
+    gracefulShutdown({ exitProcess: true }).catch((error: unknown) => {
+      console.error('Shutdown request failed:', error instanceof Error ? error.message : error);
     });
   });
 
-  app.get('/api/system/info', (_req: any, res: any) => {
+  app.get('/api/system/info', (_req: Request, res: Response) => {
     res.json({
       openchamberVersion,
       runtime: runtimeName,
@@ -35,12 +36,12 @@ export function registerServerStatusRoutes(app: any, deps: CoreRoutesDeps): void
   });
 }
 
-export function registerAuthAndAccessRoutes(app: any, deps: AuthRoutesDeps): void {
+export function registerAuthAndAccessRoutes(app: Express, deps: AuthRoutesDeps): void {
   const {
     uiAuthController,
   } = deps;
 
-  app.get('/auth/session', async (req: any, res: any) => {
+  app.get('/auth/session', async (req: Request, res: Response) => {
     try {
       await uiAuthController.handleSessionStatus(req, res);
     } catch {
@@ -48,23 +49,23 @@ export function registerAuthAndAccessRoutes(app: any, deps: AuthRoutesDeps): voi
     }
   });
 
-  app.post('/auth/session', (req: any, res: any) => {
+  app.post('/auth/session', (req: Request, res: Response) => {
     return uiAuthController.handleSessionCreate(req, res);
   });
 
-  app.get('/auth/passkey/status', (req: any, res: any) => {
+  app.get('/auth/passkey/status', (req: Request, res: Response) => {
     return uiAuthController.handlePasskeyStatus(req, res);
   });
 
-  app.post('/auth/passkey/authenticate/options', (req: any, res: any) => {
+  app.post('/auth/passkey/authenticate/options', (req: Request, res: Response) => {
     return uiAuthController.handlePasskeyAuthenticationOptions(req, res);
   });
 
-  app.post('/auth/passkey/authenticate/verify', (req: any, res: any) => {
+  app.post('/auth/passkey/authenticate/verify', (req: Request, res: Response) => {
     return uiAuthController.handlePasskeyAuthenticationVerify(req, res);
   });
 
-  app.post('/auth/passkey/register/options', async (req: any, res: any, next: any) => {
+  app.post('/auth/passkey/register/options', async (req: Request, res: Response, next: NextFunction) => {
     try {
       await uiAuthController.requireAuth(req, res, async () => {
         await uiAuthController.handlePasskeyRegistrationOptions(req, res);
@@ -74,7 +75,7 @@ export function registerAuthAndAccessRoutes(app: any, deps: AuthRoutesDeps): voi
     }
   });
 
-  app.post('/auth/passkey/register/verify', async (req: any, res: any, next: any) => {
+  app.post('/auth/passkey/register/verify', async (req: Request, res: Response, next: NextFunction) => {
     try {
       await uiAuthController.requireAuth(req, res, async () => {
         await uiAuthController.handlePasskeyRegistrationVerify(req, res);
@@ -84,7 +85,7 @@ export function registerAuthAndAccessRoutes(app: any, deps: AuthRoutesDeps): voi
     }
   });
 
-  app.get('/api/passkeys', async (req: any, res: any, next: any) => {
+  app.get('/api/passkeys', async (req: Request, res: Response, next: NextFunction) => {
     try {
       await uiAuthController.requireAuth(req, res, async () => {
         await uiAuthController.handlePasskeyList(req, res);
@@ -94,7 +95,7 @@ export function registerAuthAndAccessRoutes(app: any, deps: AuthRoutesDeps): voi
     }
   });
 
-  app.delete('/api/passkeys/:id', async (req: any, res: any, next: any) => {
+  app.delete('/api/passkeys/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
       await uiAuthController.requireAuth(req, res, async () => {
         await uiAuthController.handlePasskeyRevoke(req, res);
@@ -104,7 +105,7 @@ export function registerAuthAndAccessRoutes(app: any, deps: AuthRoutesDeps): voi
     }
   });
 
-  app.post('/api/auth/reset', async (req: any, res: any, next: any) => {
+  app.post('/api/auth/reset', async (req: Request, res: Response, next: NextFunction) => {
     try {
       await uiAuthController.requireAuth(req, res, async () => {
         await uiAuthController.handleResetAuth(req, res);
@@ -114,7 +115,7 @@ export function registerAuthAndAccessRoutes(app: any, deps: AuthRoutesDeps): voi
     }
   });
 
-  app.use('/api', async (req: any, res: any, next: any) => {
+  app.use('/api', async (req: Request, res: Response, next: NextFunction) => {
     try {
       await uiAuthController.requireAuth(req, res, next);
     } catch (err) {
@@ -123,14 +124,14 @@ export function registerAuthAndAccessRoutes(app: any, deps: AuthRoutesDeps): voi
   });
 }
 
-export function registerSettingsUtilityRoutes(app: any, deps: SettingsUtilityRoutesDeps): void {
+export function registerSettingsUtilityRoutes(app: Express, deps: SettingsUtilityRoutesDeps): void {
   const {
     readCustomThemesFromDisk,
     refreshOpenCodeAfterConfigChange,
     clientReloadDelayMs,
   } = deps;
 
-  app.get('/api/config/themes', async (_req: any, res: any) => {
+  app.get('/api/config/themes', async (_req: Request, res: Response) => {
     try {
       const customThemes = await readCustomThemesFromDisk();
       res.json({ themes: customThemes });
@@ -140,7 +141,7 @@ export function registerSettingsUtilityRoutes(app: any, deps: SettingsUtilityRou
     }
   });
 
-  app.post('/api/config/reload', async (_req: any, res: any) => {
+  app.post('/api/config/reload', async (_req: Request, res: Response) => {
     try {
       console.log('[Server] Manual configuration reload requested');
 
@@ -162,10 +163,10 @@ export function registerSettingsUtilityRoutes(app: any, deps: SettingsUtilityRou
   });
 }
 
-export function registerCommonRequestMiddleware(app: any, deps: CommonMiddlewareDeps): void {
+export function registerCommonRequestMiddleware(app: Express, deps: CommonMiddlewareDeps): void {
   const { express } = deps;
 
-  app.use((req: any, res: any, next: any) => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
     if (
       req.path.startsWith('/api/config/agents') ||
       req.path.startsWith('/api/config/commands') ||
@@ -193,7 +194,7 @@ export function registerCommonRequestMiddleware(app: any, deps: CommonMiddleware
 
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-  app.use((req: any, _res: any, next: any) => {
+  app.use((req: Request, _res: Response, next: NextFunction) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
     next();
   });
