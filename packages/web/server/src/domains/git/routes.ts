@@ -1,13 +1,9 @@
 import type { Express, Request, Response } from "express";
 
-export interface GitRoutesDeps {
-  // No external dependencies - git library is loaded dynamically via import()
-}
+export function registerGitRoutes(app: Express): void {
+  let gitLibraries: typeof import("./index.js") | null = null;
 
-export function registerGitRoutes(app: Express, _deps?: GitRoutesDeps): void {
-  let gitLibraries: { [key: string]: any } | null = null;
-
-  const getGitLibraries = async () => {
+  const getGitLibraries = async (): Promise<typeof import("./index.js")> => {
     if (!gitLibraries) {
       gitLibraries = await import("./index.js");
     }
@@ -51,7 +47,7 @@ export function registerGitRoutes(app: Express, _deps?: GitRoutesDeps): void {
   app.put("/api/git/identities/:id", async (req: Request, res: Response) => {
     const { updateProfile } = await getGitLibraries();
     try {
-      const profile = updateProfile(req.params.id, req.body);
+      const profile = updateProfile(req.params.id as string, req.body);
       console.log(`Updated git identity profile: ${profile.name} (${profile.id})`);
       res.json(profile);
     } catch (error) {
@@ -64,7 +60,7 @@ export function registerGitRoutes(app: Express, _deps?: GitRoutesDeps): void {
   app.delete("/api/git/identities/:id", async (req: Request, res: Response) => {
     const { deleteProfile } = await getGitLibraries();
     try {
-      deleteProfile(req.params.id);
+      deleteProfile(req.params.id as string);
       console.log(`Deleted git identity profile: ${req.params.id}`);
       res.json({ success: true });
     } catch (error) {
@@ -87,8 +83,7 @@ export function registerGitRoutes(app: Express, _deps?: GitRoutesDeps): void {
 
   app.get("/api/git/discover-credentials", async (_req: Request, res: Response) => {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { discoverGitCredentials } = await import("./index.js") as any;
+      const { discoverGitCredentials } = await getGitLibraries();
       const credentials = discoverGitCredentials();
       res.json(credentials);
     } catch (error) {
@@ -148,7 +143,7 @@ export function registerGitRoutes(app: Express, _deps?: GitRoutesDeps): void {
       if (!directory) {
         return res.status(400).json({ error: "directory parameter is required" });
       }
-      const remote = req.query.remote || "origin";
+      const remote = (req.query.remote as string | undefined) || "origin";
 
       const url = await getRemoteUrl(directory, remote);
       res.json({ url });
@@ -203,7 +198,7 @@ export function registerGitRoutes(app: Express, _deps?: GitRoutesDeps): void {
         return res.status(400).json({ error: "profileId is required" });
       }
 
-      let profile: { id: string; name: string; userName?: string | null; userEmail?: string | null; sshKey?: string | null } | null = null;
+      let profile: { id: string; name: string; userName?: string; userEmail?: string; sshKey?: string | null } | null = null;
 
       if (profileId === "global") {
         const globalIdentity = await getGlobalIdentity();
@@ -213,8 +208,8 @@ export function registerGitRoutes(app: Express, _deps?: GitRoutesDeps): void {
         profile = {
           id: "global",
           name: "Global Identity",
-          userName: globalIdentity.userName,
-          userEmail: globalIdentity.userEmail,
+          userName: globalIdentity.userName ?? undefined,
+          userEmail: globalIdentity.userEmail ?? undefined,
           sshKey: globalIdentity.sshCommand
             ? globalIdentity.sshCommand.replace("ssh -i ", "")
             : null,
@@ -955,9 +950,9 @@ export function registerGitRoutes(app: Express, _deps?: GitRoutesDeps): void {
       const { maxCount, from, to, file } = req.query;
       const log = await getLog(directory, {
         maxCount: typeof maxCount === 'string' ? parseInt(maxCount) : undefined,
-        from,
-        to,
-        file
+        from: from as string | undefined,
+        to: to as string | undefined,
+        file: file as string | undefined,
       });
       res.json(log);
     } catch (error) {
@@ -970,15 +965,16 @@ export function registerGitRoutes(app: Express, _deps?: GitRoutesDeps): void {
   app.get("/api/git/commit-files", async (req: Request, res: Response) => {
     const { getCommitFiles } = await getGitLibraries();
     try {
-      const { directory, hash } = req.query;
-      if (!directory) {
+      const queryDirectory = typeof req.query.directory === 'string' ? req.query.directory : '';
+      const queryHash = typeof req.query.hash === 'string' ? req.query.hash : '';
+      if (!queryDirectory) {
         return res.status(400).json({ error: "directory parameter is required" });
       }
-      if (!hash) {
+      if (!queryHash) {
         return res.status(400).json({ error: "hash parameter is required" });
       }
 
-      const result = await getCommitFiles(directory, hash);
+      const result = await getCommitFiles(queryDirectory, queryHash);
       res.json(result);
     } catch (error) {
       console.error("Failed to get commit files:", error);

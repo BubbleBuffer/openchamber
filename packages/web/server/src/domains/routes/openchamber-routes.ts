@@ -2,6 +2,19 @@ import type { Application, Request, Response } from "express";
 import type { OpenChamberRoutesDeps } from "./types.js";
 import { checkForUpdates, getUpdateCommand, detectPackageManagerDetails } from "../package-manager/index.js";
 
+type RestartOptions = {
+  port: number;
+  daemon: boolean;
+  host?: string;
+  uiPassword?: string;
+};
+
+const isAbortError = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  "name" in error &&
+  (error as { name?: unknown }).name === "AbortError";
+
 export function registerOpenChamberRoutes(app: Application, deps: OpenChamberRoutesDeps): void {
   const {
     fs,
@@ -13,7 +26,6 @@ export function registerOpenChamberRoutes(app: Application, deps: OpenChamberRou
     openchamberDataDir,
     modelsDevApiUrl,
     modelsMetadataCacheTtl,
-    readSettingsFromDiskMigrated,
     fetchFreeZenModels,
     getCachedZenModels,
   } = deps;
@@ -104,12 +116,11 @@ export function registerOpenChamberRoutes(app: Application, deps: OpenChamberRou
       const currentPort = server.address()?.port || 3000;
       const tmpDir = os.tmpdir();
       const instanceFilePath = path.join(tmpDir, `openchamber-${currentPort}.json`);
-      let storedOptions = { port: currentPort, daemon: true };
+      let storedOptions: RestartOptions = { port: currentPort, daemon: true };
       try {
         const content = await fs.promises.readFile(instanceFilePath, 'utf8');
-        storedOptions = JSON.parse(content);
-      } catch {
-      }
+        storedOptions = JSON.parse(content) as RestartOptions;
+      } catch { /* no prior instance configuration available */ }
 
       const isWindows = process.platform === 'win32';
       const quotePosix = (value: string): string => `'${String(value).replace(/'/g, "'\\''")}'`;
@@ -128,24 +139,24 @@ export function registerOpenChamberRoutes(app: Application, deps: OpenChamberRou
       ];
       let restartCmdPrimary = restartParts.join(' ');
       let restartCmdFallback = `openchamber serve --port ${storedOptions.port}`;
-      if ((storedOptions as any).host) {
+      if (storedOptions.host) {
         if (isWindows) {
-          const escapedHost = (storedOptions as any).host.replace(/"/g, '""');
+          const escapedHost = storedOptions.host.replace(/"/g, '""');
           restartCmdPrimary += ` --host "${escapedHost}"`;
           restartCmdFallback += ` --host "${escapedHost}"`;
         } else {
-          const escapedHost = (storedOptions as any).host.replace(/'/g, "'\\''");
+          const escapedHost = storedOptions.host.replace(/'/g, "'\\''");
           restartCmdPrimary += ` --host '${escapedHost}'`;
           restartCmdFallback += ` --host '${escapedHost}'`;
         }
       }
-      if ((storedOptions as any).uiPassword) {
+      if (storedOptions.uiPassword) {
         if (isWindows) {
-          const escapedPw = (storedOptions as any).uiPassword.replace(/"/g, '""');
+          const escapedPw = storedOptions.uiPassword.replace(/"/g, '""');
           restartCmdPrimary += ` --ui-password "${escapedPw}"`;
           restartCmdFallback += ` --ui-password "${escapedPw}"`;
         } else {
-          const escapedPw = (storedOptions as any).uiPassword.replace(/'/g, "'\\''");
+          const escapedPw = storedOptions.uiPassword.replace(/'/g, "'\\''");
           restartCmdPrimary += ` --ui-password '${escapedPw}'`;
           restartCmdFallback += ` --ui-password '${escapedPw}'`;
         }
@@ -227,8 +238,7 @@ export function registerOpenChamberRoutes(app: Application, deps: OpenChamberRou
         if (logFd !== null) {
           try {
             fs.closeSync(logFd);
-          } catch {
-          }
+          } catch { /* best-effort close; ignore */ }
         }
 
         console.log('Update process spawned, shutting down server...');
@@ -281,7 +291,7 @@ export function registerOpenChamberRoutes(app: Application, deps: OpenChamberRou
         res.setHeader('Cache-Control', 'public, max-age=60');
         res.json(cachedModelsMetadata);
       } else {
-        const statusCode = (error as any)?.name === 'AbortError' ? 504 : 502;
+        const statusCode = isAbortError(error) ? 504 : 502;
         res.status(statusCode).json({ error: 'Failed to retrieve model metadata' });
       }
     } finally {
@@ -303,7 +313,7 @@ export function registerOpenChamberRoutes(app: Application, deps: OpenChamberRou
         res.setHeader('Cache-Control', 'public, max-age=60');
         res.json(cachedZenModels);
       } else {
-        const statusCode = (error as any)?.name === 'AbortError' ? 504 : 502;
+        const statusCode = isAbortError(error) ? 504 : 502;
         res.status(statusCode).json({ error: 'Failed to retrieve zen models' });
       }
     }
