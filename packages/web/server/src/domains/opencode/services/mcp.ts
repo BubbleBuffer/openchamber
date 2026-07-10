@@ -125,7 +125,8 @@ export function createMcpConfig(
     config.mcp = {};
   }
 
-  const { name: _ignoredName, ...entryData } = mcpConfig as any;
+  const { name: _ignoredName, ...entryData } = mcpConfig as Partial<McpEntry> & Record<string, unknown>;
+  void _ignoredName;
   (config.mcp as Record<string, unknown>)[name] = buildMcpEntry(entryData);
 
   writeConfig(config, targetPath);
@@ -157,7 +158,8 @@ export function updateMcpConfig(
   }
 
   const existing = ((config.mcp as Record<string, unknown>)[name] as Partial<McpEntry>) || {};
-  const { name: _ignoredName, ...updateData } = updates as any;
+  const { name: _ignoredName, ...updateData } = updates as Partial<McpEntry> & Record<string, unknown>;
+  void _ignoredName;
 
   (config.mcp as Record<string, unknown>)[name] = buildMcpEntry({
     ...existing,

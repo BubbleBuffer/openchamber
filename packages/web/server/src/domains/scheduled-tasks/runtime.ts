@@ -559,7 +559,7 @@ export function createScheduledTasksRuntime(
       return false;
     }
 
-    await (client.session as any).command({
+    await client.session.command({
       sessionID,
       directory: projectPath,
       command: parsed.command,

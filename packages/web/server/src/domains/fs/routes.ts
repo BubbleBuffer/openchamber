@@ -132,7 +132,7 @@ const resolveWorkspacePathFromWorktrees = async ({
   const resolvedBase = pathModule.resolve(baseDirectory || os.homedir());
 
   try {
-    const { getWorktrees } = (await import("../git/index.js" as any) as { getWorktrees: (dir: string) => Promise<Array<{ path?: string; worktree?: string }>> });
+    const { getWorktrees } = (await import("../git/index.js")) as { getWorktrees: (dir: string) => Promise<Array<{ path?: string; worktree?: string }>> };
     const worktrees = await getWorktrees(resolvedBase);
 
     for (const worktree of worktrees) {
