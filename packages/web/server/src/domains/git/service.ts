@@ -480,10 +480,17 @@ const slugWorktreeName = (value: string): string => {
     .slice(0, 80);
 };
 
-const parseWorktreePorcelain = (raw: string): Array<{ worktree?: string; head?: string; branchRef?: string; branch?: string }> => {
+type WorktreeListEntry = {
+  worktree?: string;
+  head?: string;
+  branchRef?: string;
+  branch?: string;
+};
+
+const parseWorktreePorcelain = (raw: string): WorktreeListEntry[] => {
   const lines = String(raw || '').split('\n').map((line: string) => line.trim());
   const entries = [];
-  let current: { worktree?: string; head?: string; branchRef?: string; branch?: string } | null = null;
+  let current: WorktreeListEntry | null = null;
 
   for (const line of lines) {
     if (!line) {
@@ -676,7 +683,7 @@ const runGitCommandOrThrow = async (cwd: string, args: string[], fallbackMessage
   return result;
 };
 
-const ensureOpenCodeProjectId = async (primaryWorktree: any) => {
+const ensureOpenCodeProjectId = async (primaryWorktree: string): Promise<string> => {
   const gitDir = path.join(primaryWorktree, '.git');
   const idFile = path.join(gitDir, 'opencode');
   const existing = await fsp.readFile(idFile, 'utf8').then((value: string) => value.trim()).catch(() => '');
@@ -738,7 +745,7 @@ const resolveWorktreeProjectContext = async (directory: string) => {
   };
 };
 
-const listWorktreeEntries = async (directory: string) => {
+const listWorktreeEntries = async (directory: string): Promise<WorktreeListEntry[]> => {
   const rawResult = await runGitCommandOrThrow(
     directory,
     ['worktree', 'list', '--porcelain'],
@@ -747,12 +754,12 @@ const listWorktreeEntries = async (directory: string) => {
   return parseWorktreePorcelain(rawResult.stdout);
 };
 
-const resolveWorktreeNameCandidates = (baseName: any) => {
+const resolveWorktreeNameCandidates = (baseName: string): string[] => {
   const normalizedBase = slugWorktreeName(baseName || '');
   if (!normalizedBase) {
     return Array.from({ length: OPENCODE_WORKTREE_ATTEMPTS }, () => generateOpenCodeRandomName());
   }
-  return Array.from({ length: OPENCODE_WORKTREE_ATTEMPTS }, (_: any, index: any) => {
+  return Array.from({ length: OPENCODE_WORKTREE_ATTEMPTS }, (_, index) => {
     if (index === 0) {
       return normalizedBase;
     }
@@ -760,7 +767,7 @@ const resolveWorktreeNameCandidates = (baseName: any) => {
   });
 };
 
-const resolveCandidateDirectory = async (worktreeRoot: any, preferredName: any, explicitBranchName: any, primaryWorktree: any) => {
+const resolveCandidateDirectory = async (worktreeRoot: string, preferredName: string, explicitBranchName: string, primaryWorktree: string) => {
   const candidates = resolveWorktreeNameCandidates(preferredName);
 
   for (const name of candidates) {
@@ -786,7 +793,7 @@ const resolveCandidateDirectory = async (worktreeRoot: any, preferredName: any, 
   throw new Error('Failed to generate a unique worktree name');
 };
 
-const resolveBranchForExistingMode = async (primaryWorktree: any, existingBranch: any, preferredBranchName: any) => {
+const resolveBranchForExistingMode = async (primaryWorktree: string, existingBranch: string, preferredBranchName: string) => {
   const requested = String(existingBranch || '').trim();
   if (!requested) {
     throw new Error('existingBranch is required in existing mode');
@@ -831,14 +838,14 @@ const resolveBranchForExistingMode = async (primaryWorktree: any, existingBranch
   };
 };
 
-const findBranchInUse = async (primaryWorktree: any, localBranchName: any) => {
+const findBranchInUse = async (primaryWorktree: string, localBranchName: string): Promise<WorktreeListEntry | null> => {
   if (!localBranchName) {
     return null;
   }
   const entries = await listWorktreeEntries(primaryWorktree);
   const targetRef = `refs/heads/${localBranchName}`;
   const targetClean = cleanBranchName(targetRef);
-  return entries.find((entry: any) => {
+  return entries.find((entry) => {
     const entryRef = String(entry.branchRef || '').trim();
     const entryClean = cleanBranchName(entryRef || entry.branch || '');
     return entryRef === targetRef || entryClean === targetClean;
