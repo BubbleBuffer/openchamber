@@ -1,12 +1,12 @@
 ---
 kind: plan
-status: active
+status: complete
 parent_spec: .superpawers/specs/2026-07-09-lint-integration-readiness-design.md
 covers_chunks:
   - git-service-typing
 created: 2026-07-12
 updated: 2026-07-12
-next_action: "Execute Task 1"
+next_action: "Plan Git public result adapter and error-boundary typing"
 ---
 
 # Git Worktree Helper Typing Implementation Plan
@@ -41,7 +41,7 @@ No test file is added. The Git domain has no helper-level test harness, and thes
 **Files:**
 - Modify: `packages/web/server/src/domains/git/service.ts` — add `WorktreeListEntry` beside the private worktree helpers; type anchors `parseWorktreePorcelain`, `listWorktreeEntries`, `ensureOpenCodeProjectId`, `resolveWorktreeNameCandidates`, `resolveCandidateDirectory`, `resolveBranchForExistingMode`, and `findBranchInUse`.
 
-- [ ] **Step 1: Record the focused lint baseline**
+- [x] **Step 1: Record the focused lint baseline**
 
 Run from `packages/web`:
 
@@ -61,7 +61,7 @@ if (matches.length !== 44) process.exit(1)
 
 Expected: `worktree-helper any baseline: 44`. The full file remains lint-failing outside this region.
 
-- [ ] **Step 2: Add local porcelain typing and concrete scalar helper contracts**
+- [x] **Step 2: Add local porcelain typing and concrete scalar helper contracts**
 
 At the `parseWorktreePorcelain` anchor, declare a private shape that preserves the current optional fields, then use it in that parser and `listWorktreeEntries`:
 
@@ -120,7 +120,7 @@ const findBranchInUse = async (primaryWorktree: string, localBranchName: string)
 
 Do not make `WorktreeListEntry.worktree` required: the server parser currently models it as optional and downstream guards depend on that representation. Do not change `resolveWorktreeProjectContext`, command arrays, string coercions, or helper return bodies.
 
-- [ ] **Step 3: Inspect the task diff**
+- [x] **Step 3: Inspect the task diff**
 
 Run:
 
@@ -130,7 +130,7 @@ git diff -- packages/web/server/src/domains/git/service.ts
 
 Expected: private type declarations and annotations only. No changes to Git command arrays, filesystem calls, return objects, or branch/worktree control flow.
 
-- [ ] **Step 4: Run type and focused lint validation**
+- [x] **Step 4: Run type and focused lint validation**
 
 Run from the repository root:
 
@@ -140,7 +140,7 @@ bun run --cwd packages/web type-check:server
 
 Then rerun the Step 1 lint probe. Expected: the region count is reduced by the Task 1 anchors; remaining diagnostics belong only to the later storage and bootstrap tasks.
 
-- [ ] **Step 5: Commit the typed resolution helpers**
+- [x] **Step 5: Commit the typed resolution helpers**
 
 ```bash
 git add packages/web/server/src/domains/git/service.ts
@@ -152,13 +152,13 @@ git commit -m "fix(lint): type git worktree resolution helpers"
 **Files:**
 - Modify: `packages/web/server/src/domains/git/service.ts` — add private `ProjectSandboxState`; type anchors `loadProjectStartCommand`, `getProjectStoragePath`, `syncSandboxesToOpenCodeDb`, `updateProjectSandboxes`, `syncProjectSandboxAdd`, and `syncProjectSandboxRemove`.
 
-- [ ] **Step 1: Reconfirm remaining storage-region diagnostics**
+- [x] **Step 1: Reconfirm remaining storage-region diagnostics**
 
 Run the Step 1 focused lint probe. Inspect messages belonging to `loadProjectStartCommand`, `getProjectStoragePath`, `syncSandboxesToOpenCodeDb`, `updateProjectSandboxes`, `syncProjectSandboxAdd`, and `syncProjectSandboxRemove`.
 
 Expected: active diagnostics remain on their parameter and updater contracts before this task; no new error category is introduced.
 
-- [ ] **Step 2: Add a local normalized sandbox-state interface and apply it at helper boundaries**
+- [x] **Step 2: Add a local normalized sandbox-state interface and apply it at helper boundaries**
 
 Declare the private normalized shape near the other worktree helper types:
 
@@ -229,7 +229,7 @@ const syncProjectSandboxRemove = async (
 
 The `parsed: unknown` annotation is required so parsed JSON remains untrusted until the existing runtime `parsed && typeof parsed === "object"` check narrows it to a spreadable object in the conditional expression. Keep that exact conditional/spread structure, then retain the existing `Array.isArray` and numeric normalization code. Do not add schema validation, change JSON spread order, replace the in-place updater API, alter SQLite failure handling, or move the existing `eslint-disable-next-line @typescript-eslint/no-require-imports` directive.
 
-- [ ] **Step 3: Inspect the task diff**
+- [x] **Step 3: Inspect the task diff**
 
 Run:
 
@@ -239,7 +239,7 @@ git diff -- packages/web/server/src/domains/git/service.ts
 
 Expected: only local interface declarations, concrete annotations, and `unknown` at the JSON parse boundary. The JSON/file/SQLite runtime statements and persistence semantics remain unchanged.
 
-- [ ] **Step 4: Run type and focused lint validation**
+- [x] **Step 4: Run type and focused lint validation**
 
 Run from the repository root:
 
@@ -249,7 +249,7 @@ bun run --cwd packages/web type-check:server
 
 Then rerun the Step 1 lint probe. Expected: storage-helper diagnostics are gone; remaining diagnostics belong only to Task 3 and deferred Git-service work.
 
-- [ ] **Step 5: Commit the typed sandbox helpers**
+- [x] **Step 5: Commit the typed sandbox helpers**
 
 ```bash
 git add packages/web/server/src/domains/git/service.ts
@@ -261,13 +261,13 @@ git commit -m "fix(lint): type git worktree sandbox helpers"
 **Files:**
 - Modify: `packages/web/server/src/domains/git/service.ts` — add private `WorktreeBootstrapArgs` and `UpstreamConfigurationArgs`; type anchors `queueWorktreeBootstrap`, `ensureRemoteWithUrl`, `fetchRemoteBranchRef`, `checkRemoteBranchExists`, `setBranchTrackingFallback`, and `applyUpstreamConfiguration`.
 
-- [ ] **Step 1: Reconfirm remaining bootstrap-region diagnostics**
+- [x] **Step 1: Reconfirm remaining bootstrap-region diagnostics**
 
 Run the Step 1 focused lint probe and inspect the messages for the bootstrap/remote/upstream helpers.
 
 Expected: only these planned contract diagnostics remain within the worktree-helper region before this task.
 
-- [ ] **Step 2: Introduce private bootstrap and upstream argument shapes**
+- [x] **Step 2: Introduce private bootstrap and upstream argument shapes**
 
 Add the following private interfaces near `ProjectSandboxState`:
 
@@ -346,7 +346,7 @@ const applyUpstreamConfiguration = async (args: UpstreamConfigurationArgs) => {
 
 Because `GitWorktreeCreateInput.startCommand` is optional while `runWorktreeStartScripts` currently accepts `string`, pass `startCommand ?? ""` at that call site. This preserves the existing `String(startCommand || "")` result for `undefined` without changing scheduling or command execution. Do not change any other caller-built values, optional-field defaults, `String()` normalization, remote URL behavior, command arrays, catches, return behavior, or `normalizeUpstreamTarget`.
 
-- [ ] **Step 3: Inspect the task diff**
+- [x] **Step 3: Inspect the task diff**
 
 Run:
 
@@ -356,7 +356,7 @@ git diff -- packages/web/server/src/domains/git/service.ts
 
 Expected: interface declarations and erased parameter annotations only; worktree bootstrap scheduling and remote/upstream behavior are unchanged.
 
-- [ ] **Step 4: Run type and focused lint validation**
+- [x] **Step 4: Run type and focused lint validation**
 
 Run from the repository root:
 
@@ -366,7 +366,7 @@ bun run --cwd packages/web type-check:server
 
 Then rerun the Step 1 lint probe. Expected: it reports zero active `no-explicit-any` diagnostics between `ensureOpenCodeProjectId` and `isGitRepository`.
 
-- [ ] **Step 5: Commit the typed bootstrap helpers**
+- [x] **Step 5: Commit the typed bootstrap helpers**
 
 ```bash
 git add packages/web/server/src/domains/git/service.ts
@@ -380,7 +380,7 @@ git commit -m "fix(lint): type git worktree bootstrap helpers"
 - Modify: `.superpawers/plans/2026-07-12-git-worktree-helper-typing.md` — complete metadata and checkboxes.
 - Modify: `.superpawers/specs/2026-07-09-lint-integration-readiness-design.md` — leave `git-service-typing` as `Status: planned`.
 
-- [ ] **Step 1: Inspect the implementation diff against the pre-cleanup baseline**
+- [x] **Step 1: Inspect the implementation diff against the pre-cleanup baseline**
 
 Run:
 
@@ -391,7 +391,7 @@ git diff 7f82984c..HEAD -- packages/web/server/src/domains/git/service.ts
 
 Expected: the helper region changes only private type declarations, annotation replacements, and the safe `unknown` JSON-boundary type. No public API, command, persistence, or scheduling behavior changes.
 
-- [ ] **Step 2: Run server and repository type-checks**
+- [x] **Step 2: Run server and repository type-checks**
 
 Run:
 
@@ -402,7 +402,7 @@ bun run type-check
 
 Expected: both commands exit 0.
 
-- [ ] **Step 3: Assert the entire semantic helper region is free of active `any` lint diagnostics**
+- [x] **Step 3: Assert the entire semantic helper region is free of active `any` lint diagnostics**
 
 Run from `packages/web`:
 
@@ -427,7 +427,7 @@ console.log("PASS: no active no-explicit-any diagnostics in worktree-helper regi
 
 Expected: `PASS: no active no-explicit-any diagnostics in worktree-helper region`. This intentionally does not require whole-file lint to pass: deferred public result adapters and non-`any` lint debt remain outside the semantic bounds.
 
-- [ ] **Step 4: Complete plan tracking without closing the parent chunk**
+- [x] **Step 4: Complete plan tracking without closing the parent chunk**
 
 Update this plan's frontmatter:
 
@@ -439,7 +439,7 @@ next_action: "Plan Git public result adapter and error-boundary typing"
 
 Check every completed checkbox in this plan. In `.superpawers/specs/2026-07-09-lint-integration-readiness-design.md`, leave `### Chunk: git-service-typing` at `Status: planned`: public result adapters, options casts, error boundaries, and remaining helper-adjacent debt still belong to it.
 
-- [ ] **Step 5: Commit the verified plan completion**
+- [x] **Step 5: Commit the verified plan completion**
 
 ```bash
 git add .superpawers/plans/2026-07-12-git-worktree-helper-typing.md
