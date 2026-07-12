@@ -53,7 +53,7 @@ async function resolveDefaultBranch(git: SimpleGit) {
 
   const originHead = await git
     .raw(['symbolic-ref', '-q', 'refs/remotes/origin/HEAD'])
-    .then((value: any) => String(value || '').trim())
+    .then((value: string) => String(value || '').trim())
     .catch(() => '');
 
   if (originHead) {
@@ -65,7 +65,7 @@ async function resolveDefaultBranch(git: SimpleGit) {
   for (const ref of candidates) {
     const exists = await git
       .raw(['rev-parse', '--verify', ref])
-      .then((value: any) => String(value || '').trim())
+      .then((value: string) => String(value || '').trim())
       .catch(() => '');
     if (exists) return ref;
   }
@@ -679,7 +679,7 @@ const runGitCommandOrThrow = async (cwd: string, args: string[], fallbackMessage
 const ensureOpenCodeProjectId = async (primaryWorktree: any) => {
   const gitDir = path.join(primaryWorktree, '.git');
   const idFile = path.join(gitDir, 'opencode');
-  const existing = await fsp.readFile(idFile, 'utf8').then((value: any) => value.trim()).catch(() => '');
+  const existing = await fsp.readFile(idFile, 'utf8').then((value: string) => value.trim()).catch(() => '');
   if (existing) {
     return existing;
   }
@@ -692,9 +692,9 @@ const ensureOpenCodeProjectId = async (primaryWorktree: any) => {
 
   const roots = rootsResult.stdout
     .split('\n')
-    .map((line: any) => line.trim())
+    .map((line: string) => line.trim())
     .filter(Boolean)
-    .sort((a: any, b: any) => a.localeCompare(b));
+    .sort((a: string, b: string) => a.localeCompare(b));
 
   const projectId = roots[0] || '';
   if (!projectId) {
@@ -937,7 +937,7 @@ const updateProjectSandboxes = async (projectID: any, primaryWorktree: any, upda
     },
   };
 
-  const parsed = await fsp.readFile(storagePath, 'utf8').then((raw: any) => JSON.parse(raw)).catch(() => null);
+  const parsed = await fsp.readFile(storagePath, 'utf8').then((raw: string) => JSON.parse(raw)).catch(() => null);
   const current = parsed && typeof parsed === 'object' ? { ...base, ...parsed } : base;
   current.id = String(current.id || projectID);
   current.worktree = String(current.worktree || primaryWorktree);
@@ -1414,7 +1414,7 @@ export async function getStatus(directory: string, options: GitStatusOptions = {
 
       const originHead = await git
         .raw(['symbolic-ref', '-q', 'refs/remotes/origin/HEAD'])
-        .then((value: any) => String(value || '').trim())
+        .then((value: string) => String(value || '').trim())
         .catch(() => '');
 
       if (originHead) {
@@ -1427,7 +1427,7 @@ export async function getStatus(directory: string, options: GitStatusOptions = {
       for (const ref of candidates) {
         const exists = await git
           .raw(['rev-parse', '--verify', ref])
-          .then((value: any) => String(value || '').trim())
+          .then((value: string) => String(value || '').trim())
           .catch(() => '');
         if (exists) return ref;
       }
@@ -1447,7 +1447,7 @@ export async function getStatus(directory: string, options: GitStatusOptions = {
       if (baseRef) {
         const countRaw = await git
           .raw(['rev-list', '--count', `${baseRef}..HEAD`])
-          .then((value: any) => String(value || '').trim())
+          .then((value: string) => String(value || '').trim())
           .catch(() => '');
         const count = parseInt(countRaw, 10);
         if (Number.isFinite(count)) {
@@ -1610,7 +1610,7 @@ export async function getRangeDiff(directory: string, { base, head, path, contex
   if (resolvedBase === baseRef) {
     const localExists = await git
       .raw(['rev-parse', '--verify', baseRef])
-      .then((value: any) => String(value || '').trim())
+      .then((value: string) => String(value || '').trim())
       .catch(() => '');
     if (!localExists) {
       const fallback = await resolveDefaultBranch(git);
@@ -1656,7 +1656,7 @@ export async function getRangeFiles(directory: string, { base, head }: GitRangeD
   if (resolvedBase === baseRef) {
     const localExists = await git
       .raw(['rev-parse', '--verify', baseRef])
-      .then((value: any) => String(value || '').trim())
+      .then((value: string) => String(value || '').trim())
       .catch(() => '');
     if (!localExists) {
       const fallback = await resolveDefaultBranch(git);
@@ -2722,7 +2722,7 @@ export async function getLog(directory: string, options: GitLogOptions = {}): Pr
     if (resolvedFrom) {
       const fromExists = await git
         .raw(['rev-parse', '--verify', resolvedFrom])
-        .then((value: any) => String(value || '').trim())
+        .then((value: string) => String(value || '').trim())
         .catch(() => '');
       if (!fromExists) {
         const fallback = await resolveDefaultBranch(git);
@@ -2762,13 +2762,13 @@ export async function getLog(directory: string, options: GitLogOptions = {}): Pr
     const rawLog = await git.raw(logArgs);
     const records = rawLog
       .split('\x1e')
-      .map((entry: any) => entry.trim())
+      .map((entry: string) => entry.trim())
       .filter(Boolean);
 
     const statsMap = new Map();
 
-    records.forEach((record: any) => {
-      const lines = record.split('\n').filter((line: any) => line.trim().length > 0);
+    records.forEach((record: string) => {
+      const lines = record.split('\n').filter((line: string) => line.trim().length > 0);
       const header = lines.shift() || '';
       const [hash] = header.split('\x1f');
       if (!hash) {
@@ -2779,7 +2779,7 @@ export async function getLog(directory: string, options: GitLogOptions = {}): Pr
       let insertions = 0;
       let deletions = 0;
 
-      lines.forEach((line: any) => {
+      lines.forEach((line: string) => {
         const filesMatch = line.match(/(\d+)\s+files?\s+changed/);
         const insertMatch = line.match(/(\d+)\s+insertions?\(\+\)/);
         const deleteMatch = line.match(/(\d+)\s+deletions?\(-\)/);
@@ -2829,8 +2829,8 @@ export async function isLinkedWorktree(directory: string): Promise<boolean> {
   const git = await createGit(directory);
   try {
     const [gitDir, gitCommonDir] = await Promise.all([
-      git.raw(['rev-parse', '--git-dir']).then((output: any) => output.trim()),
-      git.raw(['rev-parse', '--git-common-dir']).then((output: any) => output.trim())
+      git.raw(['rev-parse', '--git-dir']).then((output: string) => output.trim()),
+      git.raw(['rev-parse', '--git-common-dir']).then((output: string) => output.trim())
     ]);
     return gitDir !== gitCommonDir;
   } catch (e) {
@@ -3066,11 +3066,11 @@ export async function renameBranch(directory: string, oldName: string, newName: 
 
     const previousRemote = await git
       .raw(['config', '--get', `branch.${normalizedOldName}.remote`])
-      .then((value: any) => String(value || '').trim())
+      .then((value: string) => String(value || '').trim())
       .catch(() => '');
     const previousMerge = await git
       .raw(['config', '--get', `branch.${normalizedOldName}.merge`])
-      .then((value: any) => String(value || '').trim())
+      .then((value: string) => String(value || '').trim())
       .catch(() => '');
 
     // Use git branch -m command to rename the branch
