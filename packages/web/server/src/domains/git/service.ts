@@ -1343,7 +1343,7 @@ export async function getStatus(directory: string, options: GitStatusOptions = {
     const diffStats = Object.fromEntries(diffStatsMap.entries());
 
     const newFileStats = lightMode ? [] : await Promise.all(
-      status.files.map(async (file: any) => {
+      status.files.map(async (file) => {
         const working = (file.working_dir || '').trim();
         const indexStatus = (file.index || '').trim();
         const statusCode = working || indexStatus;
@@ -1514,7 +1514,7 @@ export async function getStatus(directory: string, options: GitStatusOptions = {
       tracking,
       ahead,
       behind,
-      files: status.files.map((f: any) => ({
+      files: status.files.map((f) => ({
         path: f.path,
         index: f.index,
         working_dir: f.working_dir,
@@ -2002,7 +2002,7 @@ export async function push(directory: string, options: GitPushOptions = {}): Pro
         const status = await git.status();
         const branch = status.current;
         const remotes = await git.getRemotes(true);
-        const fallbackRemote = remotes.find((entry: any) => entry.name === 'origin')?.name || remotes[0]?.name;
+        const fallbackRemote = remotes.find((entry) => entry.name === 'origin')?.name || remotes[0]?.name;
         if (!branch || !fallbackRemote) {
           const message = describePushError(e);
           throw new Error(message);
@@ -2120,7 +2120,7 @@ export async function commit(directory: string, message: string, options: GitCom
       await git.add('.');
     } else if (requestedFiles.length > 0) {
       const status = await git.status();
-      const fileStatusByPath = new Map(status.files.map((file: any) => [file.path, file]));
+      const fileStatusByPath = new Map(status.files.map((file) => [file.path, file]));
       filesToCommit = requestedFiles.filter((filePath: string) => fileStatusByPath.has(filePath));
 
       if (filesToCommit.length === 0) {
@@ -2798,7 +2798,7 @@ export async function getLog(directory: string, options: GitLogOptions = {}): Pr
       statsMap.set(hash, { filesChanged, insertions, deletions });
     });
 
-    const merged = baseLog.all.map((entry: any) => {
+    const merged = baseLog.all.map((entry) => {
       const stats = statsMap.get(entry.hash) || { filesChanged: 0, insertions: 0, deletions: 0 };
       return {
         hash: entry.hash,
@@ -3110,7 +3110,7 @@ export async function getRemotes(directory: string): Promise<GitRemoteEntry[]> {
   try {
     const remotes = await git.getRemotes(true);
     
-    return remotes.map((remote: any) => ({
+    return remotes.map((remote) => ({
       name: remote.name,
       fetchUrl: remote.refs.fetch,
       pushUrl: remote.refs.push
