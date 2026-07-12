@@ -166,7 +166,7 @@ const listWindowsGitInstallCandidates = (): string[] => {
     process.env['ProgramFiles(x86)'],
     process.env.LocalAppData,
   ]
-    .map((value: any) => (typeof value === 'string' ? value.trim() : ''))
+    .map((value: string | undefined) => (typeof value === 'string' ? value.trim() : ''))
     .filter(Boolean);
 
   const candidates = [];
@@ -189,7 +189,7 @@ const resolveGitBinary = () => {
   }
 
   const explicit = [process.env.GIT_BINARY, process.env.OPENCHAMBER_GIT_BINARY]
-    .map((value: any) => (typeof value === 'string' ? value.trim() : ''))
+    .map((value: string | undefined) => (typeof value === 'string' ? value.trim() : ''))
     .filter(Boolean);
   for (const candidate of explicit) {
     if (isExecutableFile(candidate)) {
@@ -943,7 +943,7 @@ const updateProjectSandboxes = async (projectID: any, primaryWorktree: any, upda
   current.worktree = String(current.worktree || primaryWorktree);
   current.vcs = current.vcs || 'git';
   current.sandboxes = Array.isArray(current.sandboxes)
-    ? current.sandboxes.map((entry: any) => String(entry || '').trim()).filter(Boolean)
+    ? current.sandboxes.map((entry: unknown) => String(entry || '').trim()).filter(Boolean)
     : [];
   const createdAt = Number(current?.time?.created);
   current.time = {
@@ -955,7 +955,7 @@ const updateProjectSandboxes = async (projectID: any, primaryWorktree: any, upda
 
   current.sandboxes = [...new Set(
     (Array.isArray(current.sandboxes) ? current.sandboxes : [])
-      .map((entry: any) => String(entry || '').trim())
+      .map((entry: unknown) => String(entry || '').trim())
       .filter(Boolean)
   )];
 
@@ -983,7 +983,7 @@ const syncProjectSandboxRemove = async (projectID: any, primaryWorktree: any, sa
     return;
   }
   await updateProjectSandboxes(projectID, primaryWorktree, (project: any) => {
-    project.sandboxes = project.sandboxes.filter((entry: any) => entry !== sandbox);
+    project.sandboxes = project.sandboxes.filter((entry: string) => entry !== sandbox);
   });
 };
 
@@ -1310,13 +1310,13 @@ export async function getStatus(directory: string, options: GitStatusOptions = {
 
     const diffStatsMap = new Map();
 
-    const accumulateStats = (raw: any) => {
+    const accumulateStats = (raw: string): void => {
       if (!raw) return;
       raw
         .split('\n')
-        .map((line: any) => line.trim())
+        .map((line: string) => line.trim())
         .filter(Boolean)
-        .forEach((line: any) => {
+        .forEach((line: string) => {
           const parts = line.split('\t');
           if (parts.length < 3) {
             return;
@@ -1671,7 +1671,7 @@ export async function getRangeFiles(directory: string, { base, head }: GitRangeD
   const raw = await git.raw(['diff', '--name-only', `${resolvedBase}...${headRef}`]);
   return String(raw || '')
     .split('\n')
-    .map((l: any) => l.trim())
+    .map((l: string) => l.trim())
     .filter(Boolean);
 }
 
@@ -1679,7 +1679,7 @@ const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bm
 
 const BINARY_SNIFF_BYTES = 8192;
 
-function isImageFile(filePath: any) {
+function isImageFile(filePath: string) {
   const ext = filePath.split('.').pop()?.toLowerCase();
   return IMAGE_EXTENSIONS.includes(ext || '');
 }
@@ -1700,19 +1700,19 @@ function getImageMimeType(filePath: any) {
   return (mimeMap as any)[ext] || 'application/octet-stream';
 }
 
-const parseIsBinaryFromNumstat = (raw: any) => {
+const parseIsBinaryFromNumstat = (raw: string) => {
   const text = String(raw || '').trim();
   if (!text) {
     return false;
   }
 
   // Expected format: <added>\t<deleted>\t<path>
-  const firstLine = text.split('\n').map((line: any) => line.trim()).find(Boolean) || '';
+  const firstLine = text.split('\n').map((line: string) => line.trim()).find(Boolean) || '';
   const [added, deleted] = firstLine.split('\t');
   return added === '-' || deleted === '-';
 };
 
-const looksBinaryBySniff = async (absolutePath: any) => {
+const looksBinaryBySniff = async (absolutePath: string) => {
   try {
     const handle = await fsp.open(absolutePath, 'r');
     try {
@@ -1730,7 +1730,7 @@ const looksBinaryBySniff = async (absolutePath: any) => {
   }
 };
 
-const isBinaryDiff = async (directoryPath: any, filePath: any, staged: any) => {
+const isBinaryDiff = async (directoryPath: string, filePath: string, staged: boolean) => {
   // Fast path: ask git for numstat. For binary, it returns "-\t-\t<path>".
   const args = ['diff', '--numstat'];
   if (staged) {
@@ -1745,10 +1745,10 @@ const isBinaryDiff = async (directoryPath: any, filePath: any, staged: any) => {
 
   // Fallback for untracked files (diff output is empty): use --no-index against /dev/null
   if (!staged) {
-    const tracked = await runGitCommand(directoryPath, ['ls-files', '--error-unmatch', '--', filePath]).then((r: any) => r.success);
+    const tracked = await runGitCommand(directoryPath, ['ls-files', '--error-unmatch', '--', filePath]).then((result: { success: boolean }) => result.success);
     if (!tracked) {
       const noIndex = await runGitCommand(directoryPath, ['diff', '--no-index', '--numstat', '--', '/dev/null', filePath]);
-      if (parseIsBinaryFromNumstat(noIndex.stdout) || parseIsBinaryFromNumstat(noIndex.stderr) || parseIsBinaryFromNumstat(noIndex.message)) {
+      if (parseIsBinaryFromNumstat(noIndex.stdout) || parseIsBinaryFromNumstat(noIndex.stderr) || parseIsBinaryFromNumstat(noIndex.message || '')) {
         return true;
       }
       const text = `${noIndex.stdout || ''}\n${noIndex.stderr || ''}\n${noIndex.message || ''}`.toLowerCase();
@@ -1774,7 +1774,7 @@ export async function getFileDiff(directory: string, { path: filePath, staged = 
   if (!isImage) {
     const absolutePath = path.join(directoryPath as string, filePath);
     const isBinaryBySniff = await looksBinaryBySniff(absolutePath);
-    const isBinary = isBinaryBySniff || (await isBinaryDiff(directoryPath, filePath, staged));
+    const isBinary = isBinaryBySniff || (await isBinaryDiff(directoryPath as string, filePath, staged));
     if (isBinary) {
       return {
         original: '',
@@ -2111,7 +2111,7 @@ export async function commit(directory: string, message: string, options: GitCom
   try {
     const requestedFiles = Array.isArray(options.files)
       ? options.files
-        .map((value: any) => String(value || '').trim())
+        .map((value: string) => String(value || '').trim())
         .filter(Boolean)
       : [];
     let filesToCommit = requestedFiles;
@@ -2121,13 +2121,13 @@ export async function commit(directory: string, message: string, options: GitCom
     } else if (requestedFiles.length > 0) {
       const status = await git.status();
       const fileStatusByPath = new Map(status.files.map((file: any) => [file.path, file]));
-      filesToCommit = requestedFiles.filter((filePath: any) => fileStatusByPath.has(filePath));
+      filesToCommit = requestedFiles.filter((filePath: string) => fileStatusByPath.has(filePath));
 
       if (filesToCommit.length === 0) {
         throw new Error('No selected files are available to commit. Refresh git status and try again.');
       }
 
-      const filesNeedingAdd = filesToCommit.filter((filePath: any) => {
+      const filesNeedingAdd = filesToCommit.filter((filePath: string) => {
         const fileStatus = fileStatusByPath.get(filePath);
         if (!fileStatus) {
           return false;
@@ -2180,11 +2180,11 @@ export async function getBranches(directory: string): Promise<GitBranchResult> {
     const result = await git.branch();
 
     const allBranches = result.all;
-    const remoteBranches = allBranches.filter((branch: any) => branch.startsWith('remotes/'));
+    const remoteBranches = allBranches.filter((branch: string) => branch.startsWith('remotes/'));
     const activeRemoteBranches = await filterActiveRemoteBranches(git, remoteBranches);
 
     const filteredAll = [
-      ...allBranches.filter((branch: any) => !branch.startsWith('remotes/')),
+      ...allBranches.filter((branch: string) => !branch.startsWith('remotes/')),
       ...activeRemoteBranches
     ];
 
@@ -2213,7 +2213,7 @@ async function filterActiveRemoteBranches(git: SimpleGit, remoteBranches: string
       }
     }
 
-    return remoteBranches.filter((remoteBranch: any) => {
+    return remoteBranches.filter((remoteBranch: string) => {
 
       const match = remoteBranch.match(/^remotes\/[^\/]+\/(.+)$/);
       if (!match) return false;
@@ -3336,7 +3336,7 @@ export async function getConflictDetails(directory: string): Promise<GitConflict
     const unmergedFilesRaw = await git.raw(['diff', '--name-only', '--diff-filter=U']).catch(() => '');
     const unmergedFiles = unmergedFilesRaw
       .split('\n')
-      .map((line: any) => line.trim())
+      .map((line: string) => line.trim())
       .filter(Boolean);
 
     // Get current diff
