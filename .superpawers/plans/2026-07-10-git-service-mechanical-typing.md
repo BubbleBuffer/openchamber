@@ -1,12 +1,12 @@
 ---
 kind: plan
-status: active
+status: complete
 parent_spec: .superpawers/specs/2026-07-09-lint-integration-readiness-design.md
 covers_chunks:
   - git-service-typing
 created: 2026-07-10
-updated: 2026-07-10
-next_action: "Execute Task 1"
+updated: 2026-07-12
+next_action: "Plan the Git worktree helper typing subset"
 ---
 
 # Git Service Mechanical Typing Implementation Plan
@@ -51,7 +51,7 @@ It does **not** cover:
 **Files:**
 - Modify: `packages/web/server/src/domains/git/service.ts` — anchors `resolveDefaultBranch`, `ensureOpenCodeProjectId`, `updateProjectSandboxes`, `getStatus`, `getRangeDiff`, `getRangeFiles`, `getLog`, `isLinkedWorktree`, and `renameBranch`.
 
-- [ ] **Step 1: Establish the Task 1 focused baseline**
+- [x] **Step 1: Establish the Task 1 focused baseline**
 
 Run from `packages/web`:
 
@@ -61,7 +61,7 @@ npx eslint --config ../../eslint.config.js ./server/src/domains/git/service.ts
 
 Expected: the full file remains lint-failing because later Git typing slices are intentionally excluded. Record the active `no-explicit-any` diagnostics at the Task 1 promise-callback anchors before editing: `resolveDefaultBranch`, the `fsp.readFile(..., "utf8")` callbacks in `ensureOpenCodeProjectId` and `updateProjectSandboxes`, and the `git.raw()` callbacks in the named exported functions.
 
-- [ ] **Step 2: Replace only callbacks with statically known string results**
+- [x] **Step 2: Replace only callbacks with statically known string results**
 
 In each of the following semantic anchors, replace the explicit `any` parameter with `string`; retain the existing `String(value || "").trim()`, `.trim()`, and `JSON.parse(...)` bodies unchanged:
 
@@ -89,7 +89,7 @@ Apply this only to these existing callbacks:
 
 Do not simplify runtime expressions merely because the new type is `string`; annotations must be the only behavior-adjacent change.
 
-- [ ] **Step 3: Inspect the Task 1 diff**
+- [x] **Step 3: Inspect the Task 1 diff**
 
 Run:
 
@@ -99,7 +99,7 @@ git diff -- packages/web/server/src/domains/git/service.ts
 
 Expected: changes are limited to callback parameter annotations at `git.raw()` and UTF-8 `fsp.readFile()` chains, plus `string` annotations on the associated newline-processing callbacks. No command arrays, fallbacks, string coercions, JSON parsing, or Git control flow change.
 
-- [ ] **Step 4: Run server type-check and inspect lint progress**
+- [x] **Step 4: Run server type-check and inspect lint progress**
 
 Run:
 
@@ -112,7 +112,7 @@ Then verify the JSON output contains no `@typescript-eslint/no-explicit-any` mes
 
 Expected: server type-check exits 0. The JSON inspection confirms the edited promise/string callback locations are clear; full-file ESLint still exits nonzero because later slices remain.
 
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
 
 ```bash
 git add packages/web/server/src/domains/git/service.ts
@@ -124,7 +124,7 @@ git commit -m "fix(lint): type git string callbacks"
 **Files:**
 - Modify: `packages/web/server/src/domains/git/service.ts` — anchors `listWindowsGitInstallCandidates`, `resolveGitBinary`, `updateProjectSandboxes`, `syncProjectSandboxRemove`, `accumulateStats`, `getRangeFiles`, image/binary helpers, `commit`, `getBranches`, `filterActiveRemoteBranches`, and `getConflictDetails`.
 
-- [ ] **Step 1: Establish the Task 2 focused baseline**
+- [x] **Step 1: Establish the Task 2 focused baseline**
 
 Run from `packages/web`:
 
@@ -134,7 +134,7 @@ npx eslint --config ../../eslint.config.js ./server/src/domains/git/service.ts
 
 Expected: Task 1's edited callback diagnostics are absent. The Task 2 anchors still report their existing `no-explicit-any` errors, along with errors from explicitly excluded Git service boundaries.
 
-- [ ] **Step 2: Type only locally-proven arrays and private scalar helpers**
+- [x] **Step 2: Type only locally-proven arrays and private scalar helpers**
 
 Preserve all bodies and add the following annotations where the immediate source establishes the shape:
 
@@ -168,7 +168,7 @@ For `isBinaryDiff`, type its existing `runGitCommand(...).then(...)` callback as
 
 Do not add type predicates, change `.filter(Boolean)`, remove defensive `typeof` checks, or simplify coercions. The runtime operations and their ordering must remain byte-for-byte equivalent apart from erased annotations.
 
-- [ ] **Step 3: Inspect the Task 2 diff**
+- [x] **Step 3: Inspect the Task 2 diff**
 
 Run:
 
@@ -178,7 +178,7 @@ git diff -- packages/web/server/src/domains/git/service.ts
 
 Expected: only parameter annotations at local array callbacks/private helpers change. The image MIME map access, Git commands, binary-detection branches, and worktree code are untouched.
 
-- [ ] **Step 4: Run server type-check and inspect lint progress**
+- [x] **Step 4: Run server type-check and inspect lint progress**
 
 Run:
 
@@ -191,7 +191,7 @@ Verify the JSON output has no `no-explicit-any` messages at the edited local arr
 
 Expected: server type-check exits 0; excluded worktree, error, options, map-index, and return-contract diagnostics remain the only `any` categories outside completed work.
 
-- [ ] **Step 5: Commit Task 2**
+- [x] **Step 5: Commit Task 2**
 
 ```bash
 git add packages/web/server/src/domains/git/service.ts
@@ -203,7 +203,7 @@ git commit -m "fix(lint): type git utility callbacks"
 **Files:**
 - Modify: `packages/web/server/src/domains/git/service.ts` — anchors `getStatus`, `push`, `commit`, `getLog`, and `getRemotes`.
 
-- [ ] **Step 1: Establish the Task 3 focused baseline**
+- [x] **Step 1: Establish the Task 3 focused baseline**
 
 Run from `packages/web`:
 
@@ -213,7 +213,7 @@ npx eslint --config ../../eslint.config.js ./server/src/domains/git/service.ts
 
 Expected: only direct callback annotations whose source is already typed by `simple-git` remain from this plan's scope. The adjacent return-object casts, `@ts-ignore`, options casts, and `normalizePushResult(result: any)` remain explicitly deferred.
 
-- [ ] **Step 2: Rely on existing `simple-git` inference at direct response callbacks**
+- [x] **Step 2: Rely on existing `simple-git` inference at direct response callbacks**
 
 Remove `: any` from callback parameters when their array source is a direct, typed `simple-git` response. Do not add an explicit annotation unless inference fails; if it does, import the exact type from `simple-git` rather than inventing a local approximation.
 
@@ -247,7 +247,7 @@ Apply this only to:
 
 Do not type or alter `normalizePushResult(result: any)`, options passed to `git.push`, any `return ... as any`, or nearby `@ts-ignore` comments. Those represent the deferred exported-contract slice.
 
-- [ ] **Step 3: Inspect the Task 3 diff**
+- [x] **Step 3: Inspect the Task 3 diff**
 
 Run:
 
@@ -257,7 +257,7 @@ git diff -- packages/web/server/src/domains/git/service.ts
 
 Expected: only removed `: any` annotations from direct `simple-git` callback parameters. No import is added unless compilation demonstrates inference is insufficient; no public function signature, response-object shape, or push/commit behavior changes.
 
-- [ ] **Step 4: Run server and repository type-checks, then inspect focused lint**
+- [x] **Step 4: Run server and repository type-checks, then inspect focused lint**
 
 Run:
 
@@ -269,7 +269,7 @@ bunx eslint packages/web/server/src/domains/git/service.ts --format json > /tmp/
 
 Expected: both type-check commands exit 0. The JSON output has no `no-explicit-any` messages at every Task 3 direct-response callback anchor. Full-file lint remains nonzero only for deferred categories and unrelated blocking lint debt.
 
-- [ ] **Step 5: Commit Task 3**
+- [x] **Step 5: Commit Task 3**
 
 ```bash
 git add packages/web/server/src/domains/git/service.ts
@@ -281,7 +281,7 @@ git commit -m "fix(lint): infer git response callbacks"
 **Files:**
 - Modify: `.superpawers/plans/2026-07-10-git-service-mechanical-typing.md` — mark this subset plan complete after all gates pass.
 
-- [ ] **Step 1: Inspect the complete Git service subset diff**
+- [x] **Step 1: Inspect the complete Git service subset diff**
 
 Run:
 
@@ -291,7 +291,7 @@ git diff 7f82984c..HEAD -- packages/web/server/src/domains/git/service.ts
 
 Expected: the changes from this plan are erased annotations only: scalar callback types, private utility parameter types, and direct `simple-git` inference. No exported service signatures, Git command arrays, return-object shapes, error-handling branches, options casts, or worktree/project helpers change.
 
-- [ ] **Step 2: Run final type-check gates**
+- [x] **Step 2: Run final type-check gates**
 
 Run:
 
@@ -302,7 +302,7 @@ bun run type-check
 
 Expected: both commands exit 0.
 
-- [ ] **Step 3: Verify all selected annotations are removed without claiming full lint cleanliness**
+- [x] **Step 3: Verify all selected annotations are removed without claiming full lint cleanliness**
 
 Run:
 
@@ -323,11 +323,11 @@ Expected: the script exits 0. Full-file ESLint is expected to retain errors from
 
 The selected-line set is valid only because Tasks 1–3 replace same-line annotations without adding or removing surrounding lines. If an implementation changes line structure, regenerate the set from the post-edit ESLint JSON rather than trusting these historical locations.
 
-- [ ] **Step 4: Mark only this subset plan complete**
+- [x] **Step 4: Mark only this subset plan complete**
 
 Leave the parent spec's `git-service-typing` chunk as `Status: planned`: this plan excludes the worktree-helper and exported-contract portions of that chunk. Set this plan's frontmatter to `status: complete`, retain `updated: 2026-07-10`, set `next_action: "Plan the Git worktree helper typing subset"`, and check off all plan steps.
 
-- [ ] **Step 5: Commit completion metadata**
+- [x] **Step 5: Commit completion metadata**
 
 ```bash
 git add .superpawers/plans/2026-07-10-git-service-mechanical-typing.md
