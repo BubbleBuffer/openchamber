@@ -487,6 +487,30 @@ type WorktreeListEntry = {
   branch?: string;
 };
 
+type WorktreeBootstrapArgs = {
+  directory: string
+  projectID: string
+  primaryWorktree: string
+  localBranch: string
+  setUpstream: boolean
+  upstreamRemote: string
+  upstreamBranch: string
+  ensureRemoteName: string
+  ensureRemoteUrl: string
+  startCommand: string | undefined
+}
+
+type UpstreamConfigurationArgs = {
+  primaryWorktree: string
+  worktreeDirectory: string
+  localBranch: string
+  setUpstream: boolean
+  upstreamRemote: string
+  upstreamBranch: string
+  ensureRemoteName?: string
+  ensureRemoteUrl?: string
+}
+
 type ProjectSandboxState = {
   id: string;
   worktree: string;
@@ -1026,7 +1050,7 @@ const runWorktreeStartScripts = async (directory: string, projectID: string, sta
   }
 };
 
-const queueWorktreeBootstrap = (args: any) => {
+const queueWorktreeBootstrap = (args: WorktreeBootstrapArgs): void => {
   const {
     directory,
     projectID,
@@ -1056,7 +1080,7 @@ const queueWorktreeBootstrap = (args: any) => {
           console.warn('Worktree upstream configuration failed:', e instanceof Error ? e.message : String(e));
         });
       }
-      await runWorktreeStartScripts(directory, projectID, startCommand).catch((e) => {
+      await runWorktreeStartScripts(directory, projectID, startCommand ?? "").catch((e) => {
         console.warn('Worktree start script task failed:', e instanceof Error ? e.message : String(e));
       });
       setWorktreeBootstrapState(directory, WORKTREE_BOOTSTRAP_READY);
@@ -1073,7 +1097,11 @@ const queueWorktreeBootstrap = (args: any) => {
   }, 0);
 };
 
-const ensureRemoteWithUrl = async (primaryWorktree: any, remoteName: any, remoteUrl: any) => {
+const ensureRemoteWithUrl = async (
+  primaryWorktree: string,
+  remoteName: string,
+  remoteUrl: string
+) => {
   const name = String(remoteName || '').trim();
   const url = String(remoteUrl || '').trim();
   if (!name || !url) {
@@ -1092,7 +1120,11 @@ const ensureRemoteWithUrl = async (primaryWorktree: any, remoteName: any, remote
   await runGitCommandOrThrow(primaryWorktree, ['remote', 'add', name, url], 'Failed to add git remote');
 };
 
-const fetchRemoteBranchRef = async (primaryWorktree: any, remoteName: any, branchName: any) => {
+const fetchRemoteBranchRef = async (
+  primaryWorktree: string,
+  remoteName: string,
+  branchName: string
+) => {
   const remote = String(remoteName || '').trim();
   const branch = String(branchName || '').trim();
   if (!remote || !branch) {
@@ -1107,7 +1139,12 @@ const fetchRemoteBranchRef = async (primaryWorktree: any, remoteName: any, branc
   );
 };
 
-const checkRemoteBranchExists = async (primaryWorktree: any, remoteName: any, branchName: any, remoteUrl: any = '') => {
+const checkRemoteBranchExists = async (
+  primaryWorktree: string,
+  remoteName: string,
+  branchName: string,
+  remoteUrl = ""
+) => {
   const remote = String(remoteName || '').trim();
   const branch = String(branchName || '').trim();
   const url = String(remoteUrl || '').trim();
@@ -1130,7 +1167,11 @@ const checkRemoteBranchExists = async (primaryWorktree: any, remoteName: any, br
   };
 };
 
-const setBranchTrackingFallback = async (worktreeDirectory: any, localBranch: any, upstream: any) => {
+const setBranchTrackingFallback = async (
+  worktreeDirectory: string,
+  localBranch: string,
+  upstream: { remote: string; branch: string }
+) => {
   await runGitCommandOrThrow(
     worktreeDirectory,
     ['config', `branch.${localBranch}.remote`, upstream.remote],
@@ -1143,7 +1184,7 @@ const setBranchTrackingFallback = async (worktreeDirectory: any, localBranch: an
   );
 };
 
-const applyUpstreamConfiguration = async (args: any) => {
+const applyUpstreamConfiguration = async (args: UpstreamConfigurationArgs) => {
   const {
     primaryWorktree,
     worktreeDirectory,
