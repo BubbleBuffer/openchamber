@@ -487,6 +487,14 @@ type WorktreeListEntry = {
   branch?: string;
 };
 
+type ProjectSandboxState = {
+  id: string;
+  worktree: string;
+  vcs: string;
+  sandboxes: string[];
+  time: { created: number; updated: number };
+};
+
 const parseWorktreePorcelain = (raw: string): WorktreeListEntry[] => {
   const lines = String(raw || '').split('\n').map((line: string) => line.trim());
   const entries = [];
@@ -892,7 +900,7 @@ const runWorktreeStartCommand = async (directory: string, command: string): Prom
   return result;
 };
 
-const loadProjectStartCommand = async (projectID: any) => {
+const loadProjectStartCommand = async (projectID: string): Promise<string> => {
   const storagePath = path.join(getOpenCodeDataPath(), 'storage', 'project', `${projectID}.json`);
   try {
     const raw = await fsp.readFile(storagePath, 'utf8');
@@ -904,11 +912,11 @@ const loadProjectStartCommand = async (projectID: any) => {
   }
 };
 
-const getProjectStoragePath = (projectID: any) => {
+const getProjectStoragePath = (projectID: string): string => {
   return path.join(getOpenCodeDataPath(), 'storage', 'project', `${projectID}.json`);
 };
 
-const syncSandboxesToOpenCodeDb = (projectID: any, sandboxes: any) => {
+const syncSandboxesToOpenCodeDb = (projectID: string, sandboxes: string[]): void => {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Database = require("better-sqlite3");
@@ -928,12 +936,16 @@ const syncSandboxesToOpenCodeDb = (projectID: any, sandboxes: any) => {
   }
 };
 
-const updateProjectSandboxes = async (projectID: any, primaryWorktree: any, updater: any) => {
+const updateProjectSandboxes = async (
+  projectID: string,
+  primaryWorktree: string,
+  updater: (project: ProjectSandboxState) => void,
+) => {
   const storagePath = getProjectStoragePath(projectID);
   await fsp.mkdir(path.dirname(storagePath), { recursive: true });
 
   const now = Date.now();
-  const base = {
+  const base: ProjectSandboxState = {
     id: projectID,
     worktree: primaryWorktree,
     vcs: 'git',
@@ -944,7 +956,7 @@ const updateProjectSandboxes = async (projectID: any, primaryWorktree: any, upda
     },
   };
 
-  const parsed = await fsp.readFile(storagePath, 'utf8').then((raw: string) => JSON.parse(raw)).catch(() => null);
+  const parsed: unknown = await fsp.readFile(storagePath, 'utf8').then((raw: string) => JSON.parse(raw)).catch(() => null);
   const current = parsed && typeof parsed === 'object' ? { ...base, ...parsed } : base;
   current.id = String(current.id || projectID);
   current.worktree = String(current.worktree || primaryWorktree);
@@ -972,24 +984,24 @@ const updateProjectSandboxes = async (projectID: any, primaryWorktree: any, upda
   syncSandboxesToOpenCodeDb(projectID, current.sandboxes);
 };
 
-const syncProjectSandboxAdd = async (projectID: any, primaryWorktree: any, sandboxPath: any) => {
+const syncProjectSandboxAdd = async (projectID: string, primaryWorktree: string, sandboxPath: string) => {
   const sandbox = String(sandboxPath || '').trim();
   if (!sandbox) {
     return;
   }
-  await updateProjectSandboxes(projectID, primaryWorktree, (project: any) => {
+  await updateProjectSandboxes(projectID, primaryWorktree, (project: ProjectSandboxState) => {
     if (!project.sandboxes.includes(sandbox)) {
       project.sandboxes.push(sandbox);
     }
   });
 };
 
-const syncProjectSandboxRemove = async (projectID: any, primaryWorktree: any, sandboxPath: any) => {
+const syncProjectSandboxRemove = async (projectID: string, primaryWorktree: string, sandboxPath: string) => {
   const sandbox = String(sandboxPath || '').trim();
   if (!sandbox) {
     return;
   }
-  await updateProjectSandboxes(projectID, primaryWorktree, (project: any) => {
+  await updateProjectSandboxes(projectID, primaryWorktree, (project: ProjectSandboxState) => {
     project.sandboxes = project.sandboxes.filter((entry: string) => entry !== sandbox);
   });
 };
