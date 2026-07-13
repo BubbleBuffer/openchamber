@@ -2128,7 +2128,7 @@ export async function push(directory: string, options: GitPushOptions = {}): Pro
   }
 }
 
-export async function deleteRemoteBranch(directory: string, options: { branch: string; remote?: string } = { branch: '' }): Promise<boolean> {
+export async function deleteRemoteBranch(directory: string, options: { branch: string; remote?: string } = { branch: '' }): Promise<GitSuccessResult> {
   const { branch, remote } = options;
   if (!branch) {
     throw new Error('branch is required to delete remote branch');
@@ -2142,14 +2142,14 @@ export async function deleteRemoteBranch(directory: string, options: { branch: s
 
   try {
     await git.push(remoteName, `:${targetBranch}`);
-    return { success: true } as any;
+    return { success: true };
   } catch (e) {
     console.error('Failed to delete remote branch:', e);
     throw e;
   }
 }
 
-export async function fetch(directory: string, options: GitFetchOptions = {}): Promise<boolean> {
+export async function fetch(directory: string, options: GitFetchOptions = {}): Promise<GitSuccessResult> {
   const git = await createGit(directory);
 
   try {
@@ -2159,7 +2159,7 @@ export async function fetch(directory: string, options: GitFetchOptions = {}): P
       options.options || {}
     );
 
-    return { success: true } as any;
+    return { success: true };
   } catch (e) {
     console.error('Failed to fetch:', e);
     throw e;
@@ -2755,7 +2755,7 @@ export async function removeWorktree(directory: string, input: GitWorktreeRemove
   return true;
 }
 
-export async function deleteBranch(directory: string, branch: string, options: GitDeleteBranchOptions = {}): Promise<boolean> {
+export async function deleteBranch(directory: string, branch: string, options: GitDeleteBranchOptions = {}): Promise<GitSuccessResult> {
   const git = await createGit(directory);
 
   try {
@@ -2764,7 +2764,7 @@ export async function deleteBranch(directory: string, branch: string, options: G
       : branch;
     const args = ['branch', options.force ? '-D' : '-d', branchName];
     await git.raw(args);
-    return { success: true } as any;
+    return { success: true };
   } catch (e) {
     console.error('Failed to delete branch:', e);
     throw e;
@@ -3182,7 +3182,7 @@ export async function getRemotes(directory: string): Promise<GitRemoteEntry[]> {
   }
 }
 
-export async function removeRemote(directory: string, options: GitRemoveRemoteOptions = {} as GitRemoveRemoteOptions): Promise<boolean> {
+export async function removeRemote(directory: string, options: GitRemoveRemoteOptions = {} as GitRemoveRemoteOptions): Promise<GitSuccessResult> {
   const remoteName = String(options.remote || '').trim();
   if (!remoteName) {
     throw new Error('remote is required to remove a remote');
@@ -3195,7 +3195,7 @@ export async function removeRemote(directory: string, options: GitRemoveRemoteOp
 
   try {
     await git.removeRemote(remoteName);
-    return { success: true } as any;
+    return { success: true };
   } catch (e) {
     console.error('Failed to remove remote:', e);
     throw e;
@@ -3238,12 +3238,12 @@ export async function rebase(directory: string, options: GitRebaseOptions = {} a
   }
 }
 
-export async function abortRebase(directory: string): Promise<boolean> {
+export async function abortRebase(directory: string): Promise<GitSuccessResult> {
   const git = await createGit(directory);
 
   try {
     await git.rebase(['--abort']);
-    return { success: true } as any;
+    return { success: true };
   } catch (e) {
     console.error('Failed to abort rebase:', e);
     throw e;
@@ -3286,12 +3286,12 @@ export async function merge(directory: string, options: GitMergeOptions = {} as 
   }
 }
 
-export async function abortMerge(directory: string): Promise<boolean> {
+export async function abortMerge(directory: string): Promise<GitSuccessResult> {
   const git = await createGit(directory);
 
   try {
     await git.merge(['--abort']);
-    return { success: true } as any;
+    return { success: true };
   } catch (e) {
     console.error('Failed to abort merge:', e);
     throw e;
