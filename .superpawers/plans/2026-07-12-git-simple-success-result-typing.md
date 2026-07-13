@@ -1,12 +1,12 @@
 ---
 kind: plan
-status: active
+status: complete
 parent_spec: .superpawers/specs/2026-07-09-lint-integration-readiness-design.md
 covers_chunks:
   - git-service-typing
 created: 2026-07-12
 updated: 2026-07-12
-next_action: "Execute Task 1"
+next_action: "Plan Git branch-result and rich-result adapter typing"
 ---
 
 # Git Simple Success Result Typing Implementation Plan
@@ -45,7 +45,7 @@ No test file is added. These functions already emit the target JSON shape and ev
 - Modify: `packages/web/server/src/domains/git/index.ts` — add `GitSuccessResult` to the explicit `export type` list.
 - Modify: `packages/web/server/src/domains/git/service.ts` — add `GitSuccessResult` to the existing type import from `./types.js`.
 
-- [ ] **Step 1: Record the six-return lint baseline**
+- [x] **Step 1: Record the six-return lint baseline**
 
 Run from `packages/web`:
 
@@ -70,7 +70,7 @@ if (matches.length !== 6) process.exit(1)
 
 Expected: `success-result any baseline: 6`, one `as any` return cast in each named function. The full file remains lint-failing for deferred Git service work.
 
-- [ ] **Step 2: Add the single public result shape and follow the established type-barrel pattern**
+- [x] **Step 2: Add the single public result shape and follow the established type-barrel pattern**
 
 In `types.ts`, insert this interface immediately after `GitDeleteBranchOptions` and before `GitWorktreeEntry`, which begins the worktree-only type group:
 
@@ -82,7 +82,7 @@ export interface GitSuccessResult {
 
 In `index.ts`, add `GitSuccessResult` to the existing `export type { ... } from "./types.js"` list. In `service.ts`, add it to the existing `import type { ... } from "./types.js"` list. Do not add a second barrel, a local duplicate type, or a type alias that permits additional fields.
 
-- [ ] **Step 3: Inspect the contract-only diff**
+- [x] **Step 3: Inspect the contract-only diff**
 
 Run:
 
@@ -92,7 +92,7 @@ git diff -- packages/web/server/src/domains/git/types.ts packages/web/server/src
 
 Expected: one exported interface and its two type-only references. No route or runtime expressions change in this task.
 
-- [ ] **Step 4: Run server type-check**
+- [x] **Step 4: Run server type-check**
 
 Run:
 
@@ -102,7 +102,7 @@ bun run --cwd packages/web type-check:server
 
 Expected: exit 0. The new result type is available to the service through the existing type import and to domain consumers through the existing barrel.
 
-- [ ] **Step 5: Commit the shared result contract**
+- [x] **Step 5: Commit the shared result contract**
 
 ```bash
 git add packages/web/server/src/domains/git/types.ts packages/web/server/src/domains/git/index.ts packages/web/server/src/domains/git/service.ts
@@ -115,7 +115,7 @@ git commit -m "fix(lint): define git success result contract"
 - Modify: `packages/web/server/src/domains/git/service.ts` — update the declared result type and success return in six exported functions.
 - Reference only: `packages/web/server/src/domains/git/routes.ts` — confirm each route continues to pass the unchanged value directly to `res.json(result)`.
 
-- [ ] **Step 1: Confirm route forwarding and current success shapes**
+- [x] **Step 1: Confirm route forwarding and current success shapes**
 
 Inspect these semantic anchors in `service.ts` and their direct routes:
 
@@ -130,7 +130,7 @@ Inspect these semantic anchors in `service.ts` and their direct routes:
 
 Expected: every route uses `const result = await ...; res.json(result);` with no transformation. Do not modify routes.
 
-- [ ] **Step 2: Replace the six false boolean declarations and their casts**
+- [x] **Step 2: Replace the six false boolean declarations and their casts**
 
 At each of the six named exported function anchors, apply this exact local pattern:
 
@@ -150,7 +150,7 @@ export async function example(/* preserve existing parameters */): Promise<GitSu
 
 Apply it to only these functions: `deleteRemoteBranch`, `fetch`, `deleteBranch`, `removeRemote`, `abortRebase`, and `abortMerge`. Preserve all parameters, defaults, `try`/`catch` blocks, Git command arrays, error logging, and return object values exactly. Do not alter the adjacent `git.fetch as any` options cast in `fetch`; it belongs to the deferred options-boundary work. Do not change `createBranch`, `checkoutBranch`, `renameBranch`, `pull`, `push`, `commit`, `rebase`, `merge`, `continueRebase`, or `continueMerge`.
 
-- [ ] **Step 3: Inspect the route-neutral service diff**
+- [x] **Step 3: Inspect the route-neutral service diff**
 
 Run:
 
@@ -160,7 +160,7 @@ git diff -- packages/web/server/src/domains/git/service.ts packages/web/server/s
 
 Expected: exactly six return annotations and six `as any` removals in `service.ts`; `routes.ts` has no diff. The existing runtime JSON remains `{ "success": true }`.
 
-- [ ] **Step 4: Run type and focused lint validation**
+- [x] **Step 4: Run type and focused lint validation**
 
 Run from the repository root:
 
@@ -170,7 +170,7 @@ bun run --cwd packages/web type-check:server
 
 Then rerun the Task 1 lint probe. Expected: it reports `success-result any baseline: 0`; all remaining `no-explicit-any` diagnostics are deferred categories outside the six function ranges.
 
-- [ ] **Step 5: Commit the aligned service contracts**
+- [x] **Step 5: Commit the aligned service contracts**
 
 ```bash
 git add packages/web/server/src/domains/git/service.ts
@@ -186,7 +186,7 @@ git commit -m "fix(lint): type git success-only operations"
 - Modify: `.superpawers/plans/2026-07-12-git-simple-success-result-typing.md` — complete metadata and checkboxes.
 - Modify: `.superpawers/specs/2026-07-09-lint-integration-readiness-design.md` — leave `git-service-typing` at `Status: planned`.
 
-- [ ] **Step 1: Inspect the implementation diff against the cleanup baseline**
+- [x] **Step 1: Inspect the implementation diff against the cleanup baseline**
 
 Run:
 
@@ -197,7 +197,7 @@ git diff 7f82984c..HEAD -- packages/web/server/src/domains/git/types.ts packages
 
 Expected: this plan's changes define one shared result type, re-export it, and replace only six matching `Promise<boolean>` annotations and success-return casts. No route, command, error, or JSON response behavior changes.
 
-- [ ] **Step 2: Run server and repository type-checks**
+- [x] **Step 2: Run server and repository type-checks**
 
 Run:
 
@@ -208,7 +208,7 @@ bun run type-check
 
 Expected: both commands exit 0.
 
-- [ ] **Step 3: Assert the six success-only function ranges are free of active `any` diagnostics**
+- [x] **Step 3: Assert the six success-only function ranges are free of active `any` diagnostics**
 
 Run from `packages/web`:
 
@@ -237,7 +237,7 @@ console.log("PASS: no active no-explicit-any diagnostics in success-only result 
 
 Expected: `PASS: no active no-explicit-any diagnostics in success-only result functions`. This deliberately does not require full-file or repository lint to pass because public rich-result, options-boundary, and error-boundary debt remains.
 
-- [ ] **Step 4: Complete plan tracking without closing the parent chunk**
+- [x] **Step 4: Complete plan tracking without closing the parent chunk**
 
 Update this plan's frontmatter:
 
@@ -249,7 +249,7 @@ next_action: "Plan Git branch-result and rich-result adapter typing"
 
 Check every completed checkbox in this plan. In `.superpawers/specs/2026-07-09-lint-integration-readiness-design.md`, leave `### Chunk: git-service-typing` at `Status: planned`: branch-bearing, rich, conflict, options-boundary, and error-boundary work still belong to it.
 
-- [ ] **Step 5: Commit the verified plan completion**
+- [x] **Step 5: Commit the verified plan completion**
 
 ```bash
 git add .superpawers/plans/2026-07-12-git-simple-success-result-typing.md
