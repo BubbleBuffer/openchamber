@@ -103,6 +103,10 @@ export interface GitDeleteBranchOptions {
   force?: boolean;
 }
 
+export interface GitSuccessResult {
+  success: boolean;
+}
+
 export interface GitWorktreeEntry {
   head: string;
   name: string;

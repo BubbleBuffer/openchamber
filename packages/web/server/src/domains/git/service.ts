@@ -21,6 +21,7 @@ import type {
   GitBranchResult,
   GitCreateBranchOptions,
   GitDeleteBranchOptions,
+  GitSuccessResult,
   GitWorktreeEntry,
   GitWorktreeBootstrapState,
   GitWorktreeCreateInput,
