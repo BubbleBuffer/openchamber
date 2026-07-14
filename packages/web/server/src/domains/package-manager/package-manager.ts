@@ -41,7 +41,7 @@ function getOpenChamberConfigDir(): string {
 }
 
 function sanitizeInstallScope(scope: string): string {
-  if (scope === "desktop-tauri" || scope === "vscode" || scope === "web") return scope;
+  if (scope === "desktop-tauri" || scope === "web") return scope;
   return "web";
 }
 
@@ -77,7 +77,7 @@ function mapArch(value: string): string {
 }
 
 function normalizeAppType(value: string): string {
-  if (value === "web" || value === "desktop-tauri" || value === "vscode") return value;
+  if (value === "web" || value === "desktop-tauri") return value;
   return "web";
 }
 
@@ -90,17 +90,6 @@ function normalizeDeviceClass(value: string): string {
   )
     return value;
   return "unknown";
-}
-
-function normalizePlatform(value: string): string {
-  if (value === "macos" || value === "windows" || value === "linux" || value === "web")
-    return value;
-  return mapPlatform(process.platform);
-}
-
-function normalizeArch(value: string): string {
-  if (value === "arm64" || value === "x64" || value === "unknown") return value;
-  return mapArch(process.arch);
 }
 
 interface CheckForUpdatesFromApiResult {
@@ -119,15 +108,11 @@ async function checkForUpdatesFromApi(
     const appType = normalizeAppType(options.appType || "web");
     const hostPlatform = mapPlatform(process.platform);
     const hostArch = mapArch(process.arch);
-    const platform =
-      appType === "vscode" ? normalizePlatform(options.platform || "") : hostPlatform;
-    const arch =
-      appType === "vscode" ? normalizeArch(options.arch || "") : hostArch;
     const payload = {
       appType,
       deviceClass: normalizeDeviceClass(options.deviceClass || "unknown"),
-      platform,
-      arch,
+      platform: hostPlatform,
+      arch: hostArch,
       channel: "stable",
       currentVersion,
       installId: getOrCreateInstallId(appType),

@@ -668,7 +668,6 @@ vi.mock("@/stores/useDialogStore", () => ({
 
 vi.mock("@/hooks/useRuntimeAPIs", () => ({
   useRuntimeAPIs: () => ({
-    runtime: { isVSCode: false },
     github: {
       authStatus: vi.fn(),
       listPrStatuses: vi.fn(),
@@ -677,14 +676,12 @@ vi.mock("@/hooks/useRuntimeAPIs", () => ({
   }),
   useRuntimeAPI: (selector: (api: Record<string, unknown>) => unknown) =>
     selector({
-      runtime: { isVSCode: false },
       github: {
         authStatus: vi.fn(),
         listPrStatuses: vi.fn(),
         listPullRequests: vi.fn(),
       },
     }),
-  useIsVSCodeRuntime: () => false,
 }))
 
 vi.mock("@/lib/opencode/client", () => ({
@@ -710,7 +707,6 @@ vi.mock("@/lib/desktop/desktop", () => ({
   isTauriShell: () => false,
   isDesktopShell: () => false,
   isDesktopLocalOriginActive: () => false,
-  isVSCodeRuntime: () => false,
   isWebRuntime: () => true,
   getDesktopHomeDirectory: () => undefined,
   checkForDesktopUpdates: vi.fn(),

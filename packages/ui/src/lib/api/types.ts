@@ -1,13 +1,11 @@
 import type { WorktreeMetadata } from '@/types/worktree';
 
-export type RuntimePlatform = 'web' | 'desktop' | 'vscode';
+export type RuntimePlatform = 'web' | 'desktop';
 
 export interface RuntimeDescriptor {
   platform: RuntimePlatform;
 
   isDesktop: boolean;
-
-  isVSCode: boolean;
 
   label?: string;
 }
@@ -654,12 +652,6 @@ export interface EditorAPI {
   ): Promise<void>;
 }
 
-export interface VSCodeAPI {
-  executeCommand(command: string, ...args: unknown[]): Promise<unknown>;
-  openAgentManager(): Promise<void>;
-  openExternalUrl(url: string): Promise<void>;
-}
-
 export interface PushSubscribePayload {
   endpoint: string;
   keys: {
@@ -983,7 +975,6 @@ export interface RuntimeAPIs {
   diagnostics?: DiagnosticsAPI;
   tools: ToolsAPI;
   editor?: EditorAPI;
-  vscode?: VSCodeAPI;
   worktrees?: WorktreeMetadata[];
 }
 

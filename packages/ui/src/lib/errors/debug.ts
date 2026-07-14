@@ -320,7 +320,6 @@ export const debugUtils = {
       runtime: {
         platform: runtimeApis?.runtime?.platform ?? null,
         isDesktop: isTauriShell,
-        isVSCode: Boolean(runtimeApis?.runtime?.isVSCode),
         hasRuntimeApis: Boolean(runtimeApis),
         desktopServerOrigin: null,
       },

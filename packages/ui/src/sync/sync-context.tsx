@@ -1459,8 +1459,6 @@ export function SyncProvider(props: {
             }),
           })
 
-          // VS Code race: if sessions are still empty after bootstrap, OpenCode
-          // wasn't ready yet (bridge returned 503). Retry a few times.
           const state = store.getState()
           if (state.session.length === 0 && attempt < 5) {
             console.warn(`[bootstrap] sessions empty for ${directory} after attempt ${attempt + 1}; retrying in 2s`)

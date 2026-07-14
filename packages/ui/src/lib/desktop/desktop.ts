@@ -259,24 +259,11 @@ export const startDesktopWindowDrag = async (): Promise<boolean> => {
   }
 };
 
-export const isVSCodeRuntime = (): boolean => {
-  if (typeof window === "undefined") return false;
-  const apis = (window as { __OPENCHAMBER_RUNTIME_APIS__?: { runtime?: { isVSCode?: boolean } } }).__OPENCHAMBER_RUNTIME_APIS__;
-  return apis?.runtime?.isVSCode === true;
-};
-
 export const isWebRuntime = (): boolean => {
-  if (typeof window === "undefined") return false;
-  const apis = (window as { __OPENCHAMBER_RUNTIME_APIS__?: { runtime?: { platform?: string } } }).__OPENCHAMBER_RUNTIME_APIS__;
-  const platform = apis?.runtime?.platform;
-  if (platform === 'web') {
-    return true;
-  }
-  if (platform === 'desktop' || platform === 'vscode') {
-    return false;
-  }
-  // Default: anything that's not VSCode behaves like web (HTTP UI).
-  return !isVSCodeRuntime();
+  if (typeof window === 'undefined') return false;
+  const platform = (window as { __OPENCHAMBER_RUNTIME_APIS__?: { runtime?: { platform?: string } } })
+    .__OPENCHAMBER_RUNTIME_APIS__?.runtime?.platform;
+  return platform !== 'desktop';
 };
 
 export const getDesktopHomeDirectory = async (): Promise<string | null> => {
