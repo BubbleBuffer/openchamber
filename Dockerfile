@@ -8,7 +8,6 @@ COPY package.json bun.lock ./
 COPY packages/session-state/package.json ./packages/session-state/
 COPY packages/ui/package.json ./packages/ui/
 COPY packages/web/package.json ./packages/web/
-COPY packages/electron/package.json ./packages/electron/
 COPY tests/package.json ./tests/
 RUN bun install --frozen-lockfile --ignore-scripts
 
