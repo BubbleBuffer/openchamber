@@ -134,7 +134,7 @@ Run: `bun install`
 Then run:
 
 ```bash
-if rg -n -P '"(?:packages/electron|@openchamber/electron|@electron/[^"]*|electron(?!-to-chromium)[^"]*|app-builder-(?:bin|lib)|builder-util(?:-runtime)?|dmg-builder|dmg-license)' bun.lock; then echo "removed Electron dependency remains" >&2; exit 1; else status=$?; if [ "$status" -gt 1 ]; then exit "$status"; fi; fi
+bun -e 'import fs from "node:fs"; const lock = fs.readFileSync("bun.lock", "utf8"); const keys = [...lock.matchAll(/^\s+"([^"]+)":/gm)].map((match) => match[1]); const forbidden = keys.filter((name) => name === "packages/electron" || name.includes("@openchamber/electron") || /(^|\/)(?:@electron\/|electron(?!-to-chromium)|app-builder-(?:bin|lib)|builder-util(?:-runtime)?|dmg-builder|dmg-license)/.test(name)); if (forbidden.length) throw new Error(`removed Electron dependencies remain: ${forbidden.join(", ")}`);'
 rg -n '"electron-to-chromium"' bun.lock || true
 ```
 
@@ -317,7 +317,7 @@ test ! -e packages/electron
 test ! -e scripts/test-release-build.sh
 test ! -e .github/workflows/build-macos-arm64-dmg.yml
 rg -n 'build:electron|type-check:electron|lint:electron|electron:(dev|build)|release:test|packages/electron|packages/desktop' package.json Dockerfile .dockerignore scripts .github/workflows/release.yml AGENTS.md CONTRIBUTING.md README.md
-if rg -n -P '"(?:packages/electron|@openchamber/electron|@electron/[^"]*|electron(?!-to-chromium)[^"]*|app-builder-(?:bin|lib)|builder-util(?:-runtime)?|dmg-builder|dmg-license)' bun.lock; then echo "removed Electron dependency remains" >&2; exit 1; else status=$?; if [ "$status" -gt 1 ]; then exit "$status"; fi; fi
+bun -e 'import fs from "node:fs"; const lock = fs.readFileSync("bun.lock", "utf8"); const keys = [...lock.matchAll(/^\s+"([^"]+)":/gm)].map((match) => match[1]); const forbidden = keys.filter((name) => name === "packages/electron" || name.includes("@openchamber/electron") || /(^|\/)(?:@electron\/|electron(?!-to-chromium)|app-builder-(?:bin|lib)|builder-util(?:-runtime)?|dmg-builder|dmg-license)/.test(name)); if (forbidden.length) throw new Error(`removed Electron dependencies remain: ${forbidden.join(", ")}`);'
 rg -n '"electron-to-chromium"' bun.lock || true
 ```
 
