@@ -1,13 +1,15 @@
 ---
 kind: spec
-status: active
+status: superseded
 id: lint-integration-readiness
 created: 2026-07-09
-updated: 2026-07-10
+updated: 2026-07-14
 ---
 
 # Lint & Integration Readiness — Design Spec
 
+> **Superseded by:** `.superpawers/specs/2026-07-14-web-pwa-maintainability-program-design.md`. Completed typing work remains valid; uncovered lint and boundary work moves into the broader program.
+>
 > **Status:** Approved design (user-approved 2026-07-09). Ready for subplan decomposition.
 > **Branch:** `feature/lint-integration-readiness`
 > **Baseline commit:** `7f82984c` on `main`

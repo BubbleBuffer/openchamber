@@ -1,5 +1,7 @@
 # OpenChamber Refactor — Overview & Checklist
 
+> **Superseded on 2026-07-14:** The active source of truth is `.superpawers/specs/2026-07-14-web-pwa-maintainability-program-design.md`. This file is retained only as historical context for completed and deferred work.
+>
 > Living overview of the radical refactor program. Source of truth for "what's done / in flight / next".
 > Deep design lives in `.superpawers/specs/`. Per-task plans live in `.superpawers/plans/`.
 > Last updated: 2026-06-28 (testing-expansion cleanup + 68 store tests).
