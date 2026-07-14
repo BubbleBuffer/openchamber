@@ -1,7 +1,5 @@
 import React from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { VSCodeLayout } from '@/components/layout/VSCodeLayout';
-import { AgentManagerView } from '@/components/views/agent-manager';
 import { ChatView } from '@/components/views';
 import { FireworksProvider } from '@/contexts/FireworksContext';
 import { Toaster } from '@/components/ui/sonner';
@@ -125,14 +123,13 @@ const isMcpOAuthCallbackPath = (): boolean => {
 
 const EmbeddedSessionSelectionGate: React.FC<{
   embeddedSessionChat: EmbeddedSessionChatConfig | null;
-  isVSCodeRuntime: boolean;
-}> = ({ embeddedSessionChat, isVSCodeRuntime }) => {
+}> = ({ embeddedSessionChat }) => {
   const sessions = useSessions();
   const currentSessionId = useSessionUIStore((state) => state.currentSessionId);
   const setCurrentSession = useSessionUIStore((state) => state.setCurrentSession);
 
   React.useEffect(() => {
-    if (!embeddedSessionChat || isVSCodeRuntime) {
+    if (!embeddedSessionChat) {
       return;
     }
 
@@ -145,7 +142,7 @@ const EmbeddedSessionSelectionGate: React.FC<{
     }
 
     void setCurrentSession(embeddedSessionChat.sessionId);
-  }, [currentSessionId, embeddedSessionChat, isVSCodeRuntime, sessions, setCurrentSession]);
+  }, [currentSessionId, embeddedSessionChat, sessions, setCurrentSession]);
 
   return null;
 };
@@ -193,7 +190,6 @@ function App({ apis }: AppProps) {
   const [showMemoryDebug, setShowMemoryDebug] = React.useState(false);
   const { uiFont, monoFont } = useFontPreferences();
   const refreshGitHubAuthStatus = useGitHubAuthStore((state) => state.refreshStatus);
-  const [isVSCodeRuntime, setIsVSCodeRuntime] = React.useState<boolean>(() => apis.runtime.isVSCode);
   const [isEmbeddedVisible, setIsEmbeddedVisible] = React.useState(true);
   const isDesktopRuntime = React.useMemo(() => isDesktopShell(), []);
   const setPlanModeEnabled = useFeatureFlagsStore((state) => state.setPlanModeEnabled);
@@ -225,10 +221,6 @@ function App({ apis }: AppProps) {
       setStreamPerfEnabled(false);
     };
   }, [showMemoryDebug]);
-
-  React.useEffect(() => {
-    setIsVSCodeRuntime(apis.runtime.isVSCode);
-  }, [apis.runtime.isVSCode]);
 
   React.useEffect(() => {
     registerRuntimeAPIs(apis);
@@ -349,11 +341,6 @@ function App({ apis }: AppProps) {
 
   React.useEffect(() => {
     const init = async () => {
-      // VS Code runtime bootstraps config + sessions after the managed OpenCode instance reports "connected".
-      // Doing the default initialization here can race with startup and lead to one-shot failures.
-      if (isVSCodeRuntime) {
-        return;
-      }
       if (initializationInFlightRef.current) {
         return;
       }
@@ -371,10 +358,10 @@ function App({ apis }: AppProps) {
     };
 
     init();
-  }, [initializeApp, isVSCodeRuntime]);
+  }, [initializeApp]);
 
   React.useEffect(() => {
-    if (isVSCodeRuntime || isInitialized) return;
+    if (isInitialized) return;
 
     let active = true;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
@@ -406,13 +393,13 @@ function App({ apis }: AppProps) {
       active = false;
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [isInitialized, isVSCodeRuntime]);
+  }, [isInitialized]);
 
   // Startup recovery: poll until providers AND agents are loaded.
   // loadProviders/loadAgents resolve normally even on failure (errors swallowed),
   // so a reactive effect can't detect failure — we need an interval.
   React.useEffect(() => {
-    if (isVSCodeRuntime || !isConnected) return;
+    if (!isConnected) return;
     if (providersCount > 0 && agentsCount > 0) return;
 
     let active = true;
@@ -435,15 +422,10 @@ function App({ apis }: AppProps) {
       void attempt();
     }, 2000);
     return () => { active = false; clearInterval(id); };
-  }, [isConnected, isVSCodeRuntime, loadAgents, loadProviders, providersCount, agentsCount]);
+  }, [isConnected, loadAgents, loadProviders, providersCount, agentsCount]);
 
   React.useEffect(() => {
     if (isSwitchingDirectory) {
-      return;
-    }
-
-    // VS Code runtime loads sessions via VSCodeLayout bootstrap to avoid startup races.
-    if (isVSCodeRuntime) {
       return;
     }
 
@@ -453,7 +435,7 @@ function App({ apis }: AppProps) {
     opencodeClient.setDirectory(currentDirectory);
 
     // Session loading is handled by the sync system's bootstrap — no manual loadSessions needed.
-  }, [currentDirectory, isSwitchingDirectory, isConnected, isVSCodeRuntime]);
+  }, [currentDirectory, isSwitchingDirectory, isConnected]);
 
   React.useEffect(() => {
     if (!embeddedSessionChat || typeof window === 'undefined') {
@@ -494,7 +476,7 @@ function App({ apis }: AppProps) {
   }, [embeddedSessionChat]);
 
   React.useEffect(() => {
-    if (!embeddedSessionChat?.directory || isVSCodeRuntime) {
+    if (!embeddedSessionChat?.directory) {
       return;
     }
 
@@ -503,7 +485,7 @@ function App({ apis }: AppProps) {
     }
 
     setDirectory(embeddedSessionChat.directory, { showOverlay: false });
-  }, [currentDirectory, embeddedSessionChat, isVSCodeRuntime, setDirectory]);
+  }, [currentDirectory, embeddedSessionChat, setDirectory]);
 
   React.useEffect(() => {
     if (!embeddedSessionChat || typeof window === 'undefined') {
@@ -740,7 +722,7 @@ function App({ apis }: AppProps) {
           <RuntimeAPIProvider apis={apis}>
             <TooltipProvider delayDuration={700} skipDelayDuration={150}>
               <div className="h-full text-foreground bg-background">
-                <EmbeddedSessionSelectionGate embeddedSessionChat={embeddedSessionChat} isVSCodeRuntime={isVSCodeRuntime} />
+                <EmbeddedSessionSelectionGate embeddedSessionChat={embeddedSessionChat} />
                 <SyncAppEffects embeddedBackgroundWorkEnabled={embeddedBackgroundWorkEnabled} />
                 <ChatView />
                 <Toaster />
@@ -756,50 +738,6 @@ function App({ apis }: AppProps) {
     return (
       <ErrorBoundary>
         <McpOAuthCallbackPage />
-      </ErrorBoundary>
-    );
-  }
-
-  // VS Code runtime - simplified layout without git/terminal views
-  if (isVSCodeRuntime) {
-    // Check if this is the Agent Manager panel
-    const panelType = typeof window !== 'undefined'
-      ? (window as { __OPENCHAMBER_PANEL_TYPE__?: 'chat' | 'agentManager' }).__OPENCHAMBER_PANEL_TYPE__
-      : 'chat';
-
-    if (panelType === 'agentManager') {
-    return (
-      <ErrorBoundary>
-        <SyncProvider sdk={opencodeClient.getSdkClient()} directory={currentDirectory || ''}>
-          <RuntimeAPIProvider apis={apis}>
-            <TooltipProvider delayDuration={700} skipDelayDuration={150}>
-              <div className="h-full text-foreground bg-background">
-                <SyncAppEffects embeddedBackgroundWorkEnabled={embeddedBackgroundWorkEnabled} />
-                <AgentManagerView />
-                <Toaster />
-              </div>
-            </TooltipProvider>
-          </RuntimeAPIProvider>
-        </SyncProvider>
-      </ErrorBoundary>
-    );
-    }
-
-    return (
-      <ErrorBoundary>
-        <SyncProvider sdk={opencodeClient.getSdkClient()} directory={currentDirectory || ''}>
-          <RuntimeAPIProvider apis={apis}>
-            <FireworksProvider>
-              <TooltipProvider delayDuration={700} skipDelayDuration={150}>
-                <div className="h-full text-foreground bg-background">
-                  <SyncAppEffects embeddedBackgroundWorkEnabled={embeddedBackgroundWorkEnabled} />
-                  <VSCodeLayout />
-                  <Toaster />
-                </div>
-              </TooltipProvider>
-            </FireworksProvider>
-          </RuntimeAPIProvider>
-        </SyncProvider>
       </ErrorBoundary>
     );
   }

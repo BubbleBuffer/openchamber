@@ -10,17 +10,6 @@ import type { MainTab } from '@/stores/useUIStore';
 import { resolveSettingsSlug } from '@/lib/settings/metadata';
 
 /**
- * Check if running in VS Code webview context.
- */
-function isVSCodeContext(): boolean {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-  const win = window as { __VSCODE_CONFIG__?: unknown };
-  return win.__VSCODE_CONFIG__ !== undefined;
-}
-
-/**
  * Hook that provides bidirectional URL routing for OpenChamber.
  *
  * On mount:
@@ -28,14 +17,9 @@ function isVSCodeContext(): boolean {
  * - Sets up subscriptions to sync state changes back to URL
  * - Listens for browser back/forward navigation
  *
- * Works in:
- * - Web: Full bidirectional sync
- * - Desktop (Tauri): Full bidirectional sync
- * - VS Code: State-only (no URL updates, reads initial params)
+ * Works in web and desktop (Tauri) runtimes.
  */
 export function useRouter(): void {
-  const isVSCode = React.useMemo(() => isVSCodeContext(), []);
-
   // Track initialization to avoid duplicate applies
   const initializedRef = React.useRef(false);
   const isApplyingRouteRef = React.useRef(false);
@@ -120,14 +104,14 @@ export function useRouter(): void {
    */
   const syncURLFromState = React.useCallback(
     (options: { replace?: boolean } = {}) => {
-      if (isVSCode || isApplyingRouteRef.current) {
+      if (isApplyingRouteRef.current) {
         return;
       }
 
       const state = getCurrentAppState();
       updateBrowserURL(state, options);
     },
-    [isVSCode, getCurrentAppState]
+    [getCurrentAppState]
   );
 
   // Initialize: parse URL and apply route on mount
@@ -150,20 +134,14 @@ export function useRouter(): void {
       await applyRoute(route);
 
       // After applying, update URL to normalized form (use replaceState)
-      if (!isVSCode) {
-        syncURLFromState({ replace: true });
-      }
+      syncURLFromState({ replace: true });
     };
 
     void initializeRoute();
-  }, [applyRoute, isVSCode, syncURLFromState]);
+  }, [applyRoute, syncURLFromState]);
 
   // Subscribe to session changes
   React.useEffect(() => {
-    if (isVSCode) {
-      return;
-    }
-
     let prevSessionId: string | null = useSessionUIStore.getState().currentSessionId;
 
     const unsubscribe = useSessionUIStore.subscribe((state) => {
@@ -179,14 +157,10 @@ export function useRouter(): void {
     });
 
     return unsubscribe;
-  }, [isVSCode, syncURLFromState]);
+  }, [syncURLFromState]);
 
   // Subscribe to navigation store changes (tab)
   React.useEffect(() => {
-    if (isVSCode) {
-      return;
-    }
-
     let prevTab: MainTab = useNavigationStore.getState().activeMainTab;
 
     const unsubNav = useNavigationStore.subscribe((navState) => {
@@ -201,14 +175,10 @@ export function useRouter(): void {
     });
 
     return unsubNav;
-  }, [isVSCode, syncURLFromState]);
+  }, [syncURLFromState]);
 
   // Subscribe to UI store changes (settings)
   React.useEffect(() => {
-    if (isVSCode) {
-      return;
-    }
-
     let prevSettingsOpen: boolean = useDialogStore.getState().isSettingsDialogOpen;
     let prevSettingsPath: string = useUIStore.getState().settingsPage;
 
@@ -233,14 +203,10 @@ export function useRouter(): void {
     });
 
     return unsubUI;
-  }, [isVSCode, syncURLFromState]);
+  }, [syncURLFromState]);
 
   // Subscribe to context panel store changes (diff file)
   React.useEffect(() => {
-    if (isVSCode) {
-      return;
-    }
-
     let prevDiffFile: string | null = useContextPanelStore.getState().pendingDiffFile;
 
     const unsubCtx = useContextPanelStore.subscribe((state) => {
@@ -257,11 +223,11 @@ export function useRouter(): void {
     });
 
     return unsubCtx;
-  }, [isVSCode, syncURLFromState]);
+  }, [syncURLFromState]);
 
   // Listen for browser back/forward navigation
   React.useEffect(() => {
-    if (typeof window === 'undefined' || isVSCode) {
+    if (typeof window === 'undefined') {
       return;
     }
 
@@ -291,7 +257,7 @@ export function useRouter(): void {
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [applyRoute, isVSCode, setActiveMainTab, setSettingsDialogOpen]);
+  }, [applyRoute, setActiveMainTab, setSettingsDialogOpen]);
 }
 
 /**
@@ -300,25 +266,6 @@ export function useRouter(): void {
  */
 export function navigateToRoute(route: Partial<RouteState>): void {
   if (typeof window === 'undefined') {
-    return;
-  }
-
-  // Check VS Code context
-  const win = window as { __VSCODE_CONFIG__?: unknown };
-  if (win.__VSCODE_CONFIG__ !== undefined) {
-    // In VS Code, just apply state changes directly
-    if (route.sessionId) {
-      void useSessionUIStore.getState().setCurrentSession(route.sessionId);
-    }
-    if (route.settingsPath) {
-      useUIStore.getState().setSettingsPage(resolveSettingsSlug(route.settingsPath));
-      useDialogStore.getState().setSettingsDialogOpen(true);
-    } else if (route.tab) {
-      useNavigationStore.getState().setActiveMainTab(route.tab);
-    }
-    if (route.diffFile) {
-      useContextPanelStore.getState().navigateToDiff(route.diffFile);
-    }
     return;
   }
 
