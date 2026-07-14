@@ -3,7 +3,7 @@ import { RiInformationLine, RiRestartLine } from '@remixicon/react';
 import { useNotificationSettingsStore } from '@/stores/useNotificationSettingsStore';
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
-import { isDesktopShell, isVSCodeRuntime } from '@/lib/desktop/desktop';
+import { isDesktopShell } from '@/lib/desktop/desktop';
 import { useDeviceInfo } from '@/lib/device';
 import { updateDesktopSettings } from '@/lib/config/persistence';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -34,8 +34,7 @@ const DEFAULT_MAX_LAST_MESSAGE_LENGTH = 250;
 export const NotificationSettings: React.FC = () => {
   const { isMobile } = useDeviceInfo();
   const isDesktop = React.useMemo(() => isDesktopShell(), []);
-  const isVSCode = React.useMemo(() => isVSCodeRuntime(), []);
-  const isBrowser = !isDesktop && !isVSCode;
+  const isBrowser = !isDesktop;
   const nativeNotificationsEnabled = useNotificationSettingsStore(state => state.nativeNotificationsEnabled);
   const setNativeNotificationsEnabled = useNotificationSettingsStore(state => state.setNativeNotificationsEnabled);
   const notificationMode = useNotificationSettingsStore(state => state.notificationMode);
@@ -229,7 +228,7 @@ export const NotificationSettings: React.FC = () => {
     }
   };
 
-  const canShowNotifications = isDesktop || isVSCode || (isBrowser && typeof Notification !== 'undefined' && Notification.permission === 'granted');
+  const canShowNotifications = isDesktop || (isBrowser && typeof Notification !== 'undefined' && Notification.permission === 'granted');
 
   const updateTemplate = (
     event: 'completion' | 'error' | 'question' | 'subtask',
@@ -624,13 +623,6 @@ export const NotificationSettings: React.FC = () => {
                   Permission granted, but notifications are disabled.
                 </p>
               )}
-            </div>
-          )}
-          {isVSCode && (
-            <div className="mt-1 px-2">
-              <p className="typography-meta text-muted-foreground/70">
-                When enabled, notifications are delivered through VS Code native notifications.
-              </p>
             </div>
           )}
         </div>

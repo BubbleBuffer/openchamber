@@ -66,7 +66,7 @@ import type { SessionContextUsage } from '@/stores/types/sessionTypes';
 import { DesktopHostSwitcherDialog } from '@/components/desktop/DesktopHostSwitcher';
 import { OpenInAppButton } from '@/components/desktop/OpenInAppButton';
 import { ProjectActionsButton } from '@/components/layout/ProjectActionsButton';
-import { isDesktopShell, isVSCodeRuntime, startDesktopWindowDrag } from '@/lib/desktop/desktop';
+import { isDesktopShell, startDesktopWindowDrag } from '@/lib/desktop/desktop';
 import { desktopHostsGet, locationMatchesHost, redactSensitiveUrl } from '@/lib/desktop/desktopHosts';
 import { resolveSessionDiffStats } from '@/components/session/sidebar/utils';
 import type { Session } from '@/lib/opencode/client';
@@ -776,7 +776,6 @@ export const Header: React.FC<HeaderProps> = ({
     }
   }, [desktopServicesTab, isDesktopApp]);
 
-  const isVSCode = React.useMemo(() => isVSCodeRuntime(), []);
   const isLeftSidebarOpen = React.useMemo(() => {
     if (!isMobile) {
       return isSidebarOpen;
@@ -786,7 +785,7 @@ export const Header: React.FC<HeaderProps> = ({
     }
     return isSessionSwitcherOpen;
   }, [isMobile, isSessionSwitcherOpen, isSidebarOpen, leftDrawerOpen, onToggleLeftDrawer]);
-  const showDesktopHeaderContextUsage = !isVSCode && activeMainTab === 'chat' && !!stableDesktopContextUsage && stableDesktopContextUsage.totalTokens > 0;
+  const showDesktopHeaderContextUsage = activeMainTab === 'chat' && !!stableDesktopContextUsage && stableDesktopContextUsage.totalTokens > 0;
   const desktopHeaderDisplayPercentage = stableDesktopContextUsage && stableDesktopContextUsage.contextLimit > 0
     ? Math.min(999, (stableDesktopContextUsage.totalTokens / stableDesktopContextUsage.contextLimit) * 100)
     : 0;
@@ -1362,7 +1361,7 @@ export const Header: React.FC<HeaderProps> = ({
   }, [isDesktopApp, isMacPlatform, macosMajorVersion]);
 
   const webWindowControlsOverlayStyle = React.useMemo<React.CSSProperties | undefined>(() => {
-    if (isDesktopApp || isVSCode) {
+    if (isDesktopApp) {
       return undefined;
     }
 
@@ -1372,7 +1371,7 @@ export const Header: React.FC<HeaderProps> = ({
       minHeight: 'max(3rem, var(--oc-wco-titlebar-height, 0px))',
       height: 'max(3rem, var(--oc-wco-titlebar-height, 0px))',
     };
-  }, [isDesktopApp, isVSCode]);
+  }, [isDesktopApp]);
 
   const updateHeaderHeight = React.useCallback(() => {
     if (typeof document === 'undefined') {

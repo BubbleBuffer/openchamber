@@ -6,7 +6,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { openExternalUrl } from '@/lib/url';
-import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 import {
   useMcpConfigStore,
   envRecordToArray,
@@ -562,7 +561,6 @@ export const McpPage: React.FC = () => {
   } = useMcpConfigStore();
 
   const currentDirectory = useDirectoryStore((state) => state.currentDirectory);
-  const isVSCodeAuthRuntime = React.useMemo(() => isVSCodeRuntime(), []);
   const mcpStatus = useMcpStore((state) => state.getStatusForDirectory(currentDirectory ?? null));
   const mcpDiagnostics = useMcpStore((state) => state.getDiagnosticForDirectory(currentDirectory ?? null));
   const refreshStatus = useMcpStore((state) => state.refresh);
@@ -982,7 +980,7 @@ export const McpPage: React.FC = () => {
         throw new Error('Unable to build MCP OAuth redirect URL');
       }
 
-      if (!oauthRedirectUri.trim() && !isVSCodeAuthRuntime) {
+      if (!oauthRedirectUri.trim()) {
         const saved = await updateMcp(selectedMcpName, {
           oauthEnabled,
           oauthClientId,
@@ -1036,9 +1034,7 @@ export const McpPage: React.FC = () => {
 
       if (opened) {
         toast.message(
-          isVSCodeAuthRuntime
-            ? 'Complete the MCP authorization flow in your browser, then paste the returned code or callback URL here'
-            : 'Complete the MCP authorization flow in your browser',
+          'Complete the MCP authorization flow in your browser',
         );
       } else {
         toast.error('Could not open the authorization URL automatically');
@@ -1053,7 +1049,7 @@ export const McpPage: React.FC = () => {
         setIsAuthorizing(false);
       }
     }
-  }, [currentDirectory, isVSCodeAuthRuntime, mcpType, oauthClientId, oauthClientSecret, oauthEnabled, oauthRedirectUri, oauthScope, requireSavedConfig, runtimeActionKey, selectedMcpName, startAuthMcp, updateMcp]);
+  }, [currentDirectory, mcpType, oauthClientId, oauthClientSecret, oauthEnabled, oauthRedirectUri, oauthScope, requireSavedConfig, runtimeActionKey, selectedMcpName, startAuthMcp, updateMcp]);
 
   const handleClearAuthorization = React.useCallback(async () => {
     if (!selectedMcpName || !requireSavedConfig()) return;
@@ -1246,7 +1242,7 @@ export const McpPage: React.FC = () => {
   const effectiveRuntimeStatus = runtimeStatus ?? runtimeDiagnostic;
   const isConnected = runtimeStatus?.status === 'connected';
   const needsAuthorization = runtimeStatus?.status === 'needs_auth' || runtimeStatus?.status === 'needs_client_registration';
-  const suggestedRedirectUri = isVSCodeAuthRuntime ? null : buildMcpOAuthRedirectUri(selectedMcpName, currentDirectory);
+  const suggestedRedirectUri = buildMcpOAuthRedirectUri(selectedMcpName, currentDirectory);
   const runtimeDescription = getStatusDescription(
     effectiveRuntimeStatus?.status,
     effectiveRuntimeStatus && 'error' in effectiveRuntimeStatus ? effectiveRuntimeStatus.error : undefined,

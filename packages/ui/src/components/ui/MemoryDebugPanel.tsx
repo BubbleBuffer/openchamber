@@ -7,7 +7,7 @@ import { useSessions, useDirectorySync } from '@/sync/sync-context';
 import { MEMORY_LIMITS } from '@/stores/types/sessionTypes';
 import { useGitHubPrStatusStore } from '@/stores/github/useGitHubPrStatusStore';
 import { getBackgroundTrimLimit } from '@/stores/types/sessionTypes';
-import { getStreamPerfSnapshot, getVsCodeStreamPerfSnapshot, resetStreamPerf, type StreamPerfSnapshot } from '@/stores/utils/streamDebug';
+import { getStreamPerfSnapshot, resetStreamPerf, type StreamPerfSnapshot } from '@/stores/utils/streamDebug';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
@@ -106,7 +106,6 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ onClose }) => {
   const messageRecord = useDirectorySync((state) => state.message);
   const totalGitHubRequests = useGitHubPrStatusStore((state) => state.totalRequestCount);
   const [streamSnapshot, setStreamSnapshot] = React.useState<StreamPerfSnapshot>(() => getStreamPerfSnapshot());
-  const [vscodeStreamSnapshot, setVsCodeStreamSnapshot] = React.useState<StreamPerfSnapshot>(() => getVsCodeStreamPerfSnapshot());
   const streamMetricCounts = React.useMemo(() => {
     const counts = new Map<string, number>();
     streamSnapshot.entries.forEach((entry) => {
@@ -126,7 +125,6 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ onClose }) => {
   React.useEffect(() => {
     const refresh = () => {
       setStreamSnapshot(getStreamPerfSnapshot());
-      setVsCodeStreamSnapshot(getVsCodeStreamPerfSnapshot());
     };
 
     refresh();
@@ -178,7 +176,6 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ onClose }) => {
       const payload = {
         generatedAt: new Date().toISOString(),
         ui: getStreamPerfSnapshot(),
-        vscode: getVsCodeStreamPerfSnapshot(),
       };
       await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
       setCopyState('copied');
@@ -213,7 +210,6 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ onClose }) => {
                 onClick={() => {
                   resetStreamPerf();
                   setStreamSnapshot(getStreamPerfSnapshot());
-                  setVsCodeStreamSnapshot(getVsCodeStreamPerfSnapshot());
                 }}
               >
                 <RiRefreshLine className="h-3.5 w-3.5" />
@@ -334,7 +330,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ onClose }) => {
                 ? 'Streaming debug JSON copied'
                 : copyState === 'error'
                   ? 'Failed to copy JSON'
-                  : 'Copy exports both UI and VS Code streaming metrics as JSON'}
+                  : 'Copy UI streaming metrics as JSON'}
             </span>
             <Button size="xs" variant="outline" onClick={handleCopyStreamingDebug}>
               Copy JSON
@@ -343,7 +339,6 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ onClose }) => {
 
           <div className="grid grid-cols-2 gap-2">
             <MetricCard label="UI Metrics" value={streamSnapshot.entries.length} />
-            <MetricCard label="VS Code Metrics" value={vscodeStreamSnapshot.entries.length} />
             <MetricCard label="MsgList Renders" value={streamMetricCounts.messageListRender} />
             <MetricCard label="MsgList Stream Renders" value={streamMetricCounts.messageListRenderStreaming} />
             <MetricCard label="ChatMessage Renders" value={streamMetricCounts.chatMessageRender} />
@@ -361,13 +356,6 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ onClose }) => {
             emptyLabel="No UI streaming samples yet. Start a stream and keep this panel open."
           />
 
-          {vscodeStreamSnapshot.entries.length > 0 ? (
-            <PerfSection
-              title="VS Code Bridge Metrics"
-              snapshot={vscodeStreamSnapshot}
-              emptyLabel="No VS Code bridge samples yet."
-            />
-          ) : null}
         </div>
       )}
     </Card>

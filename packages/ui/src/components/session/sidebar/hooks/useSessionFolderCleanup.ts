@@ -15,7 +15,6 @@ type Args = {
   sessions: Session[];
   archivedSessions: Session[];
   normalizedProjects: NormalizedProject[];
-  isVSCode: boolean;
   availableWorktreesByProject: Map<string, WorktreeMeta[]>;
   cleanupSessions: (scopeKey: string, validSessionIds: Set<string>) => void;
 };
@@ -26,7 +25,6 @@ export const useSessionFolderCleanup = (args: Args): void => {
     sessions,
     archivedSessions,
     normalizedProjects,
-    isVSCode,
     availableWorktreesByProject,
     cleanupSessions,
   } = args;
@@ -52,7 +50,7 @@ export const useSessionFolderCleanup = (args: Args): void => {
 
     normalizedProjects.forEach((project) => {
       const scopeKey = getArchivedScopeKey(project.normalizedPath);
-      const worktreesForProject = isVSCode ? [] : (availableWorktreesByProject.get(project.normalizedPath) ?? []);
+      const worktreesForProject = availableWorktreesByProject.get(project.normalizedPath) ?? [];
       const validDirectories = new Set<string>([
         project.normalizedPath,
         ...worktreesForProject
@@ -87,7 +85,6 @@ export const useSessionFolderCleanup = (args: Args): void => {
     availableWorktreesByProject,
     cleanupSessions,
     isSessionsLoading,
-    isVSCode,
     normalizedProjects,
     sessions,
   ]);

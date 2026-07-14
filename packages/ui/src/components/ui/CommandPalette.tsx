@@ -38,7 +38,7 @@ import {
 } from '@remixicon/react';
 import { createWorktreeSession } from '@/lib/session/worktreeSessionCreator';
 import { formatShortcutForDisplay, getEffectiveShortcutCombo } from '@/lib/shortcuts';
-import { isDesktopShell, isVSCodeRuntime, isWebRuntime } from '@/lib/desktop/desktop';
+import { isDesktopShell, isWebRuntime } from '@/lib/desktop/desktop';
 import { SETTINGS_PAGE_METADATA, SETTINGS_GROUP_LABELS, type SettingsRuntimeContext } from '@/lib/settings/metadata';
 import { getSettingsNavIcon } from '@/components/views/SettingsView';
 
@@ -127,7 +127,7 @@ export const CommandPalette: React.FC = () => {
 
   const settingsRuntimeCtx = React.useMemo<SettingsRuntimeContext>(() => {
     const isDesktop = isDesktopShell();
-    return { isVSCode: isVSCodeRuntime(), isWeb: !isDesktop && isWebRuntime(), isDesktop };
+    return { isWeb: !isDesktop && isWebRuntime(), isDesktop };
   }, []);
 
   const settingsItems = React.useMemo(() => {

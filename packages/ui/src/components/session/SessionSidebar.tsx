@@ -22,7 +22,6 @@ import { useNotificationSettingsStore } from '@/stores/useNotificationSettingsSt
 import { useDialogStore } from '@/stores/useDialogStore';
 import { getSafeStorage } from '@/stores/utils/safeStorage';
 import { useGitStore, useGitAllBranches, useGitRepoStatusMap } from '@/stores/git/useGitStore';
-import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 import { NewWorktreeDialog } from './NewWorktreeDialog';
 import { ScheduledTasksDialog } from './ScheduledTasksDialog';
 import { useSessionFoldersStore } from '@/stores/session/useSessionFoldersStore';
@@ -421,15 +420,14 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
   const isDesktopShellRuntime = React.useMemo(() => isDesktopShell(), []);
   const [isDesktopWindowFullscreen, setIsDesktopWindowFullscreen] = React.useState(false);
 
-  const isVSCode = React.useMemo(() => isVSCodeRuntime(), []);
   const isMacPlatform = React.useMemo(() => {
     if (typeof navigator === 'undefined') {
       return false;
     }
     return /Macintosh|Mac OS X/.test(navigator.userAgent || '');
   }, []);
-  const isWebRuntime = !mobileVariant && !isVSCode && !isDesktopShellRuntime;
-  const showDesktopSidebarChrome = !mobileVariant && !isVSCode && !isWebRuntime;
+  const isWebRuntime = !mobileVariant && !isDesktopShellRuntime;
+  const showDesktopSidebarChrome = !mobileVariant && !isWebRuntime;
   const desktopSidebarTopPaddingClass = isDesktopShellRuntime && isMacPlatform && !isDesktopWindowFullscreen ? 'pl-[5.5rem]' : 'pl-3';
   const desktopSidebarToggleButtonClass = 'app-region-no-drag inline-flex h-8 w-8 items-center justify-center rounded-md typography-ui-label font-medium text-foreground transition-colors hover:bg-interactive-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-50';
 
@@ -503,11 +501,9 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
     worktreeMetadata,
     pinnedSessionIds,
     gitBranches,
-    isVSCode,
   });
 
   const { scheduleCollapsedProjectsPersist } = useSidebarPersistence({
-    isVSCode,
     hasLoadedGlobalSessions,
     safeStorage,
     keys: {
@@ -780,12 +776,10 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
       try {
         safeStorage.setItem(PROJECT_COLLAPSE_STORAGE_KEY, JSON.stringify(Array.from(allIds)));
       } catch { /* ignored */ }
-      if (!isVSCode) {
-        scheduleCollapsedProjectsPersist(allIds);
-      }
+      scheduleCollapsedProjectsPersist(allIds);
       return allIds;
     });
-  }, [projects, isVSCode, safeStorage, scheduleCollapsedProjectsPersist]);
+  }, [projects, safeStorage, scheduleCollapsedProjectsPersist]);
 
   const expandAllProjects = React.useCallback(() => {
     ignoreIntersectionUntil.current = Date.now() + 150;
@@ -794,12 +788,10 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
       try {
         safeStorage.setItem(PROJECT_COLLAPSE_STORAGE_KEY, JSON.stringify([]));
       } catch { /* ignored */ }
-      if (!isVSCode) {
-        scheduleCollapsedProjectsPersist(empty);
-      }
+      scheduleCollapsedProjectsPersist(empty);
       return empty;
     });
-  }, [isVSCode, safeStorage, scheduleCollapsedProjectsPersist]);
+  }, [safeStorage, scheduleCollapsedProjectsPersist]);
 
   const toggleProject = React.useCallback((projectId: string) => {
     // Ignore intersection events for a short period after toggling
@@ -816,12 +808,10 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
       } catch { /* ignored */ }
 
       // Persist collapse state to server settings (web + desktop local/remote).
-      if (!isVSCode) {
-        scheduleCollapsedProjectsPersist(next);
-      }
+      scheduleCollapsedProjectsPersist(next);
       return next;
     });
-  }, [isVSCode, safeStorage, scheduleCollapsedProjectsPersist]);
+  }, [safeStorage, scheduleCollapsedProjectsPersist]);
 
   const normalizedProjects = React.useMemo(() => {
     return projects
@@ -867,13 +857,11 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
     sessions,
     archivedSessions,
     normalizedProjects,
-    isVSCode,
     availableWorktreesByProject,
     cleanupSessions,
   });
 
   const { getSessionsForProject, getArchivedSessionsForProject } = useProjectSessionLists({
-    isVSCode,
     sessions,
     archivedSessions,
     availableWorktreesByProject,
@@ -884,7 +872,6 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
     sessions,
     archivedSessions,
     availableWorktreesByProject,
-    isVSCode,
     isSessionsLoading,
     foldersMap,
     createFolder,
@@ -1093,39 +1080,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
     loadMessages: sync.syncSession,
   });
 
-  const sectionsForSidebarRender = React.useMemo(() => {
-    if (!isVSCode || hasSessionSearchQuery || recentSessionIds.size === 0) {
-      return sectionsForRender;
-    }
-
-    const filterNodes = (nodes: SessionNode[]): SessionNode[] => {
-      return nodes.reduce<SessionNode[]>((acc, node) => {
-        if (recentSessionIds.has(node.session.id)) {
-          return acc;
-        }
-
-        const filteredChildren = filterNodes(node.children);
-        if (filteredChildren.length === node.children.length) {
-          acc.push(node);
-          return acc;
-        }
-
-        acc.push({
-          ...node,
-          children: filteredChildren,
-        });
-        return acc;
-      }, []);
-    };
-
-    return sectionsForRender.map((section) => ({
-      ...section,
-      groups: section.groups.map((group) => ({
-        ...group,
-        sessions: filterNodes(group.sessions),
-      })),
-    }));
-  }, [isVSCode, hasSessionSearchQuery, recentSessionIds, sectionsForRender]);
+  const sectionsForSidebarRender = sectionsForRender;
 
   const prLookupKeys = React.useMemo(() => {
     const keys = new Set<string>();
@@ -1712,7 +1667,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
         onOpenShortcuts={toggleHelpDialog}
         onOpenAbout={() => setAboutDialogOpen(true)}
         onOpenUpdate={handleOpenUpdateDialog}
-        showRuntimeButtons={!isVSCode}
+        showRuntimeButtons
         showUpdateButton={showSidebarUpdateButton}
       />
 

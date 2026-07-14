@@ -56,7 +56,7 @@ import type { OpenChamberSection } from '@/components/sections/openchamber/types
 import { OpenChamberPage } from '@/components/sections/openchamber/OpenChamberPage';
 import { McpIcon } from '@/components/icons/McpIcon';
 import { useDeviceInfo } from '@/lib/device';
-import { isDesktopShell, isVSCodeRuntime, isWebRuntime } from '@/lib/desktop/desktop';
+import { isDesktopShell, isWebRuntime } from '@/lib/desktop/desktop';
 import { reloadOpenCodeConfiguration } from '@/stores/agents/useAgentsStore';
 import {
   SETTINGS_PAGE_METADATA,
@@ -102,9 +102,8 @@ const pageOrder: SettingsPageSlug[] = [
 ];
 
 function buildRuntimeContext(isDesktop: boolean): SettingsRuntimeContext {
-  const isVSCode = isVSCodeRuntime();
   const isWeb = !isDesktop && isWebRuntime();
-  return { isVSCode, isWeb, isDesktop };
+  return { isWeb, isDesktop };
 }
 
 function isPageAvailable(page: SettingsPageMeta, ctx: SettingsRuntimeContext): boolean {
@@ -266,7 +265,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
     return SETTINGS_PAGE_METADATA
       .filter((page) => page.slug !== 'home')
       .filter((page) => isPageAvailable(page, runtimeCtx))
-      .filter((page) => !(runtimeCtx.isVSCode && page.slug === 'projects'))
       .filter((page) => !(isMobile && page.slug === 'shortcuts'));
   }, [runtimeCtx, isMobile]);
 
@@ -323,7 +321,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
 
   // Load stores when project changes or when a page becomes active.
   React.useEffect(() => {
-    if (!isSettingsDialogOpen && !runtimeCtx.isVSCode) {
+    if (!isSettingsDialogOpen) {
       return;
     }
 
@@ -344,7 +342,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
       void useSkillsStore.getState().loadSkills();
       void useSkillsCatalogStore.getState().loadCatalog();
     }
-  }, [activeProjectId, isSettingsDialogOpen, runtimeCtx.isVSCode, settingsSlug]);
+  }, [activeProjectId, isSettingsDialogOpen, settingsSlug]);
 
   const openPage = React.useCallback((slug: SettingsPageSlug) => {
     setSettingsPage(slug);
@@ -542,27 +540,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
           )}
         >
           <div className="border-t border-border bg-sidebar px-2 py-1 space-y-0.5">
-            {!runtimeCtx.isVSCode && (
-              <Tooltip delayDuration={300}>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className={cn(
-                      'flex h-7 w-full items-center gap-2 rounded-md px-2 overflow-hidden whitespace-nowrap',
-                      'text-sm font-semibold text-sidebar-foreground/90',
-                      'hover:text-sidebar-foreground hover:bg-interactive-hover',
-                    )}
-                    onClick={() => void reloadOpenCodeConfiguration({ message: 'Restarting OpenCode…', mode: 'projects', scopes: ['all'] })}
-                  >
-                    <RiRestartLine className="h-4 w-4 shrink-0" />
-                    <span>Reload OpenCode</span>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Restart OpenCode and reload its configuration.
-                </TooltipContent>
-              </Tooltip>
-            )}
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    'flex h-7 w-full items-center gap-2 rounded-md px-2 overflow-hidden whitespace-nowrap',
+                    'text-sm font-semibold text-sidebar-foreground/90',
+                    'hover:text-sidebar-foreground hover:bg-interactive-hover',
+                  )}
+                  onClick={() => void reloadOpenCodeConfiguration({ message: 'Restarting OpenCode…', mode: 'projects', scopes: ['all'] })}
+                >
+                  <RiRestartLine className="h-4 w-4 shrink-0" />
+                  <span>Reload OpenCode</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Restart OpenCode and reload its configuration.
+              </TooltipContent>
+            </Tooltip>
 
           </div>
         </div>
@@ -573,7 +569,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
   const renderMobileStage = () => {
     if (mobileStage === 'nav') {
       return (
-        <div className={cn('flex-1 min-h-0 overflow-hidden', runtimeCtx.isVSCode ? 'bg-background' : 'bg-sidebar')}>
+        <div className="flex-1 min-h-0 overflow-hidden bg-sidebar">
           <div className="flex h-full min-h-0 flex-col">
             <ErrorBoundary>{renderSettingsNav(false)}</ErrorBoundary>
           </div>
@@ -596,7 +592,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
         );
       }
       return (
-        <div className={cn('flex-1 min-h-0 overflow-hidden', runtimeCtx.isVSCode ? 'bg-background' : 'bg-sidebar')}>
+        <div className="flex-1 min-h-0 overflow-hidden bg-sidebar">
           <ErrorBoundary>
             {renderPageSidebar(settingsSlug, { onItemSelect: () => setMobileStage('page-content') })}
           </ErrorBoundary>
@@ -622,7 +618,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
     if (activePageMeta.kind === 'split') {
       return (
         <div className="flex h-full min-h-0 overflow-hidden">
-          <div className={cn('w-[264px] min-w-[264px] border-r', runtimeCtx.isVSCode ? 'bg-background' : 'bg-sidebar')} style={{ borderColor: 'var(--interactive-border)' }}>
+          <div className="w-[264px] min-w-[264px] border-r bg-sidebar" style={{ borderColor: 'var(--interactive-border)' }}>
             <ErrorBoundary>{renderPageSidebar(settingsSlug, {})}</ErrorBoundary>
           </div>
           <div className="flex-1 overflow-hidden bg-background">
@@ -726,11 +722,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
             <div
               className={cn(
                 'relative flex h-full min-h-0 flex-col overflow-hidden border-r',
-                isDesktopApp
-                  ? 'bg-sidebar'
-                  : runtimeCtx.isVSCode
-                    ? 'bg-background'
-                    : 'bg-sidebar',
+                'bg-sidebar',
                 isResizing && !isNavCollapsed ? '' : 'transition-[width,min-width] duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]'
               )}
               style={{

@@ -97,7 +97,7 @@ interface OpenChamberDefaults {
 
 const fetchOpenChamberDefaults = async (): Promise<OpenChamberDefaults> => {
     try {
-        // 1. Runtime settings API (VSCode)
+        // 1. Registered runtime settings API
         const runtimeSettings = getRegisteredRuntimeAPIs()?.settings;
         if (runtimeSettings) {
             try {

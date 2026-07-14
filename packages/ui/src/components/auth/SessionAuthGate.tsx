@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui';
-import { isDesktopShell, isVSCodeRuntime } from '@/lib/desktop/desktop';
+import { isDesktopShell } from '@/lib/desktop/desktop';
 import { syncDesktopSettings, initializeAppearancePreferences } from '@/lib/config/persistence';
 import { applyPersistedDirectoryPreferences } from '@/lib/files/directoryPersistence';
 import { DesktopHostSwitcherInline } from '@/components/desktop/DesktopHostSwitcher';
@@ -126,10 +126,8 @@ interface ErrorScreenProps {
 }
 
 export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) => {
-  const vscodeRuntime = React.useMemo(() => isVSCodeRuntime(), []);
-  const skipAuth = vscodeRuntime;
-  const showHostSwitcher = React.useMemo(() => isDesktopShell() && !vscodeRuntime, [vscodeRuntime]);
-  const [state, setState] = React.useState<GateState>(() => (skipAuth ? 'authenticated' : 'pending'));
+  const showHostSwitcher = React.useMemo(() => isDesktopShell(), []);
+  const [state, setState] = React.useState<GateState>('pending');
   const [password, setPassword] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState('');
@@ -141,7 +139,7 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
   const [trustDevice, setTrustDevice] = React.useState<boolean>(() => readStoredTrustDevice());
   const [activePasskeyAction, setActivePasskeyAction] = React.useState<'auth' | 'register' | null>(null);
   const passwordInputRef = React.useRef<HTMLInputElement | null>(null);
-  const hasResyncedRef = React.useRef(skipAuth);
+  const hasResyncedRef = React.useRef(false);
 
   React.useEffect(() => {
     if (typeof window === 'undefined') {
@@ -151,10 +149,6 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
   }, [trustDevice]);
 
   const refreshPasskeyStatus = React.useCallback(async () => {
-    if (skipAuth) {
-      return defaultPasskeyStatus;
-    }
-
     try {
       const nextStatus = await fetchPasskeyStatus();
       setPasskeyStatus(nextStatus);
@@ -163,14 +157,10 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
       setPasskeyStatus(defaultPasskeyStatus);
       return defaultPasskeyStatus;
     }
-  }, [skipAuth]);
+  }, []);
 
   React.useEffect(() => {
     let cancelled = false;
-
-    if (skipAuth) {
-      return;
-    }
 
     void (async () => {
       try {
@@ -193,15 +183,9 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
     return () => {
       cancelled = true;
     };
-  }, [skipAuth]);
+  }, []);
 
   const checkStatus = React.useCallback(async () => {
-    if (skipAuth) {
-      console.log('[Frontend Auth] VSCode runtime, skipping auth');
-      setState('authenticated');
-      return;
-    }
-
     setState((prev) => (prev === 'authenticated' ? prev : 'pending'));
     try {
       const [response, latestPasskeyStatus] = await Promise.all([
@@ -256,20 +240,17 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
       setState('error');
       setIsTunnelLocked(false);
     }
-  }, [refreshPasskeyStatus, skipAuth]);
+  }, [refreshPasskeyStatus]);
 
   React.useEffect(() => {
-    if (skipAuth) {
-      return;
-    }
     void checkStatus();
-  }, [checkStatus, skipAuth]);
+  }, [checkStatus]);
 
   React.useEffect(() => {
-    if (!skipAuth && state === 'locked') {
+    if (state === 'locked') {
       hasResyncedRef.current = false;
     }
-  }, [skipAuth, state]);
+  }, [state]);
 
   React.useEffect(() => {
     if (state === 'locked' && passwordInputRef.current) {
@@ -279,9 +260,6 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
   }, [state]);
 
   React.useEffect(() => {
-    if (skipAuth) {
-      return;
-    }
     if (state === 'authenticated' && !hasResyncedRef.current) {
       hasResyncedRef.current = true;
       void (async () => {
@@ -290,7 +268,7 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
         await applyPersistedDirectoryPreferences();
       })();
     }
-  }, [skipAuth, state]);
+  }, [state]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

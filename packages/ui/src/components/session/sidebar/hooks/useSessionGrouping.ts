@@ -16,7 +16,6 @@ type Args = {
   worktreeMetadata: Map<string, WorktreeMetadata>;
   pinnedSessionIds: Set<string>;
   gitBranches: Map<string, string | null>;
-  isVSCode: boolean;
 };
 
 const isArchivedSession = (session: Session): boolean => Boolean(session.time?.archived);
@@ -230,14 +229,14 @@ export const useSessionGrouping = (args: Args) => {
           isArchivedBucket: true,
           worktree: null,
           directory: null,
-          folderScopeKey: !args.isVSCode && normalizedProjectRoot ? getArchivedScopeKey(normalizedProjectRoot) : null,
+          folderScopeKey: normalizedProjectRoot ? getArchivedScopeKey(normalizedProjectRoot) : null,
           sessions: archivedSessions,
         });
       }
 
       return groups;
     },
-    [args.homeDirectory, args.worktreeMetadata, args.pinnedSessionIds, args.gitBranches, args.isVSCode],
+    [args.homeDirectory, args.worktreeMetadata, args.pinnedSessionIds, args.gitBranches],
   );
 
   return {

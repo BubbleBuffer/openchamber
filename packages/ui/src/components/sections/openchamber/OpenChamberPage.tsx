@@ -12,7 +12,7 @@ import { DesktopNetworkSettings } from './DesktopNetworkSettings';
 import { KeyboardShortcutsSettings } from './KeyboardShortcutsSettings';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { useDeviceInfo } from '@/lib/device';
-import { isDesktopLocalOriginActive, isDesktopShell, isVSCodeRuntime, isWebRuntime } from '@/lib/desktop/desktop';
+import { isDesktopLocalOriginActive, isDesktopShell, isWebRuntime } from '@/lib/desktop/desktop';
 import type { OpenChamberSection } from './types';
 
 interface OpenChamberPageProps {
@@ -23,7 +23,6 @@ interface OpenChamberPageProps {
 export const OpenChamberPage: React.FC<OpenChamberPageProps> = ({ section }) => {
     const { isMobile } = useDeviceInfo();
     const showAbout = isMobile && isWebRuntime();
-    const isVSCode = isVSCodeRuntime();
     const showDesktopNetworkSettings = isDesktopShell() && isDesktopLocalOriginActive();
 
     // If no section specified, show all (mobile/legacy behavior)
@@ -38,11 +37,9 @@ export const OpenChamberPage: React.FC<OpenChamberPageProps> = ({ section }) => 
                     <div className="border-t border-border/40 pt-6">
                         <DefaultsSettings />
                     </div>
-                    {!isVSCode && (
-                        <div className="border-t border-border/40 pt-6">
-                            <OpenCodeCliSettings />
-                        </div>
-                    )}
+                    <div className="border-t border-border/40 pt-6">
+                        <OpenCodeCliSettings />
+                    </div>
                     {showDesktopNetworkSettings && (
                         <div className="border-t border-border/40 pt-6">
                             <DesktopNetworkSettings />
@@ -104,7 +101,6 @@ const ShortcutsSectionContent: React.FC = () => {
 
 // Visual section: Theme Mode, Font Size, Spacing, Input Bar Offset (mobile), Nav Rail
 const VisualSectionContent: React.FC = () => {
-    const isVSCode = isVSCodeRuntime();
     return <OpenChamberVisualSettings visibleSettings={[
         'theme',
         'pwaInstallName',
@@ -115,7 +111,7 @@ const VisualSectionContent: React.FC = () => {
         'terminalFontSize',
         'spacing',
         'inputBarOffset',
-        ...(!isVSCode ? ['terminalQuickKeys' as const] : []),
+        'terminalQuickKeys',
         'reportUsage',
     ]} />;
 };
@@ -127,16 +123,13 @@ const ChatSectionContent: React.FC = () => {
 
 // Sessions section: Default model & agent, Session retention
 const SessionsSectionContent: React.FC = () => {
-    const isVSCode = isVSCodeRuntime();
     const showDesktopNetworkSettings = isDesktopShell() && isDesktopLocalOriginActive();
     return (
         <div className="space-y-6">
             <DefaultsSettings />
-            {!isVSCode && (
-                <div className="border-t border-border/40 pt-6">
-                    <OpenCodeCliSettings />
-                </div>
-            )}
+            <div className="border-t border-border/40 pt-6">
+                <OpenCodeCliSettings />
+            </div>
             {showDesktopNetworkSettings && (
                 <div className="border-t border-border/40 pt-6">
                     <DesktopNetworkSettings />
@@ -163,9 +156,6 @@ const GitSectionContent: React.FC = () => {
 
 // GitHub section: Connect account for PR/issue workflows
 const GitHubSectionContent: React.FC = () => {
-    if (isVSCodeRuntime()) {
-        return null;
-    }
     return <GitHubSettings />;
 };
 

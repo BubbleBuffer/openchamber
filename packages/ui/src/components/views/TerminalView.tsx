@@ -84,15 +84,14 @@ const getSequenceForKey = (key: MobileKey, modifier: Modifier | null): string | 
 };
 
 export const TerminalView: React.FC = () => {
-    const { terminal, runtime } = useRuntimeAPIs();
+    const { terminal } = useRuntimeAPIs();
     const { currentTheme } = useThemeSystem();
     const { monoFont } = useFontPreferences();
     const terminalFontSize = useVisualPreferencesStore(state => state.terminalFontSize);
     const bottomTerminalHeight = useLayoutStore((state) => state.bottomTerminalHeight);
     const isBottomTerminalExpanded = useLayoutStore((state) => state.isBottomTerminalExpanded);
     const { isMobile, hasTouchInput } = useDeviceInfo();
-    // Tabs are supported for web + desktop runtimes, including mobile (not VSCode).
-    const enableTabs = runtime.platform !== 'vscode';
+    const enableTabs = true;
     const showTerminalQuickKeysOnDesktop = useUIStore((state) => state.showTerminalQuickKeysOnDesktop);
     const showQuickKeys = isMobile || showTerminalQuickKeysOnDesktop;
 
@@ -194,12 +193,12 @@ export const TerminalView: React.FC = () => {
     const [hasOpenedTerminalViewport, setHasOpenedTerminalViewport] = React.useState(isTerminalVisible);
 
     React.useEffect(() => {
-        if (!isTerminalVisible || runtime.platform === 'vscode') {
+        if (!isTerminalVisible) {
             return;
         }
 
         primeTerminalInputTransport();
-    }, [isTerminalVisible, runtime.platform]);
+    }, [isTerminalVisible]);
 
     React.useEffect(() => {
         if (isTerminalVisible) {

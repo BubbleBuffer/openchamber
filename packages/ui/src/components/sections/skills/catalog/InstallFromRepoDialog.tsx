@@ -22,7 +22,6 @@ import {
 } from '@/components/ui/select';
 import { RiFolderLine, RiGitRepositoryLine, RiRobot2Line, RiUser3Line } from '@remixicon/react';
 
-import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 import type { SkillsCatalogItem } from '@/lib/api/types';
 import { useSkillsCatalogStore } from '@/stores/skills/useSkillsCatalogStore';
 import { useSkillsStore } from '@/stores/skills/useSkillsStore';
@@ -168,11 +167,6 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
 
     if (!result.ok) {
       if (result.error?.kind === 'authRequired') {
-        if (isVSCodeRuntime()) {
-          toast.error('Private repositories are not supported in VS Code yet');
-          return;
-        }
-
         const ids = (result.error.identities || []) as IdentityOption[];
         setIdentities(ids);
         if (!gitIdentityId && ids.length > 0) {
@@ -253,10 +247,6 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
     }
 
     if (result.error?.kind === 'authRequired') {
-      if (isVSCodeRuntime()) {
-        toast.error('Private repositories are not supported in VS Code yet');
-        return;
-      }
       const ids = (result.error.identities || []) as IdentityOption[];
       setIdentities(ids);
       if (!gitIdentityId && ids.length > 0) {
@@ -382,7 +372,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
               </div>
             )}
 
-            {identities.length > 0 && !isVSCodeRuntime() ? (
+            {identities.length > 0 ? (
               <div className="rounded-lg border bg-muted/20 px-3 py-2">
                 <div className="typography-ui-label font-medium text-foreground">Authentication required</div>
                 <div className="typography-meta text-muted-foreground mt-1">

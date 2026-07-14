@@ -33,7 +33,6 @@ import {
   RiGitBranchLine,
 } from '@remixicon/react';
 import { cn } from '@/lib/utils';
-import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 import { toast } from '@/components/ui';
 import { buildExportFilename, downloadAsMarkdown, formatSessionAsMarkdown, getExportRevealLabel, revealExportedMarkdown, saveAsMarkdownDesktop } from '@/lib/exportSession';
 import { buildSessionMessageRecordsSnapshot, useDirectoryStore, useGlobalSessionStatus, useSession, useSessionPermissions } from '@/sync/sync-context';
@@ -244,20 +243,11 @@ function SessionNodeItemComponent(props: Props): React.ReactNode {
 
   const displayMode = useSessionDisplayStore((state) => state.displayMode);
   const isMinimalMode = displayMode === 'minimal';
-  const isVSCode = React.useMemo(() => isVSCodeRuntime(), []);
-  const revealOnHoverClass = isVSCode
-    ? 'group-hover:opacity-100 group-hover:pointer-events-auto'
-    : 'group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto';
-  const hideOnHoverClass = isVSCode
-    ? 'group-hover:opacity-0'
-    : 'group-hover:opacity-0 group-focus-within:opacity-0';
+  const revealOnHoverClass = 'group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto';
+  const hideOnHoverClass = 'group-hover:opacity-0 group-focus-within:opacity-0';
   const revealPaddingClass = isMinimalMode
-    ? (isVSCode
-        ? 'group-hover:pr-1'
-        : 'group-hover:pr-1 group-focus-within:pr-1')
-    : (isVSCode
-        ? 'group-hover:pr-5'
-        : 'group-hover:pr-5 group-focus-within:pr-5');
+    ? 'group-hover:pr-1 group-focus-within:pr-1'
+    : 'group-hover:pr-5 group-focus-within:pr-5';
   const suppressNextSelectRef = React.useRef(false);
   const [isTouchPressed, setIsTouchPressed] = React.useState(false);
 
@@ -601,24 +591,22 @@ function SessionNodeItemComponent(props: Props): React.ReactNode {
         );
       })() : null}
 
-      {!isVSCode ? (
-        <DropdownMenuItem
-          disabled={!sessionDirectory}
-          onClick={() => {
-            if (!sessionDirectory) return;
-            openContextPanelTab(sessionDirectory, {
-              mode: 'chat',
-              dedupeKey: `session:${session.id}`,
-              label: sessionTitle,
-            });
-          }}
-          className="[&>svg]:mr-1"
-        >
-          <RiChat4Line className="mr-1 h-4 w-4" />
-          <span className="truncate">Open in Side Panel</span>
-          <span className="shrink-0 typography-micro px-1 rounded leading-none pb-px text-[var(--status-warning)] bg-[var(--status-warning)]/10">beta</span>
-        </DropdownMenuItem>
-      ) : null}
+      <DropdownMenuItem
+        disabled={!sessionDirectory}
+        onClick={() => {
+          if (!sessionDirectory) return;
+          openContextPanelTab(sessionDirectory, {
+            mode: 'chat',
+            dedupeKey: `session:${session.id}`,
+            label: sessionTitle,
+          });
+        }}
+        className="[&>svg]:mr-1"
+      >
+        <RiChat4Line className="mr-1 h-4 w-4" />
+        <span className="truncate">Open in Side Panel</span>
+        <span className="shrink-0 typography-micro px-1 rounded leading-none pb-px text-[var(--status-warning)] bg-[var(--status-warning)]/10">beta</span>
+      </DropdownMenuItem>
 
       <DropdownMenuSeparator />
       <DropdownMenuItem className="text-destructive focus:text-destructive [&>svg]:mr-1" onClick={() => handleDeleteSession(session, { archivedBucket })}>
@@ -664,7 +652,7 @@ function SessionNodeItemComponent(props: Props): React.ReactNode {
 	                      'flex min-w-0 flex-1 cursor-pointer flex-col gap-0 overflow-hidden rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 text-foreground select-none disabled:cursor-not-allowed transition-[padding]',
 	                      isTouchPressed && 'bg-interactive-hover/70',
                       mobileVariant
-                        ? (isVSCode ? revealPaddingClass : 'pr-7')
+                        ? 'pr-7'
                         : revealPaddingClass,
                     )}
                   >
@@ -729,7 +717,7 @@ function SessionNodeItemComponent(props: Props): React.ReactNode {
 	                  'flex min-w-0 flex-1 cursor-pointer flex-col gap-0 overflow-hidden rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 text-foreground select-none disabled:cursor-not-allowed transition-[padding]',
 	                  isTouchPressed && 'bg-interactive-hover/70',
                   mobileVariant
-                    ? (isVSCode ? revealPaddingClass : 'pr-7')
+                    ? 'pr-7'
                     : revealPaddingClass
                 )}
               >
@@ -769,7 +757,7 @@ function SessionNodeItemComponent(props: Props): React.ReactNode {
             'absolute right-0 top-1/2 z-10 -translate-y-1/2 transition-opacity',
             isMenuOpen
               ? 'opacity-100'
-              : (mobileVariant && !isVSCode)
+              : mobileVariant
                 ? 'opacity-100'
                 : cn('opacity-0', revealOnHoverClass),
           )}>

@@ -11,7 +11,6 @@ vi.mock("@/lib/device", () => ({
 
 vi.mock("@/lib/desktop/desktop", () => ({
   isDesktopShell: () => false,
-  isVSCodeRuntime: () => false,
   isWebRuntime: () => true,
 }))
 

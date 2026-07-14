@@ -22,7 +22,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { isDesktopShell, isVSCodeRuntime, isWebRuntime } from '@/lib/desktop/desktop';
+import { isDesktopShell, isWebRuntime } from '@/lib/desktop/desktop';
 import { useDeviceInfo } from '@/lib/device';
 import { usePwaDetection } from '@/hooks/usePwaDetection';
 import { updateDesktopSettings } from '@/lib/config/persistence';
@@ -444,8 +444,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
         return visibleSettings.includes(setting);
     };
 
-    const isVSCode = isVSCodeRuntime();
-    const hasAppearanceSettings = (shouldShow('theme') || shouldShow('pwaInstallName') || shouldShow('pwaOrientation') || shouldShow('timeFormat') || shouldShow('weekStart')) && !isVSCode;
+    const hasAppearanceSettings = shouldShow('theme') || shouldShow('pwaInstallName') || shouldShow('pwaOrientation') || shouldShow('timeFormat') || shouldShow('weekStart');
     const hasLayoutSettings = shouldShow('fontSize') || shouldShow('terminalFontSize') || shouldShow('spacing') || shouldShow('inputBarOffset');
     const hasNavigationSettings = shouldShow('terminalQuickKeys') && !isMobile;
     const hasBehaviorSettings = shouldShow('mermaidRendering')
@@ -464,8 +463,8 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
         || shouldShow('expandedTools')
         || (!isMobile && shouldShow('inputSpellcheck'));
 
-    const showPwaInstallNameSetting = shouldShow('pwaInstallName') && isWebRuntime() && browserTab && !isDesktopShell() && !isVSCode;
-    const showPwaOrientationSetting = shouldShow('pwaOrientation') && isWebRuntime() && !isDesktopShell() && !isVSCode;
+    const showPwaInstallNameSetting = shouldShow('pwaInstallName') && isWebRuntime() && browserTab && !isDesktopShell();
+    const showPwaOrientationSetting = shouldShow('pwaOrientation') && isWebRuntime() && !isDesktopShell();
     const [pwaInstallName, setPwaInstallName] = React.useState('');
     const [pwaOrientation, setPwaOrientation] = React.useState<'system' | 'portrait' | 'landscape'>('system');
 
@@ -982,7 +981,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
 
 
 
-                            {(shouldShow('userMessageRendering') || shouldShow('mermaidRendering') || shouldShow('chatRenderMode') || shouldShow('messageTransport') || (shouldShow('activityRenderMode') && chatRenderMode === 'sorted') || (shouldShow('diffLayout') && !isVSCode)) && (
+                            {(shouldShow('userMessageRendering') || shouldShow('mermaidRendering') || shouldShow('chatRenderMode') || shouldShow('messageTransport') || (shouldShow('activityRenderMode') && chatRenderMode === 'sorted') || shouldShow('diffLayout')) && (
                                 <div className="grid grid-cols-1 gap-y-2 md:grid-cols-[minmax(0,16rem)_minmax(0,16rem)] md:justify-start md:gap-x-2">
                                     {shouldShow('chatRenderMode') && (
                                         <section className="p-2 md:col-span-2">
@@ -1249,7 +1248,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                         </section>
                                     )}
 
-                                    {shouldShow('diffLayout') && !isVSCode && (
+                                    {shouldShow('diffLayout') && (
                                         <section className="p-2">
                                             <h4 className="typography-ui-header font-medium text-foreground">Diff Layout</h4>
                                             <div role="radiogroup" aria-label="Diff layout" className="mt-0.5 space-y-0">
@@ -1285,7 +1284,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                         </section>
                                     )}
 
-                                    {shouldShow('diffLayout') && !isVSCode && (
+                                    {shouldShow('diffLayout') && (
                                         <section className="p-2">
                                             <h4 className="typography-ui-header font-medium text-foreground">Diff View Mode</h4>
                                             <div role="radiogroup" aria-label="Diff view mode" className="mt-0.5 space-y-0">
@@ -1417,7 +1416,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                         </div>
                                     )}
 
-                                    {shouldShow('dotfiles') && !isVSCodeRuntime() && (
+                                    {shouldShow('dotfiles') && (
                                         <div
                                             className="group flex cursor-pointer items-center gap-2 py-0.5"
                                             role="button"

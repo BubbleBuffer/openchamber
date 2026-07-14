@@ -27,7 +27,7 @@ export const GitSettings: React.FC = () => {
       try {
         let data: GitSettingsPayload | null = null;
 
-        // 1. Runtime settings API (VSCode)
+        // 1. Registered runtime settings API
         if (!data) {
           const runtimeSettings = getRegisteredRuntimeAPIs()?.settings;
           if (runtimeSettings) {

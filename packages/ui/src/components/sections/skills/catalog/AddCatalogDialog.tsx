@@ -21,7 +21,6 @@ import {
 import { RiGitRepositoryLine } from '@remixicon/react';
 
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
-import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 import { updateDesktopSettings } from '@/lib/config/persistence';
 import type { DesktopSettings, SkillCatalogConfig } from '@/lib/desktop/desktop';
 import { useSkillsCatalogStore } from '@/stores/skills/useSkillsCatalogStore';
@@ -145,11 +144,6 @@ export const AddCatalogDialog: React.FC<AddCatalogDialogProps> = ({ open, onOpen
 
     if (!result.ok) {
       if (result.error?.kind === 'authRequired') {
-        if (isVSCodeRuntime()) {
-          toast.error('Private repositories are not supported in VS Code yet');
-          return;
-        }
-
         const ids = (result.error.identities || []) as IdentityOption[];
         setIdentityOptions(ids);
         if (!gitIdentityId && ids.length > 0) {
@@ -256,7 +250,7 @@ export const AddCatalogDialog: React.FC<AddCatalogDialogProps> = ({ open, onOpen
               placeholder="owner/repo or git@github.com:owner/repo.git"
             />
             <p className="typography-micro text-muted-foreground">
-              Public repos work everywhere. Private repos require SSH identity (Desktop/Web only).
+              Public repos work everywhere. Private repos require an SSH identity.
             </p>
           </div>
 
@@ -273,7 +267,7 @@ export const AddCatalogDialog: React.FC<AddCatalogDialogProps> = ({ open, onOpen
             />
           </div>
 
-          {identityOptions.length > 0 && !isVSCodeRuntime() ? (
+          {identityOptions.length > 0 ? (
             <div className="space-y-2">
               <div>
                 <span className="typography-ui-label text-[var(--status-warning)]">Authentication required</span>
