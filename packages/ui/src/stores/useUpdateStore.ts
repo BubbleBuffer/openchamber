@@ -8,7 +8,6 @@ import {
   restartToApplyUpdate,
   isDesktopLocalOriginActive,
   isTauriShell,
-  isVSCodeRuntime,
   isWebRuntime,
 } from '@/lib/desktop/desktop';
 
@@ -20,7 +19,7 @@ export type UpdateState = {
   info: UpdateInfo | null;
   progress: UpdateProgress | null;
   error: string | null;
-  runtimeType: 'desktop' | 'web' | 'vscode' | null;
+  runtimeType: 'desktop' | 'web' | null;
   lastChecked: number | null;
   nextCheckInSec: number | null;
 };
@@ -33,7 +32,7 @@ interface UpdateStore extends UpdateState {
   reset: () => void;
 }
 
-type ClientRuntime = 'desktop' | 'web' | 'vscode';
+type ClientRuntime = 'desktop' | 'web';
 
 function detectDeviceClass(): 'mobile' | 'tablet' | 'desktop' | 'unknown' {
   if (typeof window === 'undefined') return 'unknown';
@@ -80,12 +79,6 @@ function mapRuntimeParams(runtime: ClientRuntime): URLSearchParams {
     return params;
   }
 
-  if (runtime === 'vscode') {
-    params.set('appType', 'vscode');
-    params.set('instanceMode', 'local');
-    return params;
-  }
-
   params.set('appType', 'web');
   params.set('instanceMode', 'unknown');
   return params;
@@ -123,13 +116,12 @@ async function checkForWebUpdates(runtime: ClientRuntime, currentVersion?: strin
   }
 }
 
-function detectRuntimeType(): 'desktop' | 'web' | 'vscode' | null {
+function detectRuntimeType(): 'desktop' | 'web' | null {
   if (isTauriShell()) {
     // Only use Tauri updater when we're on the local instance.
     // When viewing a remote host inside the desktop shell, treat update as web update.
     return isDesktopLocalOriginActive() ? 'desktop' : 'web';
   }
-  if (isVSCodeRuntime()) return 'vscode';
   if (isWebRuntime()) return 'web';
   return null;
 }
@@ -201,15 +193,12 @@ export const useUpdateStore = create<UpdateStore>()((set, get) => ({
       } else if (runtime === 'web') {
         info = await checkForWebUpdates('web');
         suggestedSec = info?.nextSuggestedCheckInSec ?? null;
-      } else if (runtime === 'vscode') {
-        const vscodeInfo = await checkForWebUpdates('vscode');
-        suggestedSec = vscodeInfo?.nextSuggestedCheckInSec ?? null;
       }
 
       set({
         checking: false,
-        available: runtime === 'vscode' ? false : (info?.available ?? false),
-        info: runtime === 'vscode' ? null : info,
+        available: info?.available ?? false,
+        info,
         lastChecked: Date.now(),
         nextCheckInSec: suggestedSec,
       });

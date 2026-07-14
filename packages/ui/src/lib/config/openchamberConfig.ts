@@ -6,7 +6,6 @@
 
 import type { FilesAPI, RuntimeAPIs } from '../api/types';
 import { getDesktopHomeDirectory } from '../desktop/desktop';
-import { isVSCodeRuntime } from '../desktop/desktop';
 import { createProjectIdFromPath } from '../project/projectId';
 
 type ProjectRef = { id: string; path: string };
@@ -17,7 +16,7 @@ const LEGACY_CONFIG_DIR = '.openchamber';
 const USER_PROJECTS_DIR_SEGMENTS = ['.config', 'openchamber', 'projects'];
 
 /**
- * Get the runtime Files API if available (Desktop/VSCode).
+ * Get the runtime Files API if available (Desktop).
  */
 function getRuntimeFilesAPI(): FilesAPI | null {
   if (typeof window === 'undefined') return null;
@@ -197,13 +196,9 @@ const writeTextFile = async (path: string, content: string): Promise<boolean> =>
 };
 
 const resolveHomeDirectory = async (): Promise<string | null> => {
-  // VSCode webview sets __OPENCHAMBER_HOME__ to workspace folder (not OS home).
-  // For user config (~/.config/openchamber), always use /api/fs/home in VSCode.
-  if (!isVSCodeRuntime()) {
-    const desktopHome = await getDesktopHomeDirectory().catch(() => null);
-    if (desktopHome && desktopHome.trim().length > 0) {
-      return normalize(desktopHome);
-    }
+  const desktopHome = await getDesktopHomeDirectory().catch(() => null);
+  if (desktopHome && desktopHome.trim().length > 0) {
+    return normalize(desktopHome);
   }
 
   try {

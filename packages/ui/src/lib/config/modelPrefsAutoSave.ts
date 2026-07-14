@@ -1,7 +1,6 @@
 import { useModelPreferencesStore } from '@/stores/useModelPreferencesStore';
 import { updateDesktopSettings } from '@/lib/config/persistence';
 import { asReporter } from '@/lib/errors/reportError';
-import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 
 type ModelRef = { providerID: string; modelID: string };
 
@@ -19,10 +18,6 @@ export const startModelPrefsAutoSave = () => {
   if (typeof window === 'undefined') {
     return () => { };
   }
-  if (isVSCodeRuntime()) {
-    return () => { };
-  }
-
   let timer: number | null = null;
   let lastSent: { favoriteModels: ModelRef[]; recentModels: ModelRef[] } | null = null;
   let didSkipInitial = false;
