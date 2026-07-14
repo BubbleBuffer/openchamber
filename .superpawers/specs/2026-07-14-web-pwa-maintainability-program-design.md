@@ -103,17 +103,18 @@ Acceptance:
 Status: planned
 Goal: Make browser installation and single-owner local/remote operation a first-class runtime rather than a desktop fallback.
 Acceptance:
-- The application is installable as a PWA and has explicit service-worker update, stale-client, offline-shell, and reconnect behavior.
+- The application is installable as a PWA and implements the update and offline invariants in Section 6.
 - Browser notifications, permissions, clipboard, and file-picker capability failures have understandable UI states.
-- Loopback operation may be frictionless; non-loopback operation requires an authenticated owner session by default.
-- Authentication protects HTTP, SSE, and WebSocket surfaces consistently and does not introduce multi-user tenancy.
-- Local and remote deployment, reverse-proxy expectations, secrets, origin handling, and recovery are documented and tested.
+- Direct loopback operation may be frictionless; a non-loopback bind or trusted-proxy mode refuses to start until an owner bootstrap credential is configured.
+- Owner sessions use protected cookies, expire and revoke consistently, and require reauthentication without losing recoverable live-stream position.
+- HTTP mutations, SSE, and WebSocket upgrades enforce the origin, CSRF, cookie, and proxy-trust invariants in Section 5.
+- Password bootstrap, logout, expiry, credential reset, and lost-credential recovery are documented and tested without introducing multi-user tenancy.
 
 ### Chunk: quality-gates-and-test-architecture
 Status: planned
 Goal: Turn the surviving product's maintainability rules into reliable automated feedback.
 Acceptance:
-- `scripts/verify.sh` passes and covers every maintained package with real type checking, linting, and production builds.
+- `scripts/verify.sh` passes and applies the workspace-specific checks in Section 9; production builds are required only for workspaces that publish or deploy an artifact.
 - Surviving first-party TypeScript and TSX lint errors and warnings are reduced to zero before warning rules become CI-blocking; no blanket or file-wide suppression hides debt.
 - Complexity and file-size fixes follow real responsibility seams and do not create pass-through modules solely to satisfy metrics.
 - Root commands provide one documented interface for unit, store, React, server, integration, and performance tests even if specialized runners remain justified underneath.
@@ -152,12 +153,32 @@ This program deliberately permits a clean compatibility break. Existing local-st
 - Local and remote/self-hosted browser operation
 - PWA installation, updates, notifications, and reconnect behavior
 
+### Protected workflow matrix
+
+The clean compatibility break permits storage and internal API changes, not accidental loss of these user outcomes:
+
+| Capability | Minimum protected workflows |
+|------------|-----------------------------|
+| Sessions and chat | List, create, open, rename/archive when supported, prompt, stream incremental output, recover after reconnect, restore history, cancel, retry, and handle tool/permission requests. |
+| Models, tools, and permissions | Discover available choices, select them, submit their configuration with a prompt, render tool progress/results, approve or deny requests, and surface unsupported or failed operations. |
+| Projects and files | Discover and switch projects/directories, browse and search files, read content, save edits, and report conflicts or filesystem failures without silent data loss. |
+| Terminal | Create a terminal, stream output, send input, resize, reconnect where supported, and close/clean up the process. |
+| Git and worktrees | Read status/diff/history, stage and unstage, commit, manage branches, perform the currently supported stash/rebase/conflict flows, create/manage worktrees, and return explicit partial failures. |
+| GitHub | Authenticate, load repository and pull-request state, perform the currently exposed pull-request actions, refresh status, and isolate provider/API failures from local Git behavior. |
+| Quota | Load configured providers, refresh usage, preserve successful provider results when another provider fails, and expose credential/rate-limit errors safely. |
+| Settings | Load, change, validate, and reset settings used by protected capabilities; invalid settings cannot partially corrupt the persisted configuration. |
+| Local web/PWA | Start through the documented CLI, load on loopback, install as a PWA, reconnect after server interruption, and update without losing an unsent draft silently. |
+| Remote web/PWA | Refuse insecure unconfigured exposure, authenticate the owner, protect HTTP/SSE/WebSocket access, survive session expiry through reauthentication, and operate behind a documented trusted reverse proxy. |
+
+Plans may add more focused acceptance tests, but they may not narrow this matrix without changing the spec.
+
 ### Removed capabilities and runtimes
 
 - Electron and all native desktop behavior
 - VS Code extension and webview
 - SSH-managed Remote Instances and desktop host switching
 - Scheduled tasks and background-task lifecycle
+- WebAuthn/passkey enrollment unless a later approved design demonstrates value beyond the single-owner password/session model
 - Native updater, custom deep links, menus, multi-window behavior, arbitrary local-path integration, app discovery, and reveal/open-in-IDE behavior
 - Tauri compatibility shims and cross-runtime parity infrastructure
 
@@ -221,7 +242,7 @@ The current documented state authority model is preserved and completed:
 
 Live state wins over historical or persisted state. Optimistic changes identify rollback behavior. Event handlers update only the collections each event can affect. No cleanup task may merge stores merely to reduce store count; it must improve authority, update frequency, or subscriber isolation.
 
-## 5. Error And Failure Model
+## 5. Error, Authentication, And Failure Model
 
 - Network boundaries return stable domain error codes plus safe user messages.
 - Unknown exceptions are logged with diagnostic context but do not expose secrets or raw credentials.
@@ -231,7 +252,32 @@ Live state wins over historical or persisted state. Optimistic changes identify 
 - PWA update and offline behavior must not silently strand the user on an incompatible client/server pair.
 - Unsupported browser capabilities degrade explicitly rather than invoking deleted desktop paths.
 
-## 6. Adjacent Improvement Policy
+Single-owner authentication follows these invariants:
+
+- Frictionless loopback access is permitted only when the server itself is bound exclusively to loopback and proxy trust is disabled. Any non-loopback bind or trusted-proxy mode requires normal owner authentication even when the immediate proxy peer is loopback.
+- A direct loopback client receives an automatically issued local-owner session and CSRF token, so state-changing requests follow the same origin and CSRF checks as authenticated remote requests. Host headers and untrusted forwarded headers cannot grant local trust.
+- A non-loopback bind or trusted-proxy mode fails closed unless an owner bootstrap credential is explicitly supplied or initialized by the CLI. There is no default remote password.
+- The bootstrap password is the owner login and recovery credential. It is never returned by an API or persisted in browser-readable storage.
+- Authenticated sessions use random server-verifiable tokens in `HttpOnly`, `SameSite=Lax` cookies. `Secure` is required whenever the public origin is HTTPS. Logout, owner reset, and expiry invalidate server-side session state.
+- State-changing HTTP requests require an allowed `Origin` plus a per-session CSRF token. SSE requests authenticate the session cookie. WebSocket upgrades authenticate the cookie and validate `Origin` before accepting the upgrade.
+- Reverse-proxy trust is disabled by default. When enabled, trusted proxy addresses and the public origin are explicit; forwarded host, protocol, and client addresses are ignored from untrusted peers.
+- Expiry produces a stable authentication error. The client stops mutations, closes or rejects live transports, prompts for authentication, and resumes SSE/WS from the last valid event position after successful login when replay is available.
+- CLI owner reset is the lost-credential recovery path. It invalidates all sessions and requires physical/server access; there is no email or multi-user recovery system.
+
+## 6. PWA Update And Offline Model
+
+OpenChamber is installable and resilient to connection loss, but it is not an offline editor or an offline command queue.
+
+- The service worker caches only versioned application-shell and immutable static assets. Authenticated API responses, session/message payloads, file contents, terminal data, Git/GitHub data, quota responses, and credentials are not persisted in shared HTTP caches.
+- Already-rendered in-memory data may remain visible while disconnected, clearly marked stale. Server-backed mutations, prompts, terminal input, file writes, and Git/GitHub actions are disabled until reconnection; they are never silently queued for later replay.
+- Draft text remains local to the active client state. An update or reconnect cannot silently discard a non-empty draft.
+- A newly downloaded compatible service worker waits while the current client is active. The UI announces the update and allows the user to activate/reload at a safe boundary; it does not replace the running application mid-stream or during an active mutation.
+- Compatible update download or installation failure leaves the current worker and application usable and presents a retry action.
+- The server exposes a protocol/build compatibility value. An incompatible client immediately enters a blocking read-only update state and makes no further mutations. Once the replacement worker is available, activation/reload occurs automatically only at a safe boundary: no active mutation or prompt stream is running and any non-empty draft has been preserved. Obsolete application-shell caches are then purged.
+- If an incompatible replacement cannot be downloaded or activated, the current application remains read-only and presents retry plus network-reload recovery. It never resumes mutations against the incompatible server contract.
+- If no cached shell exists, offline navigation returns an explicit unavailable response. If a cached shell exists, it opens into the disconnected read-only state described above.
+
+## 7. Adjacent Improvement Policy
 
 Cleanup is allowed to round off the code it makes authoritative. A chunk may fix a nearby issue when all of the following are true:
 
@@ -243,7 +289,7 @@ Cleanup is allowed to round off the code it makes authoritative. A chunk may fix
 
 Examples include stale loading state, missing empty/error handling, keyboard or focus defects, broken mobile layout, unsafe optimistic rollback, misleading labels after feature removal, and accessibility defects in a component being decomposed.
 
-## 7. Deletion Standard
+## 8. Deletion Standard
 
 A removed runtime or feature is complete only when all of its maintenance surface is gone:
 
@@ -258,7 +304,7 @@ A removed runtime or feature is complete only when all of its maintenance surfac
 
 Temporary compatibility code is prohibited unless a specific active plan demonstrates that it is needed between two already-scheduled tasks. It must name its deletion task.
 
-## 8. Quality And Testing Strategy
+## 9. Quality And Testing Strategy
 
 Every implementation plan uses the smallest relevant test first and preserves a green focused loop. Behavior changes and bug fixes follow red-green-refactor. Pure deletion must be protected by build, type, lint, import/reference, and affected integration checks.
 
@@ -275,7 +321,19 @@ Tests that spawn OpenCode retain the repository's PID-file, watchdog, and orphan
 
 The program begins from a known-bad baseline on 2026-07-14: type-check passes; lint reports 463 errors across the current web, UI, and tests workspaces; and the VS Code webview build exceeds the baseline verifier timeout. These are inherited debts, not acceptable final exceptions.
 
-## 9. Execution And Sequencing
+Final verification applies checks by responsibility:
+
+| Workspace/surface | Required final checks |
+|-------------------|-----------------------|
+| Browser application | Strict type-check, ESLint, production Vite/PWA build, component/store tests, and protected browser-workflow tests. |
+| Server and CLI | Strict server type-check, ESLint, production compile/package check, domain tests, CLI-mode tests, and integration tests. |
+| `@openchamber/session-state` | Strict type-check, ESLint, machine/fixture tests, and package build or export validation if it remains a published artifact. |
+| Documentation | Link/frontmatter validation and documentation build when the docs site is deployed; no artificial TypeScript build requirement. |
+| Test workspace | Strict type-check, ESLint, test discovery/config validation, and execution through the appropriate root test commands; no production bundle. |
+
+The final lint gate is zero errors and zero warnings in maintained first-party TypeScript/TSX under the centrally configured rules. Production code is limited to cyclomatic complexity 10 and 600 lines per file. Generated files, vendored code, static data, and test fixtures may be excluded only through a narrow central configuration entry with written rationale. Tests may use separately calibrated limits when readability is improved by complete scenarios. Once the surviving code reaches zero warnings, CI runs ESLint with `--max-warnings 0`; thresholds cannot be weakened merely to land a change.
+
+## 10. Execution And Sequencing
 
 The program uses contraction-first sequencing:
 
@@ -289,7 +347,7 @@ Chunks are durable scope labels, not mandatory one-plan units. A chunk may requi
 
 The controller is authorized to select the next uncovered or partially covered chunk, write and review its plan, implement it through isolated tasks, request code review, run independent verification, update chunk and plan status, and continue without a user checkpoint. It must stop only for a destructive action outside this spec, missing credentials or external access, an architectural contradiction that changes protected scope, or an irreconcilable conflict with concurrent user changes.
 
-## 10. Completion Criteria
+## 11. Completion Criteria
 
 The program is complete when:
 
