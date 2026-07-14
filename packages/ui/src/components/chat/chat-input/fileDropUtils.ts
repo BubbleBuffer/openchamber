@@ -31,6 +31,7 @@ export const hasDraggedFiles = (
     if (dataTransfer.types) {
         const types = Array.from(dataTransfer.types);
         const lowerTypes = types.map((type) => type.toLowerCase());
+        if (lowerTypes.includes('files')) return true;
         if (lowerTypes.includes('application/x-openchamber-file-path')) return true;
     }
 

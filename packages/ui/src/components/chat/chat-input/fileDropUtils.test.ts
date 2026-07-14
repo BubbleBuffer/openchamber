@@ -33,6 +33,16 @@ describe('fileDropUtils', () => {
         expect(hasDraggedFiles(transfer)).toBe(true);
     });
 
+    test('recognizes protected-mode browser file drags by their standard type', () => {
+        const transfer = {
+            files: [],
+            items: [],
+            types: ['Files'],
+        } as unknown as DataTransfer;
+
+        expect(hasDraggedFiles(transfer)).toBe(true);
+    });
+
     test('does not claim URI, editor, or text-only drags', () => {
         for (const type of ['text/uri-list', 'codefiles', 'application/vnd.code.tree', 'text/plain']) {
             const transfer = {
