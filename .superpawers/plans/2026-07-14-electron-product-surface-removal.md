@@ -1,13 +1,13 @@
 ---
 kind: plan
-status: active
+status: complete
 parent_spec: .superpawers/specs/2026-07-14-web-pwa-maintainability-program-design.md
 covers_chunks:
   - electron-removal
 coverage: partial
 created: 2026-07-14
 updated: 2026-07-14
-next_action: "Execute Task 1"
+next_action: "Write and execute the Electron shared UI and server runtime cleanup plan"
 ---
 
 # Electron Product Surface Removal Implementation Plan
@@ -64,7 +64,7 @@ Historical root `CHANGELOG.md` entries and completed planning artifacts remain u
 - Modify: `.dockerignore` — stale `packages/desktop/src-tauri` and `packages/desktop/target` entries
 - Regenerate: `bun.lock` — workspace and dependency graph
 
-- [ ] **Step 1: Record the native product contract before deletion**
+- [x] **Step 1: Record the native product contract before deletion**
 
 Run:
 
@@ -77,17 +77,17 @@ rg -n '"packages/electron"|@openchamber/electron|"electron"|electron-builder|ele
 
 Expected: both deletion targets exist; the first search identifies only the root/native integration being removed; the lockfile search shows the Electron workspace and product-owned runtime/build dependencies.
 
-- [ ] **Step 2: Capture the fresh inherited lint baseline**
+- [x] **Step 2: Capture the fresh inherited lint baseline**
 
 Run: `bun run lint`
 
 Expected: lint remains nonzero. Record the exact per-workspace errors and warnings in the implementer report before deleting the Electron workspace. The completed VS Code chunk most recently verified session-state 0 errors/5 warnings, web 379/237, tests 37/5, UI 43/766, and Electron 0/0; these current counts supersede the program-start counts in the spec because the completed VS Code contraction reduced test/UI findings. The fresh run is authoritative for this plan's final comparison.
 
-- [ ] **Step 3: Delete native-owned implementation and smoke tooling**
+- [x] **Step 3: Delete native-owned implementation and smoke tooling**
 
 Delete `packages/electron/` and `scripts/test-release-build.sh` in full. Do not preserve the native main/preload/SSH code, IPC gate, tests, package scripts, icons, entitlements, generated-output ignores, release helper, or obsolete Tauri smoke logic elsewhere.
 
-- [ ] **Step 4: Simplify root metadata, scripts, versioning, and Docker manifests**
+- [x] **Step 4: Simplify root metadata, scripts, versioning, and Docker manifests**
 
 Apply these anchored target states:
 
@@ -127,7 +127,7 @@ Delete only the stale `packages/desktop/src-tauri` and `packages/desktop/target`
 
 Preserve `release:prepare`, all root web development/build/test commands, the generic `packages/*` workspace glob, and the Docker runtime's `openssh-client`: browser/server Git SSH support is not the removed Electron SSH manager.
 
-- [ ] **Step 5: Regenerate and audit the Bun lockfile**
+- [x] **Step 5: Regenerate and audit the Bun lockfile**
 
 Run: `bun install`
 
@@ -140,7 +140,7 @@ rg -n '"electron-to-chromium"' bun.lock || true
 
 Expected: install succeeds; the first command finds no removed workspace, `@electron/*` package, Electron-prefixed runtime/helper package (including `electron-dl` and `electron-is-dev`), builder, updater, signer, DMG, publisher, or installer entry. The optional second search may return surviving Browserslist compatibility data or no match; either result is acceptable and must not be treated as product residue.
 
-- [ ] **Step 6: Inspect the focused deletion diff**
+- [x] **Step 6: Inspect the focused deletion diff**
 
 Run:
 
@@ -151,7 +151,7 @@ rg -n 'build:electron|type-check:electron|lint:electron|electron:(dev|build)|rel
 
 Expected: the diff contains only planned native product/integration removal and the search returns no active root/tooling references.
 
-- [ ] **Step 7: Verify the surviving dependency and build entrypoints**
+- [x] **Step 7: Verify the surviving dependency and build entrypoints**
 
 Run:
 
@@ -164,7 +164,7 @@ docker build --target builder -t openchamber-electron-removal-check .
 
 Expected: frozen install, type-check, and root build pass; the build invokes only UI and web/PWA work. The Docker builder target should pass when Docker is available. If Docker is unavailable, record the exact environment error and require static Dockerfile review plus Docker-capable CI before release; do not report a Docker pass.
 
-- [ ] **Step 8: Commit the native workspace contraction**
+- [x] **Step 8: Commit the native workspace contraction**
 
 ```bash
 git add -A -- package.json scripts/bump-version.mjs scripts/test-release-build.sh Dockerfile .dockerignore bun.lock packages/electron
@@ -177,7 +177,7 @@ git commit -m "refactor: remove electron desktop product"
 - Delete: `.github/workflows/build-macos-arm64-dmg.yml` — obsolete manual Tauri/Electron DMG workflow
 - Modify: `.github/workflows/release.yml` — native build/manifest jobs and final dependencies
 
-- [ ] **Step 1: Capture current release job ownership**
+- [x] **Step 1: Capture current release job ownership**
 
 Run:
 
@@ -188,11 +188,11 @@ rg -n '^  [a-zA-Z0-9_-]+:|packages/(desktop|electron)|Tauri|Electron|tauri|elect
 
 Expected: the manual workflow exists; release jobs include `create-release`, stale Tauri build/manifest jobs, `publish-npm`, Electron build/manifest jobs, and `finalize-release`.
 
-- [ ] **Step 2: Delete the obsolete manual native workflow**
+- [x] **Step 2: Delete the obsolete manual native workflow**
 
 Delete `.github/workflows/build-macos-arm64-dmg.yml` in full. Both jobs build removed native products, so no partial workflow remains.
 
-- [ ] **Step 3: Remove native jobs from the release workflow**
+- [x] **Step 3: Remove native jobs from the release workflow**
 
 In `.github/workflows/release.yml`:
 
@@ -208,7 +208,7 @@ In `.github/workflows/release.yml`:
 
 The resulting job graph must contain exactly `create-release`, `publish-npm`, and `finalize-release`.
 
-- [ ] **Step 4: Parse and assert the release workflow graph**
+- [x] **Step 4: Parse and assert the release workflow graph**
 
 Run:
 
@@ -220,7 +220,7 @@ test ! -e .github/workflows/build-macos-arm64-dmg.yml
 
 Expected: YAML parsing, exact job/dependency assertions, native environment removal, changelog extraction paths, draft creation/body path, frozen install/build, npm pack/upload/publish commands and dry-run/token wiring, final publication, Discord webhook dispatch, and optional website refresh wiring all pass; the search returns no native artifact references; the standalone workflow is absent.
 
-- [ ] **Step 5: Inspect and commit the release contraction**
+- [x] **Step 5: Inspect and commit the release contraction**
 
 Run: `git diff -- .github/workflows/release.yml .github/workflows/build-macos-arm64-dmg.yml`
 
@@ -241,7 +241,7 @@ git commit -m "ci: remove native desktop releases"
 - Modify: `tests/perf/README.md` — process-boundary guidance
 - Modify: `.superpawers/OVERVIEW.md` — active validation status only
 
-- [ ] **Step 1: Capture active native product claims**
+- [x] **Step 1: Capture active native product claims**
 
 Run:
 
@@ -252,7 +252,7 @@ rg -n 'electron|vscode|bun run type-check|bun run lint' .superpawers/OVERVIEW.md
 
 Expected: matches identify the active native product, engineering, contributor, issue, performance, and stale validation guidance being removed. Generic browser form-factor wording such as desktop browser widths is not a native product claim.
 
-- [ ] **Step 2: Update user-facing product guidance**
+- [x] **Step 2: Update user-facing product guidance**
 
 Apply these exact scope rules to `README.md`:
 
@@ -265,7 +265,7 @@ Apply these exact scope rules to `README.md`:
 
 Do not rewrite unrelated stale feature claims in this contraction unless they are native-shell claims.
 
-- [ ] **Step 3: Update engineering, contributor, issue, and test guidance**
+- [x] **Step 3: Update engineering, contributor, issue, and test guidance**
 
 Apply these target-state rules:
 
@@ -276,7 +276,7 @@ Apply these target-state rules:
 - `.superpawers/OVERVIEW.md` changes only the active validation status line so it no longer calls deleted runtimes clean; preserve historical references elsewhere.
 - Root `CHANGELOG.md`, completed/superseded plans, and the active maintainability spec remain unchanged.
 
-- [ ] **Step 4: Audit and inspect active-documentation changes**
+- [x] **Step 4: Audit and inspect active-documentation changes**
 
 Run:
 
@@ -287,7 +287,7 @@ rg -n -i 'packages/electron|electron:|electron|tauri|desktop \(macos\)|desktop a
 
 Expected: the search returns no active native product claims; the diff preserves browser/PWA and test-process guidance and does not alter historical records.
 
-- [ ] **Step 5: Validate docs and commit guidance changes**
+- [x] **Step 5: Validate docs and commit guidance changes**
 
 Run:
 
@@ -308,7 +308,7 @@ git commit -m "docs: remove native desktop guidance"
 **Files:**
 - Modify: `.superpawers/plans/2026-07-14-electron-product-surface-removal.md` — completion state and verification record
 
-- [ ] **Step 1: Run native product-surface absence checks**
+- [x] **Step 1: Run native product-surface absence checks**
 
 Run:
 
@@ -325,7 +325,7 @@ Expected: all absence assertions pass; active product/tool searches and the lock
 
 These checks intentionally exclude shared UI/server desktop compatibility code, root `CHANGELOG.md`, completed planning artifacts, the active spec/plan, browser device-form-factor language, ordinary Git SSH behavior, and `@tauri-apps/api`; those compatibility paths belong to the follow-up plan.
 
-- [ ] **Step 2: Verify release workflow structure**
+- [x] **Step 2: Verify release workflow structure**
 
 Run:
 
@@ -336,7 +336,7 @@ rg -n 'packages/(desktop|electron)|build-desktop|combine-(electron-)?manifests|T
 
 Expected: the complete release behavior assertion passes and the search returns no native release references.
 
-- [ ] **Step 3: Run maintained workspace checks**
+- [x] **Step 3: Run maintained workspace checks**
 
 Run:
 
@@ -352,13 +352,13 @@ scripts/verify.sh
 
 Expected: frozen install, type-check, root UI/web build, React tests, web tests, and docs validation pass. `scripts/verify.sh` is expected to remain nonzero only because of inherited lint debt; its type-check and build phases must pass and no Electron workspace may run.
 
-- [ ] **Step 4: Compare lint against the inherited baseline**
+- [x] **Step 4: Compare lint against the inherited baseline**
 
 Run: `bun run lint`
 
 Expected: Electron is no longer a workspace. Compare every surviving workspace against the fresh Task 1 Step 2 output; no count may increase and no new lint category may appear. The latest verified reference before this plan is session-state 0 errors/5 warnings, web 379/237, tests 37/5, and UI 43/766.
 
-- [ ] **Step 5: Probe Docker and inspect repository state**
+- [x] **Step 5: Probe Docker and inspect repository state**
 
 Run:
 
@@ -371,7 +371,7 @@ git log --oneline -5
 
 Expected: Docker passes when available; otherwise record the exact missing-environment error and retain the Docker-capable CI follow-up. The worktree is clean before the tracking update, whitespace validation passes, and all three implementation commits are present.
 
-- [ ] **Step 6: Close only this partial plan**
+- [x] **Step 6: Close only this partial plan**
 
 Update this file's frontmatter to:
 
@@ -383,7 +383,7 @@ next_action: "Write and execute the Electron shared UI and server runtime cleanu
 
 Mark all checkboxes complete and append a concise verification record with exact test/lint results and any Docker limitation. Do not change the parent spec's `electron-removal` status; it remains planned until the shared-runtime follow-up passes.
 
-- [ ] **Step 7: Check planning state and commit completion metadata**
+- [x] **Step 7: Check planning state and commit completion metadata**
 
 Run:
 
@@ -398,3 +398,15 @@ Expected: this plan reports complete with all tasks checked; `electron-removal` 
 git add .superpawers/plans/2026-07-14-electron-product-surface-removal.md
 git commit -m "docs: complete electron product removal plan"
 ```
+
+## Verification Record
+
+- Product paths are absent; active root/tool/doc references and the lock audit are clean.
+- Release workflow is exactly `create-release`, `publish-npm`, and `finalize-release`, with preserved behavior assertions.
+- Frozen install passed: 1268 installs/1341 packages, with no changes.
+- Type-check passed for all surviving workspaces/server; root build passed UI+web only.
+- React: 59 passed. Web: 19 passed, 1 skipped. Docs: 7 pages/7 links.
+- `scripts/verify.sh` exited 1 only due to inherited lint; type-check/build passed.
+- Lint is exactly unchanged: session-state 0 errors/5 warnings; web 379/237; tests 37/5; UI 43/766.
+- Docker unavailable exactly: `docker: command not found`; no Docker pass is claimed. Docker-capable CI is required before release.
+- Worktree and `git diff --check` were clean before tracking.
