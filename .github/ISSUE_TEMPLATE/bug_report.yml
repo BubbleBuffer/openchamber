@@ -17,9 +17,8 @@ body:
     attributes:
       label: Where does it happen?
       options:
-        - Desktop (macOS)
-        - Desktop Web
-        - Mobile (Web/PWA)
+        - Desktop browser (Web/PWA)
+        - Mobile browser (Web/PWA)
         - Not sure
     validations:
       required: true

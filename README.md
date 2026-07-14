@@ -51,28 +51,16 @@
 - Background notifications plus reliable cross-tab session activity tracking
 - Built-in self-update + restart flow that keeps your server settings intact
 
-### Desktop (macOS)
-
-- Native macOS menu integration with polished app actions and deep-link handling
-- Multi-window support for parallel project/session workflows
-- "Open In" shortcuts for Finder, Terminal, and your preferred editor
-- Fast switching between local and remote instances
-- Workspace-first startup flow with directory picker and steadier window restore behavior
-
 ### Custom Themes
 
 - **Use it from anywhere** - Cloudflare tunnel with QR code onboarding. Scan, connect, code from your couch.
 - **Branchable chat timeline** - Undo, redo, fork from any turn. Explore different approaches without losing your place.
 - **GitHub-native workflows** - Start sessions from issues and PRs with context already attached. Review checks, merge - all in-app.
-- **Project Actions** - Run dev servers, configure SSH port forwarding, open remote URLs locally. Your project commands, one click away.
-- **Connect to remote machines** - Desktop app connects to remote OpenChamber instances over SSH, with dedicated lifecycle and UX flows.
+- **Project Actions** - Run dev servers and manage project commands, one click away.
 
 ## Quick Start
 
 > **Prerequisite:** [OpenCode CLI](https://opencode.ai) installed.
-
-### **Desktop (macOS)**
-Download from [Releases](https://github.com/btriapitsyn/openchamber/releases).
 
 ### **CLI (Web + PWA)**
 _requires Node.js 20+_
@@ -299,18 +287,6 @@ chown -R 1000:1000 data/
 </details>
 
 <details>
-<summary><strong>Desktop (macOS)</strong></summary>
-
-- Connect to remote OpenChamber instances over SSH with dedicated lifecycle flows
-- Project Actions: run dev servers, SSH port forwarding, open remote URLs locally
-- Multi-window support for parallel project workflows
-- "Open In" shortcuts for Finder, Terminal, and your preferred editor
-- Fast switching between local and remote instances
-- Native macOS menu, deep-link handling, and polished startup
-
-</details>
-
-<details>
 <summary><strong>Customization</strong></summary>
 
 - 18+ built-in themes with light/dark variants
@@ -355,7 +331,6 @@ Independent project, not affiliated with the OpenCode team.
 - [OpenCode](https://opencode.ai) - For the excellent API and extensible architecture.
 - [Flexoki](https://github.com/kepano/flexoki) - Beautiful color scheme by [Steph Ango](https://stephango.com/flexoki).
 - [Pierre](https://pierrejs-docs.vercel.app/) - Fast, beautiful diff viewer with syntax highlighting.
-- [Tauri](https://github.com/tauri-apps/tauri) - Desktop application framework.
 - [Ghostty-web](https://github.com/coder/ghostty-web) - Great implementation of a Ghostty web renderer.
 - [David Hill](https://x.com/iamdavidhill) - Who inspired me to release this without [overthinking](https://x.com/iamdavidhill/status/1993648326450020746).
 - [My wife](https://github.com/yulia-ivashko), who - with zero AI background - sat down with the app for the first time and built the firework celebration that plays on every successful push.

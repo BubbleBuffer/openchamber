@@ -8,9 +8,6 @@ OpenChamber is a mobile-first UI for an OpenCode server. The UI talks to OpenCod
 | ---------------- | ------------------- | ------------------------------------------------------------------------------------- |
 | Shared UI        | `packages/ui`       | Active. Mobile-first.                                                                 |
 | Web app + server | `packages/web`      | Active. All backend logic lives here.                                                 |
-| Desktop (Electron) | `packages/electron` | **Active — all new desktop work goes here.** Boots the web server in-process.       |
-
-Electron imports the web server via `@openchamber/web/server/index.js` and calls `startWebUiServer({...})`. The native shell is for menu, dialogs, notifications, updater, deep-links, and quit only — never feature logic. `packages/electron/preload.mjs` exposes a `__TAURI__` IPC shim so renderer code stays shell-agnostic.
 
 ## Principles
 
@@ -39,7 +36,6 @@ Skills live in `.opencode/skills/<name>/SKILL.md`. Load the matching skill befor
 - New zustand store → `packages/ui/src/stores/`. Split by change frequency and subscriber set; do not bolt onto an existing broad store.
 - New sync-layer state (live session/message/streaming) → `packages/ui/src/sync/`. Read `packages/ui/src/sync/DOCUMENTATION.md` first.
 - New server route or server-side module → `packages/web/server/src/domains/<domain>/` with a `DOCUMENTATION.md`.
-- New desktop IPC handler → `packages/electron/main.mjs` + `preload.mjs` (preserve the `__TAURI__` shim).
 
 ## Tech stack
 
@@ -48,7 +44,6 @@ Skills live in `.opencode/skills/<name>/SKILL.md`. Load the matching skill befor
 - State: Zustand (`packages/ui/src/stores/` and sync child stores in `packages/ui/src/sync/`)
 - UI primitives: **Base UI** (`@base-ui/react`) — wrappers in `packages/ui/src/components/ui/`. Radix UI and HeroUI are legacy; do not use for new code. Icons: Remixicon.
 - Server: Express
-- Desktop: Electron 41 (forward)
 - PWA: `vite-plugin-pwa`
 
 ## Entry points
@@ -56,7 +51,6 @@ Skills live in `.opencode/skills/<name>/SKILL.md`. Load the matching skill befor
 - Web bootstrap: `packages/web/src/main.tsx`
 - Web server: `packages/web/server/index.js`
 - Web CLI: `packages/web/bin/cli.js`
-- Electron main: `packages/electron/main.mjs` (preload: `packages/electron/preload.mjs`)
 
 ## OpenCode integration
 
@@ -103,9 +97,6 @@ Validation and safety gates MUST live in core command logic, not in prompts. The
 | `bun run type-check`          | TypeScript validation                |
 | `bun run lint`                | ESLint                               |
 | `bun run build`               | Build all packages                   |
-| `bun run electron:dev`        | Desktop dev (Electron — primary)     |
-| `bun run electron:build`      | Desktop build (Electron — primary)   |
-| `bun run release:test`        | Release smoke (`scripts/test-release-build.sh`) |
 | `scripts/verify.sh`           | Full verification (type-check + lint + build)  |
 
 Run `scripts/verify.sh` before finalising any change. At minimum, run `bun run type-check` and `bun run lint`.

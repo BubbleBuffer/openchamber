@@ -19,14 +19,6 @@ bun install
 
 Both are configurable via env vars: `OPENCHAMBER_PORT`, `OPENCHAMBER_HMR_UI_PORT`, `OPENCHAMBER_HMR_API_PORT`.
 
-### Desktop (Electron)
-
-```bash
-bun run electron:dev
-```
-
-Launches Electron in dev mode with the web server running in-process.
-
 ### Shared UI (`packages/ui`)
 
 No dev server — this is a source-level library consumed by other packages. During development, `bun run dev` runs type-checking in watch mode.
@@ -61,7 +53,6 @@ bun run build        # Must succeed
 packages/
   ui/        Shared React components, hooks, stores, and theme system
   web/       Web server (Express) + frontend (Vite) + CLI
-  electron/  Electron desktop app (thin shell around the web UI)
 ```
 
 See [AGENTS.md](./AGENTS.md) for detailed architecture reference.
