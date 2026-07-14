@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 describe("checkForUpdates", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.doUnmock("node:os");
     vi.resetModules();
   });
 
