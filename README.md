@@ -13,7 +13,6 @@
 ![Settings](docs/references/settings_example.png)
 ![Web Version](docs/references/web_version_example.png)
 ![Diff View](docs/references/diff_example.png)
-![VS Code Extension](packages/vscode/extension.jpg)
 
 <p>
 <img src="docs/references/pwa_chat_example.png" width="45%" alt="PWA Chat">
@@ -60,14 +59,6 @@
 - Fast switching between local and remote instances
 - Workspace-first startup flow with directory picker and steadier window restore behavior
 
-### VS Code Extension
-
-- Editor-native workflow: open files directly from tool output and keep sessions beside your code
-- Agent Manager for parallel multi-model runs from a single prompt
-- Right-click actions to add context, explain selections, and improve code in-place
-- In-extension settings, responsive layout, and theme mapping that matches your editor
-- Hardened runtime lifecycle and health checks for faster startup and fewer stuck reconnect states
-
 ### Custom Themes
 
 - **Use it from anywhere** - Cloudflare tunnel with QR code onboarding. Scan, connect, code from your couch.
@@ -82,9 +73,6 @@
 
 ### **Desktop (macOS)**
 Download from [Releases](https://github.com/btriapitsyn/openchamber/releases).
-
-### **VS Code**
-Install from [Marketplace](https://marketplace.visualstudio.com/items?itemName=fedaykindev.openchamber) or search "OpenChamber" in Extensions.
 
 ### **CLI (Web + PWA)**
 _requires Node.js 20+_
@@ -319,17 +307,6 @@ chown -R 1000:1000 data/
 - "Open In" shortcuts for Finder, Terminal, and your preferred editor
 - Fast switching between local and remote instances
 - Native macOS menu, deep-link handling, and polished startup
-
-</details>
-
-<details>
-<summary><strong>VS Code Extension</strong></summary>
-
-- Editor-native: open files from tool output, keep sessions beside your code
-- Agent Manager for parallel multi-model runs from a single prompt
-- Right-click actions: add context, explain selections, improve code in-place
-- Session editor panel, responsive layout, and theme mapping to your editor
-- Edit-style tool results open directly in focused diff views
 
 </details>
 

@@ -9,7 +9,6 @@ OpenChamber is a mobile-first UI for an OpenCode server. The UI talks to OpenCod
 | Shared UI        | `packages/ui`       | Active. Mobile-first.                                                                 |
 | Web app + server | `packages/web`      | Active. All backend logic lives here.                                                 |
 | Desktop (Electron) | `packages/electron` | **Active — all new desktop work goes here.** Boots the web server in-process.       |
-| VS Code          | `packages/vscode`   | Active. Extension + webview.                                                          |
 
 Electron imports the web server via `@openchamber/web/server/index.js` and calls `startWebUiServer({...})`. The native shell is for menu, dialogs, notifications, updater, deep-links, and quit only — never feature logic. `packages/electron/preload.mjs` exposes a `__TAURI__` IPC shim so renderer code stays shell-agnostic.
 
@@ -41,7 +40,6 @@ Skills live in `.opencode/skills/<name>/SKILL.md`. Load the matching skill befor
 - New sync-layer state (live session/message/streaming) → `packages/ui/src/sync/`. Read `packages/ui/src/sync/DOCUMENTATION.md` first.
 - New server route or server-side module → `packages/web/server/src/domains/<domain>/` with a `DOCUMENTATION.md`.
 - New desktop IPC handler → `packages/electron/main.mjs` + `preload.mjs` (preserve the `__TAURI__` shim).
-- New VS Code bridge → `packages/vscode/src/bridge-*-runtime.ts`.
 
 ## Tech stack
 
@@ -59,8 +57,6 @@ Skills live in `.opencode/skills/<name>/SKILL.md`. Load the matching skill befor
 - Web server: `packages/web/server/index.js`
 - Web CLI: `packages/web/bin/cli.js`
 - Electron main: `packages/electron/main.mjs` (preload: `packages/electron/preload.mjs`)
-- VS Code extension host: `packages/vscode/src/extension.ts`
-- VS Code webview bootstrap: `packages/vscode/webview/main.tsx`
 
 ## OpenCode integration
 
@@ -94,7 +90,6 @@ Read the relevant `DOCUMENTATION.md` before modifying that module.
 ## Architecture patterns
 
 - **Thin entrypoints, focused modules.** Route/domain logic lives in focused modules with clear ownership.
-- **Cross-runtime parity.** Shared route/payload contracts must work in web, Electron, and VS Code.
 - **Partial-failure-safe flows.** Prefer per-item results, rollback paths, or resumable cleanup over all-or-nothing assumptions.
 
 ## CLI parity (terminal CLI — `packages/web/bin/*`)
@@ -110,7 +105,6 @@ Validation and safety gates MUST live in core command logic, not in prompts. The
 | `bun run build`               | Build all packages                   |
 | `bun run electron:dev`        | Desktop dev (Electron — primary)     |
 | `bun run electron:build`      | Desktop build (Electron — primary)   |
-| `bun run vscode:build`        | VS Code extension                    |
 | `bun run release:test`        | Release smoke (`scripts/test-release-build.sh`) |
 | `scripts/verify.sh`           | Full verification (type-check + lint + build)  |
 

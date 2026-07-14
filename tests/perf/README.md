@@ -46,4 +46,4 @@ It is intentionally standalone for now. It uses hand-rolled synthetic workloads 
 
 - Do not loosen benchmark thresholds or snapshot samples without documenting the reason in the commit message.
 - Prefer adding a new focused benchmark over broadening an existing one.
-- Keep mocks at process boundaries; do not import Electron, VS Code, or real OpenCode processes from perf tests.
+- Keep mocks at process boundaries; do not import Electron or real OpenCode processes from perf tests.
