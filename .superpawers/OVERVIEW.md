@@ -165,5 +165,4 @@ bun run test:integration     # ⚠ 50 / 54 pass (1 pre-existing liveness-fix tes
 - Sentry integration — done
 - TTS / Cloudflare tunnels / Tauri shell — removed
 - Store / lib / chat folder restructuring — done
-- VS Code / Electron parity — maintained per phase
 - PWA / mobile-first UI — ongoing per `.opencode/skills/mobile-first-ui`

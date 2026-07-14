@@ -20,7 +20,7 @@ Acceptance:
 - Root verification no longer invokes or describes Electron.
 
 ### Chunk: vscode-removal
-Status: planned
+Status: complete
 Goal: Remove the VS Code extension and its duplicated runtime implementations without weakening the web product.
 Acceptance:
 - `packages/vscode` and VS Code-only bridges, webview bootstraps, tests, scripts, dependencies, workflows, docs, and release configuration are deleted.
