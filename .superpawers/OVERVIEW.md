@@ -153,9 +153,9 @@ Specs:
 ## Verification baseline
 
 ```bash
-bun run type-check           # ⚠ fails only in @openchamber/tests due pre-existing UI ambient gaps (`__OPENCHAMBER_*__`, `import.meta.env`/`glob`, `?worker&url`, `?raw`); ui/web/vscode/session-state clean
+bun run type-check           # ⚠ fails only in @openchamber/tests due pre-existing UI ambient gaps (`__OPENCHAMBER_*__`, `import.meta.env`/`glob`, `?worker&url`, `?raw`); ui/web/session-state clean
 bun run type-check:server    # ✅ clean
-bun run lint                 # ⚠ not clean: UI has 1 pre-existing `activeTransport` error + 787 warnings; VS Code has 0 errors + 113 warnings; web lint currently reports pre-existing server lint debt
+bun run lint                 # ⚠ not clean: UI has 1 pre-existing `activeTransport` error + 787 warnings; web lint currently reports pre-existing server lint debt
 bun run test:stores          # ✅ 68 / 68 pass (15 store test files, ~1.1s)
 bun run test:integration     # ⚠ 50 / 54 pass (1 pre-existing liveness-fix test failure; 4 skipped)
 ```
