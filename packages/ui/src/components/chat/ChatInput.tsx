@@ -1160,7 +1160,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
     }, [currentSessionId, newSessionDraftOpen]);
 
     const hasDraggedFiles = React.useCallback((dataTransfer: DataTransfer | null | undefined): boolean => {
-        return hasDraggedFilesInTransfer(dataTransfer, []);
+        return hasDraggedFilesInTransfer(dataTransfer);
     }, []);
 
     const collectDroppedFiles = React.useCallback((dataTransfer: DataTransfer | null | undefined): File[] => {

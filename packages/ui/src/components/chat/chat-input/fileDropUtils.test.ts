@@ -1,10 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import {
-    collectDroppedFileUris,
     encodeFilePath,
+    hasDraggedFiles,
     normalizeDroppedPath,
-    parseDroppedFileReferences,
-    toLikelyFileDropReference,
     toProjectRelativeMentionPath,
     toServerFileUrl,
 } from './fileDropUtils';
@@ -19,41 +17,31 @@ describe('fileDropUtils', () => {
         expect(toServerFileUrl('file:///tmp/a.ts')).toBe('file:///tmp/a.ts');
     });
 
-    test('recognizes absolute drop references only', () => {
-        expect(toLikelyFileDropReference('/repo/file.ts')).toBe('/repo/file.ts');
-        expect(toLikelyFileDropReference('file:///repo/file.ts')).toBe('file:///repo/file.ts');
-        expect(toLikelyFileDropReference('relative/file.ts')).toBeNull();
-    });
-
-    test('extracts file references from text and nested JSON payloads', () => {
-        const payload = JSON.stringify({
-            resources: [{ uri: 'file:///repo/a.ts' }, { path: '/repo/b.ts' }],
-            ignored: 'relative/c.ts',
-        });
-
-        expect(parseDroppedFileReferences(payload)).toEqual([
-            'file:///repo/a.ts',
-            '/repo/b.ts',
-        ]);
-    });
-
     test('normalizes dropped file URIs and project-relative mention paths', () => {
         expect(normalizeDroppedPath('file:///repo/src/App.tsx')).toBe('/repo/src/App.tsx');
         expect(toProjectRelativeMentionPath('/repo/src/App.tsx', '/repo')).toBe('src/App.tsx');
         expect(toProjectRelativeMentionPath('/other/App.tsx', '/repo')).toBe('/other/App.tsx');
     });
 
-    test('collects dropped URI references from configured data types', () => {
-        const data = new Map<string, string>([
-            ['text/uri-list', 'file:///repo/a.ts\n/repo/b.ts'],
-        ]);
+    test('recognizes actual File drags', () => {
         const transfer = {
-            getData: (type: string) => data.get(type) ?? '',
-        } as DataTransfer;
+            files: [new File(['contents'], 'file.ts', { type: 'text/plain' })],
+            items: [],
+            types: ['Files'],
+        } as unknown as DataTransfer;
 
-        expect(collectDroppedFileUris(transfer, ['text/uri-list'])).toEqual([
-            'file:///repo/a.ts',
-            '/repo/b.ts',
-        ]);
+        expect(hasDraggedFiles(transfer)).toBe(true);
+    });
+
+    test('does not claim URI, editor, or text-only drags', () => {
+        for (const type of ['text/uri-list', 'codefiles', 'application/vnd.code.tree', 'text/plain']) {
+            const transfer = {
+                files: [],
+                items: [],
+                types: [type],
+            } as unknown as DataTransfer;
+
+            expect(hasDraggedFiles(transfer)).toBe(false);
+        }
     });
 });
