@@ -17,7 +17,6 @@ import {
 
 export type ComposerAttachmentControlsProps = {
     isMobile: boolean;
-    isVSCode: boolean;
     footerIconButtonClass: string;
     iconSizeClass: string;
     fileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -32,7 +31,6 @@ export type ComposerAttachmentControlsProps = {
 export const ComposerAttachmentControls = React.memo(function ComposerAttachmentControls(props: ComposerAttachmentControlsProps) {
     const {
         isMobile,
-        isVSCode,
         footerIconButtonClass,
         iconSizeClass,
         fileInputRef,
@@ -77,56 +75,44 @@ export const ComposerAttachmentControls = React.memo(function ComposerAttachment
             />
 
             <div className="relative inline-flex">
-                {isVSCode ? (
-                    <button
-                        type="button"
-                        className={footerIconButtonClass}
-                        onClick={handlePickLocalFiles}
-                        title="Attach files"
-                        aria-label="Attach files"
-                    >
-                        <RiAttachment2 className={cn(iconSizeClass, 'text-current')} />
-                    </button>
-                ) : (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button
-                                type="button"
-                                className={footerIconButtonClass}
-                                title="Add attachment"
-                                aria-label="Add attachment"
-                            >
-                                <RiAddCircleLine className={cn(iconSizeClass, 'text-current')} />
-                            </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                            <DropdownMenuItem
-                                onSelect={() => {
-                                    requestAnimationFrame(handlePickLocalFiles);
-                                }}
-                            >
-                                <RiAttachment2 />
-                                Attach files
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onSelect={() => {
-                                    requestAnimationFrame(openIssuePicker);
-                                }}
-                            >
-                                <RiGithubLine />
-                                Link GitHub Issue
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onSelect={() => {
-                                    requestAnimationFrame(openPrPicker);
-                                }}
-                            >
-                                <RiGitPullRequestLine />
-                                Link GitHub PR
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                )}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button
+                            type="button"
+                            className={footerIconButtonClass}
+                            title="Add attachment"
+                            aria-label="Add attachment"
+                        >
+                            <RiAddCircleLine className={cn(iconSizeClass, 'text-current')} />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                        <DropdownMenuItem
+                            onSelect={() => {
+                                requestAnimationFrame(handlePickLocalFiles);
+                            }}
+                        >
+                            <RiAttachment2 />
+                            Attach files
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onSelect={() => {
+                                requestAnimationFrame(openIssuePicker);
+                            }}
+                        >
+                            <RiGithubLine />
+                            Link GitHub Issue
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onSelect={() => {
+                                requestAnimationFrame(openPrPicker);
+                            }}
+                        >
+                            <RiGitPullRequestLine />
+                            Link GitHub PR
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
 
             {onOpenSettings ? (
@@ -144,7 +130,6 @@ export const ComposerAttachmentControls = React.memo(function ComposerAttachment
     );
 }, (prev, next) => (
     prev.isMobile === next.isMobile
-    && prev.isVSCode === next.isVSCode
     && prev.footerIconButtonClass === next.footerIconButtonClass
     && prev.iconSizeClass === next.iconSizeClass
     && prev.onOpenSettings === next.onOpenSettings

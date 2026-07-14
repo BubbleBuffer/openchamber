@@ -1,6 +1,6 @@
 import type { Message, Part } from '@/lib/opencode/client';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
-import { isVSCodeRuntime, openDesktopPath, revealDesktopPath, saveDesktopMarkdownFile } from '@/lib/desktop/desktop';
+import { openDesktopPath, revealDesktopPath, saveDesktopMarkdownFile } from '@/lib/desktop/desktop';
 import { getRevealLabel } from '@/lib/utils';
 
 type SessionMessageRecord = { info: Message; parts: Part[] };
@@ -100,31 +100,7 @@ export async function saveAsMarkdownDesktop(content: string, filename: string): 
     return desktopPath;
   }
 
-  if (!isVSCodeRuntime()) {
-    return null;
-  }
-
-  try {
-    const response = await fetch('/api/vscode/save-markdown', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileName: filename, content }),
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const payload = await response.json() as { saved?: boolean; path?: string };
-    if (payload.saved !== true) {
-      return null;
-    }
-
-    const savedPath = typeof payload.path === 'string' ? payload.path.trim() : '';
-    return savedPath.length > 0 ? savedPath : null;
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 export async function revealExportedMarkdown(path: string): Promise<boolean> {

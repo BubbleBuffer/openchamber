@@ -34,10 +34,8 @@ export type DraftTargetSelectorState = {
 
 export const useDraftTargetSelector = ({
     newSessionDraftOpen,
-    isVSCode,
 }: {
     newSessionDraftOpen: boolean;
-    isVSCode: boolean;
 }): DraftTargetSelectorState => {
     const newSessionDraft = useSessionUIStore((s) => s.newSessionDraft);
     const setNewSessionDraftTarget = useSessionUIStore((s) => s.setNewSessionDraftTarget);
@@ -52,7 +50,7 @@ export const useDraftTargetSelector = ({
         currentDirectory ? state.directories.get(currentDirectory)?.status ?? null : null,
     );
     const fetchBranches = useGitStore((state) => state.fetchBranches);
-    const showDraftTargetSelectors = newSessionDraftOpen && !isVSCode;
+    const showDraftTargetSelectors = newSessionDraftOpen;
 
     const selectedDraftProject = React.useMemo(() => {
         const explicit = newSessionDraft?.selectedProjectId

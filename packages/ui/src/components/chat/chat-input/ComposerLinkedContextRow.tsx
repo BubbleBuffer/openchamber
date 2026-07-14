@@ -24,7 +24,6 @@ interface LinkedPr {
 interface ComposerLinkedContextRowProps {
     linkedIssue: LinkedIssue | null;
     linkedPr: LinkedPr | null;
-    isVSCode: boolean;
     onOpenIssuePicker: () => void;
     onOpenPrPicker: () => void;
     onClearIssue: () => void;
@@ -34,7 +33,6 @@ interface ComposerLinkedContextRowProps {
 export const ComposerLinkedContextRow = React.memo(function ComposerLinkedContextRow({
     linkedIssue,
     linkedPr,
-    isVSCode,
     onOpenIssuePicker,
     onOpenPrPicker,
     onClearIssue,
@@ -45,7 +43,7 @@ export const ComposerLinkedContextRow = React.memo(function ComposerLinkedContex
     return (
         <>
             {/* Linked Issue row */}
-            {linkedIssue && !isVSCode && (
+            {linkedIssue && (
                 <div className="pb-2 w-full px-1">
                     <button
                         type="button"
@@ -93,7 +91,7 @@ export const ComposerLinkedContextRow = React.memo(function ComposerLinkedContex
                     </button>
                 </div>
             )}
-            {linkedPr && !isVSCode && (
+            {linkedPr && (
                 <div className="pb-2 w-full px-1">
                     <button
                         type="button"

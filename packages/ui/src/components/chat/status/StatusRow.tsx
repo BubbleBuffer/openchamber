@@ -20,7 +20,6 @@ type TodoPriority = string;
 import { useRuntimeStore } from "@/stores/useRuntimeStore";
 import { useTodosPersistStore } from "@/stores/useTodosPersistStore";
 import { WorkingPlaceholder } from "../message/parts/WorkingPlaceholder";
-import { isVSCodeRuntime } from "@/lib/desktop/desktop";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const statusConfig: Record<TodoStatus, { textClassName: string }> = {
@@ -127,7 +126,7 @@ interface StatusRowProps {
   wasAborted?: boolean;
   abortActive?: boolean;
   retryInfo?: { attempt?: number; next?: number } | null;
-  // Abort state (for mobile/vscode)
+  // Abort state (for mobile)
   showAbort?: boolean;
   onAbort?: () => void;
   // Abort status display
@@ -170,7 +169,7 @@ export const StatusRow: React.FC<StatusRowProps> = ({
     return persistedSessionTodos ?? EMPTY_TODOS;
   }, [todosRecord, persistedSessionTodos, currentSessionId]);
   const isMobile = useRuntimeStore((state) => state.isMobile);
-  const isCompact = isMobile || isVSCodeRuntime();
+  const isCompact = isMobile;
 
   // Filter out cancelled todos for display and keep original order.
   // This prevents items from jumping around when status changes.
@@ -229,7 +228,7 @@ export const StatusRow: React.FC<StatusRowProps> = ({
 
   const toggleExpanded = () => setIsExpanded((prev) => !prev);
 
-  // Abort button for mobile/vscode
+  // Abort button for mobile
   const abortButton = showAbort && onAbort ? (
     <button
       type="button"
@@ -248,7 +247,7 @@ export const StatusRow: React.FC<StatusRowProps> = ({
       onClick={toggleExpanded}
       className="flex items-center gap-1 flex-shrink-0 text-muted-foreground"
     >
-      {/* Desktop: show task text; Mobile/VSCode: just "Tasks" */}
+      {/* Desktop: show task text; Mobile: just "Tasks" */}
       {!isCompact && activeTodo ? (
         <span className="status-row__active-todo typography-ui-label text-foreground truncate max-w-[200px]">
           {activeTodo.content}

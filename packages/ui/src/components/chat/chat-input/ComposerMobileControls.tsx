@@ -14,7 +14,6 @@ const MemoMobileAgentButton = React.memo(MobileAgentButton);
 const MemoMobileModelButton = React.memo(MobileModelButton);
 
 interface ComposerMobileControlsProps {
-  isVSCode: boolean;
   footerIconButtonClass: string;
   iconSizeClass: string;
   sendIconSizeClass: string;
@@ -51,7 +50,6 @@ interface ComposerMobileControlsProps {
 }
 
 export const ComposerMobileControls = React.memo(function ComposerMobileControls({
-  isVSCode,
   footerIconButtonClass,
   iconSizeClass,
   sendIconSizeClass,
@@ -91,7 +89,6 @@ export const ComposerMobileControls = React.memo(function ComposerMobileControls
         <div className="flex items-center gap-x-1.5">
           <ComposerAttachmentControls
             isMobile={true}
-            isVSCode={isVSCode}
             footerIconButtonClass={footerIconButtonClass}
             iconSizeClass={iconSizeClass}
             fileInputRef={fileInputRef}

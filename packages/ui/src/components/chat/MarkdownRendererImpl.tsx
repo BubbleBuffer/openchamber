@@ -22,13 +22,10 @@ import { useOptionalThemeSystem } from '@/contexts/useThemeSystem';
 import { getDefaultTheme } from '@/lib/theme/themes';
 import { generateSyntaxTheme } from '@/lib/theme/syntaxThemeGenerator';
 import type { ToolPopupContent } from './message/types';
-import { useUIStore } from '@/stores/useUIStore';
 import { useContextPanelStore } from '@/stores/useContextPanelStore';
 import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
 import { useDeviceInfo } from '@/lib/device';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
-import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
-import type { EditorAPI } from '@/lib/api/types';
 
 const useCurrentMermaidTheme = () => {
   const themeSystem = useOptionalThemeSystem();
@@ -1166,13 +1163,9 @@ const getContextDirectory = (effectiveDirectory: string, resolvedPath: string): 
 const useFileReferenceInteractions = ({
   containerRef,
   effectiveDirectory,
-  editor,
-  preferRuntimeEditor,
 }: {
   containerRef: React.RefObject<HTMLDivElement | null>;
   effectiveDirectory: string;
-  editor?: EditorAPI;
-  preferRuntimeEditor?: boolean;
 }) => {
   const annotationDebounceRef = React.useRef<number | null>(null);
 
@@ -1221,19 +1214,6 @@ const useFileReferenceInteractions = ({
       }
 
       const contextDirectory = getContextDirectory(effectiveDirectory, resolved.resolvedPath);
-      if (preferRuntimeEditor && editor) {
-        void editor.openFile(
-          resolved.resolvedPath,
-          Number.isFinite(resolved.line ?? Number.NaN)
-            ? Math.max(1, Math.trunc(resolved.line as number))
-            : undefined,
-          Number.isFinite(resolved.column ?? Number.NaN)
-            ? Math.max(1, Math.trunc(resolved.column as number))
-            : undefined,
-        );
-        return;
-      }
-
       const ctxStore = useContextPanelStore.getState();
       if (Number.isFinite(resolved.line ?? Number.NaN)) {
         ctxStore.openContextFileAtLine(
@@ -1314,7 +1294,7 @@ const useFileReferenceInteractions = ({
       container.removeEventListener('click', handleClick);
       container.removeEventListener('keydown', handleKeyDown);
     };
-  }, [containerRef, editor, effectiveDirectory, preferRuntimeEditor]);
+  }, [containerRef, effectiveDirectory]);
 };
 
 const useMermaidInlineInteractions = ({
@@ -1423,7 +1403,6 @@ const MarkdownRendererImpl: React.FC<MarkdownRendererProps> = ({
   onShowPopup,
 }) => {
   const currentTheme = useCurrentMermaidTheme();
-  const { editor, runtime } = useRuntimeAPIs();
   const containerRef = React.useRef<HTMLDivElement>(null);
   const effectiveDirectory = useEffectiveDirectory() ?? '';
   const mermaidBlocks = React.useMemo(() => extractMermaidBlocks(content), [content]);
@@ -1431,8 +1410,6 @@ const MarkdownRendererImpl: React.FC<MarkdownRendererProps> = ({
   useFileReferenceInteractions({
     containerRef,
     effectiveDirectory,
-    editor,
-    preferRuntimeEditor: runtime.isVSCode,
   });
   useExternalLinkInteractions({ containerRef });
   const syntaxTheme = React.useMemo(() => generateSyntaxTheme(currentTheme), [currentTheme]);
@@ -1498,7 +1475,6 @@ const SimpleMarkdownRendererImpl: React.FC<{
   onShowPopup,
   allowMermaidWheelZoom = false,
 }) => {
-    const { editor, runtime } = useRuntimeAPIs();
     const renderedContent = React.useMemo(
       () => (stripFrontmatter ? stripLeadingFrontmatter(content) : content),
       [content, stripFrontmatter],
@@ -1516,8 +1492,6 @@ const SimpleMarkdownRendererImpl: React.FC<{
     useFileReferenceInteractions({
       containerRef,
       effectiveDirectory,
-      editor,
-      preferRuntimeEditor: runtime.isVSCode,
     });
     useExternalLinkInteractions({ containerRef, enabled: !disableLinkSafety });
     const syntaxTheme = React.useMemo(() => generateSyntaxTheme(currentTheme), [currentTheme]);

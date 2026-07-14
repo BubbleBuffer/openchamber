@@ -7,7 +7,6 @@ import { toast } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { openExternalUrl } from '@/lib/url';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import { useIsVSCodeRuntime } from '@/hooks/useRuntimeAPIs';
 import { FileTypeIcon } from '@/components/icons/FileTypeIcon';
 
 import type { ToolPopupContent } from './message/types';
@@ -16,7 +15,6 @@ export const FileAttachmentButton = memo(() => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const addAttachedFile = useInputStore((state) => state.addAttachedFile);
   const isMobile = useRuntimeStore((state) => state.isMobile);
-  const isVSCodeRuntime = useIsVSCodeRuntime();
   const buttonSizeClass = isMobile ? 'h-9 w-9' : 'h-7 w-7';
   const iconSizeClass = isMobile ? 'h-5 w-5' : 'h-[18px] w-[18px]';
 
@@ -42,48 +40,6 @@ export const FileAttachmentButton = memo(() => {
     }
   };
 
-  const handleVSCodePick = async () => {
-    try {
-      const response = await fetch('/api/vscode/pick-files');
-      const data = await response.json();
-      const picked = Array.isArray(data?.files) ? data.files : [];
-      const skipped = Array.isArray(data?.skipped) ? data.skipped : [];
-
-      if (skipped.length > 0) {
-        const summary = skipped.map((s: { name?: string; reason?: string }) => `${s?.name || 'file'}: ${s?.reason || 'skipped'}`).join('\n');
-        toast.error(`Some files were skipped:\n${summary}`);
-      }
-
-      const asFiles = picked
-        .map((file: { name: string; mimeType?: string; dataUrl?: string }) => {
-          if (!file?.dataUrl) return null;
-          try {
-            const [meta, base64] = file.dataUrl.split(',');
-            const mime = file.mimeType || (meta?.match(/data:(.*);base64/)?.[1] || 'application/octet-stream');
-            if (!base64) return null;
-            const binary = atob(base64);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) {
-              bytes[i] = binary.charCodeAt(i);
-            }
-            const blob = new Blob([bytes], { type: mime });
-            return new File([blob], file.name || 'file', { type: mime });
-          } catch (err) {
-            console.error('Failed to decode VS Code picked file', err);
-            return null;
-          }
-        })
-        .filter(Boolean) as File[];
-
-      if (asFiles.length > 0) {
-        await attachFiles(asFiles);
-      }
-    } catch (error) {
-      console.error('VS Code file pick failed', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to pick files in VS Code');
-    }
-  };
-
   return (
     <>
       <input
@@ -97,7 +53,7 @@ export const FileAttachmentButton = memo(() => {
         <TooltipTrigger asChild>
           <button
             type="button"
-            onClick={isVSCodeRuntime ? handleVSCodePick : () => fileInputRef.current?.click()}
+            onClick={() => fileInputRef.current?.click()}
             className={cn(
               'flex items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
               'hover:bg-muted text-muted-foreground',

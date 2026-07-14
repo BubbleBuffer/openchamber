@@ -12,7 +12,6 @@ import { toast } from '@/components/ui';
 import { getProjectNotesAndTodos, saveProjectNotesAndTodos } from '@/lib/config/openchamberConfig';
 import { resolveProjectForSessionDirectory } from '@/lib/project/projectResolution';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
-import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 
 interface TextSelectionMenuProps {
   containerRef: React.RefObject<HTMLElement | null>;
@@ -594,23 +593,21 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({ containerR
           <span>Copy</span>
         </button>
 
-        {!isVSCodeRuntime() ? (
-          <button
-            onClick={handleAddToNotes}
-            disabled={isAddingToNotes}
-            className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-lg',
-              'text-sm font-medium',
-              'bg-[var(--surface-muted)] text-[var(--surface-foreground)]',
-              'active:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed',
-              'transition-opacity duration-150'
-            )}
-            type="button"
-          >
-            {isAddingToNotes ? <RiLoader4Line className="h-5 w-5 animate-spin" /> : <RiBookletLine className="h-5 w-5" />}
-            <span>Add to notes</span>
-          </button>
-        ) : null}
+        <button
+          onClick={handleAddToNotes}
+          disabled={isAddingToNotes}
+          className={cn(
+            'flex items-center gap-2 px-3 py-2 rounded-lg',
+            'text-sm font-medium',
+            'bg-[var(--surface-muted)] text-[var(--surface-foreground)]',
+            'active:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed',
+            'transition-opacity duration-150'
+          )}
+          type="button"
+        >
+          {isAddingToNotes ? <RiLoader4Line className="h-5 w-5 animate-spin" /> : <RiBookletLine className="h-5 w-5" />}
+          <span>Add to notes</span>
+        </button>
       </div>,
       document.body
     );
@@ -671,28 +668,24 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({ containerR
           <span className="whitespace-nowrap">New session</span>
         </button>
 
-        {!isVSCodeRuntime() ? (
-          <>
-            <div className="w-px h-4 bg-[var(--interactive-border)]" />
+        <div className="w-px h-4 bg-[var(--interactive-border)]" />
 
-            <button
-              onClick={handleAddToNotes}
-              disabled={isAddingToNotes}
-              className={cn(
-                'flex items-center gap-1.5 px-2 py-1 rounded-md',
-                'text-sm font-medium',
-                'text-[var(--surface-foreground)]',
-                'hover:bg-[var(--interactive-hover)] disabled:opacity-60 disabled:cursor-not-allowed',
-                'transition-colors duration-150'
-              )}
-              title="Save distilled insight to notes"
-              type="button"
-            >
-              {isAddingToNotes ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiBookletLine className="h-4 w-4" />}
-              <span className="whitespace-nowrap">Add to notes</span>
-            </button>
-          </>
-        ) : null}
+        <button
+          onClick={handleAddToNotes}
+          disabled={isAddingToNotes}
+          className={cn(
+            'flex items-center gap-1.5 px-2 py-1 rounded-md',
+            'text-sm font-medium',
+            'text-[var(--surface-foreground)]',
+            'hover:bg-[var(--interactive-hover)] disabled:opacity-60 disabled:cursor-not-allowed',
+            'transition-colors duration-150'
+          )}
+          title="Save distilled insight to notes"
+          type="button"
+        >
+          {isAddingToNotes ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiBookletLine className="h-4 w-4" />}
+          <span className="whitespace-nowrap">Add to notes</span>
+        </button>
       </div>
     </div>,
     document.body

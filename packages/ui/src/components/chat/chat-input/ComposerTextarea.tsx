@@ -22,12 +22,10 @@ interface ComposerTextareaProps {
     textareaSize: TextareaSize | null;
     chatInputRadius: string;
     onChange: React.ChangeEventHandler<HTMLTextAreaElement>;
-    onBeforeInput: React.FormEventHandler<HTMLTextAreaElement>;
     onKeyDown: React.KeyboardEventHandler<HTMLTextAreaElement>;
     onPaste: React.ClipboardEventHandler<HTMLTextAreaElement>;
     onDragEnter: React.DragEventHandler<HTMLTextAreaElement>;
     onDragOver: React.DragEventHandler<HTMLTextAreaElement>;
-    onDropCapture: React.DragEventHandler<HTMLTextAreaElement>;
     onDrop: React.DragEventHandler<HTMLTextAreaElement>;
     onDragEnd: React.DragEventHandler<HTMLTextAreaElement>;
     onKeyUp: () => void;
@@ -51,12 +49,10 @@ export const ComposerTextarea = React.memo(function ComposerTextarea({
     textareaSize,
     chatInputRadius,
     onChange,
-    onBeforeInput,
     onKeyDown,
     onPaste,
     onDragEnter,
     onDragOver,
-    onDropCapture,
     onDrop,
     onDragEnd,
     onKeyUp,
@@ -102,12 +98,10 @@ export const ComposerTextarea = React.memo(function ComposerTextarea({
                 data-chat-input="true"
                 value={value}
                 onChange={onChange}
-                onBeforeInput={onBeforeInput}
                 onKeyDown={onKeyDown}
                 onPaste={onPaste}
                 onDragEnter={onDragEnter}
                 onDragOver={onDragOver}
-                onDropCapture={onDropCapture}
                 onDrop={onDrop}
                 onDragEnd={onDragEnd}
                 onKeyUp={onKeyUp}

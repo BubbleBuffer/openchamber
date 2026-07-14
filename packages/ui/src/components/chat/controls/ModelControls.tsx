@@ -40,7 +40,6 @@ import { ProviderLogo } from '@/components/ui/ProviderLogo';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { TextLoop } from '@/components/ui/TextLoop';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useIsVSCodeRuntime } from '@/hooks/useRuntimeAPIs';
 import { isDesktopShell } from '@/lib/desktop/desktop';
 import { getAgentColor } from '@/lib/theme/agentColors';
 import { useDeviceInfo } from '@/lib/device';
@@ -379,8 +378,6 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
 
     const { isMobile } = useDeviceInfo();
     const isDesktop = React.useMemo(() => isDesktopShell(), []);
-    const isVSCodeRuntime = useIsVSCodeRuntime();
-    // Only use mobile panels on actual mobile devices, VSCode uses desktop dropdowns
     const isCompact = isMobile;
     const [localMobilePanel, setLocalMobilePanel] = React.useState<MobileControlsPanel>(null);
     const usingExternalMobilePanel = mobilePanel !== undefined && typeof onMobilePanelChange === 'function';
@@ -506,12 +503,11 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
         return getCurrentAgent?.();
     }, [agents, getCurrentAgent, uiAgentName]);
 
-    const sizeVariant: 'mobile' | 'vscode' | 'default' = isMobile ? 'mobile' : isVSCodeRuntime ? 'vscode' : 'default';
-    const buttonHeight = sizeVariant === 'mobile' ? 'h-9' : sizeVariant === 'vscode' ? 'h-6' : 'h-8';
-    const editToggleIconClass = sizeVariant === 'mobile' ? 'h-5 w-5' : sizeVariant === 'vscode' ? 'h-4 w-4' : 'h-4 w-4';
-    const controlIconSize = sizeVariant === 'mobile' ? 'h-5 w-5' : sizeVariant === 'vscode' ? 'h-4 w-4' : 'h-4 w-4';
+    const buttonHeight = isMobile ? 'h-9' : 'h-8';
+    const editToggleIconClass = isMobile ? 'h-5 w-5' : 'h-4 w-4';
+    const controlIconSize = isMobile ? 'h-5 w-5' : 'h-4 w-4';
     const controlTextSize = isCompact ? 'typography-micro' : 'typography-meta';
-    const inlineGapClass = sizeVariant === 'mobile' ? 'gap-x-1' : sizeVariant === 'vscode' ? 'gap-x-2' : 'gap-x-3';
+    const inlineGapClass = isMobile ? 'gap-x-1' : 'gap-x-3';
     const renderEditModeIcon = React.useCallback((mode: EditPermissionMode, iconClass = editToggleIconClass) => {
         const combinedClassName = cn(iconClass, 'flex-shrink-0');
         const modeColors = getEditModeColors(mode);
@@ -1982,11 +1978,9 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
             );
         }
 
-        const supportsRotatingMetadata = !isVSCodeRuntime;
         const shouldShowThinking = hasThinkingVariants && wasAdjusted;
-        const shouldAnimate = supportsRotatingMetadata && slides.length > 1 && (isHighlighted || isSelected) && !shouldShowThinking;
-        const staticSlideIndex = !supportsRotatingMetadata && hasCapabilities && hasPrice ? 1 : 0;
-        const staticMetadataSlide = slides[staticSlideIndex];
+        const shouldAnimate = slides.length > 1 && (isHighlighted || isSelected) && !shouldShowThinking;
+        const staticMetadataSlide = slides[0];
 
         return (
             <div

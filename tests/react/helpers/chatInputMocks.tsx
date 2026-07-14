@@ -50,7 +50,6 @@ vi.mock("@/contexts/useThemeSystem", () => ({
 
 vi.mock("@/lib/desktop/desktop", () => ({
   isTauriShell: () => false,
-  isVSCodeRuntime: () => false,
   isWebRuntime: () => true,
   getDesktopHomeDirectory: () => undefined,
 }))

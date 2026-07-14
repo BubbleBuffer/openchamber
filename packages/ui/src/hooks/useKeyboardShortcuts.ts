@@ -13,7 +13,6 @@ import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { useAssistantStatus } from '@/hooks/useAssistantStatus';
 import { createWorktreeSession } from '@/lib/session/worktreeSessionCreator';
-import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 import { showOpenCodeStatus } from '@/lib/errors/openCodeStatus';
 import { eventMatchesShortcut, getEffectiveShortcutCombo } from '@/lib/shortcuts';
 
@@ -95,7 +94,7 @@ export const useKeyboardShortcuts = () => {
         setActiveMainTab('chat');
         setSessionSwitcherOpen(false);
 
-        if (!isVSCodeRuntime() && matchedWorktreeShortcut) {
+        if (matchedWorktreeShortcut) {
           createWorktreeSession();
           return;
         }

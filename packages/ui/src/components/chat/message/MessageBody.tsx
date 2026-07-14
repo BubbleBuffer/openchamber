@@ -29,7 +29,6 @@ import { MULTIRUN_EXECUTION_FORK_PROMPT_META_TEXT } from '@/lib/messages/executi
 import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { TextSelectionMenu } from './TextSelectionMenu';
 import { copyTextToClipboard } from '@/lib/clipboard';
-import { isVSCodeRuntime } from '@/lib/desktop/desktop';
 import { toPng } from 'html-to-image';
 import { toast } from '@/components/ui';
 import { formatTimestampForDisplay } from './timeFormat';
@@ -1046,32 +1045,12 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
 
                 const fileName = `message-${messageId}.png`;
 
-                if (isVSCodeRuntime()) {
-                    const response = await fetch('/api/vscode/save-image', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ fileName, dataUrl }),
-                    });
-
-                    if (!response.ok) {
-                        throw new Error('Failed to save image in VS Code');
-                    }
-
-                    const payload = await response.json() as { saved?: boolean; canceled?: boolean; error?: string };
-                    if (payload.saved !== true) {
-                        if (payload.canceled) {
-                            return;
-                        }
-                        throw new Error(payload.error || 'Failed to save image in VS Code');
-                    }
-                } else {
-                    const link = document.createElement('a');
-                    link.download = fileName;
-                    link.href = dataUrl;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                }
+                const link = document.createElement('a');
+                link.download = fileName;
+                link.href = dataUrl;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
 
                 toast.success('Image saved');
             } catch (error) {
@@ -1441,27 +1420,25 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
                 </TooltipTrigger>
                 <TooltipContent sideOffset={6}>{isSharing ? 'Saving image...' : 'Save as image'}</TooltipContent>
             </Tooltip>
-            {!isVSCodeRuntime() ? (
-                <Tooltip delayDuration={1000}>
-                    <TooltipTrigger asChild>
-                        <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            disabled={!hasCopyableText || !currentProjectRef}
-                            className={cn(
-                                'h-8 w-8 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50',
-                                (!hasCopyableText || !currentProjectRef) && 'opacity-50'
-                            )}
-                            onPointerDown={(event) => event.stopPropagation()}
-                            onClick={handleSaveAsPlanClick}
-                        >
-                            <RiBookletLine className="h-4 w-4" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent sideOffset={6}>Save as plan</TooltipContent>
-                </Tooltip>
-            ) : null}
+            <Tooltip delayDuration={1000}>
+                <TooltipTrigger asChild>
+                    <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        disabled={!hasCopyableText || !currentProjectRef}
+                        className={cn(
+                            'h-8 w-8 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50',
+                            (!hasCopyableText || !currentProjectRef) && 'opacity-50'
+                        )}
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={handleSaveAsPlanClick}
+                    >
+                        <RiBookletLine className="h-4 w-4" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent sideOffset={6}>Save as plan</TooltipContent>
+            </Tooltip>
             <Tooltip delayDuration={1000}>
                 <TooltipTrigger asChild>
                     <Button

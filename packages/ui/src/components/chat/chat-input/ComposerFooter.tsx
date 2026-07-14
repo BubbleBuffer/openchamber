@@ -9,7 +9,6 @@ import { cn } from '@/lib/utils';
 const MemoModelControls = React.memo(ModelControls);
 
 interface ComposerFooterProps {
-  isVSCode: boolean;
   footerIconButtonClass: string;
   footerGapClass: string;
   iconSizeClass: string;
@@ -38,7 +37,6 @@ interface ComposerFooterProps {
 }
 
 export const ComposerFooter = React.memo(function ComposerFooter({
-  isVSCode,
   footerIconButtonClass,
   footerGapClass,
   iconSizeClass,
@@ -70,7 +68,6 @@ export const ComposerFooter = React.memo(function ComposerFooter({
       <div className={cn("flex items-center flex-shrink-0", footerGapClass)}>
         <ComposerAttachmentControls
           isMobile={false}
-          isVSCode={isVSCode}
           footerIconButtonClass={footerIconButtonClass}
           iconSizeClass={iconSizeClass}
           fileInputRef={fileInputRef}
