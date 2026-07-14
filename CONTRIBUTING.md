@@ -19,13 +19,13 @@ bun install
 
 Both are configurable via env vars: `OPENCHAMBER_PORT`, `OPENCHAMBER_HMR_UI_PORT`, `OPENCHAMBER_HMR_API_PORT`.
 
-### Desktop (Tauri)
+### Desktop (Electron)
 
 ```bash
-bun run desktop:dev
+bun run electron:dev
 ```
 
-Launches Tauri in dev mode with WebView devtools enabled and a distinct dev icon.
+Launches Electron in dev mode with the web server running in-process.
 
 ### Shared UI (`packages/ui`)
 
@@ -61,7 +61,7 @@ bun run build        # Must succeed
 packages/
   ui/        Shared React components, hooks, stores, and theme system
   web/       Web server (Express) + frontend (Vite) + CLI
-  desktop/   Tauri macOS app (thin shell around the web UI)
+  electron/  Electron desktop app (thin shell around the web UI)
 ```
 
 See [AGENTS.md](./AGENTS.md) for detailed architecture reference.
