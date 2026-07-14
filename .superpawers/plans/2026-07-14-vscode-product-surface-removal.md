@@ -1,13 +1,13 @@
 ---
 kind: plan
-status: active
+status: complete
 parent_spec: .superpawers/specs/2026-07-14-web-pwa-maintainability-program-design.md
 covers_chunks:
   - vscode-removal
 coverage: partial
 created: 2026-07-14
 updated: 2026-07-14
-next_action: "Execute Task 1"
+next_action: "Write and execute the VS Code shared UI runtime cleanup plan"
 ---
 
 # VS Code Product Surface Removal Implementation Plan
@@ -64,7 +64,7 @@ The follow-up plan will be `.superpawers/plans/2026-07-14-vscode-shared-ui-runti
 - Modify: `Dockerfile` — dependency manifest copy layer
 - Regenerate: `bun.lock` — workspace and transitive dependency graph
 
-- [ ] **Step 1: Record the removal contract before deleting files**
+- [x] **Step 1: Record the removal contract before deleting files**
 
 Run:
 
@@ -77,11 +77,11 @@ rg -n 'vscode:(dev|build|package|type-check)|packages/vscode' package.json Docke
 
 Expected: all three removed surfaces exist and the search reports the root build/script, Docker, versioning, and workflow references this task will eliminate.
 
-- [ ] **Step 2: Delete the extension-owned files**
+- [x] **Step 2: Delete the extension-owned files**
 
 Delete `packages/vscode/`, `.github/workflows/vscode-extension.yml`, and `scripts/dev-vscode.mjs` in full. Do not preserve bridge interfaces, copied Git/quota implementations, source tests, extension changelog, screenshots, icons, VSIX metadata, or generated `dist` output elsewhere.
 
-- [ ] **Step 3: Simplify surviving repository integration**
+- [x] **Step 3: Simplify surviving repository integration**
 
 Apply these anchored target states:
 
@@ -119,13 +119,13 @@ COPY tests/package.json ./tests/
 
 This intentionally corrects the pre-existing stale `packages/desktop/package.json` copy to the current `packages/electron/package.json` while editing the same dependency manifest block. Do not remove the generic `.vscode/` IDE-settings ignores, Shiki/TextMate dependencies, quota-provider HTTP compatibility headers, or application targets that launch Visual Studio Code.
 
-- [ ] **Step 4: Regenerate the Bun lockfile**
+- [x] **Step 4: Regenerate the Bun lockfile**
 
 Run: `bun install`
 
 Expected: install succeeds; `bun.lock` no longer contains the `packages/vscode` workspace entry, `openchamber@workspace:packages/vscode`, `@types/vscode`, `@vscode/vsce`, or `@vscode/vsce-sign` entries. Dependencies still required by surviving workspaces remain even if their package names contain `vscode`; specifically, Shiki's `@shikijs/vscode-textmate` remains.
 
-- [ ] **Step 5: Inspect the focused diff and generated lockfile**
+- [x] **Step 5: Inspect the focused diff and generated lockfile**
 
 Run:
 
@@ -137,7 +137,7 @@ rg -n '"@shikijs/vscode-textmate"' bun.lock
 
 Expected: the diff contains only the planned deletion/integration changes; the first search returns no extension workspace, command, or extension-only dependency references; the second search confirms the surviving Shiki/TextMate dependency.
 
-- [ ] **Step 6: Verify dependency and build entrypoint integrity**
+- [x] **Step 6: Verify dependency and build entrypoint integrity**
 
 Run:
 
@@ -150,7 +150,7 @@ docker build --target builder -t openchamber-vscode-removal-check .
 
 Expected: frozen install, root type-check, root build, and the Docker builder target pass; neither build starts an extension or webview build.
 
-- [ ] **Step 7: Commit the product deletion**
+- [x] **Step 7: Commit the product deletion**
 
 ```bash
 git add -A -- package.json scripts/bump-version.mjs Dockerfile bun.lock .github/workflows/vscode-extension.yml scripts/dev-vscode.mjs packages/vscode
@@ -170,7 +170,7 @@ git commit -m "refactor: remove vscode extension product"
 - Modify: `packages/docs/content/docs/troubleshooting.mdx` — active troubleshooting topics
 - Modify: `tests/perf/README.md` — active performance-test boundary guidance
 
-- [ ] **Step 1: Capture active documentation references**
+- [x] **Step 1: Capture active documentation references**
 
 Run:
 
@@ -180,7 +180,7 @@ rg -n -i 'packages/vscode|vs[[:space:]-]?code|visual studio code|vscode:|extensi
 
 Expected: matches identify only active extension product claims and commands that this task will remove.
 
-- [ ] **Step 2: Update engineering and contributor documentation**
+- [x] **Step 2: Update engineering and contributor documentation**
 
 Apply these target-state rules:
 
@@ -188,7 +188,7 @@ Apply these target-state rules:
 - `CONTRIBUTING.md` removes the VS Code Extension development section and `packages/vscode/` package-tree entry without rewriting unrelated setup instructions.
 - Do not add a compatibility note or hypothetical future-extension guidance here; the durable spec already establishes network contracts as the only future integration point.
 
-- [ ] **Step 3: Update user-facing product documentation**
+- [x] **Step 3: Update user-facing product documentation**
 
 Apply these target-state rules:
 
@@ -202,7 +202,7 @@ Apply these target-state rules:
 - `scripts/convert-vscode-theme.cjs` remains unchanged: it is an offline importer for third-party theme JSON, not an extension runtime or compatibility facade.
 - Preserve root `CHANGELOG.md` unchanged because prior extension releases are historical facts.
 
-- [ ] **Step 4: Inspect the documentation diff**
+- [x] **Step 4: Inspect the documentation diff**
 
 Run:
 
@@ -213,13 +213,13 @@ rg -n -i 'packages/vscode|vs[[:space:]-]?code|visual studio code|vscode:|extensi
 
 Expected: active product references return zero matches and the diff does not alter unrelated product claims or historical changelog entries.
 
-- [ ] **Step 5: Validate the documentation site**
+- [x] **Step 5: Validate the documentation site**
 
 Run: `bun run docs:validate`
 
 Expected: documentation frontmatter and internal navigation validation pass.
 
-- [ ] **Step 6: Commit the documentation contraction**
+- [x] **Step 6: Commit the documentation contraction**
 
 ```bash
 git add AGENTS.md CONTRIBUTING.md README.md packages/docs/content/docs/index.mdx packages/docs/content/docs/install.mdx packages/docs/content/docs/quickstart.mdx packages/docs/content/docs/troubleshooting.mdx tests/perf/README.md .github/ISSUE_TEMPLATE/bug_report.yml
@@ -231,7 +231,7 @@ git commit -m "docs: remove vscode extension guidance"
 **Files:**
 - Modify: `.superpawers/plans/2026-07-14-vscode-product-surface-removal.md` — task completion and handoff status
 
-- [ ] **Step 1: Run extension-surface absence checks**
+- [x] **Step 1: Run extension-surface absence checks**
 
 Run:
 
@@ -246,7 +246,7 @@ rg -n '"@shikijs/vscode-textmate"' bun.lock
 
 Expected: all absence assertions pass; the first two searches return no matches; the final search confirms the retained Shiki/TextMate dependency. These searches intentionally exclude root `CHANGELOG.md`, old completed planning artifacts, generic `.vscode` editor configuration, `scripts/convert-vscode-theme.cjs`, quota-provider protocol headers, file-type icons, and application-launch targets.
 
-- [ ] **Step 2: Run maintained root checks affected by this plan**
+- [x] **Step 2: Run maintained root checks affected by this plan**
 
 Run:
 
@@ -260,13 +260,13 @@ docker build --target builder -t openchamber-vscode-removal-check .
 
 Expected: every command passes and no command invokes a VS Code extension or webview build. Do not claim root lint is clean: the approved spec records inherited lint debt for later chunks.
 
-- [ ] **Step 3: Run lint against the recorded inherited baseline**
+- [x] **Step 3: Run lint against the recorded inherited baseline**
 
 Run: `bun run lint`
 
 Expected: exit non-zero with the same inherited findings recorded before this plan for surviving workspaces: web 379 errors/237 warnings, tests 40 errors/5 warnings, UI 44 errors/787 warnings, session-state 0 errors/5 warnings, and Electron 0 findings. The removed VS Code workspace's 113 warnings disappear, and no new finding appears. Save the exact output for the verifier; any changed surviving-workspace count must be investigated before continuing.
 
-- [ ] **Step 4: Inspect repository state**
+- [x] **Step 4: Inspect repository state**
 
 Run:
 
@@ -278,7 +278,7 @@ git log --oneline -5
 
 Expected: only this plan's tracking update remains uncommitted; whitespace validation passes; the two implementation commits are present.
 
-- [ ] **Step 5: Close this partial plan and identify the next action**
+- [x] **Step 5: Close this partial plan and identify the next action**
 
 Update this file's frontmatter to:
 
@@ -290,9 +290,18 @@ next_action: "Write and execute the VS Code shared UI runtime cleanup plan"
 
 Mark all task checkboxes complete. Do not mark the parent spec's `vscode-removal` chunk complete; its shared UI/runtime cleanup remains.
 
-- [ ] **Step 6: Commit plan completion metadata**
+- [x] **Step 6: Commit plan completion metadata**
 
 ```bash
 git add .superpawers/plans/2026-07-14-vscode-product-surface-removal.md
 git commit -m "docs: complete vscode product removal plan"
 ```
+
+## Verification Record
+
+- Extension workspace, workflow, and development script are absent; no active extension workspace/script/lockfile/documentation references remain. Shiki TextMate is retained.
+- `bun install --frozen-lockfile`, `bun run type-check` for all surviving workspaces/server, `bun run build` (with no VS Code/webview build), and `bun run docs:validate` passed; docs validation covered 7 pages and 7 links.
+- `bun run lint` exited 1 with the exact inherited surviving counts: web 379 errors/237 warnings; tests 40/5; UI 44/787; session-state 0/5; Electron 0. The removed VS Code 113 warnings are absent and no new findings were introduced.
+- `git diff --check` passed. Implementation commits were `153f5ebe`, `a1338c6c`, and `76692599`.
+- Docker verification was explicitly probed but unavailable because `docker: command not found`; Dockerfile static review was completed and approved. This remains an environment-limited residual verification item for Docker-capable CI, not a pass.
+- The parent spec `vscode-removal` chunk remains planned/incomplete until `.superpawers/plans/2026-07-14-vscode-shared-ui-runtime-removal.md` is executed.
