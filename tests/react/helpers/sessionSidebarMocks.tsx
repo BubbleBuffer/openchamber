@@ -681,7 +681,6 @@ vi.mock("@/lib/opencode/client", () => ({
     getFilesystemHome: () => "/home/test",
     getSdkClient: vi.fn(),
     getSystemInfo: () => ({}),
-    getDesktopHomeDirectory: () => undefined,
     sendMessage: vi.fn(),
     listSessions: vi.fn(),
     createSession: vi.fn(),

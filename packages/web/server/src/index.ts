@@ -959,6 +959,7 @@ async function main(options: any = {}): Promise<any> {
   });
   terminalRuntime = startupPipelineResult.terminalRuntime;
   messageStreamRuntime = startupPipelineResult.messageStreamRuntime;
+  let activePort: number | null = startupPipelineResult.activePort;
 
   Sentry.setupExpressErrorHandler(app);
 
@@ -974,14 +975,16 @@ async function main(options: any = {}): Promise<any> {
   return {
     expressApp: app,
     httpServer: server,
-    getPort: () => startupPipelineResult.activePort,
+    getPort: () => activePort,
     getOpenCodePort: () => openCodeRuntime.getPort(),
     isReady: () => openCodeRuntime.isReady(),
     restartOpenCode: () => openCodeRuntime.restart(),
-    stop: (shutdownOptions: any = {}) =>
-      gracefulShutdown({
+    stop: async (shutdownOptions: any = {}) => {
+      await gracefulShutdown({
         exitProcess: shutdownOptions.exitProcess ?? false,
-      }),
+      });
+      activePort = null;
+    },
   };
 }
 
