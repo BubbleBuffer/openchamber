@@ -28,7 +28,6 @@ import {
   RiPaletteLine,
   RiRobot2Line,
   RiRestartLine,
-  RiServerLine,
   RiSlashCommands2,
 } from '@remixicon/react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -43,8 +42,6 @@ import { SkillsSidebar } from '@/components/sections/skills/SkillsSidebar';
 import { SkillsPage } from '@/components/sections/skills/SkillsPage';
 import { ProjectsSidebar } from '@/components/sections/projects/ProjectsSidebar';
 import { ProjectsPage } from '@/components/sections/projects/ProjectsPage';
-import { RemoteInstancesSidebar } from '@/components/sections/remote-instances/RemoteInstancesSidebar';
-import { RemoteInstancesPage } from '@/components/sections/remote-instances/RemoteInstancesPage';
 import { ProvidersSidebar } from '@/components/sections/providers/ProvidersSidebar';
 import { ProvidersPage } from '@/components/sections/providers/ProvidersPage';
 import { UsageSidebar } from '@/components/sections/usage/UsageSidebar';
@@ -56,15 +53,12 @@ import type { OpenChamberSection } from '@/components/sections/openchamber/types
 import { OpenChamberPage } from '@/components/sections/openchamber/OpenChamberPage';
 import { McpIcon } from '@/components/icons/McpIcon';
 import { useDeviceInfo } from '@/lib/device';
-import { isDesktopShell, isWebRuntime } from '@/lib/desktop/desktop';
 import { reloadOpenCodeConfiguration } from '@/stores/agents/useAgentsStore';
 import {
   SETTINGS_PAGE_METADATA,
   getSettingsPageMeta,
   resolveSettingsSlug,
   type SettingsPageSlug,
-  type SettingsRuntimeContext,
-  type SettingsPageMeta,
 } from '@/lib/settings/metadata';
 
 // Same constraints as main sidebar
@@ -91,7 +85,6 @@ const pageOrder: SettingsPageSlug[] = [
   'git',
   'magic-prompts',
   'projects',
-  'remote-instances',
   'agents',
   'commands',
   'mcp',
@@ -101,25 +94,11 @@ const pageOrder: SettingsPageSlug[] = [
   'skills.catalog',
 ];
 
-function buildRuntimeContext(isDesktop: boolean): SettingsRuntimeContext {
-  const isWeb = !isDesktop && isWebRuntime();
-  return { isWeb, isDesktop };
-}
-
-function isPageAvailable(page: SettingsPageMeta, ctx: SettingsRuntimeContext): boolean {
-  if (!page.isAvailable) {
-    return true;
-  }
-  return page.isAvailable(ctx);
-}
-
 // eslint-disable-next-line react-refresh/only-export-components
 export function getSettingsNavIcon(slug: SettingsPageSlug): React.ComponentType<{ className?: string }> | null {
   switch (slug) {
     case 'projects':
       return RiFoldersLine;
-    case 'remote-instances':
-      return RiServerLine;
     case 'appearance':
       return RiPaletteLine;
     case 'chat':
@@ -253,20 +232,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
   const startWidthRef = React.useRef(navWidth);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  const isDesktopApp = React.useMemo(() => {
-    return isDesktopShell();
-  }, []);
-
-  // keep platform check available for future window chrome tweaks
-
-  const runtimeCtx = React.useMemo(() => buildRuntimeContext(isDesktopApp), [isDesktopApp]);
-
   const visiblePages = React.useMemo(() => {
     return SETTINGS_PAGE_METADATA
       .filter((page) => page.slug !== 'home')
-      .filter((page) => isPageAvailable(page, runtimeCtx))
       .filter((page) => !(isMobile && page.slug === 'shortcuts'));
-  }, [runtimeCtx, isMobile]);
+  }, [isMobile]);
 
   const sortedFilteredPages = React.useMemo(() => {
     const rank = new Map<SettingsPageSlug, number>(pageOrder.map((s, i) => [s, i]));
@@ -373,23 +343,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
     notifications: 'notifications',
   }), []);
 
-  const renderUnavailable = React.useCallback(() => {
-    return (
-      <div className="flex h-full items-center justify-center px-6">
-        <div className="max-w-md text-center">
-          <div className="typography-ui-header font-semibold text-foreground">Not available</div>
-          <p className="typography-ui text-muted-foreground mt-1">This settings page is not available in this runtime.</p>
-        </div>
-      </div>
-    );
-  }, []);
-
   const renderPageSidebar = React.useCallback((slug: SettingsPageSlug, opts: { onItemSelect?: () => void }) => {
     switch (slug) {
       case 'projects':
         return <ProjectsSidebar onItemSelect={opts.onItemSelect} />;
-      case 'remote-instances':
-        return <RemoteInstancesSidebar onItemSelect={opts.onItemSelect} />;
       case 'agents':
         return <AgentsSidebar onItemSelect={opts.onItemSelect} />;
       case 'commands':
@@ -410,18 +367,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
   }, []);
 
   const renderPageContent = React.useCallback((slug: SettingsPageSlug) => {
-    const meta = getSettingsPageMeta(slug);
-    if (meta && !isPageAvailable(meta, runtimeCtx)) {
-      return renderUnavailable();
-    }
-
     switch (slug) {
       case 'home':
         return <SettingsHome onOpen={openPage} />;
       case 'projects':
         return <ProjectsPage />;
-      case 'remote-instances':
-        return <RemoteInstancesPage />;
       case 'agents':
         return <AgentsPage />;
       case 'commands':
@@ -451,7 +401,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
       default:
         return <SettingsHome onOpen={openPage} />;
     }
-  }, [openChamberSectionBySlug, openPage, renderUnavailable, runtimeCtx]);
+  }, [openChamberSectionBySlug, openPage]);
 
   // Mobile: if opened via deep-link / palette to a non-home page, jump into it once.
   React.useEffect(() => {

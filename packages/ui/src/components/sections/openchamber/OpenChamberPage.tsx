@@ -8,11 +8,10 @@ import { GitSettings } from './GitSettings';
 import { NotificationSettings } from './NotificationSettings';
 import { GitHubSettings } from './GitHubSettings';
 import { OpenCodeCliSettings } from './OpenCodeCliSettings';
-import { DesktopNetworkSettings } from './DesktopNetworkSettings';
 import { KeyboardShortcutsSettings } from './KeyboardShortcutsSettings';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { useDeviceInfo } from '@/lib/device';
-import { isDesktopLocalOriginActive, isDesktopShell, isWebRuntime } from '@/lib/desktop/desktop';
+import { isWebRuntime } from '@/lib/desktop/desktop';
 import type { OpenChamberSection } from './types';
 
 interface OpenChamberPageProps {
@@ -23,7 +22,6 @@ interface OpenChamberPageProps {
 export const OpenChamberPage: React.FC<OpenChamberPageProps> = ({ section }) => {
     const { isMobile } = useDeviceInfo();
     const showAbout = isMobile && isWebRuntime();
-    const showDesktopNetworkSettings = isDesktopShell() && isDesktopLocalOriginActive();
 
     // If no section specified, show all (mobile/legacy behavior)
     if (!section) {
@@ -40,11 +38,6 @@ export const OpenChamberPage: React.FC<OpenChamberPageProps> = ({ section }) => 
                     <div className="border-t border-border/40 pt-6">
                         <OpenCodeCliSettings />
                     </div>
-                    {showDesktopNetworkSettings && (
-                        <div className="border-t border-border/40 pt-6">
-                            <DesktopNetworkSettings />
-                        </div>
-                    )}
                     <div className="border-t border-border/40 pt-6">
                         <SessionRetentionSettings />
                     </div>
@@ -123,18 +116,12 @@ const ChatSectionContent: React.FC = () => {
 
 // Sessions section: Default model & agent, Session retention
 const SessionsSectionContent: React.FC = () => {
-    const showDesktopNetworkSettings = isDesktopShell() && isDesktopLocalOriginActive();
     return (
         <div className="space-y-6">
             <DefaultsSettings />
             <div className="border-t border-border/40 pt-6">
                 <OpenCodeCliSettings />
             </div>
-            {showDesktopNetworkSettings && (
-                <div className="border-t border-border/40 pt-6">
-                    <DesktopNetworkSettings />
-                </div>
-            )}
             <div className="border-t border-border/40 pt-6">
                 <SessionRetentionSettings />
             </div>

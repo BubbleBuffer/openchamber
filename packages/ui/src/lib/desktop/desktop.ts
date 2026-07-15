@@ -44,7 +44,6 @@ export type DesktopSettings = {
   homeDirectory?: string;
   // Optional absolute path to `opencode` binary.
   opencodeBinary?: string;
-  desktopLanAccessEnabled?: boolean;
   projects?: ProjectEntry[];
   activeProjectId?: string;
   approvedDirectories?: string[];
@@ -94,7 +93,6 @@ export type DesktopSettings = {
   defaultVariant?: string;
   defaultAgent?: string;
   defaultGitIdentityId?: string; // ''/undefined = unset, 'global' or profile id
-  openInAppId?: string;
   autoCreateWorktree?: boolean;
   queueModeEnabled?: boolean;
   gitmojiEnabled?: boolean;

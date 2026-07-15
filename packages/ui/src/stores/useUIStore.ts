@@ -3,7 +3,6 @@ import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 
 import { getSafeStorage } from './utils/safeStorage';
 import type { ShortcutCombo } from '@/lib/shortcuts';
-import type { MainTab, MainTabGuard } from './useNavigationStore';
 
 export type { MainTab, MainTabGuard } from './useNavigationStore';
 
@@ -32,7 +31,6 @@ interface UIStore {
   // Settings IA (new shell)
   settingsPage: string;
   settingsProjectsSelectedId: string | null;
-  settingsRemoteInstancesSelectedId: string | null;
   eventStreamStatus: EventStreamStatus;
   showTerminalQuickKeysOnDesktop: boolean;
   persistChatDraft: boolean;
@@ -48,7 +46,6 @@ interface UIStore {
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setSettingsPage: (slug: string) => void;
   setSettingsProjectsSelectedId: (projectId: string | null) => void;
-  setSettingsRemoteInstancesSelectedId: (instanceId: string | null) => void;
   setEventStreamStatus: (status: EventStreamStatus) => void;
   setShowTerminalQuickKeysOnDesktop: (value: boolean) => void;
   setPersistChatDraft: (value: boolean) => void;
@@ -74,7 +71,6 @@ export const useUIStore = create<UIStore>()(
         theme: 'system',
         settingsPage: 'home',
         settingsProjectsSelectedId: null,
-        settingsRemoteInstancesSelectedId: null,
         eventStreamStatus: 'idle',
         showTerminalQuickKeysOnDesktop: false,
         persistChatDraft: true,
@@ -97,10 +93,6 @@ export const useUIStore = create<UIStore>()(
 
         setSettingsProjectsSelectedId: (projectId) => {
           set({ settingsProjectsSelectedId: projectId });
-        },
-
-        setSettingsRemoteInstancesSelectedId: (instanceId) => {
-          set({ settingsRemoteInstancesSelectedId: instanceId });
         },
 
         setEventStreamStatus: (status) => {
@@ -225,7 +217,6 @@ export const useUIStore = create<UIStore>()(
           theme: state.theme,
           settingsPage: state.settingsPage,
           settingsProjectsSelectedId: state.settingsProjectsSelectedId,
-          settingsRemoteInstancesSelectedId: state.settingsRemoteInstancesSelectedId,
           showTerminalQuickKeysOnDesktop: state.showTerminalQuickKeysOnDesktop,
           persistChatDraft: state.persistChatDraft,
           inputSpellcheckEnabled: state.inputSpellcheckEnabled,

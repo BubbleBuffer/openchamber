@@ -3,7 +3,6 @@ import type { SidebarSection } from '@/constants/sidebar';
 export type SettingsPageSlug =
   | 'home'
   | 'projects'
-  | 'remote-instances'
   | 'providers'
   | 'usage'
   | 'agents'
@@ -29,11 +28,6 @@ export type SettingsPageGroup =
   | 'usage'
   | 'advanced';
 
-export interface SettingsRuntimeContext {
-  isWeb: boolean;
-  isDesktop: boolean;
-}
-
 export interface SettingsPageMeta {
   slug: SettingsPageSlug;
   title: string;
@@ -41,7 +35,6 @@ export interface SettingsPageMeta {
   kind: 'single' | 'split';
   description?: string;
   keywords?: string[];
-  isAvailable?: (ctx: SettingsRuntimeContext) => boolean;
 }
 
 export const SETTINGS_GROUP_LABELS: Record<SettingsPageGroup, string> = {
@@ -70,14 +63,6 @@ export const SETTINGS_PAGE_METADATA: readonly SettingsPageMeta[] = [
     group: 'projects',
     kind: 'split',
     keywords: ['project', 'projects', 'worktree', 'worktrees', 'repo', 'repository', 'directory'],
-  },
-  {
-    slug: 'remote-instances',
-    title: 'Remote Instances',
-    group: 'projects',
-    kind: 'split',
-    keywords: ['ssh', 'remote', 'instances', 'tunnels', 'forwarding', 'connection'],
-    isAvailable: (ctx) => ctx.isDesktop && !ctx.isWeb,
   },
   {
     slug: 'providers',

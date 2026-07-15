@@ -580,7 +580,6 @@ export interface SettingsPayload {
   gitChangesViewMode?: 'flat' | 'tree';
   directoryShowHidden?: boolean;
   filesViewShowGitignored?: boolean;
-  openInAppId?: string;
   gitProviderId?: string;
   gitModelId?: string;
   pwaAppName?: string;

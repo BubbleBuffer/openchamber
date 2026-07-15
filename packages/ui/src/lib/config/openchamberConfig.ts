@@ -47,7 +47,6 @@ export interface OpenChamberProjectAction {
   platforms?: OpenChamberProjectActionPlatform[];
   autoOpenUrl?: boolean;
   openUrl?: string;
-  desktopOpenSshForward?: string;
 }
 
 export interface OpenChamberProjectActionsState {
@@ -89,7 +88,6 @@ export const OPENCHAMBER_PROJECT_TODO_TEXT_MAX_LENGTH = 120;
 export const OPENCHAMBER_PROJECT_ACTION_NAME_MAX_LENGTH = 80;
 export const OPENCHAMBER_PROJECT_ACTION_COMMAND_MAX_LENGTH = 4000;
 export const OPENCHAMBER_PROJECT_ACTION_OPEN_URL_MAX_LENGTH = 2000;
-export const OPENCHAMBER_PROJECT_ACTION_DESKTOP_FORWARD_MAX_LENGTH = 300;
 export const OPENCHAMBER_PROJECT_PLAN_TITLE_MAX_LENGTH = 160;
 
 const OPENCHAMBER_ACTION_PLATFORM_SET = new Set<OpenChamberProjectActionPlatform>(['macos', 'linux', 'windows']);
@@ -378,7 +376,6 @@ const sanitizeProjectActions = (value: unknown): OpenChamberProjectAction[] => {
       platforms?: unknown;
       autoOpenUrl?: unknown;
       openUrl?: unknown;
-      desktopOpenSshForward?: unknown;
     };
 
     const id = typeof record.id === 'string' ? record.id.trim() : '';
@@ -395,14 +392,6 @@ const sanitizeProjectActions = (value: unknown): OpenChamberProjectAction[] => {
     const autoOpenUrl = record.autoOpenUrl === true;
     const openUrlRaw = typeof record.openUrl === 'string' ? record.openUrl.trim() : '';
     const openUrl = trimToMaxLength(openUrlRaw, OPENCHAMBER_PROJECT_ACTION_OPEN_URL_MAX_LENGTH);
-    const desktopOpenSshForwardRaw = typeof record.desktopOpenSshForward === 'string'
-      ? record.desktopOpenSshForward.trim()
-      : '';
-    const desktopOpenSshForward = trimToMaxLength(
-      desktopOpenSshForwardRaw,
-      OPENCHAMBER_PROJECT_ACTION_DESKTOP_FORWARD_MAX_LENGTH
-    );
-
     sanitized.push({
       id,
       name,
@@ -410,7 +399,6 @@ const sanitizeProjectActions = (value: unknown): OpenChamberProjectAction[] => {
       icon: iconRaw || null,
       ...(autoOpenUrl ? { autoOpenUrl: true } : {}),
       ...(openUrl ? { openUrl } : {}),
-      ...(desktopOpenSshForward ? { desktopOpenSshForward } : {}),
       ...(platforms.length > 0 ? { platforms } : {}),
     });
   }

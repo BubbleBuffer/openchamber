@@ -16,7 +16,7 @@ domain stores and `@/stores/<store>` for the root ones.
 | `session/`    | `useSessionDisplayStore`, `useSessionFoldersStore`, `useSessionMultiSelectStore` |
 | `github/`     | `useGitHubAuthStore`, `useGitHubPrStatusStore`                         |
 | `git/`        | `useGitStore`, `useGitIdentitiesStore`                                 |
-| `files/`      | `useFileSearchStore`, `useFilesViewTabsStore`, `useDirectoryStore`, `useOpenInAppsStore` |
+| `files/`      | `useFileSearchStore`, `useFilesViewTabsStore`, `useDirectoryStore` |
 | `config/`     | `useConfigStore`, `useProviderConfigStore`                             |
 | `mcp/`        | `useMcpStore`, `useMcpConfigStore`                                     |
 | `skills/`     | `useSkillsStore`, `useSkillsCatalogStore`                              |
@@ -26,7 +26,7 @@ domain stores and `@/stores/<store>` for the root ones.
 | `terminal/`   | `useTerminalStore`                                                     |
 | `types/`      | Shared store-level type definitions                                    |
 | `utils/`      | Shared store-level helpers (`safeStorage`, etc.)                       |
-| (root)        | App-shell / cross-cutting stores: `useUIStore`, `useDialogStore`, `useUpdateStore`, `useFeatureFlagsStore`, `useDesktopSshStore`, `useTodosPersistStore`, `useMultiRunStore`, `useInlineCommentDraftStore`, `useMagicPromptsStore`, `useCommandsStore`, `useGlobalSessionsStore`, `globalSessions`, `messageQueueStore`, `permissionStore`, `contextStore`, `fileStore` |
+| (root)        | App-shell / cross-cutting stores: `useUIStore`, `useDialogStore`, `useUpdateStore`, `useFeatureFlagsStore`, `useTodosPersistStore`, `useMultiRunStore`, `useInlineCommentDraftStore`, `useMagicPromptsStore`, `useCommandsStore`, `useGlobalSessionsStore`, `globalSessions`, `messageQueueStore`, `permissionStore`, `contextStore`, `fileStore` |
 
 Not all state in the UI belongs here.
 

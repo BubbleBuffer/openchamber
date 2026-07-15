@@ -1,11 +1,9 @@
 import React from 'react';
 import { RiFileCopyLine, RiCheckLine, RiExternalLinkLine } from '@remixicon/react';
-import { isDesktopShell, isTauriShell } from '@/lib/desktop/desktop';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { updateDesktopSettings } from '@/lib/config/persistence';
 import { copyTextToClipboard } from '@/lib/clipboard';
-import { restartDesktopApp } from '@/lib/desktop/desktop';
 
 const INSTALL_COMMAND = 'curl -fsSL https://opencode.ai/install | bash';
 const DOCS_URL = 'https://opencode.ai/docs';
@@ -18,10 +16,6 @@ type LocalSetupScreenProps = {
   onBack: () => void;
   /** Callback when CLI becomes available */
   onCliAvailable?: () => void;
-  /** Whether this screen was entered from recovery flow (shows "Connect to Remote" link) */
-  isFromRecovery?: boolean;
-  /** Callback when user wants to switch to remote */
-  onSwitchToRemote?: () => void;
 };
 
 function BashCommand({ onCopy }: { onCopy: () => void }) {
@@ -50,12 +44,9 @@ const HINT_DELAY_MS = 30000;
 export function LocalSetupScreen({
   onBack,
   onCliAvailable,
-  isFromRecovery = false,
-  onSwitchToRemote,
 }: LocalSetupScreenProps) {
   const [copied, setCopied] = React.useState(false);
   const [showHint, setShowHint] = React.useState(false);
-  const [isDesktopApp, setIsDesktopApp] = React.useState(false);
   const [isRetrying, setIsRetrying] = React.useState(false);
   const [isChecking, setIsChecking] = React.useState(false);
   const [checkError, setCheckError] = React.useState<string | null>(null);
@@ -65,10 +56,6 @@ export function LocalSetupScreen({
   React.useEffect(() => {
     const timer = setTimeout(() => setShowHint(true), HINT_DELAY_MS);
     return () => clearTimeout(timer);
-  }, []);
-
-  React.useEffect(() => {
-    setIsDesktopApp(isDesktopShell());
   }, []);
 
   React.useEffect(() => {
@@ -114,22 +101,6 @@ export function LocalSetupScreen({
     };
   }, []);
 
-  const handleDragStart = React.useCallback(async (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('button, a, input, select, textarea, code')) {
-      return;
-    }
-    if (e.button !== 0) return;
-    if (isDesktopApp && isTauriShell()) {
-      try {
-        const { getCurrentWindow } = await import('@tauri-apps/api/window');
-        const window = getCurrentWindow();
-        await window.startDragging();
-      } catch (error) {
-        console.error('Failed to start window dragging:', error);
-      }
-    }
-  }, [isDesktopApp]);
-
   const checkCliAvailability = React.useCallback(async (): Promise<boolean> => {
     try {
       const response = await fetch('/health');
@@ -141,45 +112,10 @@ export function LocalSetupScreen({
     }
   }, []);
 
-  const handleBrowse = React.useCallback(async () => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    if (!isDesktopApp || !isTauriShell()) {
-      return;
-    }
-
-    const tauri = (window as unknown as { __TAURI__?: { dialog?: { open?: (opts: Record<string, unknown>) => Promise<unknown> } } }).__TAURI__;
-    if (!tauri?.dialog?.open) {
-      return;
-    }
-
-    try {
-      const selected = await tauri.dialog.open({
-        title: 'Select opencode binary',
-        multiple: false,
-        directory: false,
-      });
-      if (typeof selected === 'string' && selected.trim().length > 0) {
-        setOpencodeBinary(selected.trim());
-      }
-    } catch {
-      // ignore
-    }
-  }, [isDesktopApp]);
-
   const handleApplyPath = React.useCallback(async () => {
     setIsRetrying(true);
     try {
       await updateDesktopSettings({ opencodeBinary: opencodeBinary.trim() });
-
-      // In desktop boot flow, always restart the entire Tauri app so Rust
-      // can re-evaluate the boot outcome with the updated binary path.
-      if (isTauriShell()) {
-        await restartDesktopApp();
-        return;
-      }
-
       await fetch('/api/config/reload', { method: 'POST' });
     } finally {
       setTimeout(() => setIsRetrying(false), 1000);
@@ -223,10 +159,7 @@ export function LocalSetupScreen({
         : '/Users/you/.bun/bin/opencode';
 
   return (
-    <div
-      className="h-full flex items-center justify-center bg-transparent p-8 relative cursor-default select-none"
-      onMouseDown={handleDragStart}
-    >
+    <div className="h-full flex items-center justify-center bg-transparent p-8 relative cursor-default select-none">
       <div className="w-full max-w-lg space-y-4 text-center">
         <div className="flex items-center">
           <Button
@@ -316,14 +249,6 @@ export function LocalSetupScreen({
               />
               <Button
                 type="button"
-                variant="secondary"
-                onClick={handleBrowse}
-                disabled={isRetrying || !isDesktopApp || !isTauriShell()}
-              >
-                Browse
-              </Button>
-              <Button
-                type="button"
                 onClick={handleApplyPath}
                 disabled={isRetrying}
               >
@@ -334,19 +259,6 @@ export function LocalSetupScreen({
           </div>
         </div>
 
-        {isFromRecovery && onSwitchToRemote && (
-          <div className="text-center pt-4">
-            <p className="text-sm text-muted-foreground mb-2">
-              Prefer to use a remote server?
-            </p>
-            <Button
-              variant="link"
-              onClick={onSwitchToRemote}
-            >
-              Connect to Remote Server &rarr;
-            </Button>
-          </div>
-        )}
       </div>
 
       {showHint && (

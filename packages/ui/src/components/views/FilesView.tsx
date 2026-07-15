@@ -23,7 +23,6 @@ import {
   RiDeleteBinLine,
   RiEditLine,
   RiFileCopyLine,
-  RiFileTransferLine,
   RiCodeSSlashLine,
   RiNodeTree,
   RiDownloadLine,
@@ -83,8 +82,6 @@ import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { FileTypeIcon } from '@/components/icons/FileTypeIcon';
 import { ensurePierreThemeRegistered } from '@/lib/shiki/appThemeRegistry';
 import { getDefaultTheme } from '@/lib/theme/themes';
-import { openDesktopFileInApp, openDesktopPath } from '@/lib/desktop/desktop';
-import { useOpenInAppsStore } from '@/stores/files/useOpenInAppsStore';
 import { eventMatchesShortcut, getEffectiveShortcutCombo } from '@/lib/shortcuts';
 import {
   type FileNode,
@@ -92,7 +89,6 @@ import {
   MAX_VIEW_CHARS,
   getAncestorPaths,
   getDisplayPath,
-  getParentDirectoryPath,
   isAbsolutePath,
   isDirectoryReadError,
   isHtmlFile,
@@ -113,33 +109,6 @@ type FileStatSnapshot = {
 type SelectedLineRange = {
   start: number;
   end: number;
-};
-
-const OpenInAppListIcon = ({ label, iconDataUrl }: { label: string; iconDataUrl?: string }) => {
-  const [failed, setFailed] = React.useState(false);
-  const initial = label.trim().slice(0, 1).toUpperCase() || '?';
-
-  if (iconDataUrl && !failed) {
-    return (
-      <img
-        src={iconDataUrl}
-        alt=""
-        className="h-4 w-4 rounded-sm"
-        onError={() => setFailed(true)}
-      />
-    );
-  }
-
-  return (
-    <span
-      className={cn(
-        'h-4 w-4 rounded-sm flex items-center justify-center',
-        'bg-[var(--surface-muted)] text-[9px] font-medium text-muted-foreground'
-      )}
-    >
-      {initial}
-    </span>
-  );
 };
 
 const FileStatusDot: React.FC<{ status: FileStatus }> = ({ status }) => {
@@ -388,13 +357,6 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
   const floatingToolbarRef = React.useRef<HTMLDivElement | null>(null);
   const toolbarDropdownOpenCountRef = React.useRef(0);
 
-  const handleToolbarDropdownOpenChange = React.useCallback((open: boolean) => {
-    toolbarDropdownOpenCountRef.current = Math.max(
-      0,
-      toolbarDropdownOpenCountRef.current + (open ? 1 : -1),
-    );
-  }, []);
-
   const isClickInsidePortalledMenu = React.useCallback((target: EventTarget | null) => {
     if (!(target instanceof Element)) return false;
     return target.closest('[data-slot="dropdown-menu-content"], [data-slot="dropdown-menu-item"]') !== null;
@@ -539,14 +501,6 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
   const canRename = Boolean(files.rename);
   const canDelete = Boolean(files.delete);
   const canReveal = Boolean(files.revealPath);
-  const openInApps = useOpenInAppsStore((state) => state.availableApps);
-  const openInCacheStale = useOpenInAppsStore((state) => state.isCacheStale);
-  const initializeOpenInApps = useOpenInAppsStore((state) => state.initialize);
-  const loadOpenInApps = useOpenInAppsStore((state) => state.loadInstalledApps);
-
-  React.useEffect(() => {
-    initializeOpenInApps();
-  }, [initializeOpenInApps]);
 
   const handleRevealPath = React.useCallback((targetPath: string) => {
     if (!files.revealPath) return;
@@ -554,31 +508,6 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
       toast.error('Failed to reveal path');
     });
   }, [files]);
-
-  const handleOpenInApp = React.useCallback(async (app: { id: string; appName: string }) => {
-    if (!selectedFile?.path) {
-      return;
-    }
-
-    const openedInApp = await openDesktopFileInApp(selectedFile.path, app.id, app.appName);
-    if (openedInApp) {
-      return;
-    }
-
-    const openedFile = await openDesktopPath(selectedFile.path, app.appName);
-    if (openedFile) {
-      return;
-    }
-
-    const fileDirectory = getParentDirectoryPath(selectedFile.path) || root;
-    if (fileDirectory) {
-      const openedDirectory = await openDesktopPath(fileDirectory, app.appName);
-      if (openedDirectory) {
-        return;
-      }
-    }
-    toast.error(`Failed to open in ${app.appName}`);
-  }, [root, selectedFile?.path]);
 
   const handleOpenDialog = React.useCallback((type: 'createFile' | 'createFolder' | 'rename' | 'delete', data: { path: string; name?: string; type?: 'file' | 'directory' }) => {
     setActiveDialog(type);
@@ -2321,41 +2250,6 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
             </Button>
           ) : null
         )}
-
-        <DropdownMenu onOpenChange={handleToolbarDropdownOpenChange}>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0 text-foreground opacity-100 hover:bg-transparent focus-visible:bg-transparent active:bg-transparent"
-              title="Open in desktop app"
-              aria-label="Open in desktop app"
-            >
-              <RiFileTransferLine className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 max-h-[70vh] overflow-y-auto">
-            {openInApps.map((app) => (
-              <DropdownMenuItem
-                key={app.id}
-                className="flex items-center gap-2"
-                onClick={() => void handleOpenInApp(app)}
-              >
-                <OpenInAppListIcon label={app.label} iconDataUrl={app.iconDataUrl} />
-                <span className="typography-ui-label text-foreground">{app.label}</span>
-              </DropdownMenuItem>
-            ))}
-            {openInCacheStale ? (
-              <DropdownMenuItem
-                className="flex items-center gap-2"
-                onClick={() => void loadOpenInApps(true)}
-              >
-                <RiRefreshLine className="h-4 w-4" />
-                <span className="typography-ui-label text-foreground">Refresh Apps</span>
-              </DropdownMenuItem>
-            ) : null}
-          </DropdownMenuContent>
-        </DropdownMenu>
 
         {!isSelectedImage && (
           <>

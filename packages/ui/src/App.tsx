@@ -21,17 +21,6 @@ import { useWindowTitle } from '@/hooks/useWindowTitle';
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { hasModifier } from '@/lib/utils';
-import { isDesktopLocalOriginActive, isDesktopShell, isTauriShell, restartDesktopApp } from '@/lib/desktop/desktop';
-import {
-  getInjectedBootOutcome,
-  getBootInjectionStatus,
-  resolveDesktopBootView,
-  canDismissInitialLoading,
-  shouldRestartDesktopBootFlow,
-  type BootInjectionStatus,
-  type DesktopBootView,
-} from '@/lib/desktop/desktopBoot';
-import type { RecoveryVariant } from '@/components/onboarding/DesktopConnectionRecovery';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { useProjectsStore } from '@/stores/projects/useProjectsStore';
@@ -191,17 +180,8 @@ function App({ apis }: AppProps) {
   const { uiFont, monoFont } = useFontPreferences();
   const refreshGitHubAuthStatus = useGitHubAuthStore((state) => state.refreshStatus);
   const [isEmbeddedVisible, setIsEmbeddedVisible] = React.useState(true);
-  const isDesktopRuntime = React.useMemo(() => isDesktopShell(), []);
   const setPlanModeEnabled = useFeatureFlagsStore((state) => state.setPlanModeEnabled);
-  const [bootInjectionStatus, setBootInjectionStatus] = React.useState<BootInjectionStatus>(() => {
-    return getBootInjectionStatus();
-  });
-  const [bootView, setBootView] = React.useState<DesktopBootView | null>(() => {
-    const outcome = getInjectedBootOutcome();
-    return outcome !== null
-      ? resolveDesktopBootView({ isDesktopShell: true, bootOutcome: outcome })
-      : null;
-  });
+  const hasEverConnected = useProviderConfigStore((state) => state.hasEverConnected);
   const appReadyDispatchedRef = React.useRef(false);
   const initializationInFlightRef = React.useRef(false);
   const embeddedSessionChat = React.useMemo<EmbeddedSessionChatConfig | null>(() => readEmbeddedSessionChatConfig(), []);
@@ -255,19 +235,8 @@ function App({ apis }: AppProps) {
     }
   }, [uiFont, monoFont]);
 
-  const bootOutcomeKnown = bootInjectionStatus === 'valid';
-  const bootViewIsMain = bootView?.screen === 'main';
-
-  // Splash dismissal: use the authoritative loading gate from desktopBoot.
-  // Desktop shells strictly require a valid boot outcome before dismissing.
-  // Non-main outcomes (chooser/recovery) can dismiss without waiting for init.
   React.useEffect(() => {
-    if (!canDismissInitialLoading({
-      isDesktopShell: isDesktopRuntime,
-      isInitialized,
-      bootOutcomeKnown,
-      bootViewIsMain,
-    })) {
+    if (!isInitialized) {
       return;
     }
 
@@ -282,28 +251,9 @@ function App({ apis }: AppProps) {
     }, 150);
 
     return () => clearTimeout(timer);
-  }, [isDesktopRuntime, isInitialized, bootOutcomeKnown, bootViewIsMain]);
+  }, [isInitialized]);
 
-  // Deterministic malformed handling: update splash text so the user
-  // sees a specific error instead of a generic spinner, but do NOT
-  // dismiss the splash (that only happens on a valid outcome).
   React.useEffect(() => {
-    if (!isDesktopRuntime || bootInjectionStatus !== 'malformed') {
-      return;
-    }
-
-    const loadingElement = document.getElementById('initial-loading');
-    if (loadingElement) {
-      loadingElement.textContent = 'Desktop startup failed — please restart the app.';
-    }
-  }, [isDesktopRuntime, bootInjectionStatus]);
-
-  // Non-desktop fallback: remove splash after 5 seconds even if init stalls.
-  React.useEffect(() => {
-    if (isDesktopRuntime) {
-      return;
-    }
-
     const fallbackTimer = setTimeout(() => {
       const loadingElement = document.getElementById('initial-loading');
       if (loadingElement && !isInitialized) {
@@ -315,7 +265,7 @@ function App({ apis }: AppProps) {
     }, 5000);
 
     return () => clearTimeout(fallbackTimer);
-  }, [isDesktopRuntime, isInitialized]);
+  }, [isInitialized]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -593,121 +543,14 @@ function App({ apis }: AppProps) {
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [embeddedSessionChat]);
 
-  // Poll for the injected boot outcome until it becomes available (desktop only).
-  // The Rust backend sets window.__OPENCHAMBER_DESKTOP_BOOT_OUTCOME__ once the
-  // sidecar reaches a stable state. We poll with exponential backoff to handle
-  // potential race conditions during startup and config writes.
-  React.useEffect(() => {
-    if (!isDesktopRuntime || bootInjectionStatus !== 'not-injected') {
-      return;
-    }
-
-    let cancelled = false;
-    let attempts = 0;
-    const BASE_INTERVAL = 200;
-    const MAX_INTERVAL = 2000;
-    const MAX_ATTEMPTS = 50; // 10 seconds total (200ms * 50 with exponential backoff cap)
-
-    const pollWithBackoff = () => {
-      if (cancelled) return;
-
-      attempts++;
-      const status = getBootInjectionStatus();
-
-      if (status !== 'not-injected') {
-        cancelled = true;
-        setBootInjectionStatus(status);
-
-        if (status === 'valid') {
-          const outcome = getInjectedBootOutcome();
-          if (outcome) {
-            setBootView(resolveDesktopBootView({ isDesktopShell: true, bootOutcome: outcome }));
-          }
-        }
-        // If status is 'malformed', we keep the splash visible with error text
-        // handled by the separate useEffect below
-        return;
-      }
-
-      // Exponential backoff with cap
-      const nextInterval = Math.min(BASE_INTERVAL * Math.pow(1.1, attempts), MAX_INTERVAL);
-
-      if (attempts >= MAX_ATTEMPTS) {
-        // Max attempts reached - keep polling but show error
-        const loadingElement = document.getElementById('initial-loading');
-        if (loadingElement && !loadingElement.textContent?.includes('taking longer')) {
-          loadingElement.textContent = 'Desktop startup is taking longer than expected...';
-        }
-      }
-
-      window.setTimeout(pollWithBackoff, nextInterval);
-    };
-
-    // Start polling
-    window.setTimeout(pollWithBackoff, BASE_INTERVAL);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isDesktopRuntime, bootInjectionStatus]);
-
-  const handleDesktopBootDismiss = React.useCallback(async () => {
-    if (shouldRestartDesktopBootFlow({
-      isTauriShell: isTauriShell(),
-      isDesktopLocalOriginActive: isDesktopLocalOriginActive(),
-    })) {
-      await restartDesktopApp();
-      return;
-    }
-
-    window.location.reload();
-  }, []);
-
-  // Map boot outcome kind to recovery variant
-  const mapBootViewToRecoveryVariant = (view: DesktopBootView): RecoveryVariant | undefined => {
-    if (view.screen === 'recovery') {
-      return view.variant;
-    }
-    return undefined;
-  };
-
-  // Desktop boot view routing.
-  // When the boot outcome resolves to a non-main screen (chooser, recovery),
-  // render OnboardingScreen with appropriate mode/variant.
-  if (isDesktopRuntime && bootView && bootView.screen !== 'main') {
-    // First-launch chooser
-    if (bootView.screen === 'chooser') {
-      return (
-        <ErrorBoundary>
-          <div className="h-full text-foreground bg-transparent">
-            <React.Suspense fallback={<div className="h-full" />}>
-              <OnboardingScreen
-                mode="first-launch"
-                onCliAvailable={handleDesktopBootDismiss}
-                onChooseRemote={() => {
-                  // Switch to remote tab - handled internally by OnboardingScreen
-                }}
-              />
-            </React.Suspense>
-          </div>
-        </ErrorBoundary>
-      );
-    }
-
-    // Recovery screens
-    const recoveryVariant = mapBootViewToRecoveryVariant(bootView);
-    const hostUrl = bootView.screen === 'recovery' && 'url' in bootView ? bootView.url : undefined;
-
+  if (!embeddedSessionChat && !isMcpOAuthCallback && !isInitialized && !isConnected) {
     return (
       <ErrorBoundary>
-        <div className="h-full text-foreground bg-transparent">
+        <div className="h-full text-foreground bg-background">
           <React.Suspense fallback={<div className="h-full" />}>
             <OnboardingScreen
-              mode="recovery"
-              recoveryVariant={recoveryVariant}
-              recoveryHostUrl={hostUrl}
-              recoveryHostLabel={undefined}
-              onCliAvailable={handleDesktopBootDismiss}
+              mode={hasEverConnected ? 'local-setup' : 'first-launch'}
+              onCliAvailable={() => void initializeApp()}
             />
           </React.Suspense>
         </div>
@@ -745,7 +588,7 @@ function App({ apis }: AppProps) {
   // Always mount the full provider tree to avoid remounts when isInitialized
   // flips from false → true. FireworksProvider is a lightweight
   // shells; their heavy children are only activated when actually needed.
-  const isBootShell = !isInitialized && !isDesktopRuntime;
+  const isBootShell = !isInitialized;
 
   return (
     <ErrorBoundary>
@@ -753,7 +596,7 @@ function App({ apis }: AppProps) {
         <RuntimeAPIProvider apis={apis}>
           <FireworksProvider>
             <TooltipProvider delayDuration={700} skipDelayDuration={150}>
-                <div className={isDesktopRuntime ? 'h-full text-foreground bg-transparent' : 'h-full text-foreground bg-background'}>
+                <div className="h-full text-foreground bg-background">
                   <SyncAppEffects embeddedBackgroundWorkEnabled={embeddedBackgroundWorkEnabled} />
                   <MainLayout />
                   <Toaster />

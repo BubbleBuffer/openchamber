@@ -86,9 +86,6 @@ const persistToLocalStorage = (settings: DesktopSettings) => {
   if (typeof settings.filesViewShowGitignored === 'boolean') {
     localStorage.setItem('filesViewShowGitignored', settings.filesViewShowGitignored ? 'true' : 'false');
   }
-  if (typeof settings.openInAppId === 'string' && settings.openInAppId.length > 0) {
-    localStorage.setItem('openInAppId', settings.openInAppId);
-  }
   if (typeof settings.pwaAppName === 'string') {
     const normalized = settings.pwaAppName.trim().replace(/\s+/g, ' ').slice(0, 64);
     if (normalized.length > 0) {
@@ -493,9 +490,6 @@ const sanitizeWebSettings = (payload: unknown): DesktopSettings | null => {
     const trimmed = candidate.opencodeBinary.trim();
     result.opencodeBinary = trimmed.length > 0 ? trimmed : undefined;
   }
-  if (typeof candidate.desktopLanAccessEnabled === 'boolean') {
-    result.desktopLanAccessEnabled = candidate.desktopLanAccessEnabled;
-  }
 
   const projects = sanitizeProjects(candidate.projects);
   if (projects) {
@@ -813,9 +807,6 @@ const sanitizeWebSettings = (payload: unknown): DesktopSettings | null => {
   }
   if (typeof candidate.filesViewShowGitignored === 'boolean') {
     result.filesViewShowGitignored = candidate.filesViewShowGitignored;
-  }
-  if (typeof candidate.openInAppId === 'string' && candidate.openInAppId.length > 0) {
-    result.openInAppId = candidate.openInAppId;
   }
   if (typeof candidate.pwaAppName === 'string') {
     const normalized = candidate.pwaAppName.trim().replace(/\s+/g, ' ').slice(0, 64);

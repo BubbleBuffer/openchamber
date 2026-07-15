@@ -38,8 +38,7 @@ import {
 } from '@remixicon/react';
 import { createWorktreeSession } from '@/lib/session/worktreeSessionCreator';
 import { formatShortcutForDisplay, getEffectiveShortcutCombo } from '@/lib/shortcuts';
-import { isDesktopShell, isWebRuntime } from '@/lib/desktop/desktop';
-import { SETTINGS_PAGE_METADATA, SETTINGS_GROUP_LABELS, type SettingsRuntimeContext } from '@/lib/settings/metadata';
+import { SETTINGS_PAGE_METADATA, SETTINGS_GROUP_LABELS } from '@/lib/settings/metadata';
 import { getSettingsNavIcon } from '@/components/views/SettingsView';
 
 export const CommandPalette: React.FC = () => {
@@ -125,23 +124,17 @@ export const CommandPalette: React.FC = () => {
     setThemeMode(mode);
   });
 
-  const settingsRuntimeCtx = React.useMemo<SettingsRuntimeContext>(() => {
-    const isDesktop = isDesktopShell();
-    return { isWeb: !isDesktop && isWebRuntime(), isDesktop };
-  }, []);
-
   const settingsItems = React.useMemo(() => {
     const groupLabel = (g: string) => (SETTINGS_GROUP_LABELS as Record<string, string>)[g] ?? g;
     return SETTINGS_PAGE_METADATA
       .filter((p) => p.slug !== 'home')
-      .filter((p) => (p.isAvailable ? p.isAvailable(settingsRuntimeCtx) : true))
       .slice()
       .sort((a, b) => {
         const g = groupLabel(a.group).localeCompare(groupLabel(b.group));
         if (g !== 0) return g;
         return a.title.localeCompare(b.title);
       });
-  }, [settingsRuntimeCtx]);
+  }, []);
 
   const recentSessions = React.useMemo(() => {
     return getSessionsByDirectory(currentDirectory ?? '').slice(0, 5);

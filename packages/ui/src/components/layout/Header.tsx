@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { SortableTabsStrip, type SortableTabsStripItem } from '@/components/ui/sortable-tabs-strip';
 
-import { RiArrowLeftSLine, RiChat4Line, RiChatNewLine, RiCheckLine, RiCloseLine, RiCommandLine, RiFileTextLine, RiFolder6Line, RiGitBranchLine, RiGithubFill, RiLayoutLeftLine, RiLayoutRightLine, RiPlayListAddLine, RiRefreshLine, RiServerLine, RiStackLine, RiTerminalBoxLine, RiTimerLine, RiAlertLine, type RemixiconComponentType } from '@remixicon/react';
+import { RiArrowLeftSLine, RiChat4Line, RiChatNewLine, RiCheckLine, RiCloseLine, RiCommandLine, RiFileTextLine, RiFolder6Line, RiGitBranchLine, RiGithubFill, RiLayoutLeftLine, RiLayoutRightLine, RiPlayListAddLine, RiRefreshLine, RiStackLine, RiTerminalBoxLine, RiTimerLine, RiAlertLine, type RemixiconComponentType } from '@remixicon/react';
 import { DiffIcon } from '@/components/icons/DiffIcon';
 import { useLayoutStore } from '@/stores/useLayoutStore';
 import { useNavigationStore } from '@/stores/useNavigationStore';
@@ -63,11 +63,8 @@ import { RiArrowDownSLine, RiArrowRightSLine } from '@remixicon/react';
 import type { UsageWindow } from '@/types';
 import type { GitHubAuthStatus } from '@/lib/api/types';
 import type { SessionContextUsage } from '@/stores/types/sessionTypes';
-import { DesktopHostSwitcherDialog } from '@/components/desktop/DesktopHostSwitcher';
-import { OpenInAppButton } from '@/components/desktop/OpenInAppButton';
 import { ProjectActionsButton } from '@/components/layout/ProjectActionsButton';
 import { isDesktopShell, startDesktopWindowDrag } from '@/lib/desktop/desktop';
-import { desktopHostsGet, locationMatchesHost, redactSensitiveUrl } from '@/lib/desktop/desktopHosts';
 import { resolveSessionDiffStats } from '@/components/session/sidebar/utils';
 import type { Session } from '@/lib/opencode/client';
 
@@ -242,13 +239,10 @@ const DesktopGitHubControl = React.memo(function DesktopGitHubControl({
 
 type DesktopServicesMenuProps = {
   isDesktopApp: boolean;
-  currentInstanceLabel: string;
-  compactCurrentInstanceLabel: string;
   isDesktopServicesOpen: boolean;
   setIsDesktopServicesOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  refreshCurrentInstanceLabel: () => Promise<void>;
-  desktopServicesTab: 'instance' | 'usage' | 'mcp';
-  setDesktopServicesTab: React.Dispatch<React.SetStateAction<'instance' | 'usage' | 'mcp'>>;
+  desktopServicesTab: 'usage' | 'mcp';
+  setDesktopServicesTab: React.Dispatch<React.SetStateAction<'usage' | 'mcp'>>;
   quotaResultsLength: number;
   fetchAllQuotas: () => Promise<unknown>;
   servicesTabItems: SortableTabsStripItem[];
@@ -268,11 +262,8 @@ type DesktopServicesMenuProps = {
 
 const DesktopServicesMenu = React.memo(function DesktopServicesMenu({
   isDesktopApp,
-  currentInstanceLabel,
-  compactCurrentInstanceLabel,
   isDesktopServicesOpen,
   setIsDesktopServicesOpen,
-  refreshCurrentInstanceLabel,
   desktopServicesTab,
   setDesktopServicesTab,
   quotaResultsLength,
@@ -297,7 +288,6 @@ const DesktopServicesMenu = React.memo(function DesktopServicesMenu({
       onOpenChange={(open) => {
         setIsDesktopServicesOpen(open);
         if (open) {
-          void refreshCurrentInstanceLabel();
           if (desktopServicesTab === 'usage' && quotaResultsLength === 0) {
             void fetchAllQuotas();
           }
@@ -309,24 +299,20 @@ const DesktopServicesMenu = React.memo(function DesktopServicesMenu({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              aria-label={isDesktopApp
-                ? `Open instance, usage and MCP (current: ${currentInstanceLabel})`
-                : 'Open services, usage and MCP'}
+              aria-label="Open services, usage and MCP"
               className={cn(
                 DESKTOP_HEADER_ICON_BUTTON_CLASS,
                 isDesktopApp ? 'w-auto max-w-[14rem] justify-start gap-1.5 px-2.5' : 'h-8 w-8'
               )}
             >
               <RiStackLine className="h-[18px] w-[18px]" />
-              {isDesktopApp ? (
-                <span className="truncate typography-ui-label font-medium text-foreground">{compactCurrentInstanceLabel}</span>
-              ) : null}
+              {isDesktopApp ? <span className="truncate typography-ui-label font-medium text-foreground">Services</span> : null}
             </button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
         <TooltipContent>
           <p>
-            {isDesktopApp ? `Current instance: ${currentInstanceLabel}` : 'Services'} ({shortcutLabel('toggle_services_menu')}; next tab {shortcutLabel('cycle_services_tab')})
+            Services ({shortcutLabel('toggle_services_menu')}; next tab {shortcutLabel('cycle_services_tab')})
           </p>
         </TooltipContent>
       </Tooltip>
@@ -340,7 +326,7 @@ const DesktopServicesMenu = React.memo(function DesktopServicesMenu({
               items={servicesTabItems}
               activeId={desktopServicesTab}
               onSelect={(tabID) => {
-                const value = tabID as 'instance' | 'usage' | 'mcp';
+                const value = tabID as 'usage' | 'mcp';
                 setDesktopServicesTab(value);
                 if (value === 'usage' && quotaResultsLength === 0) {
                   void fetchAllQuotas();
@@ -354,15 +340,6 @@ const DesktopServicesMenu = React.memo(function DesktopServicesMenu({
             />
           </div>
         </div>
-
-        {isDesktopApp && desktopServicesTab === 'instance' ? (
-          <DesktopHostSwitcherDialog
-            embedded
-            open={isDesktopServicesOpen && desktopServicesTab === 'instance'}
-            onOpenChange={() => { }}
-            onHostSwitched={() => setIsDesktopServicesOpen(false)}
-          />
-        ) : null}
 
         {desktopServicesTab === 'mcp' ? (
           <McpDropdownContent active={isDesktopServicesOpen && desktopServicesTab === 'mcp'} />
@@ -536,26 +513,6 @@ const isSameContextUsage = (
     && (a.normalizedOutput ?? 0) === (b.normalizedOutput ?? 0)
     && a.thresholdLimit === b.thresholdLimit
     && (a.lastMessageId ?? '') === (b.lastMessageId ?? '');
-};
-
-const formatCompactHeaderLabel = (value: string): string => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return '';
-  }
-
-  const words = trimmed.split(/\s+/).filter(Boolean);
-  if (words.length >= 2) {
-    const first = words[0];
-    const second = words[1].slice(0, 3);
-    const shortTwoWord = `${first} ${second}`.trim();
-    if (words.length > 2 || shortTwoWord.length < trimmed.length) {
-      return `${shortTwoWord}...`;
-    }
-    return shortTwoWord;
-  }
-
-  return trimmed.length > 12 ? `${trimmed.slice(0, 9).trimEnd()}...` : trimmed;
 };
 
 const formatTime = (timestamp: number | null) => {
@@ -764,17 +721,8 @@ export const Header: React.FC<HeaderProps> = ({
   const [isMobileRateLimitsOpen, setIsMobileRateLimitsOpen] = React.useState(false);
   const [isDesktopServicesOpen, setIsDesktopServicesOpen] = React.useState(false);
   const [isUsageRefreshSpinning, setIsUsageRefreshSpinning] = React.useState(false);
-  const [currentInstanceLabel, setCurrentInstanceLabel] = React.useState('Local');
-  const compactCurrentInstanceLabel = React.useMemo(() => formatCompactHeaderLabel(currentInstanceLabel), [currentInstanceLabel]);
-  const [desktopServicesTab, setDesktopServicesTab] = React.useState<'instance' | 'usage' | 'mcp'>(
-    isDesktopApp ? 'instance' : 'usage'
-  );
+  const [desktopServicesTab, setDesktopServicesTab] = React.useState<'usage' | 'mcp'>('usage');
   const [mobileServicesTab, setMobileServicesTab] = React.useState<'usage' | 'mcp'>('usage');
-  useEffect(() => {
-    if (!isDesktopApp && desktopServicesTab === 'instance') {
-      setDesktopServicesTab('usage');
-    }
-  }, [desktopServicesTab, isDesktopApp]);
 
   const isLeftSidebarOpen = React.useMemo(() => {
     if (!isMobile) {
@@ -790,39 +738,6 @@ export const Header: React.FC<HeaderProps> = ({
     ? Math.min(999, (stableDesktopContextUsage.totalTokens / stableDesktopContextUsage.contextLimit) * 100)
     : 0;
 
-  const refreshCurrentInstanceLabel = React.useCallback(async () => {
-    if (typeof window === 'undefined' || !isDesktopApp) {
-      return;
-    }
-
-    try {
-      const cfg = await desktopHostsGet();
-      const currentHref = window.location.href;
-      const localOrigin = window.__OPENCHAMBER_LOCAL_ORIGIN__ || window.location.origin;
-
-      if (locationMatchesHost(currentHref, localOrigin)) {
-        setCurrentInstanceLabel('Local');
-        return;
-      }
-
-      const match = cfg.hosts.find((host) => {
-        return locationMatchesHost(currentHref, host.url);
-      });
-
-      if (match?.label?.trim()) {
-        setCurrentInstanceLabel(redactSensitiveUrl(match.label.trim()));
-        return;
-      }
-
-      setCurrentInstanceLabel('Instance');
-    } catch {
-      setCurrentInstanceLabel('Local');
-    }
-  }, [isDesktopApp]);
-
-  useEffect(() => {
-    void refreshCurrentInstanceLabel();
-  }, [refreshCurrentInstanceLabel]);
   useQuotaAutoRefresh();
   const selectedModels = useQuotaStore((state) => state.selectedModels);
   const expandedFamilies = useQuotaStore((state) => state.expandedFamilies);
@@ -1473,16 +1388,12 @@ export const Header: React.FC<HeaderProps> = ({
   }, [activeMainTab, isMobile, setActiveMainTab]);
 
   const servicesTabs = React.useMemo(() => {
-    const base: Array<{ value: 'instance' | 'usage' | 'mcp'; label: string; icon: RemixiconComponentType }> = [];
-    if (isDesktopApp) {
-      base.push({ value: 'instance', label: 'Instance', icon: RiServerLine });
-    }
-    base.push(
+    const base: Array<{ value: 'usage' | 'mcp'; label: string; icon: RemixiconComponentType }> = [
       { value: 'usage', label: 'Usage', icon: RiTimerLine },
       { value: 'mcp', label: 'MCP', icon: McpIcon as unknown as RemixiconComponentType }
-    );
+    ];
     return base;
-  }, [isDesktopApp]);
+  }, []);
 
   const servicesTabItems = React.useMemo(() => {
     return servicesTabs.map((tab) => ({
@@ -1534,7 +1445,6 @@ export const Header: React.FC<HeaderProps> = ({
           setIsDesktopServicesOpen(false);
         } else {
           setIsDesktopServicesOpen(true);
-          void refreshCurrentInstanceLabel();
           if (desktopServicesTab === 'usage' && quotaResults.length === 0) {
             void fetchAllQuotas();
           }
@@ -1546,7 +1456,7 @@ export const Header: React.FC<HeaderProps> = ({
       if (eventMatchesShortcut(e, cycleServicesCombo)) {
         e.preventDefault();
 
-        const tabValues = servicesTabs.map((tab) => tab.value) as Array<'instance' | 'usage' | 'mcp'>;
+        const tabValues = servicesTabs.map((tab) => tab.value) as Array<'usage' | 'mcp'>;
         if (tabValues.length === 0) {
           return;
         }
@@ -1556,7 +1466,6 @@ export const Header: React.FC<HeaderProps> = ({
         const nextTab = tabValues[nextIndex];
         setDesktopServicesTab(nextTab);
         setIsDesktopServicesOpen(true);
-        void refreshCurrentInstanceLabel();
         if (nextTab === 'usage' && quotaResults.length === 0) {
           void fetchAllQuotas();
         }
@@ -1579,7 +1488,6 @@ export const Header: React.FC<HeaderProps> = ({
     servicesTabs,
     quotaResults.length,
     fetchAllQuotas,
-    refreshCurrentInstanceLabel,
     handleOpenContextPlan,
   ]);
 
@@ -1651,14 +1559,10 @@ export const Header: React.FC<HeaderProps> = ({
           </TooltipContent>
         </Tooltip>
       )}
-      <OpenInAppButton directory={actionDirectory} className="mr-1" />
       <DesktopServicesMenu
         isDesktopApp={isDesktopApp}
-        currentInstanceLabel={currentInstanceLabel}
-        compactCurrentInstanceLabel={compactCurrentInstanceLabel}
         isDesktopServicesOpen={isDesktopServicesOpen}
         setIsDesktopServicesOpen={setIsDesktopServicesOpen}
-        refreshCurrentInstanceLabel={refreshCurrentInstanceLabel}
         desktopServicesTab={desktopServicesTab}
         setDesktopServicesTab={setDesktopServicesTab}
         quotaResultsLength={quotaResults.length}

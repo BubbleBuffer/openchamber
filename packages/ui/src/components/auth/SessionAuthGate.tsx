@@ -5,10 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui';
-import { isDesktopShell } from '@/lib/desktop/desktop';
 import { syncDesktopSettings, initializeAppearancePreferences } from '@/lib/config/persistence';
 import { applyPersistedDirectoryPreferences } from '@/lib/files/directoryPersistence';
-import { DesktopHostSwitcherInline } from '@/components/desktop/DesktopHostSwitcher';
 import { OpenChamberLogo } from '@/components/ui/OpenChamberLogo';
 import {
   authenticateWithPasskey,
@@ -126,7 +124,6 @@ interface ErrorScreenProps {
 }
 
 export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) => {
-  const showHostSwitcher = React.useMemo(() => isDesktopShell(), []);
   const [state, setState] = React.useState<GateState>('pending');
   const [password, setPassword] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -559,14 +556,6 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
             </form>
           )}
 
-          {showHostSwitcher && (
-            <div className="w-full">
-              <DesktopHostSwitcherInline />
-              <p className="mt-1 text-center typography-micro text-muted-foreground">
-                Use Local if remote is unreachable.
-              </p>
-            </div>
-          )}
         </div>
       </AuthShell>
     );

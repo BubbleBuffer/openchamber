@@ -17,13 +17,11 @@ import { toast } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { useDeviceInfo } from '@/lib/device';
-import { isDesktopShell } from '@/lib/desktop/desktop';
 import { useLayoutStore } from '@/stores/useLayoutStore';
 import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { useTerminalStore } from '@/stores/terminal/useTerminalStore';
-import { useDesktopSshStore } from '@/stores/useDesktopSshStore';
 import { openExternalUrl } from '@/lib/url';
 import {
   getProjectActionsState,
@@ -34,7 +32,6 @@ import {
   normalizeProjectActionDirectory,
   PROJECT_ACTIONS_UPDATED_EVENT,
   PROJECT_ACTION_ICON_MAP,
-  resolveProjectActionDesktopForwardUrl,
   toProjectActionRunKey,
 } from '@/lib/project/projectActions';
 
@@ -186,9 +183,6 @@ export const ProjectActionsButton = ({
 }: ProjectActionsButtonProps) => {
   const { terminal } = useRuntimeAPIs();
   const { isMobile } = useDeviceInfo();
-  const isDesktopShellApp = React.useMemo(() => isDesktopShell(), []);
-  const desktopSshInstances = useDesktopSshStore((state) => state.instances);
-  const loadDesktopSsh = useDesktopSshStore((state) => state.load);
 
   const setBottomTerminalOpen = useLayoutStore((state) => state.setBottomTerminalOpen);
   const setActiveMainTab = useNavigationStore((state) => state.setActiveMainTab);
@@ -220,13 +214,6 @@ export const ProjectActionsButton = ({
     }
     return { id: projectId, path: projectPath };
   }, [projectId, projectPath]);
-
-  React.useEffect(() => {
-    if (!isDesktopShellApp) {
-      return;
-    }
-    void loadDesktopSsh().catch(() => undefined);
-  }, [isDesktopShellApp, loadDesktopSsh]);
 
   const openExternal = React.useCallback(async (url: string) => {
     await openExternalUrl(url);
@@ -481,29 +468,18 @@ export const ProjectActionsButton = ({
       }));
 
       const hasCustomOpenUrl = action.autoOpenUrl === true && (action.openUrl || '').trim().length > 0;
-      const hasDesktopForwardSelection = action.autoOpenUrl === true
-        && isDesktopShellApp
-        && (action.desktopOpenSshForward || '').trim().length > 0;
       const manualOpenUrl = action.autoOpenUrl ? normalizeManualOpenUrl(action.openUrl) : null;
-      const desktopForwardUrl = action.autoOpenUrl && isDesktopShellApp
-        ? resolveProjectActionDesktopForwardUrl(action.desktopOpenSshForward, desktopSshInstances)
-        : null;
 
-      if (desktopForwardUrl) {
-        void openExternal(desktopForwardUrl);
-        toast.success('Opened forwarded URL');
-      } else if (manualOpenUrl) {
+      if (manualOpenUrl) {
         void openExternal(manualOpenUrl);
         toast.success('Opened action URL');
       } else if (hasCustomOpenUrl) {
         toast.error('Invalid custom URL format');
-      } else if (hasDesktopForwardSelection) {
-        toast.error('Selected desktop SSH forward is unavailable');
       }
 
       urlWatchByRunKeyRef.current[key] = {
         lastSeenChunkId: null,
-        openedUrl: Boolean(desktopForwardUrl) || Boolean(manualOpenUrl) || hasCustomOpenUrl,
+        openedUrl: Boolean(manualOpenUrl) || hasCustomOpenUrl,
         tail: '',
       };
 
@@ -519,11 +495,9 @@ export const ProjectActionsButton = ({
       toast.error(error instanceof Error ? error.message : 'Failed to run action');
     }
   }, [
-    desktopSshInstances,
     getOrCreateActionTab,
     allowMobile,
     isMobile,
-    isDesktopShellApp,
     normalizedDirectory,
     openExternal,
     runningByKey,
