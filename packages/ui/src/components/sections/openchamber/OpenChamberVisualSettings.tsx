@@ -22,7 +22,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { isDesktopShell, isWebRuntime } from '@/lib/desktop/desktop';
 import { useDeviceInfo } from '@/lib/device';
 import { usePwaDetection } from '@/hooks/usePwaDetection';
 import { updateSettings } from '@/lib/config/persistence';
@@ -463,8 +462,8 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
         || shouldShow('expandedTools')
         || (!isMobile && shouldShow('inputSpellcheck'));
 
-    const showPwaInstallNameSetting = shouldShow('pwaInstallName') && isWebRuntime() && browserTab && !isDesktopShell();
-    const showPwaOrientationSetting = shouldShow('pwaOrientation') && isWebRuntime() && !isDesktopShell();
+    const showPwaInstallNameSetting = shouldShow('pwaInstallName') && browserTab;
+    const showPwaOrientationSetting = shouldShow('pwaOrientation') && browserTab;
     const [pwaInstallName, setPwaInstallName] = React.useState('');
     const [pwaOrientation, setPwaOrientation] = React.useState<'system' | 'portrait' | 'landscape'>('system');
 

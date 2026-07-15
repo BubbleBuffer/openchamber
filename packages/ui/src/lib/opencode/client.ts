@@ -1,6 +1,5 @@
 import { createOpencodeClient, OpencodeClient } from "@opencode-ai/sdk/v2";
 import type { FilesAPI, RuntimeAPIs } from "../api/types";
-import { getDesktopHomeDirectory } from "../desktop/desktop";
 import type {
   Session,
   Message,
@@ -62,31 +61,6 @@ const ensureAbsoluteBaseUrl = (candidate: string): string => {
   }
 };
 
-const resolveDesktopBaseUrl = (): string | null => {
-  if (typeof window === "undefined") {
-    return null;
-  }
-  const desktopServer = (window as typeof window & {
-    __OPENCHAMBER_DESKTOP_SERVER__?: { origin: string; apiPrefix?: string };
-    __OPENCHAMBER_RUNTIME_APIS__?: RuntimeAPIs;
-  }).__OPENCHAMBER_DESKTOP_SERVER__;
-
-  const isDesktop = Boolean(
-    (window as typeof window & { __OPENCHAMBER_RUNTIME_APIS__?: RuntimeAPIs }).__OPENCHAMBER_RUNTIME_APIS__?.runtime?.isDesktop
-  );
-
-  if (!desktopServer || !isDesktop) {
-    return null;
-  }
-
-  const origin = typeof desktopServer.origin === "string" && desktopServer.origin.length > 0 ? desktopServer.origin : null;
-  if (!origin) {
-    return null;
-  }
-
-  return `${origin}/api`;
-};
-
 interface App {
   version?: string;
   [key: string]: unknown;
@@ -137,12 +111,12 @@ export type DirectorySwitchResult = {
 const normalizeFsPath = (path: string): string => path.replace(/\\/g, "/");
 const FS_LIST_CACHE_TTL_MS = 400;
 
-const getDesktopFilesApi = (): FilesAPI | null => {
+const getRuntimeFilesApi = (): FilesAPI | null => {
   if (typeof window === "undefined") {
     return null;
   }
   const apis = (window as typeof window & { __OPENCHAMBER_RUNTIME_APIS__?: RuntimeAPIs }).__OPENCHAMBER_RUNTIME_APIS__;
-  if (apis && apis.runtime?.isDesktop && apis.files) {
+  if (apis?.files) {
     return apis.files;
   }
   return null;
@@ -158,9 +132,7 @@ class OpencodeService {
   private listDirectoryCache: Map<string, { entries: FilesystemEntry[]; expiresAt: number }> = new Map();
 
   constructor(baseUrl: string = DEFAULT_BASE_URL) {
-    const desktopBase = resolveDesktopBaseUrl();
-    const requestedBaseUrl = desktopBase || baseUrl;
-    this.baseUrl = ensureAbsoluteBaseUrl(requestedBaseUrl);
+    this.baseUrl = ensureAbsoluteBaseUrl(baseUrl);
     this.client = createOpencodeClient({ baseUrl: this.baseUrl });
   }
 
@@ -1367,10 +1339,10 @@ class OpencodeService {
     dirPath: string,
     options?: { allowOutsideWorkspace?: boolean }
   ): Promise<{ success: boolean; path: string }> {
-    const desktopFiles = getDesktopFilesApi();
-    if (desktopFiles?.createDirectory) {
+    const runtimeFiles = getRuntimeFilesApi();
+    if (runtimeFiles?.createDirectory) {
       try {
-        return await desktopFiles.createDirectory(dirPath);
+        return await runtimeFiles.createDirectory(dirPath);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         throw new Error(message || 'Failed to create directory');
@@ -1414,10 +1386,10 @@ class OpencodeService {
     }
 
     const task = (async () => {
-    const desktopFiles = getDesktopFilesApi();
-    if (desktopFiles) {
+    const runtimeFiles = getRuntimeFilesApi();
+    if (runtimeFiles) {
       try {
-        const result = await desktopFiles.listDirectory(directoryPath || '', options);
+        const result = await runtimeFiles.listDirectory(directoryPath || '', options);
         if (!result || !Array.isArray(result.entries)) {
           return [];
         }
@@ -1528,13 +1500,6 @@ class OpencodeService {
   }
 
   async getFilesystemHome(): Promise<string | null> {
-    // Optimization: Check for desktop runtime first to avoid unnecessary network calls
-    // and fix the "SyntaxError" warning when the endpoint is missing
-    const desktopHome = await getDesktopHomeDirectory();
-    if (desktopHome) {
-      return desktopHome;
-    }
-
     try {
       const response = await fetch(`${this.baseUrl}/fs/home`, {
         method: 'GET',

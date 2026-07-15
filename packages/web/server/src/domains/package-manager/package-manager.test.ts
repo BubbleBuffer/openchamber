@@ -12,14 +12,12 @@ describe("checkForUpdates", () => {
 
   it("sends the web app type and host platform details to the update API", async () => {
     const homeDirectory = await mkdtemp(path.join(tmpdir(), "openchamber-package-manager-"));
-    const previousRuntime = process.env.OPENCHAMBER_RUNTIME;
     const previousFetch = globalThis.fetch;
     let requestPayload: Record<string, unknown> | undefined;
 
     vi.doMock("node:os", () => ({
       homedir: () => homeDirectory,
     }));
-    process.env.OPENCHAMBER_RUNTIME = "desktop";
     globalThis.fetch = (async (_input, init) => {
       requestPayload = JSON.parse(String(init?.body)) as Record<string, unknown>;
       return {
@@ -49,11 +47,6 @@ describe("checkForUpdates", () => {
         arch: expectedArch,
       });
     } finally {
-      if (previousRuntime === undefined) {
-        delete process.env.OPENCHAMBER_RUNTIME;
-      } else {
-        process.env.OPENCHAMBER_RUNTIME = previousRuntime;
-      }
       globalThis.fetch = previousFetch;
       await rm(homeDirectory, { recursive: true, force: true });
     }

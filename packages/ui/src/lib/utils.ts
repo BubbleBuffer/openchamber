@@ -1,6 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { isTauriShell } from "@/lib/desktop/desktop";
 import { matchesFuzzyQuery } from "@/lib/search/fuzzySearch";
 
 export function cn(...inputs: ClassValue[]) {
@@ -21,19 +20,13 @@ export const isWindows = (): boolean => {
   return /Windows/.test(navigator.userAgent || '');
 };
 
-export const getRevealLabel = (): string => {
-  if (isMacOS()) return 'Reveal in Finder';
-  if (isWindows()) return 'Open in File Explorer';
-  return 'Open in File Manager';
-};
-
 /**
  * Checks if the platform-appropriate modifier key is pressed.
  * On macOS desktop app: Cmd (metaKey), on other platforms or web: Ctrl (ctrlKey).
  * Browser intercepts Cmd shortcuts, so we only use Cmd in desktop shell.
  */
 export const hasModifier = (e: KeyboardEvent | React.KeyboardEvent): boolean => {
-  return isMacOS() && isTauriShell() ? e.metaKey : e.ctrlKey;
+  return isMacOS() ? e.metaKey : e.ctrlKey;
 };
 
 /**
@@ -42,7 +35,7 @@ export const hasModifier = (e: KeyboardEvent | React.KeyboardEvent): boolean => 
  * Browser intercepts Cmd shortcuts, so we only show Cmd in desktop shell.
  */
 export const getModifierLabel = (): string => {
-  return isMacOS() && isTauriShell() ? '⌘' : 'Ctrl';
+  return isMacOS() ? '⌘' : 'Ctrl';
 };
 
 export const truncatePathMiddle = (

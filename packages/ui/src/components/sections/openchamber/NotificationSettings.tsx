@@ -3,7 +3,6 @@ import { RiInformationLine, RiRestartLine } from '@remixicon/react';
 import { useNotificationSettingsStore } from '@/stores/useNotificationSettingsStore';
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
-import { isDesktopShell } from '@/lib/desktop/desktop';
 import { useDeviceInfo } from '@/lib/device';
 import { updateSettings } from '@/lib/config/persistence';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -33,8 +32,7 @@ const DEFAULT_MAX_LAST_MESSAGE_LENGTH = 250;
 
 export const NotificationSettings: React.FC = () => {
   const { isMobile } = useDeviceInfo();
-  const isDesktop = React.useMemo(() => isDesktopShell(), []);
-  const isBrowser = !isDesktop;
+  const isBrowser = true;
   const nativeNotificationsEnabled = useNotificationSettingsStore(state => state.nativeNotificationsEnabled);
   const setNativeNotificationsEnabled = useNotificationSettingsStore(state => state.setNativeNotificationsEnabled);
   const notificationMode = useNotificationSettingsStore(state => state.notificationMode);
@@ -197,15 +195,6 @@ export const NotificationSettings: React.FC = () => {
   }, [isBrowser]);
 
   const handleToggleChange = async (checked: boolean) => {
-    if (isDesktop) {
-      setNativeNotificationsEnabled(checked);
-      return;
-    }
-
-    if (!isBrowser) {
-      setNativeNotificationsEnabled(checked);
-      return;
-    }
     if (checked && typeof Notification !== 'undefined' && Notification.permission === 'default') {
       try {
         const permission = await Notification.requestPermission();
@@ -228,7 +217,7 @@ export const NotificationSettings: React.FC = () => {
     }
   };
 
-  const canShowNotifications = isDesktop || (isBrowser && typeof Notification !== 'undefined' && Notification.permission === 'granted');
+  const canShowNotifications = isBrowser && typeof Notification !== 'undefined' && Notification.permission === 'granted';
 
   const updateTemplate = (
     event: 'completion' | 'error' | 'question' | 'subtask',

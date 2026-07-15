@@ -249,13 +249,6 @@ export const buildOpenCodeStatusReport = async (): Promise<string> => {
     lines.push(`OpenCode auth source: ${openChamberHealth.openCodeAuthSource}`);
   }
 
-  if (typeof window !== 'undefined') {
-    const injected = (window as unknown as { __OPENCHAMBER_MACOS_MAJOR__?: unknown }).__OPENCHAMBER_MACOS_MAJOR__;
-    if (typeof injected === 'number' && Number.isFinite(injected) && injected > 0) {
-      lines.push(`macOS major: ${injected}`);
-    }
-  }
-
   const isLikelyMac = /Mac OS X|Macintosh/.test(platform);
   if (isLikelyMac) {
     lines.push('');

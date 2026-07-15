@@ -29,24 +29,9 @@ import type {
   MergeConflictDetails,
 } from '../api/types';
 
-declare global {
-  interface Window {
-    __OPENCHAMBER_DESKTOP_SERVER__?: {
-      origin: string;
-      opencodePort: number | null;
-      apiPrefix: string;
-      cliAvailable: boolean;
-    };
-  }
-}
-
 const resolveBaseOrigin = (): string => {
   if (typeof window === 'undefined') {
     return '';
-  }
-  const desktopOrigin = window.__OPENCHAMBER_DESKTOP_SERVER__?.origin;
-  if (desktopOrigin) {
-    return desktopOrigin;
   }
   return window.location.origin;
 };

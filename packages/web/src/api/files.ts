@@ -197,22 +197,6 @@ export const createWebFilesAPI = (): FilesAPI => ({
     };
   },
 
-  async revealPath(targetPath: string): Promise<{ success: boolean }> {
-    const response = await fetch('/api/fs/reveal', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: normalizePath(targetPath) }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: response.statusText }));
-      throw new Error((error as { error?: string }).error || 'Failed to reveal path');
-    }
-
-    const result = await response.json().catch(() => ({}));
-    return { success: Boolean((result as { success?: boolean }).success) };
-  },
-
   async downloadFile(path: string): Promise<void> {
     const target = normalizePath(path);
     const url = `/api/fs/raw?path=${encodeURIComponent(target)}&download=true`;

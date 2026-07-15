@@ -27,7 +27,6 @@ import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useDeviceInfo } from '@/lib/device';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { cn } from '@/lib/utils';
-import { isDesktopShell } from '@/lib/desktop/desktop';
 import { lazyWithChunkRecovery } from '@/lib/errors/chunkLoadRecovery';
 import { OfflineIndicator } from '@/components/ui/OfflineIndicator';
 
@@ -89,7 +88,6 @@ export const MainLayout: React.FC = () => {
     const multiRunLauncherPrefillPrompt = useDialogStore((state) => state.multiRunLauncherPrefillPrompt);
 
     const { isMobile } = useDeviceInfo();
-    const isDesktopShellRuntime = React.useMemo(() => isDesktopShell(), []);
     const sidebarWidth = useLayoutStore((state) => state.sidebarWidth);
     const rightSidebarWidth = useLayoutStore((state) => state.rightSidebarWidth);
     const [desktopRightSidebarActionsHost, setDesktopRightSidebarActionsHost] = React.useState<HTMLDivElement | null>(null);
@@ -828,7 +826,7 @@ export const MainLayout: React.FC = () => {
                     <div className="flex flex-1 overflow-hidden relative">
                         <div className={cn(
                             'absolute inset-0 flex overflow-hidden',
-                            isDesktopShellRuntime ? 'bg-sidebar' : 'bg-sidebar'
+                            'bg-sidebar'
                         )}>
                             {isSidebarOpen ? (
                                 <>
@@ -836,7 +834,7 @@ export const MainLayout: React.FC = () => {
                                         aria-hidden
                                         className={cn(
                                             'pointer-events-none absolute top-0 z-0',
-                                            isDesktopShellRuntime ? 'bg-sidebar' : 'bg-sidebar'
+                                            'bg-sidebar'
                                         )}
                                         style={{
                                             left: `${visibleSidebarWidth}px`,
@@ -850,7 +848,7 @@ export const MainLayout: React.FC = () => {
                                         aria-hidden
                                         className={cn(
                                             'pointer-events-none absolute bottom-0 z-0',
-                                            isDesktopShellRuntime ? 'bg-sidebar' : 'bg-sidebar'
+                                            'bg-sidebar'
                                         )}
                                         style={{
                                             left: `${visibleSidebarWidth}px`,
@@ -868,7 +866,7 @@ export const MainLayout: React.FC = () => {
                                         aria-hidden
                                         className={cn(
                                             'pointer-events-none absolute top-0 z-0',
-                                            isDesktopShellRuntime ? 'bg-sidebar' : 'bg-sidebar'
+                                            'bg-sidebar'
                                         )}
                                         style={{
                                             right: `${visibleRightSidebarWidth}px`,
@@ -882,7 +880,7 @@ export const MainLayout: React.FC = () => {
                                         aria-hidden
                                         className={cn(
                                             'pointer-events-none absolute bottom-0 z-0',
-                                            isDesktopShellRuntime ? 'bg-sidebar' : 'bg-sidebar'
+                                            'bg-sidebar'
                                         )}
                                         style={{
                                             right: `${visibleRightSidebarWidth}px`,

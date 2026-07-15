@@ -1,5 +1,4 @@
 import React from 'react';
-import { isWebRuntime } from '@/lib/desktop/desktop';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 
 const HEARTBEAT_MS = 20000;
@@ -11,10 +10,6 @@ const resolveVisibilityState = (): 'visible' | 'hidden' => {
 };
 
 const sendVisibility = (visible: boolean) => {
-  if (!isWebRuntime()) {
-    return;
-  }
-
   const apis = getRegisteredRuntimeAPIs();
   if (!apis?.push?.setVisibility) {
     return;
@@ -26,7 +21,7 @@ const sendVisibility = (visible: boolean) => {
 export const usePushVisibilityBeacon = (options?: { enabled?: boolean }) => {
   const enabled = options?.enabled ?? true;
   React.useEffect(() => {
-    if (!enabled || !isWebRuntime() || typeof document === 'undefined') {
+    if (!enabled || typeof document === 'undefined') {
       return;
     }
 

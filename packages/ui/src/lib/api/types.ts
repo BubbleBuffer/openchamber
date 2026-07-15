@@ -1,13 +1,10 @@
 import type { WorktreeMetadata } from '@/types/worktree';
 import type { AppSettings } from '@/lib/config/settingsTypes';
 
-export type RuntimePlatform = 'web' | 'desktop';
+export type RuntimePlatform = 'web';
 
 export interface RuntimeDescriptor {
   platform: RuntimePlatform;
-
-  isDesktop: boolean;
-
   label?: string;
 }
 
@@ -518,7 +515,6 @@ export interface FilesAPI {
   writeFile?(path: string, content: string): Promise<{ success: boolean; path: string }>;
   delete?(path: string): Promise<{ success: boolean }>;
   rename?(oldPath: string, newPath: string): Promise<{ success: boolean; path: string }>;
-  revealPath?(path: string): Promise<{ success: boolean }>;
   execCommands?(commands: string[], cwd: string): Promise<{ success: boolean; results: CommandExecResult[] }>;
   downloadFile?(path: string): Promise<void>;
 }
@@ -554,26 +550,7 @@ export interface SettingsAPI {
   restartOpenCode?: () => Promise<{ restarted: boolean }>;
 }
 
-export interface DirectoryPermissionRequest {
-  path: string;
-}
-
-export interface DirectoryPermissionResult {
-  success: boolean;
-  path?: string;
-  error?: string;
-}
-
-export interface StartAccessingResult {
-  success: boolean;
-  error?: string;
-}
-
-export interface PermissionsAPI {
-  requestDirectoryAccess(request: DirectoryPermissionRequest): Promise<DirectoryPermissionResult>;
-  startAccessingDirectory(path: string): Promise<StartAccessingResult>;
-  stopAccessingDirectory(path: string): Promise<StartAccessingResult>;
-}
+export type PermissionsAPI = Record<string, never>;
 
 export interface NotificationPayload {
   title?: string;

@@ -117,13 +117,7 @@ export const AboutSettings: React.FC = () => {
           open={updateDialogOpen}
           onOpenChange={setUpdateDialogOpen}
           info={updateStore.info}
-          downloading={updateStore.downloading}
-          downloaded={updateStore.downloaded}
-          progress={updateStore.progress}
-          error={updateStore.error}
-          onDownload={updateStore.downloadUpdate}
-          onRestart={updateStore.restartToUpdate}
-          runtimeType={updateStore.runtimeType}
+           error={updateStore.error}
         />
       </div>
     );
@@ -211,13 +205,7 @@ export const AboutSettings: React.FC = () => {
         open={updateDialogOpen}
         onOpenChange={setUpdateDialogOpen}
         info={updateStore.info}
-        downloading={updateStore.downloading}
-        downloaded={updateStore.downloaded}
-        progress={updateStore.progress}
-        error={updateStore.error}
-        onDownload={updateStore.downloadUpdate}
-        onRestart={updateStore.restartToUpdate}
-        runtimeType={updateStore.runtimeType}
+         error={updateStore.error}
       />
     </div>
   );

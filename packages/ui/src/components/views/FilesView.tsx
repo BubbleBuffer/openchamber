@@ -9,7 +9,6 @@ import {
   RiCheckLine,
   RiFolder3Fill,
   RiFolderOpenFill,
-  RiFolderReceivedLine,
   RiFullscreenExitLine,
   RiFullscreenLine,
   RiLoader4Line,
@@ -60,12 +59,11 @@ import {
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useFileSearchStore } from '@/stores/files/useFileSearchStore';
 import { useDeviceInfo } from '@/lib/device';
-import { cn, getModifierLabel, getRevealLabel, hasModifier } from '@/lib/utils';
+ import { cn, getModifierLabel, hasModifier } from '@/lib/utils';
 import { getLanguageFromExtension, getImageMimeType, isImageFile } from '@/lib/tools/toolHelpers';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { EditorView } from '@codemirror/view';
 import type { Extension } from '@codemirror/state';
-import { convertFileSrc } from '@tauri-apps/api/core';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';
@@ -74,7 +72,6 @@ import { useFilesViewTabsStore } from '@/stores/files/useFilesViewTabsStore';
 import { useGitStatus } from '@/stores/git/useGitStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { buildCodeMirrorCommentWidgets, normalizeLineRange, useInlineCommentController } from '@/components/comments';
-import { opencodeClient } from '@/lib/opencode/client';
 import { useDirectoryShowHidden } from '@/lib/files/directoryShowHidden';
 import { useFilesViewShowGitignored } from '@/lib/files/filesViewShowGitignored';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
@@ -140,14 +137,12 @@ interface FileRowProps {
     canCreateFile: boolean;
     canCreateFolder: boolean;
     canDelete: boolean;
-    canReveal: boolean;
   };
   downloadFile?: (path: string) => Promise<void>;
   contextMenuPath: string | null;
   setContextMenuPath: (path: string | null) => void;
   onSelect: (node: FileNode) => void;
   onToggle: (path: string) => void;
-  onRevealPath: (path: string) => void;
   onOpenDialog: (type: 'createFile' | 'createFolder' | 'rename' | 'delete', data: { path: string; name?: string; type?: 'file' | 'directory' }) => void;
 }
 
@@ -165,19 +160,18 @@ const FileRow: React.FC<FileRowProps> = ({
   setContextMenuPath,
   onSelect,
   onToggle,
-  onRevealPath,
   onOpenDialog,
 }) => {
   const isDir = node.type === 'directory';
-  const { canRename, canCreateFile, canCreateFolder, canDelete, canReveal } = permissions;
+  const { canRename, canCreateFile, canCreateFolder, canDelete } = permissions;
 
   const handleContextMenu = React.useCallback((event?: React.MouseEvent) => {
-    if (!canRename && !canCreateFile && !canCreateFolder && !canDelete && !canReveal) {
+    if (!canRename && !canCreateFile && !canCreateFolder && !canDelete) {
       return;
     }
     event?.preventDefault();
     setContextMenuPath(node.path);
-  }, [canRename, canCreateFile, canCreateFolder, canDelete, canReveal, node.path, setContextMenuPath]);
+  }, [canRename, canCreateFile, canCreateFolder, canDelete, node.path, setContextMenuPath]);
 
   const handleInteraction = React.useCallback(() => {
     if (isDir) {
@@ -229,7 +223,7 @@ const FileRow: React.FC<FileRowProps> = ({
           </span>
         )}
       </button>
-      {(canRename || canCreateFile || canCreateFolder || canDelete || canReveal) && (
+      {(canRename || canCreateFile || canCreateFolder || canDelete) && (
         <div className={cn(
           "absolute right-1 top-1/2 -translate-y-1/2",
           !isMobile && "opacity-0 focus-within:opacity-100 group-hover:opacity-100",
@@ -288,11 +282,6 @@ const FileRow: React.FC<FileRowProps> = ({
                   <RiDownloadLine className="mr-2 h-4 w-4" /> Save
                 </DropdownMenuItem>
               )}
-              {canReveal && (
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRevealPath(node.path); }}>
-                  <RiFolderReceivedLine className="mr-2 h-4 w-4" /> {getRevealLabel()}
-                </DropdownMenuItem>
-              )}
               {isDir && (canCreateFile || canCreateFolder) && (
                 <>
                   <DropdownMenuSeparator />
@@ -332,7 +321,7 @@ interface FilesViewProps {
 }
 
 export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
-  const { files, runtime } = useRuntimeAPIs();
+  const { files } = useRuntimeAPIs();
   const { currentTheme, availableThemes, lightThemeId, darkThemeId } = useThemeSystem();
   const { isMobile, screenWidth } = useDeviceInfo();
   const showHidden = useDirectoryShowHidden();
@@ -500,15 +489,6 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
   const canCreateFolder = Boolean(files.createDirectory);
   const canRename = Boolean(files.rename);
   const canDelete = Boolean(files.delete);
-  const canReveal = Boolean(files.revealPath);
-
-  const handleRevealPath = React.useCallback((targetPath: string) => {
-    if (!files.revealPath) return;
-    void files.revealPath(targetPath).catch(() => {
-      toast.error('Failed to reveal path');
-    });
-  }, [files]);
-
   const handleOpenDialog = React.useCallback((type: 'createFile' | 'createFolder' | 'rename' | 'delete', data: { path: string; name?: string; type?: 'file' | 'directory' }) => {
     setActiveDialog(type);
     setDialogData(data);
@@ -668,13 +648,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
     inFlightDirsRef.current.add(normalizedDir);
 
     const respectGitignore = !showGitignored;
-    const listPromise = runtime.isDesktop
-      ? files.listDirectory(normalizedDir, { respectGitignore }).then((result) => result.entries.map((entry) => ({
-        name: entry.name,
-        path: entry.path,
-        isDirectory: entry.isDirectory,
-      })))
-      : opencodeClient.listLocalDirectory(normalizedDir, { respectGitignore }).then((result) => result.map((entry) => ({
+    const listPromise = files.listDirectory(normalizedDir, { respectGitignore }).then((result) => result.entries.map((entry) => ({
         name: entry.name,
         path: entry.path,
         isDirectory: entry.isDirectory,
@@ -698,7 +672,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
         inFlightDirsRef.current = new Set(inFlightDirsRef.current);
         inFlightDirsRef.current.delete(normalizedDir);
       });
-  }, [files, mapDirectoryEntries, runtime.isDesktop, showGitignored]);
+  }, [files, mapDirectoryEntries, showGitignored]);
 
   const refreshRoot = React.useCallback(async () => {
     if (!root) {
@@ -1173,16 +1147,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
       setShowMobilePageContent(true);
     }
 
-    // Desktop: binary images are loaded via readFileBinary (data URL).
-    if (runtime.isDesktop && selectedIsImage && !isSvg) {
-      setFileContent('');
-      setDraftContent('');
-      setFileLoading(true);
-      return;
-    }
-
-    // Web: binary images should not be read as utf8.
-    if (!runtime.isDesktop && selectedIsImage && !isSvg) {
+    if (selectedIsImage && !isSvg) {
       setFileContent('');
       setDraftContent('');
       setLoadedFilePath(node.path);
@@ -1245,7 +1210,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
       .finally(() => {
         setFileLoading(false);
       });
-  }, [expandPaths, isMobile, loadDirectory, readFile, readFileStat, root, runtime.isDesktop, searchQuery, setSelectedPath]);
+  }, [expandPaths, isMobile, loadDirectory, readFile, readFileStat, root, searchQuery, setSelectedPath]);
 
   const ensurePathVisible = React.useCallback(async (targetPath: string, includeTarget: boolean) => {
     if (!root) {
@@ -1584,13 +1549,12 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
             isMobile={isMobile}
             status={!isDir ? getFileStatus(node.path) : undefined}
             badge={isDir ? getFolderBadge(node.path) : undefined}
-            permissions={{ canRename, canCreateFile, canCreateFolder, canDelete, canReveal }}
+            permissions={{ canRename, canCreateFile, canCreateFolder, canDelete }}
             downloadFile={files.downloadFile}
             contextMenuPath={contextMenuPath}
             setContextMenuPath={setContextMenuPath}
             onSelect={handleSelectFile}
             onToggle={toggleDirectory}
-            onRevealPath={handleRevealPath}
             onOpenDialog={handleOpenDialog}
           />
           {isDir && isExpanded && (
@@ -2067,60 +2031,13 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
   );
 
   const imageSrc = selectedFile?.path && isSelectedImage
-    ? (runtime.isDesktop
-      ? (isSelectedSvg
-        ? `data:${getImageMimeType(selectedFile.path)};utf8,${encodeURIComponent(fileContent)}`
-        : desktopImageSrc)
-      : (isSelectedSvg
-        ? `data:${getImageMimeType(selectedFile.path)};utf8,${encodeURIComponent(fileContent)}`
-        : `/api/fs/raw?path=${encodeURIComponent(selectedFile.path)}`))
+    ? (isSelectedSvg
+      ? `data:${getImageMimeType(selectedFile.path)};utf8,${encodeURIComponent(fileContent)}`
+      : `/api/fs/raw?path=${encodeURIComponent(selectedFile.path)}`)
     : '';
 
 
 
-
-  React.useEffect(() => {
-    let cancelled = false;
-
-    const resolveDesktopImage = async () => {
-      if (!runtime.isDesktop || !selectedFile?.path || !isSelectedImage || isSelectedSvg) {
-        setDesktopImageSrc('');
-        return;
-      }
-
-      setFileError(null);
-
-      const srcPromise = files.readFileBinary
-        ? files.readFileBinary(selectedFile.path).then((result) => result.dataUrl)
-        : Promise.resolve(convertFileSrc(selectedFile.path, 'asset'));
-
-      await srcPromise
-        .then((src) => {
-          if (!cancelled) {
-            setDesktopImageSrc(src);
-            setLoadedFilePath(selectedFile.path);
-          }
-        })
-        .catch((error) => {
-          if (!cancelled) {
-            setDesktopImageSrc('');
-            setFileError(error instanceof Error ? error.message : 'Failed to read file');
-            setLoadedFilePath(null);
-          }
-        })
-        .finally(() => {
-          if (!cancelled) {
-            setFileLoading(false);
-          }
-        });
-    };
-
-    void resolveDesktopImage();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [files, isSelectedImage, isSelectedSvg, runtime.isDesktop, selectedFile?.path]);
 
   const renderDialogs = () => (
     <Dialog open={!!activeDialog} onOpenChange={(open) => !open && setActiveDialog(null)}>
@@ -2713,7 +2630,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
                   // Inject base tag for relative paths (CSS/JS/images) to work
                   const basePath = selectedFile.path.substring(0, selectedFile.path.lastIndexOf('/') + 1);
                   if (!basePath) return fileContent;
-                  const baseTag = `<base href="${runtime.isDesktop ? basePath : basePath}">`;
+                  const baseTag = `<base href="${basePath}">`;
                   return fileContent.replace(/<head([^>]*)>/i, `<head$1>${baseTag}`);
                 })()}
                 className="w-full h-full border-none"

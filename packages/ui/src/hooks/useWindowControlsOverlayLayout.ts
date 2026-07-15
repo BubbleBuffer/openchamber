@@ -1,5 +1,4 @@
 import React from 'react';
-import { isWebRuntime } from '@/lib/desktop/desktop';
 
 type WindowControlsOverlayArea = {
   x: number;
@@ -38,7 +37,7 @@ const applyOverlayInsets = (
 
 export const useWindowControlsOverlayLayout = () => {
   React.useEffect(() => {
-    if (typeof window === 'undefined' || !isWebRuntime()) {
+    if (typeof window === 'undefined') {
       return;
     }
 

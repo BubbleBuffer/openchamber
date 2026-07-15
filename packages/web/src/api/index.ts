@@ -10,7 +10,7 @@ import { createWebPushAPI } from './push';
 import { createWebGitHubAPI } from './github';
 
 export const createWebAPIs = (): RuntimeAPIs => ({
-  runtime: { platform: 'web', isDesktop: false, label: 'web' },
+  runtime: { platform: 'web', label: 'web' },
   terminal: createWebTerminalAPI(),
   git: createWebGitAPI(),
   files: createWebFilesAPI(),

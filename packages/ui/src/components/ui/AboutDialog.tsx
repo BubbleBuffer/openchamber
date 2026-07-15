@@ -58,22 +58,7 @@ export const AboutDialog: React.FC<AboutDialogProps> = ({
   React.useEffect(() => {
     if (!open) return;
 
-    const isDesktop = typeof window !== 'undefined' && Boolean((window as unknown as { __TAURI__?: unknown }).__TAURI__);
-
-    if (isDesktop) {
-      const fetchVersion = async () => {
-        try {
-          const { getVersion } = await import('@tauri-apps/api/app');
-          const v = await getVersion();
-          setVersion(v);
-        } catch {
-          setVersion(typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : null);
-        }
-      };
-      fetchVersion();
-    } else {
-      setVersion(typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : null);
-    }
+    setVersion(typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : null);
   }, [open]);
 
   React.useEffect(() => {

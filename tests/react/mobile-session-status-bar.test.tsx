@@ -181,12 +181,6 @@ vi.mock("@/contexts/useThemeSystem", () => ({
   }),
 }))
 
-vi.mock("@/lib/desktop/desktop", () => ({
-  isTauriShell: () => false,
-  isDesktopLocalOriginActive: () => false,
-  requestDirectoryAccess: () => Promise.resolve({ success: false, error: "not available" }),
-}))
-
 vi.mock("@/lib/opencode/client", () => ({
   opencodeClient: {
     getDirectory: () => "/workspace",

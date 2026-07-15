@@ -7,8 +7,6 @@ import React, {
 import { flushSync } from 'react-dom';
 import type { Theme, ThemeMode } from '@/types/theme';
 import type { AppSettings } from '@/lib/config/settingsTypes';
-import { isDesktopLocalOriginActive, isTauriShell } from '@/lib/desktop/desktop';
-import { setDesktopWindowTheme } from '@/lib/desktop/desktopNative';
 import { CSSVariableGenerator } from '@/lib/theme/cssGenerator';
 import { updateSettings } from '@/lib/config/persistence';
 import {
@@ -209,8 +207,6 @@ export function ThemeSystemProvider({ children, defaultThemeId }: ThemeSystemPro
   const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(() => getSystemPreference());
   const [customThemes, setCustomThemes] = useState<Theme[]>([]);
   const [customThemesLoading, setCustomThemesLoading] = useState(false);
-  const isLocalDesktopOrigin = useMemo(() => isDesktopLocalOriginActive(), []);
-  const isDesktopShell = useMemo(() => isTauriShell(), []);
 
   const availableThemes = useMemo(() => {
     const merged: Theme[] = [];
@@ -269,7 +265,7 @@ export function ThemeSystemProvider({ children, defaultThemeId }: ThemeSystemPro
     try {
       const res = await fetch('/api/config/themes', {
         method: 'GET',
-        credentials: isLocalDesktopOrigin ? 'omit' : 'include',
+        credentials: 'include',
         headers: {
           Accept: 'application/json',
         },
@@ -293,7 +289,7 @@ export function ThemeSystemProvider({ children, defaultThemeId }: ThemeSystemPro
     } finally {
       setCustomThemesLoading(false);
     }
-  }, [isLocalDesktopOrigin]);
+  }, []);
 
   useEffect(() => {
     void reloadCustomThemes();
@@ -525,16 +521,6 @@ export function ThemeSystemProvider({ children, defaultThemeId }: ThemeSystemPro
       splashFgDark: darkTheme.colors.surface.foreground,
     });
   }, [currentTheme.metadata.id, currentTheme.metadata.variant, ensureThemeById, preferences.themeMode, preferences.lightThemeId, preferences.darkThemeId]);
-
-  useEffect(() => {
-    if (!isDesktopShell) {
-      return;
-    }
-
-    void (async () => {
-      await setDesktopWindowTheme(preferences.themeMode, currentTheme.metadata.variant);
-    })();
-  }, [currentTheme.metadata.variant, isDesktopShell, preferences.themeMode]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {

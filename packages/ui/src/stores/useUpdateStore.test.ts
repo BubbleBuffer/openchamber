@@ -7,9 +7,7 @@ const initialState = {
   downloading: false,
   downloaded: false,
   info: null,
-  progress: null,
   error: null,
-  runtimeType: null,
   lastChecked: null,
   nextCheckInSec: null,
 };
@@ -36,14 +34,12 @@ describe("useUpdateStore", () => {
     useUpdateStore.setState({
       checking: true,
       error: "boom",
-      runtimeType: "desktop",
       lastChecked: 12345,
     });
     useUpdateStore.getState().reset();
     const s = useUpdateStore.getState();
     expect(s.checking).toBe(false);
     expect(s.error).toBe(null);
-    expect(s.runtimeType).toBe(null);
     expect(s.lastChecked).toBe(null);
   });
 

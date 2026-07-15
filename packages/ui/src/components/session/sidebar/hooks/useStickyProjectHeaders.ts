@@ -1,17 +1,17 @@
 import React from 'react';
 
 type Args = {
-  isDesktopShellRuntime: boolean;
+  isDesktopLayout: boolean;
   projectSections: unknown[];
   projectHeaderSentinelRefs: React.MutableRefObject<Map<string, HTMLDivElement | null>>;
 };
 
 export const useStickyProjectHeaders = (args: Args): Set<string> => {
-  const { isDesktopShellRuntime, projectSections, projectHeaderSentinelRefs } = args;
+  const { isDesktopLayout, projectSections, projectHeaderSentinelRefs } = args;
   const [stuckProjectHeaders, setStuckProjectHeaders] = React.useState<Set<string>>(new Set());
 
   React.useEffect(() => {
-    if (!isDesktopShellRuntime) {
+    if (!isDesktopLayout) {
       return;
     }
 
@@ -44,7 +44,7 @@ export const useStickyProjectHeaders = (args: Args): Set<string> => {
     });
 
     return () => observer.disconnect();
-  }, [isDesktopShellRuntime, projectHeaderSentinelRefs, projectSections]);
+  }, [isDesktopLayout, projectHeaderSentinelRefs, projectSections]);
 
   return stuckProjectHeaders;
 };

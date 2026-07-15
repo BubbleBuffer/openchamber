@@ -1,8 +1,5 @@
 import React from 'react';
 import { useProjectsStore } from '@/stores/projects/useProjectsStore';
-import { isDesktopShell, isTauriShell } from '@/lib/desktop/desktop';
-import { desktopHostsGet, locationMatchesHost, redactSensitiveUrl } from '@/lib/desktop/desktopHosts';
-import { setDesktopWindowTitle } from '@/lib/desktop/desktopNative';
 
 const APP_TITLE = 'OpenChamber';
 
@@ -47,78 +44,12 @@ export const useWindowTitle = () => {
     return null;
   }, [activeProject]);
 
-  const [instanceLabel, setInstanceLabel] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    if (typeof window === 'undefined' || !isDesktopShell()) {
-      setInstanceLabel(null);
-      return;
-    }
-
-    let cancelled = false;
-
-    const refreshInstanceLabel = async () => {
-      try {
-        const currentHref = window.location.href;
-        const localOrigin = window.__OPENCHAMBER_LOCAL_ORIGIN__ || window.location.origin;
-
-        if (locationMatchesHost(currentHref, localOrigin)) {
-          if (!cancelled) {
-            setInstanceLabel(null);
-          }
-          return;
-        }
-
-        const cfg = await desktopHostsGet();
-        const match = cfg.hosts.find((host) => locationMatchesHost(currentHref, host.url));
-        const nextLabel = match?.label?.trim() ? redactSensitiveUrl(match.label.trim()) : 'Instance';
-        if (!cancelled) {
-          setInstanceLabel(nextLabel);
-        }
-      } catch {
-        if (!cancelled) {
-          setInstanceLabel('Instance');
-        }
-      }
-    };
-
-    void refreshInstanceLabel();
-
-    const handleFocus = () => {
-      void refreshInstanceLabel();
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => {
-      cancelled = true;
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, []);
-
-  const title = React.useMemo(() => buildWindowTitle(projectLabel, instanceLabel), [projectLabel, instanceLabel]);
+  const title = React.useMemo(() => buildWindowTitle(projectLabel, null), [projectLabel]);
 
   React.useEffect(() => {
     if (typeof document !== 'undefined') {
       document.title = title;
     }
 
-    if (!isTauriShell()) {
-      return;
-    }
-
-    const applyTitle = async () => {
-      try {
-        const isMac = typeof navigator !== 'undefined' && /Macintosh|Mac OS X/.test(navigator.userAgent || '');
-        if (isMac) {
-          return;
-        }
-
-        await setDesktopWindowTitle(title);
-      } catch {
-        return;
-      }
-    };
-
-    void applyTitle();
   }, [title]);
 };

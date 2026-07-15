@@ -34,7 +34,7 @@ import {
 } from '@remixicon/react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui';
-import { buildExportFilename, downloadAsMarkdown, formatSessionAsMarkdown, getExportRevealLabel, revealExportedMarkdown, saveAsMarkdownDesktop } from '@/lib/exportSession';
+import { buildExportFilename, downloadAsMarkdown, formatSessionAsMarkdown } from '@/lib/exportSession';
 import { buildSessionMessageRecordsSnapshot, useDirectoryStore, useGlobalSessionStatus, useSession, useSessionPermissions } from '@/sync/sync-context';
 import { useSync } from '@/sync/use-sync';
 import { useViewportStore } from '@/sync/viewport-store';
@@ -316,24 +316,6 @@ function SessionNodeItemComponent(props: Props): React.ReactNode {
 
     const markdown = formatSessionAsMarkdown(records, resolvedSession.title ?? null);
     const filename = buildExportFilename(resolvedSession.title ?? null);
-    const savedPath = await saveAsMarkdownDesktop(markdown, filename);
-
-    if (savedPath) {
-      toast.success('Session exported', {
-        action: {
-          label: getExportRevealLabel(),
-          onClick: () => {
-            void revealExportedMarkdown(savedPath).then((revealed) => {
-              if (!revealed) {
-                toast.error('Failed to reveal path');
-              }
-            });
-          },
-        },
-      });
-      return;
-    }
-
     downloadAsMarkdown(markdown, filename);
     toast.success('Session exported');
   }, [directoryStore, resolvedSession.title, session.id, sessionDirectory, sync]);

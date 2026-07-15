@@ -1,5 +1,4 @@
 import { isMacOS } from '@/lib/utils';
-import { isTauriShell } from '@/lib/desktop/desktop';
 
 export type ShortcutModifier = 'mod' | 'shift' | 'alt' | 'option' | 'ctrl';
 export type ShortcutKey = string;
@@ -32,7 +31,7 @@ const MODIFIER_KEY_MAP: Record<string, ShortcutModifier> = {
 };
 
 const DISPLAY_LABEL_MAP: Record<ShortcutModifier, string> = {
-  'mod': isMacOS() && isTauriShell() ? '⌘' : 'Ctrl',
+  'mod': isMacOS() ? '⌘' : 'Ctrl',
   'shift': '⇧',
   'alt': '⌥',
   'option': '⌥',
@@ -542,7 +541,7 @@ export function eventMatchesShortcut(
   const expectedShift = parsed.modifiers.has('shift');
   const expectedAlt = parsed.modifiers.has('alt');
   const expectedCtrl = parsed.modifiers.has('ctrl');
-  const isDesktopMac = isMacOS() && isTauriShell();
+  const isDesktopMac = isMacOS();
   const isMac = isMacOS();
 
   const modMatches = isDesktopMac
@@ -602,5 +601,5 @@ export function getShortcutLabel(id: string): string {
 }
 
 export function getModifierLabel(): string {
-  return isMacOS() && isTauriShell() ? '⌘' : 'Ctrl';
+  return isMacOS() ? '⌘' : 'Ctrl';
 }

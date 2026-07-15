@@ -14,7 +14,6 @@ import { opencodeClient } from '@/lib/opencode/client';
 import { useDeviceInfo } from '@/lib/device';
 import type { AppSettings } from '@/lib/config/settingsTypes';
 import { updateSettings } from '@/lib/config/persistence';
-import { useFileSystemAccess } from '@/hooks/useFileSystemAccess';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 
 interface DirectoryItem {
@@ -64,7 +63,6 @@ export const DirectoryTree: React.FC<DirectoryTreeProps> = ({
   const [newDirName, setNewDirName] = React.useState('');
   const [isPinnedExpanded, setIsPinnedExpanded] = React.useState(true);
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const { requestAccess, startAccessing, isDesktop } = useFileSystemAccess();
   const previousShowHidden = React.useRef(showHidden);
 
   const stripTrailingSlashes = React.useCallback((value: string | null | undefined) => {
@@ -147,21 +145,7 @@ export const DirectoryTree: React.FC<DirectoryTreeProps> = ({
       return;
     }
 
-    if (isDesktop) {
-
-      const accessResult = await requestAccess(path);
-      if (accessResult.success && accessResult.path) {
-
-        await startAccessing(accessResult.path);
-        onSelectPath(accessResult.path);
-      } else {
-        console.error('Failed to get directory access:', accessResult.error);
-
-        onSelectPath(path);
-      }
-    } else {
-      onSelectPath(path);
-    }
+    onSelectPath(path);
   };
 
   React.useEffect(() => {

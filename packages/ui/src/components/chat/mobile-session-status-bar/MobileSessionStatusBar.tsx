@@ -35,7 +35,6 @@ import type { SessionContextUsage } from '@/stores/types/sessionTypes';
 import { PROJECT_ICON_MAP, PROJECT_COLOR_MAP, getProjectIconImageUrl } from '@/lib/project/projectMeta';
 import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { toast } from '@/components/ui';
-import { isTauriShell, isDesktopLocalOriginActive, requestDirectoryAccess } from '@/lib/desktop/desktop';
 import { sessionEvents } from '@/lib/session/sessionEvents';
 import {
   Dialog,
@@ -1397,7 +1396,6 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
   const projects = useProjectsStore((state) => state.projects);
   const activeProjectId = useProjectsStore((state) => state.activeProjectId);
   const setActiveProject = useProjectsStore((state) => state.setActiveProject);
-  const addProject = useProjectsStore((state) => state.addProject);
   const removeProject = useProjectsStore((state) => state.removeProject);
   const getActiveProject = useProjectsStore((state) => state.getActiveProject);
 
@@ -1460,7 +1458,6 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
   const contextUsage = getContextUsage(contextLimit, outputLimit);
 
   const [isExpanded, setIsExpanded] = React.useState(false);
-  const tauriIpcAvailable = React.useMemo(() => isTauriShell(), []);
 
   // Helper for session title
   const getSessionTitleHelper = (session: Session): string => {
@@ -1498,29 +1495,7 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
   };
 
   const handleAddProject = () => {
-    if (!tauriIpcAvailable || !isDesktopLocalOriginActive()) {
-      sessionEvents.requestDirectoryDialog();
-      return;
-    }
-    requestDirectoryAccess('')
-      .then((result) => {
-        if (result.success && result.path) {
-          const added = addProject(result.path, { id: result.projectId });
-          if (!added) {
-            toast.error('Failed to add project', {
-              description: 'Please select a valid directory.',
-            });
-          }
-        } else if (result.error && result.error !== 'Directory selection cancelled') {
-          toast.error('Failed to select directory', {
-            description: result.error,
-          });
-        }
-      })
-      .catch((error) => {
-        console.error('Failed to select directory:', error);
-        toast.error('Failed to select directory');
-      });
+    sessionEvents.requestDirectoryDialog();
   };
 
   if (isMobileSessionStatusBarCollapsed) {

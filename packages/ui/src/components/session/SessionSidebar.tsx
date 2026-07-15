@@ -3,8 +3,6 @@ import type { Session } from '@/lib/opencode/client';
 import { RiLayoutLeftLine } from '@remixicon/react';
 import { toast } from '@/components/ui';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { isDesktopLocalOriginActive, isDesktopShell, isTauriShell } from '@/lib/desktop/desktop';
-import { isDesktopWindowFullscreen as getDesktopWindowFullscreen, onDesktopWindowResized, startDesktopWindowDrag } from '@/lib/desktop/desktopNative';
 import { sessionEvents } from '@/lib/session/sessionEvents';
 import { formatDirectoryName, cn } from '@/lib/utils';
 import { useSessionUIStore } from '@/sync/session-ui-store';
@@ -15,7 +13,6 @@ import { useSessionPrefetch } from './sidebar/hooks/useSessionPrefetch';
 import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { useLayoutStore } from '@/stores/useLayoutStore';
 import { useNavigationStore } from '@/stores/useNavigationStore';
-import { useUIStore } from '@/stores/useUIStore';
 import { useContextPanelStore } from '@/stores/useContextPanelStore';
 import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
 import { useNotificationSettingsStore } from '@/stores/useNotificationSettingsStore';
@@ -88,11 +85,9 @@ import { subscribeOpenchamberEvents } from '@/lib/config/openchamberEvents';
  */
 function ActiveNowLiveSessions({
   sessions,
-  safeStorage,
   onLiveSessionsDerived,
 }: {
   sessions: Session[];
-  safeStorage: Storage;
   onLiveSessionsDerived: (liveSessions: Session[]) => void;
 }): null {
   const allStatuses = useAllSessionStatuses();
@@ -252,7 +247,6 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
 
   const projects = useProjectsStore((state) => state.projects);
   const activeProjectId = useProjectsStore((state) => state.activeProjectId);
-  const addProject = useProjectsStore((state) => state.addProject);
   const removeProject = useProjectsStore((state) => state.removeProject);
   const setActiveProjectIdOnly = useProjectsStore((state) => state.setActiveProjectIdOnly);
   const updateProjectMeta = useProjectsStore((state) => state.updateProjectMeta);
@@ -416,82 +410,6 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
     };
   }, []);
 
-  const tauriIpcAvailable = React.useMemo(() => isTauriShell(), []);
-  const isDesktopShellRuntime = React.useMemo(() => isDesktopShell(), []);
-  const [isDesktopWindowFullscreen, setIsDesktopWindowFullscreen] = React.useState(false);
-
-  const isMacPlatform = React.useMemo(() => {
-    if (typeof navigator === 'undefined') {
-      return false;
-    }
-    return /Macintosh|Mac OS X/.test(navigator.userAgent || '');
-  }, []);
-  const isWebRuntime = !mobileVariant && !isDesktopShellRuntime;
-  const showDesktopSidebarChrome = !mobileVariant && !isWebRuntime;
-  const desktopSidebarTopPaddingClass = isDesktopShellRuntime && isMacPlatform && !isDesktopWindowFullscreen ? 'pl-[5.5rem]' : 'pl-3';
-  const desktopSidebarToggleButtonClass = 'app-region-no-drag inline-flex h-8 w-8 items-center justify-center rounded-md typography-ui-label font-medium text-foreground transition-colors hover:bg-interactive-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-50';
-
-  React.useEffect(() => {
-    if (!isDesktopShellRuntime || !isMacPlatform) {
-      setIsDesktopWindowFullscreen(false);
-      return;
-    }
-
-    let disposed = false;
-    let unlistenResize: (() => void) | null = null;
-
-    const syncFullscreenState = async () => {
-      try {
-        const fullscreen = await getDesktopWindowFullscreen();
-        if (!disposed) {
-          setIsDesktopWindowFullscreen(fullscreen);
-        }
-      } catch {
-        if (!disposed) {
-          setIsDesktopWindowFullscreen(false);
-        }
-      }
-    };
-
-    const attach = async () => {
-      try {
-        unlistenResize = onDesktopWindowResized(() => {
-          void syncFullscreenState();
-        });
-      } catch {
-        // Ignore listener setup failures; fallback state remains false.
-      }
-    };
-
-    void syncFullscreenState();
-    void attach();
-
-    return () => {
-      disposed = true;
-      if (unlistenResize) {
-        unlistenResize();
-      }
-    };
-  }, [isDesktopShellRuntime, isMacPlatform]);
-
-  const handleDesktopSidebarDragStart = React.useCallback(async (event: React.MouseEvent) => {
-    const target = event.target as HTMLElement;
-    if (target.closest('.app-region-no-drag')) {
-      return;
-    }
-    if (target.closest('button, a, input, select, textarea')) {
-      return;
-    }
-    if (event.button !== 0) {
-      return;
-    }
-    if (!isDesktopShellRuntime) {
-      return;
-    }
-
-    await startDesktopWindowDrag();
-  }, [isDesktopShellRuntime]);
-
   const {
     buildGroupSearchText,
     filterSessionNodesForSearch,
@@ -619,9 +537,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
     setSettingsDialogOpen(true);
   }, [mobileVariant, setSessionSwitcherOpen, setSettingsDialogOpen]);
 
-  const showSidebarUpdateButton =
-    updateStore.available &&
-    (updateStore.runtimeType === 'desktop' || updateStore.runtimeType === 'web');
+  const showSidebarUpdateButton = updateStore.available;
 
   const deleteSession = useSessionUIStore((state) => state.deleteSession);
   const deleteSessions = useSessionUIStore((state) => state.deleteSessions);
@@ -680,32 +596,8 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
   }, [deleteFolderConfirm, deleteFolder]);
 
   const handleOpenDirectoryDialog = React.useCallback(() => {
-    if (!tauriIpcAvailable || !isDesktopLocalOriginActive()) {
-      sessionEvents.requestDirectoryDialog();
-      return;
-    }
-
-    import('@/lib/desktop/desktop')
-      .then(({ requestDirectoryAccess }) => requestDirectoryAccess(''))
-      .then((result) => {
-        if (result.success && result.path) {
-          const added = addProject(result.path, { id: result.projectId });
-          if (!added) {
-            toast.error('Failed to add project', {
-              description: 'Please select a valid directory.',
-            });
-          }
-        } else if (result.error && result.error !== 'Directory selection cancelled') {
-          toast.error('Failed to select directory', {
-            description: result.error,
-          });
-        }
-      })
-      .catch((error) => {
-        console.error('Desktop: Error selecting directory:', error);
-        toast.error('Failed to select directory');
-      });
-  }, [addProject, tauriIpcAvailable]);
+    sessionEvents.requestDirectoryDialog();
+  }, []);
 
   // Auto-expand parent session when navigating to a subagent (child) session
   React.useEffect(() => {
@@ -1174,7 +1066,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
   const headerActionButtonClass = mobileVariant ? mobileHeaderActionButtonClass : desktopHeaderActionButtonClass;
   const headerActionIconClass = 'h-4.5 w-4.5';
   const stuckProjectHeaders = useStickyProjectHeaders({
-    isDesktopShellRuntime,
+    isDesktopLayout: !mobileVariant,
     projectSections,
     projectHeaderSentinelRefs,
   });
@@ -1559,15 +1451,12 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
       {/* ActiveNowLiveSessions owns the useAllSessionStatuses() subscription for active-now detection */}
       <ActiveNowLiveSessions
         sessions={sessions}
-        safeStorage={safeStorage}
         onLiveSessionsDerived={handleLiveSessionsDerived}
       />
-      {showDesktopSidebarChrome ? (
+      {!mobileVariant ? (
         <div
-          onMouseDown={handleDesktopSidebarDragStart}
           className={cn(
-            'app-region-drag flex h-[var(--oc-header-height,56px)] flex-shrink-0 items-center pr-3',
-            desktopSidebarTopPaddingClass,
+            'flex h-[var(--oc-header-height,56px)] flex-shrink-0 items-center pl-3 pr-3',
           )}
         >
           <Tooltip>
@@ -1575,7 +1464,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
               <button
                 type="button"
                 onClick={toggleSidebar}
-                className={desktopSidebarToggleButtonClass}
+                 className="inline-flex h-8 w-8 items-center justify-center rounded-md typography-ui-label font-medium text-foreground transition-colors hover:bg-interactive-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-50"
                 aria-label="Close sessions"
               >
                 <RiLayoutLeftLine className="h-[18px] w-[18px]" />
@@ -1609,7 +1498,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
         openScheduledTasksDialog={() => setScheduledTasksDialogOpen(true)}
         selectionModeEnabled={selectionModeEnabled}
         onToggleSelectionMode={handleToggleSelectionMode}
-        showSidebarToggle={isWebRuntime}
+         showSidebarToggle={!mobileVariant}
         onToggleSidebar={toggleSidebar}
       />
 
@@ -1627,7 +1516,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
         collapsedProjects={collapsedProjects}
         hideDirectoryControls={hideDirectoryControls}
         projectRepoStatus={projectRepoStatus}
-        isDesktopShellRuntime={isDesktopShellRuntime}
+         isDesktopLayout={!mobileVariant}
         stuckProjectHeaders={stuckProjectHeaders}
         mobileVariant={mobileVariant}
         toggleProject={toggleProject}
@@ -1675,13 +1564,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
         open={updateDialogOpen}
         onOpenChange={setUpdateDialogOpen}
         info={updateStore.info}
-        downloading={updateStore.downloading}
-        downloaded={updateStore.downloaded}
-        progress={updateStore.progress}
         error={updateStore.error}
-        onDownload={updateStore.downloadUpdate}
-        onRestart={updateStore.restartToUpdate}
-        runtimeType={updateStore.runtimeType}
       />
 
       {editingProject ? (

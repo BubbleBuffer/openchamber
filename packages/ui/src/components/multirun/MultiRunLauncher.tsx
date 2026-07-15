@@ -21,11 +21,9 @@ import { BranchSelector, useBranchOptions } from './BranchSelector';
 import { AgentSelector } from './AgentSelector';
 import { CommandAutocomplete, type CommandAutocompleteHandle, type CommandInfo } from '@/components/chat/autocomplete/CommandAutocomplete';
 import { FileMentionAutocomplete, type FileMentionHandle } from '@/components/chat/autocomplete/FileMentionAutocomplete';
-import { isDesktopShell } from '@/lib/desktop/desktop';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { PROJECT_ICON_MAP, PROJECT_COLOR_MAP, getProjectIconImageUrl } from '@/lib/project/projectMeta';
 import type { ProjectEntry } from '@/lib/api/types';
-import { startDesktopWindowDrag } from '@/lib/desktop/desktopNative';
 
 /** Max file size in bytes (10MB) */
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -191,86 +189,6 @@ export const MultiRunLauncher: React.FC<MultiRunLauncherProps> = ({
 
     return { id: `path:${base}`, path: base };
   }, [selectedProject, currentDirectory]);
-
-  const [isDesktopApp, setIsDesktopApp] = React.useState<boolean>(() => {
-    if (typeof window === 'undefined') {
-      return false;
-    }
-    return isDesktopShell();
-  });
-
-  const isMacPlatform = React.useMemo(() => {
-    if (typeof navigator === 'undefined') {
-      return false;
-    }
-    return /Macintosh|Mac OS X/.test(navigator.userAgent || '');
-  }, []);
-
-  React.useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    setIsDesktopApp(isDesktopShell());
-  }, []);
-
-  const macosMajorVersion = React.useMemo(() => {
-    if (typeof window === 'undefined') {
-      return null;
-    }
-
-    const injected = (window as unknown as { __OPENCHAMBER_MACOS_MAJOR__?: unknown }).__OPENCHAMBER_MACOS_MAJOR__;
-    if (typeof injected === 'number' && Number.isFinite(injected) && injected > 0) {
-      return injected;
-    }
-
-    // Fallback: WebKit reports "Mac OS X 10_15_7" format where 10 is legacy prefix
-    if (typeof navigator === 'undefined') {
-      return null;
-    }
-    const match = (navigator.userAgent || '').match(/Mac OS X (\d+)[._](\d+)/);
-    if (!match) {
-      return null;
-    }
-    const first = Number.parseInt(match[1], 10);
-    const second = Number.parseInt(match[2], 10);
-    if (Number.isNaN(first)) {
-      return null;
-    }
-    return first === 10 ? second : first;
-  }, []);
-
-  const desktopHeaderPaddingClass = React.useMemo(() => {
-    if (isDesktopApp && isMacPlatform) {
-      // Match main app header: reserve space for Mac traffic lights.
-      return 'pl-[5.5rem]';
-    }
-    return 'pl-3';
-  }, [isDesktopApp, isMacPlatform]);
-
-  const macosHeaderSizeClass = React.useMemo(() => {
-    if (!isDesktopApp || !isMacPlatform || macosMajorVersion === null) {
-      return '';
-    }
-    if (macosMajorVersion >= 26) {
-      return 'h-12';
-    }
-    if (macosMajorVersion <= 15) {
-      return 'h-14';
-    }
-    return '';
-  }, [isDesktopApp, isMacPlatform, macosMajorVersion]);
-
-  const handleDragStart = React.useCallback(async (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('button, a, input, select, textarea')) {
-      return;
-    }
-    if (e.button !== 0) {
-      return;
-    }
-    if (isDesktopApp) {
-      await startDesktopWindowDrag();
-    }
-  }, [isDesktopApp]);
 
   // Handle ESC key to dismiss
   React.useEffect(() => {
@@ -580,12 +498,7 @@ export const MultiRunLauncher: React.FC<MultiRunLauncherProps> = ({
     <form onSubmit={handleSubmit} className="flex flex-col h-full bg-background">
       {!isWindowed ? (
         <header
-          onMouseDown={handleDragStart}
-          className={cn(
-            'relative flex h-12 shrink-0 items-center justify-center border-b app-region-drag select-none',
-            desktopHeaderPaddingClass,
-            macosHeaderSizeClass,
-          )}
+          className="relative flex h-12 shrink-0 items-center justify-center border-b select-none"
           style={{ borderColor: 'var(--interactive-border)' }}
         >
           <h1 className="typography-ui-label font-medium">New Multi-Run</h1>

@@ -9,11 +9,6 @@ vi.mock("@/lib/device", () => ({
   getDeviceInfo: () => ({ isMobile: false, isTablet: false, deviceType: "desktop" }),
 }))
 
-vi.mock("@/lib/desktop/desktop", () => ({
-  isDesktopShell: () => false,
-  isWebRuntime: () => true,
-}))
-
 vi.mock("@/components/sections/projects/ProjectsPage", () => ({ ProjectsPage: () => <section aria-label="Projects page">Projects page</section> }))
 vi.mock("@/components/sections/projects/ProjectsSidebar", () => ({ ProjectsSidebar: ({ onItemSelect }: { onItemSelect?: () => void }) => <button type="button" onClick={onItemSelect}>Project item</button> }))
 vi.mock("@/components/sections/agents/AgentsPage", () => ({ AgentsPage: () => <section aria-label="Agents page">Agents page</section> }))

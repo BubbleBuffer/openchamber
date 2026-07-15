@@ -8,7 +8,6 @@ import {
   RiFolder3Fill,
   RiFolderAddLine,
   RiFolderOpenFill,
-  RiFolderReceivedLine,
   RiLoader4Line,
   RiMore2Fill,
   RiRefreshLine,
@@ -47,8 +46,7 @@ import { useGitStatus } from '@/stores/git/useGitStore';
 import { useDirectoryShowHidden } from '@/lib/files/directoryShowHidden';
 import { useFilesViewShowGitignored } from '@/lib/files/filesViewShowGitignored';
 import { copyTextToClipboard } from '@/lib/clipboard';
-import { cn, getRevealLabel } from '@/lib/utils';
-import { opencodeClient } from '@/lib/opencode/client';
+import { cn } from '@/lib/utils';
 import { FileTypeIcon } from '@/components/icons/FileTypeIcon';
 import { getContextFileOpenFailureMessage, validateContextFileOpen } from '@/lib/files/contextFileOpenGuard';
 
@@ -146,14 +144,12 @@ interface FileRowProps {
     canCreateFile: boolean;
     canCreateFolder: boolean;
     canDelete: boolean;
-    canReveal: boolean;
   };
   downloadFile?: (path: string) => Promise<void>;
   contextMenuPath: string | null;
   setContextMenuPath: (path: string | null) => void;
   onSelect: (node: FileNode) => void;
   onToggle: (path: string) => void;
-  onRevealPath: (path: string) => void;
   onOpenDialog: (type: 'createFile' | 'createFolder' | 'rename' | 'delete', data: { path: string; name?: string; type?: 'file' | 'directory' }) => void;
 }
 
@@ -170,18 +166,17 @@ const FileRow: React.FC<FileRowProps> = ({
   setContextMenuPath,
   onSelect,
   onToggle,
-  onRevealPath,
   onOpenDialog,
 }) => {
   const isDir = node.type === 'directory';
-  const { canRename, canCreateFile, canCreateFolder, canDelete, canReveal } = permissions;
+  const { canRename, canCreateFile, canCreateFolder, canDelete } = permissions;
   const { isMobile } = useDeviceInfo();
 
   const handleContextMenu = React.useCallback((event?: React.MouseEvent) => {
-    if (!canRename && !canCreateFile && !canCreateFolder && !canDelete && !canReveal) return;
+    if (!canRename && !canCreateFile && !canCreateFolder && !canDelete) return;
     event?.preventDefault();
     setContextMenuPath(node.path);
-  }, [canRename, canCreateFile, canCreateFolder, canDelete, canReveal, node.path, setContextMenuPath]);
+  }, [canRename, canCreateFile, canCreateFolder, canDelete, node.path, setContextMenuPath]);
 
   const handleInteraction = React.useCallback(() => {
     if (isDir) {
@@ -240,7 +235,7 @@ const FileRow: React.FC<FileRowProps> = ({
           </span>
         )}
       </button>
-      {(canRename || canCreateFile || canCreateFolder || canDelete || canReveal) && (
+      {(canRename || canCreateFile || canCreateFolder || canDelete) && (
         <div className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 focus-within:opacity-100 group-hover:opacity-100">
           <DropdownMenu
             open={contextMenuPath === node.path}
@@ -282,11 +277,6 @@ const FileRow: React.FC<FileRowProps> = ({
                   <RiDownloadLine className="mr-2 h-4 w-4" /> Save
                 </DropdownMenuItem>
               )}
-              {canReveal && (
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRevealPath(node.path); }}>
-                  <RiFolderReceivedLine className="mr-2 h-4 w-4" /> {getRevealLabel()}
-                </DropdownMenuItem>
-              )}
               {isDir && (canCreateFile || canCreateFolder) && (
                 <>
                   <DropdownMenuSeparator />
@@ -324,7 +314,7 @@ const FileRow: React.FC<FileRowProps> = ({
 // --- Main component ---
 
 export const SidebarFilesTree: React.FC = () => {
-  const { files, runtime } = useRuntimeAPIs();
+  const { files } = useRuntimeAPIs();
   const currentDirectory = useEffectiveDirectory() ?? '';
   const root = normalizePath(currentDirectory.trim());
   const showHidden = useDirectoryShowHidden();
@@ -372,15 +362,6 @@ export const SidebarFilesTree: React.FC = () => {
   const canCreateFolder = Boolean(files.createDirectory);
   const canRename = Boolean(files.rename);
   const canDelete = Boolean(files.delete);
-  const canReveal = Boolean(files.revealPath);
-
-  const handleRevealPath = React.useCallback((targetPath: string) => {
-    if (!files.revealPath) return;
-    void files.revealPath(targetPath).catch(() => {
-      toast.error('Failed to reveal path');
-    });
-  }, [files]);
-
   const handleOpenDialog = React.useCallback((type: 'createFile' | 'createFolder' | 'rename' | 'delete', data: { path: string; name?: string; type?: 'file' | 'directory' }) => {
     setActiveDialog(type);
     setDialogData(data);
@@ -419,13 +400,7 @@ export const SidebarFilesTree: React.FC = () => {
     inFlightDirsRef.current.add(normalizedDir);
 
     const respectGitignore = !showGitignored;
-    const listPromise = runtime.isDesktop
-      ? files.listDirectory(normalizedDir, { respectGitignore }).then((result) => result.entries.map((entry) => ({
-        name: entry.name,
-        path: entry.path,
-        isDirectory: entry.isDirectory,
-      })))
-      : opencodeClient.listLocalDirectory(normalizedDir, { respectGitignore }).then((result) => result.map((entry) => ({
+    const listPromise = files.listDirectory(normalizedDir, { respectGitignore }).then((result) => result.entries.map((entry) => ({
         name: entry.name,
         path: entry.path,
         isDirectory: entry.isDirectory,
@@ -449,7 +424,7 @@ export const SidebarFilesTree: React.FC = () => {
         inFlightDirsRef.current = new Set(inFlightDirsRef.current);
         inFlightDirsRef.current.delete(normalizedDir);
       });
-  }, [files, mapDirectoryEntries, runtime.isDesktop, showGitignored]);
+  }, [files, mapDirectoryEntries, showGitignored]);
 
   const refreshRoot = React.useCallback(async () => {
     if (!root) return;
@@ -787,13 +762,12 @@ export const SidebarFilesTree: React.FC = () => {
             isActive={isActive}
             status={!isDir ? getFileStatus(node.path) : undefined}
             badge={isDir ? getFolderBadge(node.path) : undefined}
-            permissions={{ canRename, canCreateFile, canCreateFolder, canDelete, canReveal }}
+            permissions={{ canRename, canCreateFile, canCreateFolder, canDelete }}
             downloadFile={files.downloadFile}
             contextMenuPath={contextMenuPath}
             setContextMenuPath={setContextMenuPath}
             onSelect={handleOpenFile}
             onToggle={toggleDirectory}
-            onRevealPath={handleRevealPath}
             onOpenDialog={handleOpenDialog}
           />
           {isDir && isExpanded && (

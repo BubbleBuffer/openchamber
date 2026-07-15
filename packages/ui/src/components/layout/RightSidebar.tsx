@@ -1,7 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { useLayoutStore } from '@/stores/useLayoutStore';
-import { isDesktopShell, startDesktopWindowDrag } from '@/lib/desktop/desktop';
 
 export const RIGHT_SIDEBAR_CONTENT_WIDTH = 420;
 const RIGHT_SIDEBAR_MIN_WIDTH = 400;
@@ -17,7 +16,6 @@ interface RightSidebarProps {
 export const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, children, className, onTopActionsHostChange }) => {
   const rightSidebarWidth = useLayoutStore((state) => state.rightSidebarWidth);
   const setRightSidebarWidth = useLayoutStore((state) => state.setRightSidebarWidth);
-  const isDesktopApp = React.useMemo(() => isDesktopShell(), []);
   const [isResizing, setIsResizing] = React.useState(false);
   const startXRef = React.useRef(0);
   const startWidthRef = React.useRef(rightSidebarWidth || 420);
@@ -108,34 +106,12 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, children, cl
     }
   }, [isOpen, onTopActionsHostChange]);
 
-  const handleDragStart = React.useCallback(async (event: React.MouseEvent) => {
-    const target = event.target as HTMLElement;
-    if (target.closest('.app-region-no-drag')) {
-      return;
-    }
-    if (target.closest('button, a, input, select, textarea')) {
-      return;
-    }
-    if (event.button !== 0) {
-      return;
-    }
-    if (!isDesktopApp) {
-      return;
-    }
-
-    await startDesktopWindowDrag();
-  }, [isDesktopApp]);
-
   const webWindowControlsOverlayStyle = React.useMemo<React.CSSProperties | undefined>(() => {
-    if (isDesktopApp) {
-      return undefined;
-    }
-
     return {
       paddingLeft: 'calc(0.75rem + var(--oc-wco-left-inset, 0px))',
       paddingRight: 'calc(0.75rem + var(--oc-wco-right-inset, 0px))',
     };
-  }, [isDesktopApp]);
+  }, []);
 
   return (
     <aside
@@ -158,14 +134,13 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, children, cl
     >
       {isOpen ? (
         <div
-          onMouseDown={handleDragStart}
-          className="app-region-drag absolute inset-x-0 top-0 z-20 flex h-[var(--oc-header-height,56px)] items-center justify-end px-3"
+          className="absolute inset-x-0 top-0 z-20 flex h-[var(--oc-header-height,56px)] items-center justify-end px-3"
           style={webWindowControlsOverlayStyle}
           aria-hidden
         >
           <div
             ref={onTopActionsHostChange}
-            className="app-region-no-drag flex items-center gap-1"
+            className="flex items-center gap-1"
           />
         </div>
       ) : null}

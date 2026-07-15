@@ -1,6 +1,5 @@
 import React from 'react';
 import { toast } from '@/components/ui';
-import { isWebRuntime } from '@/lib/desktop/desktop';
 import { usePwaDetection } from '@/hooks/usePwaDetection';
 import { getSafeSessionStorage } from '@/stores/utils/safeStorage';
 
@@ -17,7 +16,7 @@ export const usePwaInstallPrompt = () => {
   const { browserTab } = usePwaDetection();
 
   React.useEffect(() => {
-    if (typeof window === 'undefined' || !isWebRuntime() || !browserTab) {
+    if (typeof window === 'undefined' || !browserTab) {
       return;
     }
 

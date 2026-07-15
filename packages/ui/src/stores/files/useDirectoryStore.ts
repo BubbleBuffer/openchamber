@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { opencodeClient } from '@/lib/opencode/client';
-import { getDesktopHomeDirectory } from '@/lib/desktop/desktop';
 import { updateSettings } from '@/lib/config/persistence';
 import { useFileSearchStore } from '@/stores/files/useFileSearchStore';
 import { streamDebugEnabled } from '@/stores/utils/streamDebug';
@@ -117,17 +116,6 @@ const getHomeDirectory = () => {
   if (typeof window !== 'undefined') {
     if (cachedHomeDirectory) return cachedHomeDirectory;
 
-    const desktopHome =
-      (typeof window.__OPENCHAMBER_HOME__ === 'string' && window.__OPENCHAMBER_HOME__.length > 0
-        ? window.__OPENCHAMBER_HOME__
-        : null);
-
-    if (desktopHome && desktopHome.length > 0) {
-      cachedHomeDirectory = desktopHome;
-      safeStorage.setItem('homeDirectory', desktopHome);
-      return desktopHome;
-    }
-
     const storedHome = getStoredHomeDirectory();
     if (storedHome) {
       cachedHomeDirectory = storedHome;
@@ -200,16 +188,6 @@ const initializeHomeDirectory = async () => {
     }
   } catch (error) {
     console.warn('Failed to get home directory from system info:', error);
-  }
-
-  try {
-    const desktopHome = await getDesktopHomeDirectory();
-    const resolved = acceptCandidate(desktopHome);
-    if (resolved) {
-      return resolved;
-    }
-  } catch (desktopError) {
-    console.warn('Failed to obtain desktop-integrated home directory:', desktopError);
   }
 
   const fallback = getHomeDirectory();

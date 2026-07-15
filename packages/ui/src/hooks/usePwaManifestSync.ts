@@ -1,7 +1,6 @@
 import React from 'react';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSessions } from '@/sync/sync-context';
-import { isWebRuntime } from '@/lib/desktop/desktop';
 import { PWA_RECENT_SESSIONS_STORAGE_KEY } from '@/lib/pwa';
 
 type RecentSessionShortcut = {
@@ -71,7 +70,7 @@ export const usePwaManifestSync = () => {
   const signature = React.useMemo(() => JSON.stringify(recentShortcuts), [recentShortcuts]);
 
   React.useEffect(() => {
-    if (typeof window === 'undefined' || !isWebRuntime()) {
+    if (typeof window === 'undefined') {
       return;
     }
 

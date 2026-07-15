@@ -23,14 +23,19 @@ const getNotificationRegistration = async (): Promise<ServiceWorkerRegistration 
   }
 
   try {
-    const ready = await Promise.race<ServiceWorkerRegistration | null>([
-      navigator.serviceWorker.ready,
-      new Promise<null>((resolve) => {
-        setTimeout(() => resolve(null), SW_READY_TIMEOUT_MS);
-      }),
-    ]);
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const ready = await Promise.race<ServiceWorkerRegistration | null>([
+        navigator.serviceWorker.ready,
+        new Promise<null>((resolve) => {
+          timeoutId = setTimeout(() => resolve(null), SW_READY_TIMEOUT_MS);
+        }),
+      ]);
 
-    return ready ?? existing;
+      return ready ?? existing;
+    } finally {
+      if (timeoutId !== undefined) clearTimeout(timeoutId);
+    }
   } catch {
     return existing;
   }
@@ -55,6 +60,10 @@ const notifyWithServiceWorker = async (payload?: NotificationPayload): Promise<b
 };
 
 const notifyWithWebAPI = async (payload?: NotificationPayload): Promise<boolean> => {
+  if (await notifyWithServiceWorker(payload)) {
+    return true;
+  }
+
   if (typeof Notification === 'undefined') {
     console.info('Notifications not supported in this environment', payload);
     return false;
@@ -74,12 +83,6 @@ const notifyWithWebAPI = async (payload?: NotificationPayload): Promise<boolean>
   }
 
   try {
-    // Some installed PWAs expose Notification.permission but only allow
-    // notifications through an active service worker registration.
-    if (await notifyWithServiceWorker(payload)) {
-      return true;
-    }
-
     new Notification(payload?.title ?? 'OpenChamber', {
       body: payload?.body,
       tag: payload?.tag,
@@ -91,47 +94,11 @@ const notifyWithWebAPI = async (payload?: NotificationPayload): Promise<boolean>
   }
 };
 
-const notifyWithTauri = async (payload?: NotificationPayload): Promise<boolean> => {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-
-  const tauri = (window as unknown as { __TAURI__?: TauriGlobal }).__TAURI__;
-  if (!tauri?.core?.invoke) {
-    return false;
-  }
-
-  try {
-    await tauri.core.invoke('desktop_notify', {
-      payload: {
-        title: payload?.title,
-        body: payload?.body,
-        tag: payload?.tag,
-      },
-    });
-    return true;
-  } catch (error) {
-    console.warn('Failed to send native notification (tauri)', error);
-    return false;
-  }
-};
-
 export const createWebNotificationsAPI = (): NotificationsAPI => ({
   async notifyAgentCompletion(payload?: NotificationPayload): Promise<boolean> {
-    return (await notifyWithTauri(payload)) || (await notifyWithWebAPI(payload));
+    return notifyWithWebAPI(payload);
   },
   canNotify: () => {
-    if (typeof window !== 'undefined') {
-      const tauri = (window as unknown as { __TAURI__?: TauriGlobal }).__TAURI__;
-      if (tauri?.core?.invoke) {
-        return true;
-      }
-    }
     return typeof Notification !== 'undefined' ? Notification.permission === 'granted' : false;
   },
 });
-type TauriGlobal = {
-  core?: {
-    invoke?: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
-  };
-};

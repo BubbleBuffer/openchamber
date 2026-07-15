@@ -6,9 +6,9 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { SimpleMarkdownRenderer } from '@/components/chat/MarkdownRenderer';
-import { RiCheckLine, RiClipboardLine, RiDownloadCloudLine, RiDownloadLine, RiExternalLinkLine, RiLoaderLine, RiRestartLine, RiTerminalLine } from '@remixicon/react';
+import { RiCheckLine, RiClipboardLine, RiDownloadCloudLine, RiDownloadLine, RiExternalLinkLine, RiLoaderLine, RiTerminalLine } from '@remixicon/react';
 import { cn } from '@/lib/utils';
-import type { UpdateInfo, UpdateProgress } from '@/lib/desktop/desktop';
+import type { UpdateInfo } from '@/lib/config/updateTypes';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { openExternalUrl } from '@/lib/url';
 
@@ -18,14 +18,7 @@ interface UpdateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   info: UpdateInfo | null;
-  downloading: boolean;
-  downloaded: boolean;
-  progress: UpdateProgress | null;
   error: string | null;
-  onDownload: () => void;
-  onRestart: () => void;
-  /** Runtime type to show different UI for desktop vs web */
-  runtimeType?: 'desktop' | 'web' | null;
 }
 
 const GITHUB_RELEASES_URL = 'https://github.com/btriapitsyn/openchamber/releases';
@@ -191,13 +184,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
   open,
   onOpenChange,
   info,
-  downloading,
-  downloaded,
-  progress,
   error,
-  onDownload,
-  onRestart,
-  runtimeType = 'desktop',
 }) => {
   const [copied, setCopied] = useState(false);
   const [webUpdateState, setWebUpdateState] = useState<WebUpdateState>('idle');
@@ -207,11 +194,6 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
     ? `${GITHUB_RELEASES_URL}/tag/v${info.version}`
     : GITHUB_RELEASES_URL;
 
-  const progressPercent = progress?.total
-    ? Math.round((progress.downloaded / progress.total) * 100)
-    : 0;
-
-  const isWebRuntime = runtimeType === 'web';
   const updateCommand = info?.updateCommand || 'openchamber update';
 
   // Reset state when dialog closes
@@ -330,8 +312,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
         {/* Content Body */}
         <div className="space-y-2">
 
-          {/* Web update progress */}
-          {isWebRuntime && isWebUpdating && (
+          {isWebUpdating && (
             <div className="rounded-lg bg-[var(--surface-elevated)]/30 p-5 border border-[var(--surface-subtle)]">
               <div className="flex items-center gap-3">
                 <RiLoaderLine className="h-5 w-5 animate-spin text-[var(--primary-base)]" />
@@ -404,7 +385,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
           )}
 
           {/* Web runtime fallback command */}
-          {isWebRuntime && webUpdateState === 'error' && (
+          {webUpdateState === 'error' && (
             <div className="space-y-2 mt-4">
               <div className="flex items-center gap-2 typography-meta text-muted-foreground">
                 <RiTerminalLine className="h-4 w-4" />
@@ -434,22 +415,6 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
             </div>
           )}
 
-          {/* Desktop progress bar */}
-          {!isWebRuntime && downloading && (
-            <div className="space-y-2 mt-4">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Downloading update payload...</span>
-                <span className="font-mono text-foreground">{progressPercent}%</span>
-              </div>
-              <div className="h-1.5 bg-[var(--surface-subtle)] rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[var(--primary-base)] transition-all duration-300"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-            </div>
-          )}
-
           {/* Error display */}
           {(error || webError) && (
             <div className="p-3 mt-4 bg-[var(--status-error-background)] border border-[var(--status-error-border)] rounded-lg">
@@ -471,39 +436,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
           </a>
 
           <div className="flex-1 flex justify-end">
-            {/* Desktop Buttons */}
-            {!isWebRuntime && !downloaded && !downloading && (
-              <button
-                onClick={onDownload}
-                className="flex items-center justify-center gap-2 px-5 py-2 rounded-md text-sm font-medium bg-[var(--primary-base)] text-[var(--primary-foreground)] hover:opacity-90 transition-opacity"
-              >
-                <RiDownloadLine className="h-4 w-4" />
-                Download Update
-              </button>
-            )}
-
-            {!isWebRuntime && downloading && (
-              <button
-                disabled
-                className="flex items-center justify-center gap-2 px-5 py-2 rounded-md text-sm font-medium bg-[var(--primary-base)]/50 text-[var(--primary-foreground)] cursor-not-allowed"
-              >
-                <RiLoaderLine className="h-4 w-4 animate-spin" />
-                Downloading...
-              </button>
-            )}
-
-            {!isWebRuntime && downloaded && (
-              <button
-                onClick={onRestart}
-                className="flex items-center justify-center gap-2 px-5 py-2 rounded-md text-sm font-medium bg-[var(--status-success)] text-white hover:opacity-90 transition-opacity"
-              >
-                <RiRestartLine className="h-4 w-4" />
-                Restart to Update
-              </button>
-            )}
-
-            {/* Web Buttons */}
-            {isWebRuntime && !isWebUpdating && (
+            {!isWebUpdating && (
               <button
                 onClick={handleWebUpdate}
                 className="flex items-center justify-center gap-2 px-5 py-2 rounded-md text-sm font-medium bg-[var(--primary-base)] text-[var(--primary-foreground)] hover:opacity-90 transition-opacity"
@@ -513,7 +446,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
               </button>
             )}
 
-            {isWebRuntime && isWebUpdating && (
+            {isWebUpdating && (
               <button
                 disabled
                 className="flex items-center justify-center gap-2 px-5 py-2 rounded-md text-sm font-medium bg-[var(--primary-base)]/50 text-[var(--primary-foreground)] cursor-not-allowed"

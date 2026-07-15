@@ -11,7 +11,6 @@ import { OpenCodeCliSettings } from './OpenCodeCliSettings';
 import { KeyboardShortcutsSettings } from './KeyboardShortcutsSettings';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { useDeviceInfo } from '@/lib/device';
-import { isWebRuntime } from '@/lib/desktop/desktop';
 import type { OpenChamberSection } from './types';
 
 interface OpenChamberPageProps {
@@ -21,7 +20,7 @@ interface OpenChamberPageProps {
 
 export const OpenChamberPage: React.FC<OpenChamberPageProps> = ({ section }) => {
     const { isMobile } = useDeviceInfo();
-    const showAbout = isMobile && isWebRuntime();
+    const showAbout = isMobile;
 
     // If no section specified, show all (mobile/legacy behavior)
     if (!section) {

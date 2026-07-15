@@ -33,7 +33,7 @@ export interface SortableProjectItemProps {
   isCollapsed: boolean;
   isActiveProject: boolean;
   isRepo: boolean;
-  isDesktopShell: boolean;
+  isDesktopLayout: boolean;
   isStuck: boolean;
   hideDirectoryControls: boolean;
   mobileVariant: boolean;
@@ -66,7 +66,7 @@ export const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
   isCollapsed,
   isActiveProject,
   isRepo,
-  isDesktopShell,
+  isDesktopLayout,
   isStuck,
   hideDirectoryControls,
   mobileVariant,
@@ -148,7 +148,7 @@ export const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
     >
       {!hideHeader ? (
         <>
-          {isDesktopShell && (
+          {isDesktopLayout && (
             <div
               ref={sentinelRef}
               data-project-id={id}
@@ -161,7 +161,7 @@ export const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
             className={cn(
               'w-full text-left group/project select-none',
             )}
-            style={{ backgroundColor: isDesktopShell && isStuck ? 'transparent' : undefined }}
+            style={{ backgroundColor: isDesktopLayout && isStuck ? 'transparent' : undefined }}
           >
             <div className="relative flex items-center gap-1 px-0.5 py-0.5" {...attributes}>
               <Tooltip delayDuration={1500}>

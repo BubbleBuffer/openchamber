@@ -1,7 +1,4 @@
 import type { Message, Part } from '@/lib/opencode/client';
-import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
-import { openDesktopPath, revealDesktopPath, saveDesktopMarkdownFile } from '@/lib/desktop/desktop';
-import { getRevealLabel } from '@/lib/utils';
 
 type SessionMessageRecord = { info: Message; parts: Part[] };
 
@@ -92,37 +89,6 @@ export function downloadAsMarkdown(content: string, filename: string): void {
   anchor.click();
   document.body.removeChild(anchor);
   URL.revokeObjectURL(url);
-}
-
-export async function saveAsMarkdownDesktop(content: string, filename: string): Promise<string | null> {
-  const desktopPath = await saveDesktopMarkdownFile(filename, content);
-  if (desktopPath) {
-    return desktopPath;
-  }
-
-  return null;
-}
-
-export async function revealExportedMarkdown(path: string): Promise<boolean> {
-  const runtimeFiles = getRegisteredRuntimeAPIs()?.files;
-  if (runtimeFiles?.revealPath) {
-    try {
-      const result = await runtimeFiles.revealPath(path);
-      return Boolean(result?.success);
-    } catch {
-      return false;
-    }
-  }
-
-  if (await revealDesktopPath(path)) {
-    return true;
-  }
-
-  return openDesktopPath(path);
-}
-
-export function getExportRevealLabel(): string {
-  return getRevealLabel();
 }
 
 export function buildExportFilename(sessionTitle?: string | null): string {

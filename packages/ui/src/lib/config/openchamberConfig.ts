@@ -5,7 +5,6 @@
  */
 
 import type { FilesAPI, RuntimeAPIs } from '../api/types';
-import { getDesktopHomeDirectory } from '../desktop/desktop';
 import { createProjectIdFromPath } from '../project/projectId';
 
 type ProjectRef = { id: string; path: string };
@@ -194,11 +193,6 @@ const writeTextFile = async (path: string, content: string): Promise<boolean> =>
 };
 
 const resolveHomeDirectory = async (): Promise<string | null> => {
-  const desktopHome = await getDesktopHomeDirectory().catch(() => null);
-  if (desktopHome && desktopHome.trim().length > 0) {
-    return normalize(desktopHome);
-  }
-
   try {
     const response = await fetch(`${getBaseUrl()}/fs/home`);
     if (!response.ok) {

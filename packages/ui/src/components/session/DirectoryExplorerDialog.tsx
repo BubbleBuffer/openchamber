@@ -12,7 +12,6 @@ import { Input } from '@/components/ui/input';
 import { DirectoryTree } from './DirectoryTree';
 import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { useProjectsStore } from '@/stores/projects/useProjectsStore';
-import { useFileSystemAccess } from '@/hooks/useFileSystemAccess';
 import { cn, formatPathForDisplay } from '@/lib/utils';
 import { toast } from '@/components/ui';
 import {
@@ -43,7 +42,6 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
   const [hasUserSelection, setHasUserSelection] = React.useState(false);
   const [isConfirming, setIsConfirming] = React.useState(false);
   const showHidden = useDirectoryShowHidden();
-  const { isDesktop, requestAccess, startAccessing } = useFileSystemAccess();
   const { isMobile } = useDeviceInfo();
   const [autocompleteVisible, setAutocompleteVisible] = React.useState(false);
   const autocompleteRef = React.useRef<DirectoryAutocompleteHandle>(null);
@@ -91,30 +89,8 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
     }
     setIsConfirming(true);
     try {
-      let resolvedPath = targetPath;
-      let projectId: string | undefined;
-
-      if (isDesktop) {
-        const accessResult = await requestAccess(targetPath);
-        if (!accessResult.success) {
-          toast.error('Unable to access directory', {
-            description: accessResult.error || 'Desktop denied directory access.',
-          });
-          return;
-        }
-        resolvedPath = accessResult.path ?? targetPath;
-        projectId = accessResult.projectId;
-
-        const startResult = await startAccessing(resolvedPath);
-        if (!startResult.success) {
-          toast.error('Failed to open directory', {
-            description: startResult.error || 'Desktop could not grant file access.',
-          });
-          return;
-        }
-      }
-
-      const added = addProject(resolvedPath, { id: projectId });
+      const resolvedPath = targetPath.trim();
+      const added = addProject(resolvedPath);
       if (!added) {
         toast.error('Failed to add project', {
           description: 'Please select a valid directory path.',
@@ -133,9 +109,6 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
   }, [
     addProject,
     handleClose,
-    isDesktop,
-    requestAccess,
-    startAccessing,
     isConfirming,
   ]);
 

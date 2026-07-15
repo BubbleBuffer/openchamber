@@ -703,16 +703,6 @@ vi.mock("@/lib/opencode/client", () => ({
   },
 }))
 
-vi.mock("@/lib/desktop/desktop", () => ({
-  isTauriShell: () => false,
-  isDesktopShell: () => false,
-  isDesktopLocalOriginActive: () => false,
-  isWebRuntime: () => true,
-  getDesktopHomeDirectory: () => undefined,
-  checkForDesktopUpdates: vi.fn(),
-  downloadDesktopUpdate: vi.fn(),
-}))
-
 vi.mock("@/lib/session/sessionEvents", () => ({
   sessionEvents: {
     onDeleteRequest: vi.fn(() => () => {}),

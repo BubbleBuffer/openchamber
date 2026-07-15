@@ -48,12 +48,6 @@ vi.mock("@/contexts/useThemeSystem", () => ({
   useThemeSystem: () => ({ currentTheme: { id: "test", mode: "dark" } }),
 }))
 
-vi.mock("@/lib/desktop/desktop", () => ({
-  isTauriShell: () => false,
-  isWebRuntime: () => true,
-  getDesktopHomeDirectory: () => undefined,
-}))
-
 vi.mock("@/lib/opencode/client", () => ({
   opencodeClient: {
     getDirectory: () => "/workspace/openchamber",
@@ -61,7 +55,6 @@ vi.mock("@/lib/opencode/client", () => ({
     getFilesystemHome: () => "/home/test",
     getSystemInfo: () => ({}),
     getSdkClient: vi.fn(),
-    getDesktopHomeDirectory: () => undefined,
   },
 }))
 

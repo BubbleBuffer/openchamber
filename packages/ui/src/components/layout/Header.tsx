@@ -64,7 +64,6 @@ import type { UsageWindow } from '@/types';
 import type { GitHubAuthStatus } from '@/lib/api/types';
 import type { SessionContextUsage } from '@/stores/types/sessionTypes';
 import { ProjectActionsButton } from '@/components/layout/ProjectActionsButton';
-import { isDesktopShell, startDesktopWindowDrag } from '@/lib/desktop/desktop';
 import { resolveSessionDiffStats } from '@/components/session/sidebar/utils';
 import type { Session } from '@/lib/opencode/client';
 
@@ -238,7 +237,7 @@ const DesktopGitHubControl = React.memo(function DesktopGitHubControl({
 });
 
 type DesktopServicesMenuProps = {
-  isDesktopApp: boolean;
+  isDesktopLayout: boolean;
   isDesktopServicesOpen: boolean;
   setIsDesktopServicesOpen: React.Dispatch<React.SetStateAction<boolean>>;
   desktopServicesTab: 'usage' | 'mcp';
@@ -261,7 +260,7 @@ type DesktopServicesMenuProps = {
 };
 
 const DesktopServicesMenu = React.memo(function DesktopServicesMenu({
-  isDesktopApp,
+  isDesktopLayout,
   isDesktopServicesOpen,
   setIsDesktopServicesOpen,
   desktopServicesTab,
@@ -302,11 +301,11 @@ const DesktopServicesMenu = React.memo(function DesktopServicesMenu({
               aria-label="Open services, usage and MCP"
               className={cn(
                 DESKTOP_HEADER_ICON_BUTTON_CLASS,
-                isDesktopApp ? 'w-auto max-w-[14rem] justify-start gap-1.5 px-2.5' : 'h-8 w-8'
+                isDesktopLayout ? 'w-auto max-w-[14rem] justify-start gap-1.5 px-2.5' : 'h-8 w-8'
               )}
             >
               <RiStackLine className="h-[18px] w-[18px]" />
-              {isDesktopApp ? <span className="truncate typography-ui-label font-medium text-foreground">Services</span> : null}
+              {isDesktopLayout ? <span className="truncate typography-ui-label font-medium text-foreground">Services</span> : null}
             </button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
@@ -639,53 +638,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const headerRef = React.useRef<HTMLElement | null>(null);
 
-  const [isDesktopApp, setIsDesktopApp] = React.useState<boolean>(() => {
-    if (typeof window === 'undefined') {
-      return false;
-    }
-    return isDesktopShell();
-  });
-  const [isDesktopWindowFullscreen, setIsDesktopWindowFullscreen] = React.useState(false);
-
-  const isMacPlatform = React.useMemo(() => {
-    if (typeof navigator === 'undefined') {
-      return false;
-    }
-    return /Macintosh|Mac OS X/.test(navigator.userAgent || '');
-  }, []);
-
-  const macosMajorVersion = React.useMemo(() => {
-    if (typeof window === 'undefined') {
-      return null;
-    }
-
-    const injected = (window as unknown as { __OPENCHAMBER_MACOS_MAJOR__?: unknown }).__OPENCHAMBER_MACOS_MAJOR__;
-    if (typeof injected === 'number' && Number.isFinite(injected) && injected > 0) {
-      return injected;
-    }
-
-    // Fallback: WebKit reports "Mac OS X 10_15_7" format where 10 is legacy prefix
-    if (typeof navigator === 'undefined') {
-      return null;
-    }
-    const match = (navigator.userAgent || '').match(/Mac OS X (\d+)[._](\d+)/);
-    if (!match) {
-      return null;
-    }
-    const first = Number.parseInt(match[1], 10);
-    const second = Number.parseInt(match[2], 10);
-    if (Number.isNaN(first)) {
-      return null;
-    }
-    return first === 10 ? second : first;
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    setIsDesktopApp(isDesktopShell());
-  }, []);
+  const isDesktopLayout = !isMobile;
 
   const currentModel = getCurrentModel();
   const limit = currentModel && typeof currentModel.limit === 'object' && currentModel.limit !== null
@@ -1208,85 +1161,16 @@ export const Header: React.FC<HeaderProps> = ({
   const desktopHeaderIconButtonClass = DESKTOP_HEADER_ICON_BUTTON_CLASS;
   const mobileHeaderIconButtonClass = MOBILE_HEADER_ICON_BUTTON_CLASS;
 
-  const desktopPaddingClass = React.useMemo(() => {
-    if (!isSidebarOpen && isDesktopApp && isMacPlatform && !isDesktopWindowFullscreen) {
-      return 'pl-[5.5rem]';
-    }
-    return 'pl-3';
-  }, [isDesktopApp, isDesktopWindowFullscreen, isMacPlatform, isSidebarOpen]);
-
-  useEffect(() => {
-    if (!isDesktopApp || !isMacPlatform) {
-      setIsDesktopWindowFullscreen(false);
-      return;
-    }
-
-    let disposed = false;
-    let unlistenResize: (() => void) | null = null;
-
-    const syncFullscreenState = async () => {
-      try {
-        const { getCurrentWindow } = await import('@tauri-apps/api/window');
-        const currentWindow = getCurrentWindow();
-        const fullscreen = await currentWindow.isFullscreen();
-        if (!disposed) {
-          setIsDesktopWindowFullscreen(fullscreen);
-        }
-      } catch {
-        if (!disposed) {
-          setIsDesktopWindowFullscreen(false);
-        }
-      }
-    };
-
-    const attach = async () => {
-      try {
-        const { getCurrentWindow } = await import('@tauri-apps/api/window');
-        const currentWindow = getCurrentWindow();
-        unlistenResize = await currentWindow.onResized(() => {
-          void syncFullscreenState();
-        });
-      } catch {
-        // Ignore listener setup failures; fallback state remains false.
-      }
-    };
-
-    void syncFullscreenState();
-    void attach();
-
-    return () => {
-      disposed = true;
-      if (unlistenResize) {
-        unlistenResize();
-      }
-    };
-  }, [isDesktopApp, isMacPlatform]);
-
-  const macosHeaderSizeClass = React.useMemo(() => {
-    if (!isDesktopApp || !isMacPlatform || macosMajorVersion === null) {
-      return '';
-    }
-    if (macosMajorVersion >= 26) {
-      return 'h-12';
-    }
-    if (macosMajorVersion <= 15) {
-      return 'h-14';
-    }
-    return '';
-  }, [isDesktopApp, isMacPlatform, macosMajorVersion]);
+  const desktopPaddingClass = 'pl-3';
 
   const webWindowControlsOverlayStyle = React.useMemo<React.CSSProperties | undefined>(() => {
-    if (isDesktopApp) {
-      return undefined;
-    }
-
     return {
       paddingLeft: 'calc(0.75rem + var(--oc-wco-left-inset, 0px))',
       paddingRight: 'calc(0.75rem + var(--oc-wco-right-inset, 0px))',
       minHeight: 'max(3rem, var(--oc-wco-titlebar-height, 0px))',
       height: 'max(3rem, var(--oc-wco-titlebar-height, 0px))',
     };
-  }, [isDesktopApp]);
+  }, []);
 
   const updateHeaderHeight = React.useCallback(() => {
     if (typeof document === 'undefined') {
@@ -1336,23 +1220,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   useEffect(() => {
     updateHeaderHeight();
-  }, [updateHeaderHeight, isMobile, macosHeaderSizeClass]);
-
-  const handleDragStart = React.useCallback(async (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.closest('.app-region-no-drag')) {
-      return;
-    }
-    if (target.closest('button, a, input, select, textarea')) {
-      return;
-    }
-    if (e.button !== 0) {
-      return;
-    }
-    if (isDesktopApp) {
-      await startDesktopWindowDrag();
-    }
-  }, [isDesktopApp]);
+  }, [updateHeaderHeight, isMobile]);
 
   const tabs: TabConfig[] = React.useMemo(() => {
     if (isMobile) {
@@ -1560,7 +1428,7 @@ export const Header: React.FC<HeaderProps> = ({
         </Tooltip>
       )}
       <DesktopServicesMenu
-        isDesktopApp={isDesktopApp}
+        isDesktopLayout={isDesktopLayout}
         isDesktopServicesOpen={isDesktopServicesOpen}
         setIsDesktopServicesOpen={setIsDesktopServicesOpen}
         desktopServicesTab={desktopServicesTab}
@@ -1609,11 +1477,9 @@ export const Header: React.FC<HeaderProps> = ({
 
   const renderDesktop = () => (
     <div
-      onMouseDown={handleDragStart}
       className={cn(
-        'app-region-drag relative flex h-12 select-none items-center pr-3',
+        'relative flex h-12 select-none items-center pr-3',
         desktopPaddingClass,
-        macosHeaderSizeClass
       )}
       style={webWindowControlsOverlayStyle}
       role="tablist"

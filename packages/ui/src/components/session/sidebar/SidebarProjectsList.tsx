@@ -43,7 +43,7 @@ type Props = {
   collapsedProjects: Set<string>;
   hideDirectoryControls: boolean;
   projectRepoStatus: Map<string, boolean | null>;
-  isDesktopShellRuntime: boolean;
+  isDesktopLayout: boolean;
   stuckProjectHeaders: Set<string>;
   mobileVariant: boolean;
   toggleProject: (id: string) => void;
@@ -162,7 +162,7 @@ export function SidebarProjectsList(props: Props): React.ReactNode {
                     isCollapsed={isCollapsed}
                     isActiveProject={isActiveProject}
                     isRepo={Boolean(isRepo)}
-                    isDesktopShell={props.isDesktopShellRuntime}
+                    isDesktopLayout={props.isDesktopLayout}
                     isStuck={props.stuckProjectHeaders.has(projectKey)}
                     hideDirectoryControls={props.hideDirectoryControls}
                     mobileVariant={props.mobileVariant}

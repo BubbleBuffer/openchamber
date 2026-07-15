@@ -41,7 +41,7 @@ function getOpenChamberConfigDir(): string {
 }
 
 function sanitizeInstallScope(scope: string): string {
-  if (scope === "desktop-tauri" || scope === "web") return scope;
+  if (scope === "web") return scope;
   return "web";
 }
 
@@ -77,7 +77,7 @@ function mapArch(value: string): string {
 }
 
 function normalizeAppType(value: string): string {
-  if (value === "web" || value === "desktop-tauri") return value;
+  if (value === "web") return value;
   return "web";
 }
 
@@ -376,22 +376,6 @@ function packageManagerOwnsCurrentInstall(pm: string): boolean {
 }
 
 export function detectPackageManagerDetails(): PackageManagerInfo {
-  // In desktop (Electron) runtime, package-manager detection is worthless —
-  // the app ships as a .app bundle, not installed via npm/pnpm/yarn/bun, and
-  // updates are handled by electron-updater. The detection path does up to a
-  // dozen spawnSync(pm, ['bin', '-g']) calls with 10s timeouts each; under
-  // the in-process server every one blocks the Electron main event loop and
-  // manifests as a multi-second UI freeze. Short-circuit here.
-  if (process.env.OPENCHAMBER_RUNTIME === "desktop") {
-    return {
-      packageManager: "electron",
-      reason: "desktop-runtime",
-      packagePath: null,
-      packageManagerCommand: null,
-      globalNodeModulesRoot: null,
-    };
-  }
-
   if (cachedDetectedPm) {
     return {
       packageManager: cachedDetectedPm,

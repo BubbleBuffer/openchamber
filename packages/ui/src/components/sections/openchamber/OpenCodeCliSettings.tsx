@@ -2,8 +2,7 @@ import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { RiFolderLine, RiInformationLine } from '@remixicon/react';
-import { isDesktopShell, isTauriShell } from '@/lib/desktop/desktop';
+import { RiInformationLine } from '@remixicon/react';
 import { updateSettings } from '@/lib/config/persistence';
 import { reloadOpenCodeConfiguration } from '@/stores/agents/useAgentsStore';
 
@@ -40,34 +39,6 @@ export const OpenCodeCliSettings: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  const handleBrowse = React.useCallback(async () => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    if (!isDesktopShell() || !isTauriShell()) {
-      return;
-    }
-
-    const tauri = (window as unknown as { __TAURI__?: { dialog?: { open?: (opts: Record<string, unknown>) => Promise<unknown> } } }).__TAURI__;
-    if (!tauri?.dialog?.open) {
-      return;
-    }
-
-    try {
-      const selected = await tauri.dialog.open({
-        title: 'Select opencode binary',
-        multiple: false,
-        directory: false,
-      });
-      if (typeof selected === 'string' && selected.trim().length > 0) {
-        setValue(selected.trim());
-      }
-    } catch {
-      // ignore
-    }
   }, []);
 
   const handleSaveAndReload = React.useCallback(async () => {
@@ -111,18 +82,6 @@ export const OpenCodeCliSettings: React.FC = () => {
               disabled={isLoading || isSaving}
               className="h-7 min-w-0 flex-1 font-mono text-xs"
             />
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              onClick={handleBrowse}
-              disabled={isLoading || isSaving || !isDesktopShell() || !isTauriShell()}
-              className="h-7 w-7 p-0"
-              aria-label="Browse for OpenCode binary path"
-              title="Browse"
-            >
-              <RiFolderLine className="h-4 w-4" />
-            </Button>
           </div>
         </div>
 

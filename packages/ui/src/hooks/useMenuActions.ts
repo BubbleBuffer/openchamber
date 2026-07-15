@@ -3,14 +3,10 @@ import { toast } from '@/components/ui';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useLayoutStore } from '@/stores/useLayoutStore';
 import { useNavigationStore } from '@/stores/useNavigationStore';
-import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
-import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { sessionEvents } from '@/lib/session/sessionEvents';
-import { isTauriShell } from '@/lib/desktop/desktop';
-import { useFileSystemAccess } from '@/hooks/useFileSystemAccess';
 import { createWorktreeSession } from '@/lib/session/worktreeSessionCreator';
 import { showOpenCodeStatus } from '@/lib/errors/openCodeStatus';
 
@@ -59,17 +55,6 @@ const copyCurrentSelectionFallback = async (): Promise<boolean> => {
 const MENU_ACTION_EVENT = 'openchamber:menu-action';
 const CHECK_FOR_UPDATES_EVENT = 'openchamber:check-for-updates';
 
-type TauriEventApi = {
-  listen?: (
-    event: string,
-    handler: (evt: { payload?: unknown }) => void
-  ) => Promise<() => void>;
-};
-
-type TauriGlobal = {
-  event?: TauriEventApi;
-};
-
 type MenuAction =
   | 'about'
   | 'settings'
@@ -103,9 +88,7 @@ export const useMenuActions = (
   const setActiveMainTab = useNavigationStore((s) => s.setActiveMainTab);
   const setSettingsDialogOpen = useDialogStore((s) => s.setSettingsDialogOpen);
   const setAboutDialogOpen = useDialogStore((s) => s.setAboutDialogOpen);
-  const { addProject } = useProjectsStore();
   const checkForUpdates = useUpdateStore((state) => state.checkForUpdates);
-  const { requestAccess, startAccessing } = useFileSystemAccess();
   const { setThemeMode } = useThemeSystem();
   const checkUpdatesInFlightRef = React.useRef(false);
 
@@ -135,41 +118,8 @@ export const useMenuActions = (
   }, [checkForUpdates]);
 
   const handleChangeWorkspace = React.useCallback(() => {
-    if (isTauriShell()) {
-      requestAccess('')
-        .then(async (result) => {
-          if (!result.success || !result.path) {
-            if (result.error && result.error !== 'Directory selection cancelled') {
-              toast.error('Failed to select directory', {
-                description: result.error,
-              });
-            }
-            return;
-          }
-
-          const accessResult = await startAccessing(result.path);
-          if (!accessResult.success) {
-            toast.error('Failed to open directory', {
-              description: accessResult.error || 'Desktop could not grant file access.',
-            });
-            return;
-          }
-
-          const added = addProject(result.path, { id: result.projectId });
-          if (!added) {
-            toast.error('Failed to add project', {
-              description: 'Please select a valid directory path.',
-            });
-          }
-        })
-        .catch((error) => {
-          console.error('Desktop: Error selecting directory:', error);
-          toast.error('Failed to select directory');
-        });
-    }
-
     sessionEvents.requestDirectoryDialog();
-  }, [addProject, requestAccess, startAccessing]);
+  }, []);
 
   const handleAction = React.useCallback(
     (action: MenuAction) => {
@@ -306,53 +256,4 @@ export const useMenuActions = (
     };
   }, [handleAction, handleCheckForUpdates]);
 
-  React.useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const tauri = (window as unknown as { __TAURI__?: TauriGlobal }).__TAURI__;
-    const listen = tauri?.event?.listen;
-    if (typeof listen !== 'function') return;
-
-    let unlistenMenu: null | (() => void | Promise<void>) = null;
-    let unlistenUpdate: null | (() => void | Promise<void>) = null;
-
-    listen('openchamber:menu-action', (evt) => {
-      const action = evt?.payload;
-      if (typeof action !== 'string') return;
-      handleAction(action as MenuAction);
-    })
-      .then((fn) => {
-        unlistenMenu = fn;
-      })
-      .catch(() => {
-        // ignore
-      });
-
-    listen('openchamber:check-for-updates', () => {
-      window.dispatchEvent(new Event(CHECK_FOR_UPDATES_EVENT));
-    })
-      .then((fn) => {
-        unlistenUpdate = fn;
-      })
-      .catch(() => {
-        // ignore
-      });
-
-    return () => {
-      const cleanup = async () => {
-        try {
-          const a = unlistenMenu?.();
-          if (a instanceof Promise) await a;
-        } catch {
-          // ignore
-        }
-        try {
-          const b = unlistenUpdate?.();
-          if (b instanceof Promise) await b;
-        } catch {
-          // ignore
-        }
-      };
-      void cleanup();
-    };
-  }, [handleAction]);
 };
