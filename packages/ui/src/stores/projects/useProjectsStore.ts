@@ -2,8 +2,8 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { opencodeClient } from '@/lib/opencode/client';
 import type { ProjectEntry } from '@/lib/api/types';
-import type { DesktopSettings } from '@/lib/desktop/desktop';
-import { updateDesktopSettings } from '@/lib/config/persistence';
+import type { AppSettings } from '@/lib/config/settingsTypes';
+import { updateSettings } from '@/lib/config/persistence';
 import { createProjectIdFromPath } from '@/lib/project/projectId';
 import { getSafeStorage } from '../utils/safeStorage';
 import { useDirectoryStore } from '../files/useDirectoryStore';
@@ -49,7 +49,7 @@ interface ProjectsStore {
   discoverProjectIcon: (id: string, options?: { force?: boolean }) => Promise<{ ok: boolean; skipped?: boolean; reason?: string; error?: string }>;
   reorderProjects: (fromIndex: number, toIndex: number) => void;
   validateProjectPath: (path: string) => ProjectPathValidationResult;
-  synchronizeFromSettings: (settings: DesktopSettings) => void;
+  synchronizeFromSettings: (settings: AppSettings) => void;
   getActiveProject: () => ProjectEntry | null;
 }
 
@@ -281,7 +281,7 @@ const cacheProjects = (projects: ProjectEntry[], activeProjectId: string | null)
 
 const persistProjects = (projects: ProjectEntry[], activeProjectId: string | null) => {
   cacheProjects(projects, activeProjectId);
-  void updateDesktopSettings({ projects, activeProjectId: activeProjectId ?? undefined });
+  void updateSettings({ projects, activeProjectId: activeProjectId ?? undefined });
 };
 
 const initialProjects = readPersistedProjects();
@@ -474,7 +474,7 @@ export const useProjectsStore = create<ProjectsStore>()(
           return { ok: false, error: payload?.error || 'Failed to upload project icon' };
         }
 
-        const payload = (await response.json().catch(() => null)) as { settings?: DesktopSettings } | null;
+        const payload = (await response.json().catch(() => null)) as { settings?: AppSettings } | null;
         if (payload?.settings) {
           get().synchronizeFromSettings(payload.settings);
         }
@@ -499,7 +499,7 @@ export const useProjectsStore = create<ProjectsStore>()(
           return { ok: false, error: payload?.error || 'Failed to remove project icon' };
         }
 
-        const payload = (await response.json().catch(() => null)) as { settings?: DesktopSettings } | null;
+        const payload = (await response.json().catch(() => null)) as { settings?: AppSettings } | null;
         if (payload?.settings) {
           get().synchronizeFromSettings(payload.settings);
         }
@@ -525,7 +525,7 @@ export const useProjectsStore = create<ProjectsStore>()(
           error?: string;
           skipped?: boolean;
           reason?: string;
-          settings?: DesktopSettings;
+          settings?: AppSettings;
         } | null;
 
         if (!response.ok) {
@@ -567,7 +567,7 @@ export const useProjectsStore = create<ProjectsStore>()(
       persistProjects(nextProjects, activeProjectId);
     },
 
-    synchronizeFromSettings: (settings: DesktopSettings) => {
+    synchronizeFromSettings: (settings: AppSettings) => {
       const incomingProjects = sanitizeProjects(settings.projects ?? []);
       const incomingActive = typeof settings.activeProjectId === 'string' && settings.activeProjectId.trim()
         ? settings.activeProjectId.trim()
@@ -625,7 +625,7 @@ export const useProjectsStore = create<ProjectsStore>()(
 
 if (typeof window !== 'undefined') {
   window.addEventListener('openchamber:settings-synced', (event: Event) => {
-    const detail = (event as CustomEvent<DesktopSettings>).detail;
+    const detail = (event as CustomEvent<AppSettings>).detail;
     if (detail && typeof detail === 'object') {
       useProjectsStore.getState().synchronizeFromSettings(detail);
     }

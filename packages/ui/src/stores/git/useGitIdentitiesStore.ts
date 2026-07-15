@@ -10,7 +10,7 @@ import {
   discoverGitCredentials,
   getGlobalGitIdentity
 } from "@/lib/git/gitApi";
-import { updateDesktopSettings } from "@/lib/config/persistence";
+import { updateSettings } from "@/lib/config/persistence";
 import { getRegisteredRuntimeAPIs } from "@/contexts/runtimeAPIRegistry";
 
 export type GitIdentityAuthType = 'ssh' | 'token';
@@ -184,7 +184,7 @@ export const useGitIdentitiesStore = create<GitIdentitiesStore>()(
           try {
             const trimmed = typeof id === 'string' ? id.trim() : '';
             const value = trimmed.length > 0 ? trimmed : '';
-            await updateDesktopSettings({ defaultGitIdentityId: value });
+            await updateSettings({ defaultGitIdentityId: value });
             set({ defaultGitIdentityId: value.length > 0 ? value : null });
             return true;
           } catch (error) {

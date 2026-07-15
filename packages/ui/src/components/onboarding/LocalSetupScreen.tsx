@@ -2,7 +2,7 @@ import React from 'react';
 import { RiFileCopyLine, RiCheckLine, RiExternalLinkLine } from '@remixicon/react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { flushSettings, requestConfigReload, updateDesktopSettings } from '@/lib/config/persistence';
+import { flushSettings, requestConfigReload, updateSettings } from '@/lib/config/persistence';
 import { copyTextToClipboard } from '@/lib/clipboard';
 
 const INSTALL_COMMAND = 'curl -fsSL https://opencode.ai/install | bash';
@@ -117,7 +117,7 @@ export function LocalSetupScreen({
     setIsRetrying(true);
     setSettingsError(null);
     try {
-      await updateDesktopSettings({ opencodeBinary: opencodeBinary.trim() });
+      await updateSettings({ opencodeBinary: opencodeBinary.trim() });
       await flushSettings();
       await requestConfigReload();
     } catch (error) {

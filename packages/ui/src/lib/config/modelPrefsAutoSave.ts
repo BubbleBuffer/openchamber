@@ -1,5 +1,5 @@
 import { useModelPreferencesStore } from '@/stores/useModelPreferencesStore';
-import { updateDesktopSettings } from '@/lib/config/persistence';
+import { updateSettings } from '@/lib/config/persistence';
 import { asReporter } from '@/lib/errors/reportError';
 
 type ModelRef = { providerID: string; modelID: string };
@@ -40,7 +40,7 @@ export const startModelPrefsAutoSave = () => {
       recentModels: payload.recentModels.slice(),
     };
 
-    void updateDesktopSettings(payload).catch(
+    void updateSettings(payload).catch(
       asReporter({ action: 'Save model preferences', scope: 'modelPrefs:autosave', silent: true }),
     );
   };

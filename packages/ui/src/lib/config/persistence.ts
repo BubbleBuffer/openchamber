@@ -1,4 +1,4 @@
-import type { DesktopSettings } from '@/lib/desktop/desktop';
+import type { AppSettings } from '@/lib/config/settingsTypes';
 import { createProjectIdFromPath } from '@/lib/project/projectId';
 import { useUIStore } from '@/stores/useUIStore';
 import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
@@ -14,7 +14,7 @@ import { setFilesViewShowGitignored } from '@/lib/files/filesViewShowGitignored'
 import { loadAppearancePreferences, applyAppearancePreferences } from '@/lib/theme/appearancePersistence';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 
-const persistToLocalStorage = (settings: DesktopSettings) => {
+const persistToLocalStorage = (settings: AppSettings) => {
   if (typeof window === 'undefined') {
     return;
   }
@@ -39,14 +39,6 @@ const persistToLocalStorage = (settings: DesktopSettings) => {
   }
   if (settings.homeDirectory) {
     localStorage.setItem('homeDirectory', settings.homeDirectory);
-    // Electron's preload exposes __OPENCHAMBER_HOME__ as a read-only
-    // contextBridge property; assignment throws TypeError there. Swallow the
-    // error in Electron — preload already seeded the value correctly.
-    try {
-      window.__OPENCHAMBER_HOME__ = settings.homeDirectory;
-    } catch {
-      /* read-only contextBridge property — leave preload-seeded value */
-    }
   }
   if (Array.isArray(settings.projects) && settings.projects.length > 0) {
     localStorage.setItem('projects', JSON.stringify(settings.projects));
@@ -101,12 +93,12 @@ type PersistApi = {
   onFinishHydration?: (callback: () => void) => (() => void) | undefined;
 };
 
-const sanitizeSkillCatalogs = (value: unknown): DesktopSettings['skillCatalogs'] | undefined => {
+const sanitizeSkillCatalogs = (value: unknown): AppSettings['skillCatalogs'] | undefined => {
   if (!Array.isArray(value)) {
     return undefined;
   }
 
-  const result: NonNullable<DesktopSettings['skillCatalogs']> = [];
+  const result: NonNullable<AppSettings['skillCatalogs']> = [];
   const seen = new Set<string>();
 
   for (const entry of value) {
@@ -148,12 +140,12 @@ const normalizeIconBackground = (value: unknown): string | null => {
   return HEX_COLOR_PATTERN.test(trimmed) ? trimmed.toLowerCase() : null;
 };
 
-const sanitizeProjects = (value: unknown): DesktopSettings['projects'] | undefined => {
+const sanitizeProjects = (value: unknown): AppSettings['projects'] | undefined => {
   if (!Array.isArray(value)) {
     return undefined;
   }
 
-  const result: NonNullable<DesktopSettings['projects']> = [];
+  const result: NonNullable<AppSettings['projects']> = [];
   const seenIds = new Set<string>();
   const seenPaths = new Set<string>();
 
@@ -174,7 +166,7 @@ const sanitizeProjects = (value: unknown): DesktopSettings['projects'] | undefin
     seenIds.add(id);
     seenPaths.add(normalizedPath);
 
-    const project: NonNullable<DesktopSettings['projects']>[number] = {
+    const project: NonNullable<AppSettings['projects']>[number] = {
       id,
       path: normalizedPath,
     };
@@ -264,7 +256,7 @@ const getPersistApi = (): PersistApi | undefined => {
 
 const getRuntimeSettingsAPI = () => getRegisteredRuntimeAPIs()?.settings ?? null;
 
-const applyDesktopUiPreferences = (settings: DesktopSettings) => {
+const applyUiPreferences = (settings: AppSettings) => {
   const store = useUIStore.getState();
   const chatStore = useChatRenderingStore.getState();
   const notificationStore = useNotificationSettingsStore.getState();
@@ -456,13 +448,13 @@ const applyDesktopUiPreferences = (settings: DesktopSettings) => {
   }
 };
 
-const sanitizeWebSettings = (payload: unknown): DesktopSettings | null => {
+const sanitizeWebSettings = (payload: unknown): AppSettings | null => {
   if (!payload || typeof payload !== 'object') {
     return null;
   }
 
   const candidate = payload as Record<string, unknown>;
-  const result: DesktopSettings = {};
+  const result: AppSettings = {};
 
   if (typeof candidate.themeId === 'string' && candidate.themeId.length > 0) {
     result.themeId = candidate.themeId;
@@ -499,16 +491,6 @@ const sanitizeWebSettings = (payload: unknown): DesktopSettings | null => {
     result.activeProjectId = candidate.activeProjectId;
   }
 
-  if (Array.isArray(candidate.approvedDirectories)) {
-    result.approvedDirectories = candidate.approvedDirectories.filter(
-      (entry): entry is string => typeof entry === 'string' && entry.length > 0
-    );
-  }
-  if (Array.isArray(candidate.securityScopedBookmarks)) {
-    result.securityScopedBookmarks = candidate.securityScopedBookmarks.filter(
-      (entry): entry is string => typeof entry === 'string' && entry.length > 0
-    );
-  }
   if (Array.isArray(candidate.pinnedDirectories)) {
     result.pinnedDirectories = Array.from(
       new Set(
@@ -826,11 +808,11 @@ const sanitizeWebSettings = (payload: unknown): DesktopSettings | null => {
 };
 
 // Short-lived cache + in-flight dedup for settings fetches to avoid repeated GET calls during startup
-let _settingsCache: { value: DesktopSettings | null; at: number } | null = null;
-let _settingsInflight: Promise<DesktopSettings | null> | null = null;
+let _settingsCache: { value: AppSettings | null; at: number } | null = null;
+let _settingsInflight: Promise<AppSettings | null> | null = null;
 const SETTINGS_CACHE_TTL = 2_000; // 2 seconds — covers the startup burst
 
-const fetchWebSettings = async (): Promise<DesktopSettings | null> => {
+const fetchWebSettings = async (): Promise<AppSettings | null> => {
   // Return cached if fresh
   if (_settingsCache && Date.now() - _settingsCache.at < SETTINGS_CACHE_TTL) {
     return _settingsCache.value;
@@ -839,7 +821,7 @@ const fetchWebSettings = async (): Promise<DesktopSettings | null> => {
   // Dedup concurrent calls
   if (_settingsInflight) return _settingsInflight;
 
-  _settingsInflight = (async (): Promise<DesktopSettings | null> => {
+  _settingsInflight = (async (): Promise<AppSettings | null> => {
     const runtimeSettings = getRuntimeSettingsAPI();
     if (runtimeSettings) {
       try {
@@ -878,7 +860,7 @@ export const invalidateSettingsCache = (): void => {
   _settingsCache = null;
 };
 
-export const syncDesktopSettings = async (): Promise<void> => {
+export const syncSettings = async (): Promise<void> => {
   if (typeof window === 'undefined') {
     return;
   }
@@ -915,7 +897,7 @@ export const syncDesktopSettings = async (): Promise<void> => {
   // Each step is wrapped in try/catch so a failure in one side-effect (e.g.
   // a TypeError from writing to a contextBridge-protected global) doesn't
   // prevent server settings from reaching the Zustand store.
-  const applySettings = async (settings: DesktopSettings) => {
+  const applySettings = async (settings: AppSettings) => {
     try {
       persistToLocalStorage(settings);
     } catch (error) {
@@ -923,13 +905,13 @@ export const syncDesktopSettings = async (): Promise<void> => {
     }
     await waitForHydration();
     try {
-      applyDesktopUiPreferences(settings);
+      applyUiPreferences(settings);
     } catch (error) {
-      console.warn('applyDesktopUiPreferences failed:', error);
+      console.warn('applyUiPreferences failed:', error);
     }
 
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent<DesktopSettings>('openchamber:settings-synced', { detail: settings }));
+      window.dispatchEvent(new CustomEvent<AppSettings>('openchamber:settings-synced', { detail: settings }));
     }
   };
 
@@ -943,8 +925,8 @@ export const syncDesktopSettings = async (): Promise<void> => {
   }
 };
 
-// Coalesce rapid updateDesktopSettings calls into a single PUT
-let _pendingSettingsChanges: Partial<DesktopSettings> | null = null;
+// Coalesce rapid updateSettings calls into a single PUT
+let _pendingSettingsChanges: Partial<AppSettings> | null = null;
 let _settingsFlushTimer: ReturnType<typeof setTimeout> | null = null;
 let _settingsFlushInflight: Promise<void> | null = null;
 const SETTINGS_DEBOUNCE_MS = 200;
@@ -961,7 +943,7 @@ const _flushSettingsUpdate = async (propagateErrors = false): Promise<void> => {
       const updated = await runtimeSettings.save(changes);
       if (updated) {
         persistToLocalStorage(updated);
-        applyDesktopUiPreferences(updated);
+        applyUiPreferences(updated);
       }
       return;
     } catch (error) {
@@ -996,11 +978,11 @@ const _flushSettingsUpdate = async (propagateErrors = false): Promise<void> => {
     return;
   }
 
-  const updated = (await response.json().catch(() => null)) as DesktopSettings | null;
+  const updated = (await response.json().catch(() => null)) as AppSettings | null;
   if (updated) {
     try {
       persistToLocalStorage(updated);
-      applyDesktopUiPreferences(updated);
+      applyUiPreferences(updated);
     } catch (error) {
       console.warn('Failed to apply updated shared settings:', error);
     }
@@ -1030,7 +1012,7 @@ const startSettingsFlush = (propagateErrors = false): Promise<void> => {
   return current;
 };
 
-export const updateDesktopSettings = async (changes: Partial<DesktopSettings>): Promise<void> => {
+export const updateSettings = async (changes: Partial<AppSettings>): Promise<void> => {
   if (typeof window === 'undefined') {
     return;
   }

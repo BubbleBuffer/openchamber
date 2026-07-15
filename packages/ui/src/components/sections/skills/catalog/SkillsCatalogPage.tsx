@@ -27,8 +27,8 @@ import { cn } from '@/lib/utils';
 import type { SkillsCatalogItem } from '@/lib/api/types';
 
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
-import { updateDesktopSettings } from '@/lib/config/persistence';
-import type { DesktopSettings, SkillCatalogConfig } from '@/lib/desktop/desktop';
+import { updateSettings } from '@/lib/config/persistence';
+import type { AppSettings, SkillCatalogConfig } from '@/lib/config/settingsTypes';
 
 import { AddCatalogDialog } from './AddCatalogDialog';
 import { InstallSkillDialog } from './InstallSkillDialog';
@@ -41,12 +41,12 @@ interface SkillsCatalogPageProps {
   showModeTabs?: boolean;
 }
 
-const loadSettings = async (): Promise<DesktopSettings | null> => {
+const loadSettings = async (): Promise<AppSettings | null> => {
   try {
     const runtimeSettings = getRegisteredRuntimeAPIs()?.settings;
     if (runtimeSettings) {
       const result = await runtimeSettings.load();
-      return (result?.settings || {}) as DesktopSettings;
+      return (result?.settings || {}) as AppSettings;
     }
 
     const response = await fetch('/api/config/settings', {
@@ -58,7 +58,7 @@ const loadSettings = async (): Promise<DesktopSettings | null> => {
       return null;
     }
 
-    return (await response.json().catch(() => null)) as DesktopSettings | null;
+    return (await response.json().catch(() => null)) as AppSettings | null;
   } catch {
     return null;
   }
@@ -135,7 +135,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
       const settings = await loadSettings();
       const catalogs = (Array.isArray(settings?.skillCatalogs) ? settings?.skillCatalogs : []) as SkillCatalogConfig[];
       const updated = catalogs.filter((c) => c.id !== selectedSourceId);
-      await updateDesktopSettings({ skillCatalogs: updated });
+      await updateSettings({ skillCatalogs: updated });
       await loadCatalog({ refresh: true });
       setIsRemoveCatalogDialogOpen(false);
     } finally {

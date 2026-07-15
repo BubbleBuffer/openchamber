@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { getSafeStorage } from '@/stores/utils/safeStorage';
-import { updateDesktopSettings } from '@/lib/config/persistence';
+import { updateSettings } from '@/lib/config/persistence';
 
 const SHOW_GITIGNORED_STORAGE_KEY = 'filesViewShowGitignored';
 const SHOW_GITIGNORED_EVENT = 'files-view-show-gitignored-change';
@@ -40,7 +40,7 @@ export const setFilesViewShowGitignored = (
   }
 
   if (options.persist !== false) {
-    void updateDesktopSettings({ filesViewShowGitignored: value });
+    void updateSettings({ filesViewShowGitignored: value });
   }
 };
 

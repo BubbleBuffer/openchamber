@@ -4,7 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { UsageCard } from './UsageCard';
 import { QUOTA_PROVIDERS } from '@/lib/quota';
 import { useQuotaAutoRefresh, useQuotaStore } from '@/stores/quota/useQuotaStore';
-import { updateDesktopSettings } from '@/lib/config/persistence';
+import { updateSettings } from '@/lib/config/persistence';
 import { ProviderLogo } from '@/components/ui/ProviderLogo';
 import {
   Collapsible,
@@ -81,7 +81,7 @@ export const UsagePage: React.FC = () => {
       ? Array.from(new Set([...dropdownProviderIds, selectedProviderId]))
       : dropdownProviderIds.filter((id) => id !== selectedProviderId);
     setDropdownProviderIds(next);
-    void updateDesktopSettings({ usageDropdownProviders: next });
+    void updateSettings({ usageDropdownProviders: next });
   }, [dropdownProviderIds, selectedProviderId, setDropdownProviderIds]);
 
   const providerModels = React.useMemo((): ModelInfo[] => {
@@ -134,7 +134,7 @@ export const UsagePage: React.FC = () => {
       ? currentSelected.filter((m) => m !== modelName)
       : [...currentSelected, modelName];
     const nextSettings: Record<string, string[]> = { ...selectedModels, [selectedProviderId]: nextSelected };
-    void updateDesktopSettings({ usageSelectedModels: nextSettings });
+    void updateSettings({ usageSelectedModels: nextSettings });
   }, [selectedProviderId, selectedModels, toggleModelSelected]);
 
   const providerSelectedModels = selectedProviderId ? (selectedModels[selectedProviderId] ?? []) : [];

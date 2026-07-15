@@ -8,7 +8,7 @@ import { scopeMatches, subscribeToConfigChanges } from "@/lib/config/configSync"
 import { getSafeStorage } from "../utils/safeStorage";
 import { filterVisibleAgents } from "./useAgentsStore";
 import { getRegisteredRuntimeAPIs } from "@/contexts/runtimeAPIRegistry";
-import { updateDesktopSettings } from "@/lib/config/persistence";
+import { updateSettings } from "@/lib/config/persistence";
 import { useSessionUIStore } from "@/sync/session-ui-store";
 import { useSelectionStore } from "@/sync/selection-store";
 import { useProviderConfigStore } from "../config/useProviderConfigStore";
@@ -313,7 +313,7 @@ export const useAgentConfigStore = create<AgentConfigStore>()(
                                     resolvedZenModel !== defaultZenModel;
 
                                 if (shouldPersistResolvedZenModel && resolvedZenModel) {
-                                    updateDesktopSettings({
+                                    updateSettings({
                                         zenModel: resolvedZenModel,
                                         gitProviderId: '',
                                         gitModelId: '',
@@ -479,7 +479,7 @@ export const useAgentConfigStore = create<AgentConfigStore>()(
                                         settingsDefaultVariant: invalidSettings.defaultVariant !== undefined ? undefined : get().settingsDefaultVariant,
                                         settingsDefaultAgent: invalidSettings.defaultAgent !== undefined ? undefined : get().settingsDefaultAgent,
                                     });
-                                    updateDesktopSettings(invalidSettings).catch(() => {
+                                    updateSettings(invalidSettings).catch(() => {
                                         // Ignore errors - best effort cleanup
                                     });
                                 }

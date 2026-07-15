@@ -10,7 +10,7 @@ import { SessionAuthGate } from './components/auth/SessionAuthGate'
 import { ThemeSystemProvider } from './contexts/ThemeSystemContext'
 import { ThemeProvider } from './components/providers/ThemeProvider'
 import './lib/errors/debug'
-import { syncDesktopSettings, initializeAppearancePreferences } from './lib/config/persistence'
+import { syncSettings, initializeAppearancePreferences } from './lib/config/persistence'
 import { startAppearanceAutoSave } from './lib/theme/appearanceAutoSave'
 import { applyPersistedDirectoryPreferences } from './lib/files/directoryPersistence'
 import { startTypographyWatcher } from './lib/theme/typographyWatcher'
@@ -33,7 +33,7 @@ const runtimeAPIs = (typeof window !== 'undefined' && window.__OPENCHAMBER_RUNTI
 // for faster time-to-first-paint.
 void initializeAppearancePreferences().then(() => {
   void Promise.all([
-    syncDesktopSettings(),
+    syncSettings(),
     applyPersistedDirectoryPreferences(),
   ]).catch((err) => {
     console.error('[main] settings init failed:', err);

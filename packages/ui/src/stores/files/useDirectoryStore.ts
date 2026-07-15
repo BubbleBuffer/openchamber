@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { opencodeClient } from '@/lib/opencode/client';
 import { getDesktopHomeDirectory } from '@/lib/desktop/desktop';
-import { updateDesktopSettings } from '@/lib/config/persistence';
+import { updateSettings } from '@/lib/config/persistence';
 import { useFileSearchStore } from '@/stores/files/useFileSearchStore';
 import { streamDebugEnabled } from '@/stores/utils/streamDebug';
 import { getSafeStorage } from '../utils/safeStorage';
@@ -172,7 +172,7 @@ const persistResolvedHome = (resolved: string) => {
   if (typeof window !== 'undefined') {
     safeStorage.setItem('homeDirectory', resolved);
   }
-  void updateDesktopSettings({ homeDirectory: resolved });
+  void updateSettings({ homeDirectory: resolved });
   return resolved;
 };
 
@@ -262,7 +262,7 @@ export const useDirectoryStore = create<DirectoryStore>()(
           const newHistory = [...state.directoryHistory.slice(0, state.historyIndex + 1), resolvedPath];
 
           safeStorage.setItem('lastDirectory', resolvedPath);
-          void updateDesktopSettings({ lastDirectory: resolvedPath });
+          void updateSettings({ lastDirectory: resolvedPath });
 
           return {
             currentDirectory: resolvedPath,
@@ -286,7 +286,7 @@ export const useDirectoryStore = create<DirectoryStore>()(
 
           safeStorage.setItem('lastDirectory', newDirectory);
 
-          void updateDesktopSettings({ lastDirectory: newDirectory });
+          void updateSettings({ lastDirectory: newDirectory });
 
           set({
             currentDirectory: newDirectory,
@@ -309,7 +309,7 @@ export const useDirectoryStore = create<DirectoryStore>()(
 
           safeStorage.setItem('lastDirectory', newDirectory);
 
-          void updateDesktopSettings({ lastDirectory: newDirectory });
+          void updateSettings({ lastDirectory: newDirectory });
 
           set({
             currentDirectory: newDirectory,
@@ -408,11 +408,11 @@ export const useDirectoryStore = create<DirectoryStore>()(
           opencodeClient.setDirectory(nextDirectory);
           invalidateFileSearchCache();
           safeStorage.setItem('lastDirectory', nextDirectory);
-          void updateDesktopSettings({ lastDirectory: nextDirectory });
+          void updateSettings({ lastDirectory: nextDirectory });
 
         }
 
-        void updateDesktopSettings({ homeDirectory: resolvedHome });
+        void updateSettings({ homeDirectory: resolvedHome });
       }
     }),
     {

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui';
-import { syncDesktopSettings, initializeAppearancePreferences } from '@/lib/config/persistence';
+import { syncSettings, initializeAppearancePreferences } from '@/lib/config/persistence';
 import { applyPersistedDirectoryPreferences } from '@/lib/files/directoryPersistence';
 import { OpenChamberLogo } from '@/components/ui/OpenChamberLogo';
 import {
@@ -260,7 +260,7 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
     if (state === 'authenticated' && !hasResyncedRef.current) {
       hasResyncedRef.current = true;
       void (async () => {
-        await syncDesktopSettings();
+        await syncSettings();
         await initializeAppearancePreferences();
         await applyPersistedDirectoryPreferences();
       })();

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Radio } from '@/components/ui/radio';
-import { updateDesktopSettings } from '@/lib/config/persistence';
+import { updateSettings } from '@/lib/config/persistence';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useDiffPreferencesStore } from '@/stores/useDiffPreferencesStore';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
@@ -84,7 +84,7 @@ export const GitSettings: React.FC = () => {
   const handleGitmojiChange = React.useCallback(async (enabled: boolean) => {
     setSettingsGitmojiEnabled(enabled);
     try {
-      await updateDesktopSettings({
+      await updateSettings({
         gitmojiEnabled: enabled,
       });
     } catch (error) {
@@ -98,7 +98,7 @@ export const GitSettings: React.FC = () => {
     }
 
     setGitChangesViewMode(mode);
-    void updateDesktopSettings({ gitChangesViewMode: mode });
+    void updateSettings({ gitChangesViewMode: mode });
   }, [gitChangesViewMode, setGitChangesViewMode]);
 
   if (isLoading) {

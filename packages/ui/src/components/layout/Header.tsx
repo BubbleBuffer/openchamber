@@ -45,7 +45,7 @@ import { ProviderLogo } from '@/components/ui/ProviderLogo';
 import { formatPercent, formatWindowLabel, QUOTA_PROVIDERS, calculatePace, calculateExpectedUsagePercent } from '@/lib/quota';
 import { UsageProgressBar } from '@/components/sections/usage/UsageProgressBar';
 import { PaceIndicator } from '@/components/sections/usage/PaceIndicator';
-import { updateDesktopSettings } from '@/lib/config/persistence';
+import { updateSettings } from '@/lib/config/persistence';
 import { eventMatchesShortcut, formatShortcutForDisplay, getEffectiveShortcutCombo } from '@/lib/shortcuts';
 import {
   getAllModelFamilies,
@@ -845,7 +845,7 @@ export const Header: React.FC<HeaderProps> = ({
   const handleDisplayModeChange = React.useCallback(async (mode: 'usage' | 'remaining') => {
     setQuotaDisplayMode(mode);
     try {
-      await updateDesktopSettings({ usageDisplayMode: mode });
+      await updateSettings({ usageDisplayMode: mode });
     } catch (error) {
       console.warn('Failed to update usage display mode:', error);
     }

@@ -21,8 +21,8 @@ import {
 import { RiGitRepositoryLine } from '@remixicon/react';
 
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
-import { updateDesktopSettings } from '@/lib/config/persistence';
-import type { DesktopSettings, SkillCatalogConfig } from '@/lib/desktop/desktop';
+import { updateSettings } from '@/lib/config/persistence';
+import type { AppSettings, SkillCatalogConfig } from '@/lib/config/settingsTypes';
 import { useSkillsCatalogStore } from '@/stores/skills/useSkillsCatalogStore';
 import { useGitIdentitiesStore } from '@/stores/git/useGitIdentitiesStore';
 
@@ -47,12 +47,12 @@ const guessLabelFromSource = (value: string) => {
 
 type IdentityOption = { id: string; name: string };
 
-const loadSettings = async (): Promise<DesktopSettings | null> => {
+const loadSettings = async (): Promise<AppSettings | null> => {
   try {
     const runtimeSettings = getRegisteredRuntimeAPIs()?.settings;
     if (runtimeSettings) {
       const result = await runtimeSettings.load();
-      return (result?.settings || {}) as DesktopSettings;
+      return (result?.settings || {}) as AppSettings;
     }
 
     const response = await fetch('/api/config/settings', {
@@ -64,7 +64,7 @@ const loadSettings = async (): Promise<DesktopSettings | null> => {
       return null;
     }
 
-    return (await response.json().catch(() => null)) as DesktopSettings | null;
+    return (await response.json().catch(() => null)) as AppSettings | null;
   } catch {
     return null;
   }
@@ -212,7 +212,7 @@ export const AddCatalogDialog: React.FC<AddCatalogDialogProps> = ({ open, onOpen
     const updated = [...existingCatalogs, next];
 
     try {
-      await updateDesktopSettings({ skillCatalogs: updated });
+      await updateSettings({ skillCatalogs: updated });
       setExistingCatalogs(updated);
       toast.success('Catalog added');
       await loadCatalog({ refresh: true });

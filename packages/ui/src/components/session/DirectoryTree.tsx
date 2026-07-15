@@ -12,8 +12,8 @@ import { RiAddLine, RiArrowDownSLine, RiArrowRightSLine, RiCheckLine, RiCloseLin
 import { cn, formatPathForDisplay } from '@/lib/utils';
 import { opencodeClient } from '@/lib/opencode/client';
 import { useDeviceInfo } from '@/lib/device';
-import type { DesktopSettings } from '@/lib/desktop/desktop';
-import { updateDesktopSettings } from '@/lib/config/persistence';
+import type { AppSettings } from '@/lib/config/settingsTypes';
+import { updateSettings } from '@/lib/config/persistence';
 import { useFileSystemAccess } from '@/hooks/useFileSystemAccess';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 
@@ -267,7 +267,7 @@ export const DirectoryTree: React.FC<DirectoryTreeProps> = ({
     loadFromLocalStorage();
 
     const handleSettingsSynced = (event: Event) => {
-      const detail = (event as CustomEvent<DesktopSettings>).detail;
+      const detail = (event as CustomEvent<AppSettings>).detail;
       if (detail && Array.isArray(detail.pinnedDirectories)) {
         applyPinned(detail.pinnedDirectories);
       }
@@ -294,7 +294,7 @@ export const DirectoryTree: React.FC<DirectoryTreeProps> = ({
       pinnedDirectories: Array.from(pinnedPaths),
     };
 
-    void updateDesktopSettings(payload);
+    void updateSettings(payload);
   }, [pinnedPaths]);
 
   React.useEffect(() => {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { getSafeStorage } from '@/stores/utils/safeStorage';
-import { updateDesktopSettings } from '@/lib/config/persistence';
+import { updateSettings } from '@/lib/config/persistence';
 
 const SHOW_HIDDEN_STORAGE_KEY = 'directoryTreeShowHidden';
 const SHOW_HIDDEN_EVENT = 'directory-show-hidden-change';
@@ -42,7 +42,7 @@ export const setDirectoryShowHidden = (
   }
 
   if (options.persist !== false) {
-    void updateDesktopSettings({ directoryShowHidden: value });
+    void updateSettings({ directoryShowHidden: value });
   }
 };
 

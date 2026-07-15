@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Session } from '@/lib/opencode/client';
-import { updateDesktopSettings } from '@/lib/config/persistence';
+import { updateSettings } from '@/lib/config/persistence';
 import { asReporter } from '@/lib/errors/reportError';
 import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 
@@ -63,7 +63,7 @@ export const useSidebarPersistence = (args: Args) => {
       ...project,
       sidebarCollapsed: collapsed.has(project.id),
     }));
-    void updateDesktopSettings({ projects: updatedProjects }).catch(
+    void updateSettings({ projects: updatedProjects }).catch(
       asReporter({ action: 'Save sidebar layout', scope: 'sidebar:layout', silent: true }),
     );
   }, []);

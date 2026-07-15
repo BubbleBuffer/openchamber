@@ -5,7 +5,7 @@ import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { isDesktopShell } from '@/lib/desktop/desktop';
 import { useDeviceInfo } from '@/lib/device';
-import { updateDesktopSettings } from '@/lib/config/persistence';
+import { updateSettings } from '@/lib/config/persistence';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/components/ui';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
@@ -145,7 +145,7 @@ export const NotificationSettings: React.FC = () => {
       const modelId = value === UTILITY_NOT_SELECTED_VALUE ? undefined : value;
       setSettingsZenModel(modelId);
       try {
-        await updateDesktopSettings({
+        await updateSettings({
           zenModel: modelId ?? '',
           gitProviderId: '',
           gitModelId: '',

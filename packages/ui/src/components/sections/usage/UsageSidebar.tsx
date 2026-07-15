@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils';
 import { QUOTA_PROVIDERS, resolveUsageTone } from '@/lib/quota';
 import { useQuotaStore } from '@/stores/quota/useQuotaStore';
-import { updateDesktopSettings } from '@/lib/config/persistence';
+import { updateSettings } from '@/lib/config/persistence';
 import { RiRefreshLine } from '@remixicon/react';
 
 interface UsageSidebarProps {
@@ -46,7 +46,7 @@ export const UsageSidebar: React.FC<UsageSidebarProps> = ({ onItemSelect }) => {
 
   const persistUsageSettings = React.useCallback(async (changes: { usageAutoRefresh?: boolean; usageRefreshIntervalMs?: number; usageDisplayMode?: 'usage' | 'remaining'; usageDropdownProviders?: string[] }) => {
     try {
-      await updateDesktopSettings(changes);
+      await updateSettings(changes);
     } catch (error) {
       console.warn('Failed to save usage settings:', error);
     }

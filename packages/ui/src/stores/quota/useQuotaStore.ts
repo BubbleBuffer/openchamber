@@ -5,7 +5,7 @@ import type { ProviderResult, QuotaProviderId } from '@/types';
 import { QUOTA_PROVIDERS } from '@/lib/quota';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 import { getDefaultModels } from '@/lib/quota/model-families';
-import { updateDesktopSettings } from '@/lib/config/persistence';
+import { updateSettings } from '@/lib/config/persistence';
 
 const DEFAULT_REFRESH_INTERVAL_MS = 60000;
 
@@ -239,7 +239,7 @@ export const useQuotaStore = create<QuotaStore>()(
           expandedFamilies: { ...state.expandedFamilies, [providerId]: familyIds }
         }));
         // Persist
-        void updateDesktopSettings({ usageExpandedFamilies: get().expandedFamilies });
+        void updateSettings({ usageExpandedFamilies: get().expandedFamilies });
       },
 
       toggleFamilyExpanded: (providerId, familyId) => {
@@ -254,7 +254,7 @@ export const useQuotaStore = create<QuotaStore>()(
           };
         });
         // Persist
-        void updateDesktopSettings({ usageExpandedFamilies: get().expandedFamilies });
+        void updateSettings({ usageExpandedFamilies: get().expandedFamilies });
       },
 
       applyDefaultSelections: (providerId, availableModels) => {
@@ -269,7 +269,7 @@ export const useQuotaStore = create<QuotaStore>()(
           selectedModels: { ...s.selectedModels, [providerId]: defaults },
         }));
         // Persist
-        void updateDesktopSettings({ usageSelectedModels: get().selectedModels });
+        void updateSettings({ usageSelectedModels: get().selectedModels });
       },
     }),
     { name: 'quota-store' }

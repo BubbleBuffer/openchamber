@@ -6,11 +6,11 @@ import React, {
 } from 'react';
 import { flushSync } from 'react-dom';
 import type { Theme, ThemeMode } from '@/types/theme';
-import type { DesktopSettings } from '@/lib/desktop/desktop';
+import type { AppSettings } from '@/lib/config/settingsTypes';
 import { isDesktopLocalOriginActive, isTauriShell } from '@/lib/desktop/desktop';
 import { setDesktopWindowTheme } from '@/lib/desktop/desktopNative';
 import { CSSVariableGenerator } from '@/lib/theme/cssGenerator';
-import { updateDesktopSettings } from '@/lib/config/persistence';
+import { updateSettings } from '@/lib/config/persistence';
 import {
   themes,
   getThemeById,
@@ -513,7 +513,7 @@ export function ThemeSystemProvider({ children, defaultThemeId }: ThemeSystemPro
     const lightTheme = ensureThemeById(preferences.lightThemeId, 'light');
     const darkTheme = ensureThemeById(preferences.darkThemeId, 'dark');
 
-    void updateDesktopSettings({
+    void updateSettings({
       themeId: currentTheme.metadata.id,
       themeVariant: currentTheme.metadata.variant === 'light' ? 'light' : 'dark',
       useSystemTheme: preferences.themeMode === 'system',
@@ -541,7 +541,7 @@ export function ThemeSystemProvider({ children, defaultThemeId }: ThemeSystemPro
       return;
     }
     const handleSettingsSynced = (event: Event) => {
-      const detail = (event as CustomEvent<DesktopSettings>).detail;
+      const detail = (event as CustomEvent<AppSettings>).detail;
       if (!detail) {
         return;
       }

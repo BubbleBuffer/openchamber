@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 import { getSafeStorage } from './utils/safeStorage';
 import type { AttachedFile } from './types/sessionTypes';
-import { updateDesktopSettings } from '@/lib/config/persistence';
+import { updateSettings } from '@/lib/config/persistence';
 
 export interface QueuedMessage {
     id: string;
@@ -129,7 +129,7 @@ export const useMessageQueueStore = create<MessageQueueStore>()(
                 setQueueMode: (enabled) => {
                     set({ queueModeEnabled: enabled });
                     // Persist to settings.json (async, fire-and-forget)
-                    void updateDesktopSettings({ queueModeEnabled: enabled });
+                    void updateSettings({ queueModeEnabled: enabled });
                 },
 
                 getQueueForSession: (sessionId) => {

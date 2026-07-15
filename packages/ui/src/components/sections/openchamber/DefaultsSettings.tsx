@@ -3,7 +3,7 @@ import { ModelSelector } from '@/components/sections/agents/ModelSelector';
 import { AgentSelector } from '@/components/sections/commands/AgentSelector';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { updateDesktopSettings } from '@/lib/config/persistence';
+import { updateSettings } from '@/lib/config/persistence';
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
@@ -130,7 +130,7 @@ export const DefaultsSettings: React.FC = () => {
       }
 
       try {
-        await updateDesktopSettings({ defaultModel: newValue ?? '', defaultVariant: '' });
+        await updateSettings({ defaultModel: newValue ?? '', defaultVariant: '' });
         const response = await fetch('/api/config/settings', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -163,7 +163,7 @@ export const DefaultsSettings: React.FC = () => {
       setCurrentVariant(newValue);
 
       try {
-        await updateDesktopSettings({ defaultVariant: newValue ?? '' });
+        await updateSettings({ defaultVariant: newValue ?? '' });
       } catch (error) {
         console.warn('Failed to save default variant:', error);
       }
@@ -182,7 +182,7 @@ export const DefaultsSettings: React.FC = () => {
       }
 
       try {
-        await updateDesktopSettings({ defaultAgent: newValue ?? '' });
+        await updateSettings({ defaultAgent: newValue ?? '' });
       } catch (error) {
         console.warn('Failed to save default agent:', error);
       }
@@ -193,7 +193,7 @@ export const DefaultsSettings: React.FC = () => {
   const handleToggleFileViewerPreview = React.useCallback(() => {
     const next = !settingsDefaultFileViewerPreview;
     setSettingsDefaultFileViewerPreview(next);
-    updateDesktopSettings({ defaultFileViewerPreview: next }).catch(console.warn);
+    updateSettings({ defaultFileViewerPreview: next }).catch(console.warn);
   }, [settingsDefaultFileViewerPreview, setSettingsDefaultFileViewerPreview]);
 
   const availableVariants = React.useMemo(() => {
@@ -214,7 +214,7 @@ export const DefaultsSettings: React.FC = () => {
       setDefaultVariant(undefined);
       setSettingsDefaultVariant(undefined);
       setCurrentVariant(undefined);
-      updateDesktopSettings({ defaultVariant: '' }).catch(() => {
+      updateSettings({ defaultVariant: '' }).catch(() => {
         // best effort
       });
     }

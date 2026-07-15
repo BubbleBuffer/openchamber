@@ -1,4 +1,5 @@
 import type { WorktreeMetadata } from '@/types/worktree';
+import type { AppSettings } from '@/lib/config/settingsTypes';
 
 export type RuntimePlatform = 'web' | 'desktop';
 
@@ -539,57 +540,11 @@ export interface ProjectEntry {
   sidebarCollapsed?: boolean;
 }
 
-export interface SettingsPayload {
-  themeId?: string;
-  useSystemTheme?: boolean;
-  themeVariant?: 'light' | 'dark';
-  lightThemeId?: string;
-  darkThemeId?: string;
-  lastDirectory?: string;
-  homeDirectory?: string;
-  opencodeBinary?: string;
-  projects?: ProjectEntry[];
-  activeProjectId?: string;
-  approvedDirectories?: string[];
-  securityScopedBookmarks?: string[];
-  pinnedDirectories?: string[];
-  showReasoningTraces?: boolean;
-  showDeletionDialog?: boolean;
-  nativeNotificationsEnabled?: boolean;
-  notificationMode?: 'always' | 'hidden-only';
-  autoDeleteEnabled?: boolean;
-  autoDeleteAfterDays?: number;
-  sessionRetentionAction?: 'archive' | 'delete';
-  queueModeEnabled?: boolean;
-  gitmojiEnabled?: boolean;
-  inputSpellcheckEnabled?: boolean;
-  showToolFileIcons?: boolean;
-  showExpandedBashTools?: boolean;
-  showExpandedEditTools?: boolean;
-  chatRenderMode?: 'sorted' | 'live';
-  messageStreamTransport?: 'auto' | 'ws' | 'sse';
-  activityRenderMode?: 'collapsed' | 'summary';
-  mermaidRenderingMode?: 'svg' | 'ascii';
-  fontSize?: number;
-  terminalFontSize?: number;
-  padding?: number;
-  cornerRadius?: number;
-  inputBarOffset?: number;
-  diffLayoutPreference?: 'dynamic' | 'inline' | 'side-by-side';
-  diffViewMode?: 'single' | 'stacked';
-  gitChangesViewMode?: 'flat' | 'tree';
-  directoryShowHidden?: boolean;
-  filesViewShowGitignored?: boolean;
-  gitProviderId?: string;
-  gitModelId?: string;
-  pwaAppName?: string;
-
-  [key: string]: unknown;
-}
+export type SettingsPayload = AppSettings;
 
 export interface SettingsLoadResult {
   settings: SettingsPayload;
-  source: 'desktop' | 'web';
+  source: 'web';
 }
 
 export interface SettingsAPI {

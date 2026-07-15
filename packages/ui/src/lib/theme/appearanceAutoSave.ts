@@ -4,8 +4,8 @@ import { useSessionRetentionStore } from '@/stores/useSessionRetentionStore';
 import { useDiffPreferencesStore } from '@/stores/useDiffPreferencesStore';
 import { useNotificationSettingsStore } from '@/stores/useNotificationSettingsStore';
 import { useVisualPreferencesStore } from '@/stores/useVisualPreferencesStore';
-import { updateDesktopSettings } from '@/lib/config/persistence';
-import type { DesktopSettings } from '@/lib/desktop/desktop';
+import { updateSettings } from '@/lib/config/persistence';
+import type { AppSettings } from '@/lib/config/settingsTypes';
 
 // Appearance fields synced from useUIStore.
 type AppearanceSlice = {
@@ -115,7 +115,7 @@ export const startAppearanceAutoSave = (): void => {
     gitChangesViewMode: useDiffPreferencesStore.getState().gitChangesViewMode,
   };
 
-  let pending: Partial<DesktopSettings> | null = null;
+  let pending: Partial<AppSettings> | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   const flush = () => {
@@ -123,11 +123,11 @@ export const startAppearanceAutoSave = (): void => {
     pending = null;
     timer = null;
     if (payload && Object.keys(payload).length > 0) {
-      void updateDesktopSettings(payload);
+      void updateSettings(payload);
     }
   };
 
-  const schedule = (changes: Partial<DesktopSettings>) => {
+  const schedule = (changes: Partial<AppSettings>) => {
     pending = { ...(pending ?? {}), ...changes };
     if (timer) {
       return;
@@ -143,7 +143,7 @@ export const startAppearanceAutoSave = (): void => {
       reportUsage: state.reportUsage,
     };
 
-    const diff: Partial<DesktopSettings> = {};
+    const diff: Partial<AppSettings> = {};
 
     if (current.inputSpellcheckEnabled !== previousAppearance.inputSpellcheckEnabled) {
       diff.inputSpellcheckEnabled = current.inputSpellcheckEnabled;
@@ -166,7 +166,7 @@ export const startAppearanceAutoSave = (): void => {
   });
 
   useChatRenderingStore.subscribe((state) => {
-    const diff: Partial<DesktopSettings> = {};
+    const diff: Partial<AppSettings> = {};
     if (state.showReasoningTraces !== prevShowReasoningTraces) {
       diff.showReasoningTraces = state.showReasoningTraces;
       prevShowReasoningTraces = state.showReasoningTraces;
@@ -211,7 +211,7 @@ export const startAppearanceAutoSave = (): void => {
   });
 
   useSessionRetentionStore.subscribe((state) => {
-    const diff: Partial<DesktopSettings> = {};
+    const diff: Partial<AppSettings> = {};
     if (state.autoDeleteEnabled !== prevAutoDeleteEnabled) {
       diff.autoDeleteEnabled = state.autoDeleteEnabled;
       prevAutoDeleteEnabled = state.autoDeleteEnabled;
@@ -242,7 +242,7 @@ export const startAppearanceAutoSave = (): void => {
       maxLastMessageLength: state.maxLastMessageLength,
     };
 
-    const diff: Partial<DesktopSettings> = {};
+    const diff: Partial<AppSettings> = {};
 
     if (current.nativeNotificationsEnabled !== previousNotification.nativeNotificationsEnabled) {
       diff.nativeNotificationsEnabled = current.nativeNotificationsEnabled;
@@ -294,7 +294,7 @@ export const startAppearanceAutoSave = (): void => {
       inputBarOffset: state.inputBarOffset,
     };
 
-    const diff: Partial<DesktopSettings> = {};
+    const diff: Partial<AppSettings> = {};
 
     if (current.fontSize !== previousVisual.fontSize) {
       diff.fontSize = current.fontSize;
@@ -326,7 +326,7 @@ export const startAppearanceAutoSave = (): void => {
       gitChangesViewMode: state.gitChangesViewMode,
     };
 
-    const diff: Partial<DesktopSettings> = {};
+    const diff: Partial<AppSettings> = {};
 
     if (current.diffLayoutPreference !== previousDiff.diffLayoutPreference) {
       diff.diffLayoutPreference = current.diffLayoutPreference;

@@ -5,7 +5,7 @@ ensureDom();
 
 import { describe, expect, it } from "bun:test";
 
-const { flushSettings, requestConfigReload, updateDesktopSettings } = await import("./persistence");
+const { flushSettings, requestConfigReload, updateSettings } = await import("./persistence");
 
 describe("settings persistence coordination", () => {
   it("coalesces updates while allowing an explicit flush to await the PUT", async () => {
@@ -39,8 +39,8 @@ describe("settings persistence coordination", () => {
     }) as typeof fetch;
 
     try {
-      await updateDesktopSettings({ opencodeBinary: "/tmp/old" });
-      await updateDesktopSettings({ opencodeBinary: "/tmp/opencode" });
+      await updateSettings({ opencodeBinary: "/tmp/old" });
+      await updateSettings({ opencodeBinary: "/tmp/opencode" });
 
       expect(requests).toEqual([]);
 
@@ -100,7 +100,7 @@ describe("settings persistence coordination", () => {
     }) as typeof fetch;
 
     try {
-      await updateDesktopSettings({ opencodeBinary: "/tmp/failing" });
+      await updateSettings({ opencodeBinary: "/tmp/failing" });
       const flushPromise = flushSettings();
       await putStarted;
       await expect(flushPromise).rejects.toThrow("Failed to persist settings");
@@ -125,7 +125,7 @@ describe("settings persistence coordination", () => {
     }) as typeof fetch;
 
     try {
-      await updateDesktopSettings({ opencodeBinary: "/tmp/offline" });
+      await updateSettings({ opencodeBinary: "/tmp/offline" });
       const flushPromise = flushSettings();
       await putStarted;
       await expect(flushPromise).rejects.toThrow("network down");
@@ -150,7 +150,7 @@ describe("settings persistence coordination", () => {
     }) as typeof fetch;
 
     try {
-      await updateDesktopSettings({ opencodeBinary: "/tmp/background" });
+      await updateSettings({ opencodeBinary: "/tmp/background" });
       await putStarted;
       await expect(flushSettings()).resolves.toBeUndefined();
     } finally {
@@ -195,7 +195,7 @@ describe("settings persistence coordination", () => {
     }) as typeof fetch;
 
     try {
-      await updateDesktopSettings({ opencodeBinary: "/tmp/explicit" });
+      await updateSettings({ opencodeBinary: "/tmp/explicit" });
       const explicitFlush = flushSettings();
       await firstStarted;
 
@@ -204,7 +204,7 @@ describe("settings persistence coordination", () => {
       )) as typeof setTimeout;
       globalThis.clearTimeout = originalClearTimeout;
 
-      await updateDesktopSettings({ opencodeBinary: "/tmp/queued" });
+      await updateSettings({ opencodeBinary: "/tmp/queued" });
       await new Promise<void>((resolve) => originalSetTimeout(resolve, 0));
       if (!rejectFirst) throw new Error("first PUT was not held open");
       rejectFirst(new Error("explicit settings failure"));

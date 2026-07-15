@@ -25,7 +25,7 @@ import {
 import { isDesktopShell, isWebRuntime } from '@/lib/desktop/desktop';
 import { useDeviceInfo } from '@/lib/device';
 import { usePwaDetection } from '@/hooks/usePwaDetection';
-import { updateDesktopSettings } from '@/lib/config/persistence';
+import { updateSettings } from '@/lib/config/persistence';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import {
@@ -301,7 +301,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
     // Sync reportUsage changes to server settings
     const handleReportUsageChange = React.useCallback((enabled: boolean) => {
         setReportUsage(enabled);
-        void updateDesktopSettings({ reportUsage: enabled });
+        void updateSettings({ reportUsage: enabled });
     }, [setReportUsage]);
 
     const shouldAnimateChatPreview = isSettingsDialogOpen
@@ -352,62 +352,62 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
 
     const handleUserMessageRenderingModeChange = React.useCallback((mode: 'markdown' | 'plain') => {
         setUserMessageRenderingMode(mode);
-        void updateDesktopSettings({ userMessageRenderingMode: mode });
+        void updateSettings({ userMessageRenderingMode: mode });
     }, [setUserMessageRenderingMode]);
 
     const handleStickyUserHeaderChange = React.useCallback((enabled: boolean) => {
         setStickyUserHeader(enabled);
-        void updateDesktopSettings({ stickyUserHeader: enabled });
+        void updateSettings({ stickyUserHeader: enabled });
     }, [setStickyUserHeader]);
 
     const handleInputSpellcheckChange = React.useCallback((enabled: boolean) => {
         setInputSpellcheckEnabled(enabled);
-        void updateDesktopSettings({ inputSpellcheckEnabled: enabled });
+        void updateSettings({ inputSpellcheckEnabled: enabled });
     }, [setInputSpellcheckEnabled]);
 
     const handleChatRenderModeChange = React.useCallback((mode: 'sorted' | 'live') => {
         setChatRenderMode(mode);
-        void updateDesktopSettings({ chatRenderMode: mode });
+        void updateSettings({ chatRenderMode: mode });
     }, [setChatRenderMode]);
 
     const handleMessageStreamTransportChange = React.useCallback((mode: 'auto' | 'ws' | 'sse') => {
         setMessageStreamTransport(mode);
-        void updateDesktopSettings({ messageStreamTransport: mode });
+        void updateSettings({ messageStreamTransport: mode });
     }, [setMessageStreamTransport]);
 
     const handleActivityRenderModeChange = React.useCallback((mode: 'collapsed' | 'summary') => {
         setActivityRenderMode(mode);
-        void updateDesktopSettings({ activityRenderMode: mode });
+        void updateSettings({ activityRenderMode: mode });
     }, [setActivityRenderMode]);
 
     const handleMermaidRenderingModeChange = React.useCallback((mode: 'svg' | 'ascii') => {
         setMermaidRenderingMode(mode);
-        void updateDesktopSettings({ mermaidRenderingMode: mode });
+        void updateSettings({ mermaidRenderingMode: mode });
     }, [setMermaidRenderingMode]);
 
     const handleShowToolFileIconsChange = React.useCallback((enabled: boolean) => {
         setShowToolFileIcons(enabled);
-        void updateDesktopSettings({ showToolFileIcons: enabled });
+        void updateSettings({ showToolFileIcons: enabled });
     }, [setShowToolFileIcons]);
 
     const handleShowExpandedBashToolsChange = React.useCallback((enabled: boolean) => {
         setShowExpandedBashTools(enabled);
-        void updateDesktopSettings({ showExpandedBashTools: enabled });
+        void updateSettings({ showExpandedBashTools: enabled });
     }, [setShowExpandedBashTools]);
 
     const handleShowExpandedEditToolsChange = React.useCallback((enabled: boolean) => {
         setShowExpandedEditTools(enabled);
-        void updateDesktopSettings({ showExpandedEditTools: enabled });
+        void updateSettings({ showExpandedEditTools: enabled });
     }, [setShowExpandedEditTools]);
 
     const handleTimeFormatPreferenceChange = React.useCallback((value: 'auto' | '12h' | '24h') => {
         setTimeFormatPreference(value);
-        void updateDesktopSettings({ timeFormatPreference: value });
+        void updateSettings({ timeFormatPreference: value });
     }, [setTimeFormatPreference]);
 
     const handleWeekStartPreferenceChange = React.useCallback((value: 'auto' | 'monday' | 'sunday') => {
         setWeekStartPreference(value);
-        void updateDesktopSettings({ weekStartPreference: value });
+        void updateSettings({ weekStartPreference: value });
     }, [setWeekStartPreference]);
 
     const lightThemes = React.useMemo(
@@ -477,7 +477,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
         const normalized = value.trim().replace(/\s+/g, ' ').slice(0, 64);
         const persistedValue = normalized;
 
-        await updateDesktopSettings({ pwaAppName: persistedValue });
+        await updateSettings({ pwaAppName: persistedValue });
 
         if (typeof win.__OPENCHAMBER_SET_PWA_INSTALL_NAME__ === 'function') {
             const resolved = win.__OPENCHAMBER_SET_PWA_INSTALL_NAME__(persistedValue);
@@ -497,7 +497,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
         const win = window as PwaInstallNameWindow;
         const normalized = normalizePwaOrientation(value);
 
-        await updateDesktopSettings({ pwaOrientation: normalized });
+        await updateSettings({ pwaOrientation: normalized });
 
         if (typeof win.__OPENCHAMBER_SET_PWA_ORIENTATION__ === 'function') {
             const resolved = win.__OPENCHAMBER_SET_PWA_ORIENTATION__(normalized);
