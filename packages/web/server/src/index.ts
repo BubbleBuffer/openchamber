@@ -54,7 +54,7 @@ import { createScheduledTasksRuntime } from "./domains/scheduled-tasks/index.js"
 import { createServerStartupRuntime } from "./domains/bootstrap/index.js";
 import { createStartupPipelineRuntime } from "./domains/bootstrap/index.js";
 import { runCliEntryIfMain } from "./domains/bootstrap/index.js";
-import { registerNotificationRoutes, createNotificationEmitterRuntime, createNotificationTriggerRuntime, createPushRuntime, createNotificationTemplateRuntime } from "./domains/notifications/index.js";
+import { registerNotificationRoutes, createNotificationEmitterRuntime, createNotificationDeliveryRuntime, createNotificationTriggerRuntime, createPushRuntime, createNotificationTemplateRuntime } from "./domains/notifications/index.js";
 import { createGracefulShutdownRuntime } from "./domains/bootstrap/index.js";
 import { createProjectConfigRuntime } from "./domains/projects/index.js";
 import { createSessionMachine } from "@openchamber/session-state";
@@ -540,10 +540,17 @@ const notificationTriggerRuntime = (createNotificationTriggerRuntime as any)({
   fetchLastAssistantMessageText,
   resolveNotificationTemplate,
   shouldApplyResolvedTemplateMessage,
-  sendPushToAllUiSessions,
   getOpenCodeRuntime: () => openCodeRuntimeRef.current,
 });
 const { maybeSendPushForTrigger, setAutoAcceptSession } = notificationTriggerRuntime;
+
+const notificationDeliveryRuntime = createNotificationDeliveryRuntime({
+  eventBus,
+  broadcastUiNotification: notificationEmitterRuntime.broadcastUiNotification,
+  sendPushToAllUiSessions,
+  notificationTriggerRuntime,
+  notificationTemplateRuntime,
+});
 
 // ── Event stream (SSE/WS hub) ─────────────────────────────────────
 const globalMessageStreamHub = createGlobalMessageStreamHub({
@@ -690,6 +697,7 @@ const gracefulShutdownRuntime = (createGracefulShutdownRuntime as any)({
   syncToHmrState,
   openCodeWatcherRuntime,
   sessionRuntime,
+  notificationRuntime: notificationDeliveryRuntime,
   getHealthCheckInterval: () =>
     openCodeRuntimeRef.current
       ? openCodeRuntimeRef.current.getState().healthCheckInterval

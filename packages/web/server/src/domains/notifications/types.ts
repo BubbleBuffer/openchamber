@@ -16,6 +16,18 @@ export interface NotificationEmitterRuntime {
   broadcastUiNotification: (payload: any) => void;
 }
 
+export interface NotificationDeliveryRuntimeDeps {
+  eventBus: EventBus;
+  broadcastUiNotification: NotificationEmitterRuntime["broadcastUiNotification"];
+  sendPushToAllUiSessions: PushRuntime["sendPushToAllUiSessions"];
+  notificationTriggerRuntime: Pick<NotificationTriggerRuntime, "dispose">;
+  notificationTemplateRuntime?: Pick<NotificationTemplateRuntime, "dispose">;
+}
+
+export interface NotificationDeliveryRuntime {
+  dispose: () => void;
+}
+
 // ---------------------------------------------------------------------------
 // Message
 // ---------------------------------------------------------------------------
