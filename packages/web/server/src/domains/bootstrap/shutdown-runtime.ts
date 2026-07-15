@@ -12,7 +12,6 @@ export function createGracefulShutdownRuntime(deps: ShutdownDeps): ShutdownRunti
     openCodeWatcherRuntime,
     sessionRuntime,
     notificationRuntime,
-    scheduledTasksRuntime,
     getHealthCheckInterval,
     clearHealthCheckInterval,
     getTerminalRuntime,
@@ -58,7 +57,6 @@ export function createGracefulShutdownRuntime(deps: ShutdownDeps): ShutdownRunti
       }
 
       notificationRuntime?.dispose?.();
-      scheduledTasksRuntime?.stop?.();
 
       const healthCheckInterval = getHealthCheckInterval();
       if (healthCheckInterval) {

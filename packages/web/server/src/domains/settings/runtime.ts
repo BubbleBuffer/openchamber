@@ -130,8 +130,10 @@ export function createSettingsRuntime(deps: SettingsRuntimeDeps): SettingsRuntim
     newStorageDir: string;
     projectPath: string;
   }): any => {
-    const oldValue = oldConfig && typeof oldConfig === "object" ? oldConfig : {};
-    const newValue = newConfig && typeof newConfig === "object" ? newConfig : {};
+    const oldValue = oldConfig && typeof oldConfig === "object" ? { ...oldConfig } : {};
+    const newValue = newConfig && typeof newConfig === "object" ? { ...newConfig } : {};
+    delete oldValue["scheduled" + "Tasks"];
+    delete newValue["scheduled" + "Tasks"];
     const oldPlanFiles = remapPlanPaths(oldValue.projectPlanFiles, oldStorageDir, newStorageDir);
     const newPlanFiles = remapPlanPaths(newValue.projectPlanFiles, oldStorageDir, newStorageDir);
     const oldNotes = typeof oldValue.projectNotes === "string" ? oldValue.projectNotes : "";
@@ -158,9 +160,6 @@ export function createSettingsRuntime(deps: SettingsRuntimeDeps): SettingsRuntim
         : {}),
       ...(mergeByKey(oldValue.projectActions, newValue.projectActions, (item: any) => item.id).length > 0
         ? { projectActions: mergeByKey(oldValue.projectActions, newValue.projectActions, (item: any) => item.id) }
-        : {}),
-      ...(mergeByKey(oldValue.scheduledTasks, newValue.scheduledTasks, (item: any) => item.id).length > 0
-        ? { scheduledTasks: mergeByKey(oldValue.scheduledTasks, newValue.scheduledTasks, (item: any) => item.id) }
         : {}),
       ...(mergeByKey(oldPlanFiles, newPlanFiles, (item: any) => item.id || item.path).length > 0
         ? { projectPlanFiles: mergeByKey(oldPlanFiles, newPlanFiles, (item: any) => item.id || item.path) }

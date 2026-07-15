@@ -74,7 +74,6 @@ export const SSE_PATH_PREFIXES = [
   "/api/event",
   "/api/global/event",
   "/api/notifications/stream",
-  "/api/openchamber/events",
 ] as const;
 
 export const TERMINAL_INPUT_WS_HEARTBEAT_INTERVAL_MS = 15_000;

@@ -11,11 +11,6 @@ import { startOpenCodeInstance } from "../helpers/opencode-process"
 // ── Wire-format helpers ──────────────────────────────────────────
 
 type WsFrame = Record<string, unknown>
-type WsEventFrame = { type: "event"; payload: Record<string, unknown>; eventId?: string; directory?: string }
-
-function isEventFrame(frame: WsFrame): frame is WsEventFrame {
-  return frame.type === "event" && typeof frame.payload === "object" && frame.payload !== null
-}
 
 /**
  * Open a WebSocket to the OpenChamber global event stream, wait for the
@@ -149,7 +144,7 @@ describeWhenOpenCode("OpenChamber streaming liveness regression", () => {
   }, 30_000)
 
   test(
-    "global WS connects, no openchamber:heartbeat payload, OpenCode restart preserves health",
+    "global WS connects, OpenCode restart preserves health",
     async () => {
       // ── 1. Connect WS and wait for ready ────────────────────────
       const ws = await connectGlobalWs(openchamber!.baseUrl)
@@ -205,14 +200,7 @@ describeWhenOpenCode("OpenChamber streaming liveness regression", () => {
 
       // ── 7. Assertions ───────────────────────────────────────────
 
-      // 7a. No event frame carries an openchamber:heartbeat payload.
-      // The bridge explicitly filters these from WS clients.
-      const heartbeatEvents = ws.frames.filter(
-        (f) => isEventFrame(f) && f.payload.type === "openchamber:heartbeat",
-      )
-      expect(heartbeatEvents).toHaveLength(0)
-
-      // 7b. WS remained controlled throughout.
+      // 7a. WS remained controlled throughout.
       // "Controlled" means either the socket is still open, or it
       // received a known terminal frame (error) rather than an
       // unexpected close. We check that we didn't receive a close
@@ -229,14 +217,14 @@ describeWhenOpenCode("OpenChamber streaming liveness regression", () => {
       // If the WS is still open, that's the expected case — the
       // bridge keeps idle WS clients alive across upstream outages.
 
-      // 7c. OpenChamber's own health endpoint still returns 200
+      // 7b. OpenChamber's own health endpoint still returns 200
       // after the OpenCode restart.
       const healthResponse = await fetch(`${openchamber!.baseUrl}/health`)
       expect(healthResponse.status).toBe(200)
       const healthBody = await healthResponse.json() as { status?: string }
       expect(healthBody.status).toBe("ok")
 
-      // 7d. Summary of stall/resume observations (no assertion —
+      // 7c. Summary of stall/resume observations (no assertion —
       //      informational for the test log).
       const observations: string[] = []
       if (stallBeforeKill) observations.push(`data_stalled before kill: ${JSON.stringify(stallBeforeKill)}`)

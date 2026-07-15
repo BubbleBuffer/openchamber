@@ -227,8 +227,6 @@ export const createEventStreamRuntime = (deps: any) => {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const uiNotificationClients: any = createBoundedSet({ maxSize: 200, ttlMs: 3600_000 });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const uiOpenChamberEventClients: any = createBoundedSet({ maxSize: 200, ttlMs: 3600_000 });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const notificationEmitterRuntime: any = createNotificationEmitterRuntime({
@@ -344,14 +342,12 @@ export const createEventStreamRuntime = (deps: any) => {
       eventBus.emit(EVENTS.EVENT_RECEIVED, { payload, directory: undefined });
     },
     getUiNotificationClients: () => uiNotificationClients,
-    getUiOpenChamberEventClients: () => uiOpenChamberEventClients,
     pushRuntime,
     globalMessageStreamHub,
     dispose: () => {
       disposers.forEach((fn) => fn());
       globalWatcherStartPromise = null;
       uiNotificationClients.dispose();
-      uiOpenChamberEventClients.dispose();
     },
   };
 };

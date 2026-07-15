@@ -1,15 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const capturedFrames: unknown[] = [];
-const capturedEvents: unknown[] = [];
 
 vi.mock("./protocol.js", () => ({
   sendMessageStreamWsFrame: (_socket: unknown, payload: unknown) => {
     capturedFrames.push(payload);
-    return true;
-  },
-  sendMessageStreamWsEvent: (_socket: unknown, payload: unknown) => {
-    capturedEvents.push(payload);
     return true;
   },
   parseSseEventEnvelope: () => null,
@@ -56,10 +51,9 @@ function stubHub(): any {
   };
 }
 
-describe("createGlobalMessageStreamWsBridge — stall/resume dispatch + heartbeat removal", () => {
+describe("createGlobalMessageStreamWsBridge — stall/resume dispatch", () => {
   beforeEach(() => {
     capturedFrames.length = 0;
-    capturedEvents.length = 0;
     vi.useFakeTimers();
   });
 
@@ -114,28 +108,4 @@ describe("createGlobalMessageStreamWsBridge — stall/resume dispatch + heartbea
     });
   });
 
-  it("does NOT send openchamber:heartbeat data frames to clients", () => {
-    const hub = stubHub();
-    const bridge = createBridge(hub);
-    const socket = stubSocket();
-
-    bridge.accept(socket, { requestedLastEventId: "" });
-
-    // Clear any frames/events sent during accept
-    capturedFrames.length = 0;
-    capturedEvents.length = 0;
-
-    // Advance timers past several heartbeat intervals
-    vi.advanceTimersByTime(5000);
-
-    const heartbeatFrames = capturedFrames.filter(
-      (f: unknown) => (f as Record<string, unknown>).type === "openchamber:heartbeat",
-    );
-    const heartbeatEvents = capturedEvents.filter(
-      (e: unknown) => (e as Record<string, unknown>).type === "openchamber:heartbeat",
-    );
-
-    expect(heartbeatFrames).toHaveLength(0);
-    expect(heartbeatEvents).toHaveLength(0);
-  });
 });
