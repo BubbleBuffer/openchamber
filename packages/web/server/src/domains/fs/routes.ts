@@ -714,60 +714,6 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
     }
   });
 
-  app.post("/api/fs/reveal", async (req: Request, res: Response) => {
-    const { path: targetPath } = req.body || {};
-    if (!targetPath || typeof targetPath !== "string") {
-      return res.status(400).json({ error: "Path is required" });
-    }
-
-    try {
-      const resolved = pathModule.resolve(targetPath.trim());
-      await fsPromises.access(resolved);
-
-      const platform = process.platform;
-      if (platform === "darwin") {
-        const stat = await fsPromises.stat(resolved);
-        if (stat.isDirectory()) {
-          spawnFn("open", [resolved], { windowsHide: true, stdio: "ignore", detached: true }).unref();
-        } else {
-          spawnFn("open", ["-R", resolved], { windowsHide: true, stdio: "ignore", detached: true }).unref();
-        }
-      } else if (platform === "win32") {
-        const stat = await fsPromises.stat(resolved);
-        const escapedPath = resolved.replace(/'/g, "''");
-        const explorerArg = stat.isDirectory() ? escapedPath : `/select,${escapedPath}`;
-        const command = `Start-Process -FilePath explorer.exe -ArgumentList '${explorerArg}'`;
-        await new Promise<void>((resolve, reject) => {
-          const child = spawnFn("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", command], {
-            windowsHide: true,
-            stdio: "ignore",
-          });
-          child.once("error", reject);
-          child.once("exit", (code: number | null) => {
-            if (code === 0) {
-              resolve();
-              return;
-            }
-            reject(new Error(`Explorer launch failed with code ${code ?? "unknown"}`));
-          });
-        });
-      } else {
-        const stat = await fsPromises.stat(resolved);
-        const dir = stat.isDirectory() ? resolved : pathModule.dirname(resolved);
-        spawnFn("xdg-open", [dir], { windowsHide: true, stdio: "ignore", detached: true }).unref();
-      }
-
-      return res.json({ success: true, path: resolved });
-    } catch (error) {
-      const err = error as { code?: string };
-      if (err && typeof err === "object" && err.code === "ENOENT") {
-        return res.status(404).json({ error: "Path not found" });
-      }
-      console.error("Failed to reveal path:", error);
-      return res.status(500).json({ error: (error as Error)?.message || "Failed to reveal path" });
-    }
-  });
-
   app.post("/api/fs/exec", async (req: Request, res: Response) => {
     const { commands, cwd, background } = req.body || {};
     if (!Array.isArray(commands) || commands.length === 0) {

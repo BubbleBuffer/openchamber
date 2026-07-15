@@ -49,15 +49,6 @@ export function resolvePort(raw?: number | string): number {
   return 3000;
 }
 
-export function isDesktopNotifyEnabled(): boolean {
-  return (
-    process.env.OPENCHAMBER_DESKTOP_NOTIFY === "true" ||
-    process.env.OPENCHAMBER_RUNTIME === "desktop" ||
-    /openchamber-server/i.test(process.argv0 ?? "") ||
-    /openchamber-server/i.test(process.argv[1] ?? "")
-  );
-}
-
 export function getRuntimeName(): string {
   return typeof (globalThis as Record<string, unknown>).Bun !== "undefined" ? "bun" : "node";
 }

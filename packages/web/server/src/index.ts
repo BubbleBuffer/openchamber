@@ -66,7 +66,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(path.dirname(__filename));
 
 const DEFAULT_PORT = 3000;
-const DESKTOP_NOTIFY_PREFIX = "[OpenChamberDesktopNotify] ";
 const uiNotificationClients: Set<Response> = new Set();
 const uiNotificationWsClients: Set<Response> = new Set();
 const uiOpenChamberEventClients: Set<Response> = new Set();
@@ -258,13 +257,6 @@ const {
 
 const ENV_SKIP_OPENCODE_START =
   process.env.OPENCODE_SKIP_START === "true" || process.env.OPENCHAMBER_SKIP_OPENCODE_START === "true";
-const ENV_DESKTOP_NOTIFY = (() => {
-  if (process.env.OPENCHAMBER_DESKTOP_NOTIFY === "true") return true;
-  if (process.env.OPENCHAMBER_RUNTIME === "desktop") return true;
-  const argv0 = typeof process.argv?.[0] === "string" ? process.argv[0] : "";
-  const argv1 = typeof process.argv?.[1] === "string" ? process.argv[1] : "";
-  return /openchamber-server/i.test(argv0) || /openchamber-server/i.test(argv1);
-})();
 
 const ENV_CONFIGURED_OPENCODE_WSL_DISTRO =
   typeof process.env.OPENCODE_WSL_DISTRO === "string" && process.env.OPENCODE_WSL_DISTRO.trim().length > 0
@@ -451,13 +443,10 @@ function getOpenCodeRuntime(): any {
 
 // ── SSE notification clients ──────────────────────────────────────
 const notificationEmitterRuntime = createNotificationEmitterRuntime({
-  process,
-  getDesktopNotifyEnabled: () => ENV_DESKTOP_NOTIFY,
-  desktopNotifyPrefix: DESKTOP_NOTIFY_PREFIX,
   getUiNotificationClients: () => uiNotificationClients,
   getBroadcastGlobalUiEvent: () => broadcastGlobalUiEvent,
 });
-const { writeSseEvent, emitDesktopNotification, broadcastUiNotification } =
+const { writeSseEvent } =
   notificationEmitterRuntime;
 const broadcastGlobalUiEvent = createGlobalUiEventBroadcaster({
   sseClients: uiNotificationClients,
@@ -551,8 +540,6 @@ const notificationTriggerRuntime = (createNotificationTriggerRuntime as any)({
   fetchLastAssistantMessageText,
   resolveNotificationTemplate,
   shouldApplyResolvedTemplateMessage,
-  emitDesktopNotification,
-  broadcastUiNotification,
   sendPushToAllUiSessions,
   getOpenCodeRuntime: () => openCodeRuntimeRef.current,
 });
@@ -681,13 +668,11 @@ const bootstrapOpenCodeAtStartup = async (): Promise<void> => {
   if (openCodeRuntime.getProcess() && !openCodeRuntime.isExternal()) {
     openCodeRuntime.startHealthMonitoring(HEALTH_CHECK_INTERVAL);
   }
-  if (ENV_DESKTOP_NOTIFY) {
-    void ensureGlobalWatcherStarted().catch((e) => {
-      console.warn(
-        `Global event watcher startup failed: ${e instanceof Error ? e.message : String(e)}`
-      );
-    });
-  }
+  void ensureGlobalWatcherStarted().catch((e) => {
+    console.warn(
+      `Global event watcher startup failed: ${e instanceof Error ? e.message : String(e)}`
+    );
+  });
 };
 
 // ── Shutdown runtime ──────────────────────────────────────────────
@@ -777,10 +762,6 @@ async function main(options: any = {}): Promise<any> {
   const attachSignals = options.attachSignals !== false;
   if (typeof options.exitOnShutdown === "boolean")
     exitOnShutdown = options.exitOnShutdown;
-  if (typeof options.onDesktopNotification === "function")
-    (notificationEmitterRuntime as any).setOnDesktopNotification(
-      options.onDesktopNotification
-    );
 
   console.log(`Starting OpenChamber on port ${port === 0 ? "auto" : port}`);
 
@@ -807,7 +788,7 @@ async function main(options: any = {}): Promise<any> {
   const bootstrapResult = bootstrapRuntime.setupBaseRoutes(app, {
     process,
     openchamberVersion: OPENCHAMBER_VERSION,
-    runtimeName: process.env.OPENCHAMBER_RUNTIME || "web",
+    runtimeName: "web",
     serverStartedAt,
     gracefulShutdown,
     getHealthSnapshot: () => {
@@ -844,7 +825,6 @@ async function main(options: any = {}): Promise<any> {
         opencodeWslDistro: openCodeEnvState.resolvedWslDistro || null,
         nodeBinaryResolved: openCodeEnvState.resolvedNodeBinary || null,
         bunBinaryResolved: openCodeEnvState.resolvedBunBinary || null,
-        desktopNotifyEnabled: ENV_DESKTOP_NOTIFY,
         planModeExperimentalEnabled: PLAN_MODE_EXPERIMENT_ENABLED,
       };
     },

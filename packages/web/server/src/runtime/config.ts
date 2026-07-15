@@ -3,7 +3,6 @@ import {
   resolveBindHost,
   resolveOpenChamberDataDir,
   resolvePort,
-  isDesktopNotifyEnabled,
   readOpenChamberVersion,
 } from "./env.js";
 import path from "node:path";
@@ -22,8 +21,6 @@ export function buildServerConfig(options: StartWebUiServerOptions = {}): Server
     openchamberDataDir,
     settingsFilePath: path.join(openchamberDataDir, "settings.json"),
     pushSubscriptionsFilePath: path.join(openchamberDataDir, "push-subscriptions.json"),
-    onDesktopNotification: options.onDesktopNotification ?? null,
     openchamberVersion: readOpenChamberVersion(),
-    isDesktopNotifyEnabled: isDesktopNotifyEnabled(),
   };
 }

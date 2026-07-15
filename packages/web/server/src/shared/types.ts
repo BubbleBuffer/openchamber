@@ -12,9 +12,7 @@ export interface ServerConfig {
   openchamberDataDir: string;
   settingsFilePath: string;
   pushSubscriptionsFilePath: string;
-  onDesktopNotification: ((payload: unknown) => void) | null;
   openchamberVersion: string;
-  isDesktopNotifyEnabled: boolean;
 }
 
 export interface WebUiServerController {
@@ -56,7 +54,6 @@ export interface StartWebUiServerOptions {
   attachSignals?: boolean;
   exitOnShutdown?: boolean;
   uiPassword?: string | null;
-  onDesktopNotification?: (payload: unknown) => void;
 }
 
 export interface HealthSnapshot {
@@ -66,7 +63,6 @@ export interface HealthSnapshot {
   openCodeAuthSource: string | null;
   isOpenCodeReady: boolean;
   lastOpenCodeError: string | null;
-  desktopNotifyEnabled: boolean;
 }
 
 export const DEFAULT_PORT = 3000;

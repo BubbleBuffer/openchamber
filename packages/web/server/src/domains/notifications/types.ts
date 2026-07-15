@@ -7,16 +7,12 @@ import type { EventBus } from "../core/event-bus.js";
 // ---------------------------------------------------------------------------
 
 export interface NotificationEmitterDeps {
-  process: typeof import("process");
-  getDesktopNotifyEnabled: () => boolean;
-  desktopNotifyPrefix: string;
   getUiNotificationClients: () => Set<any>;
   getBroadcastGlobalUiEvent: () => ((payload: any) => void) | null;
 }
 
 export interface NotificationEmitterRuntime {
   writeSseEvent: (res: any, payload: any) => void;
-  emitDesktopNotification: (payload: any) => void;
   broadcastUiNotification: (payload: any) => void;
 }
 

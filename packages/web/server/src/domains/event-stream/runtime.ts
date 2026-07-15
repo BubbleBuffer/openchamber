@@ -217,7 +217,6 @@ export const createEventStreamRuntime = (deps: any) => {
   const {
     eventBus,
     openCodeRuntime,
-    process,
     fsPromises,
     path,
     readSettingsFromDiskMigrated,
@@ -230,19 +229,14 @@ export const createEventStreamRuntime = (deps: any) => {
   const uiNotificationClients: any = createBoundedSet({ maxSize: 200, ttlMs: 3600_000 });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const uiOpenChamberEventClients: any = createBoundedSet({ maxSize: 200, ttlMs: 3600_000 });
-  const DESKTOP_NOTIFY_PREFIX = "[OpenChamberDesktopNotify] ";
-  const getDesktopNotifyEnabled = (): boolean => false;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const notificationEmitterRuntime: any = createNotificationEmitterRuntime({
-    process,
-    getDesktopNotifyEnabled,
-    desktopNotifyPrefix: DESKTOP_NOTIFY_PREFIX,
     getUiNotificationClients: () => uiNotificationClients,
     getBroadcastGlobalUiEvent: () => null,
   });
 
-  const { writeSseEvent, emitDesktopNotification, broadcastUiNotification } =
+  const { writeSseEvent, broadcastUiNotification } =
     notificationEmitterRuntime;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -327,9 +321,6 @@ export const createEventStreamRuntime = (deps: any) => {
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const disposers: Array<() => void> = [
     eventBus.on(EVENTS.NOTIFICATION_SEND_UI, ({ payload }: any) => broadcastToClients(payload)),
-    eventBus.on(EVENTS.NOTIFICATION_SEND_DESKTOP, ({ payload }: any) =>
-      emitDesktopNotification(payload)
-    ),
     eventBus.on(EVENTS.NOTIFICATION_SEND_PUSH, ({ payload, options }: any) => {
       void pushRuntime.sendPushToAllUiSessions?.(payload, options);
     }),
@@ -342,7 +333,6 @@ export const createEventStreamRuntime = (deps: any) => {
   return {
     writeSseEvent,
     broadcastUiNotification,
-    emitDesktopNotification,
     ensureGlobalWatcherStarted,
     addUiNotificationClient: (res: unknown) => {
       uiNotificationClients.add(res);

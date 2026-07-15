@@ -88,6 +88,7 @@ describe("checkForUpdates", () => {
 
       expect(globalThis.fetch).toHaveBeenCalledOnce();
       expect(result.packageManager).toBe("npm");
+      expect(result.packageManager).not.toBe("electron");
       expect(requestPayload).toMatchObject({
         appType: "web",
       });
