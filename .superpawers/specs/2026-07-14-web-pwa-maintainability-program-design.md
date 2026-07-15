@@ -29,7 +29,7 @@ Acceptance:
 - No compatibility facade remains solely to make a future extension easier.
 
 ### Chunk: scheduled-tasks-removal
-Status: planned
+Status: complete
 Goal: Remove scheduled tasks as a product capability because background task orchestration is outside the OpenCode workspace scope.
 Acceptance:
 - Scheduled-task server domains, routes, settings, event types, client stores, UI, tests, prompts, and documentation are deleted.

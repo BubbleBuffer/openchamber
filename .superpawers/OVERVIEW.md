@@ -154,8 +154,8 @@ Specs:
 
 ```bash
 bun run type-check           # ✅ passes for all maintained workspaces and server
-bun run lint                 # ⚠ inherited debt: session-state 0/5, web 378/236, tests 37/5, UI 41/722 (errors/warnings)
-bun run test:stores          # ✅ 239 pass
+bun run lint                 # ⚠ inherited debt: session-state 0/5, web 373/225, tests 37/5, UI 41/712 (errors/warnings)
+bun run test:stores          # ✅ 238 pass
 bun run test:integration     # ✅ 54 pass / 1 skip
 ```
 

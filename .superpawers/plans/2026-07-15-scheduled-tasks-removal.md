@@ -1,13 +1,13 @@
 ---
 kind: plan
-status: active
+status: complete
 parent_spec: .superpawers/specs/2026-07-14-web-pwa-maintainability-program-design.md
 covers_chunks:
   - scheduled-tasks-removal
 coverage: completes
 created: 2026-07-15
 updated: 2026-07-15
-next_action: "Execute Task 1"
+next_action: "Select next uncovered maintainability chunk: web-product-consolidation"
 ---
 
 # Scheduled Tasks Removal Implementation Plan
@@ -51,6 +51,19 @@ Must remain:
 - historical `CHANGELOG.md` and completed `.superpawers` artifacts.
 
 The obsolete scheduled-task SSE heartbeat source and its exact event literals are removed. Generic message-stream serialization remains tested with a live, non-scheduled event fixture. The integration liveness test continues to prove connection health and OpenCode restart recovery without asserting absence of an event type that no longer exists.
+
+## Verification Record
+
+Verified 2026-07-15:
+
+- Exhaustive absence, dependency, and lock audits passed; retained event/SSE, liveness, project, worktree, and config checks passed.
+- Frozen install passed.
+- Type-check and production build passed.
+- Stores: 238 pass; React: 63 pass; performance: pass; web: 19 pass / 1 skip; integration: 54 pass / 1 skip; server build passed; docs: 7/7.
+- Focused event/notification/settings/project/OpenCode/Git/client-config tests: 11 files, 27 pass (server 10 files/24 tests; client config 1 file/3 tests).
+- `scripts/verify.sh` was nonzero only for inherited lint; its type-check and build phases passed.
+- Lint: session-state 0/5, web 373/225, tests 37/5, UI 41/712; all unchanged or reduced.
+- Worktree/diff clean; no process-name matching used.
 
 ## File Structure
 
@@ -109,7 +122,7 @@ The obsolete scheduled-task SSE heartbeat source and its exact event literals ar
 - Modify: `packages/ui/src/lib/config/openchamberConfig.ts`
 - Create: `packages/ui/src/lib/config/openchamberConfig.test.ts`
 
-- [ ] **Step 1: Record the current client feature surface**
+- [x] **Step 1: Record the current client feature surface**
 
 Run:
 
@@ -121,7 +134,7 @@ bun run test:react
 
 Expected: references are confined to the listed deletion/edit targets and the existing retained client suites pass before deletion.
 
-- [ ] **Step 2: Delete the dedicated UI and API/event modules**
+- [x] **Step 2: Delete the dedicated UI and API/event modules**
 
 Delete all four whole-file targets. In `SessionSidebar`, remove:
 
@@ -133,13 +146,13 @@ Delete all four whole-file targets. In `SessionSidebar`, remove:
 
 In `SidebarHeader`, remove `RiCalendarScheduleLine`, the callback prop, destructuring, and calendar button. Preserve all project/session controls and existing mobile/desktop form-factor behavior.
 
-- [ ] **Step 3: Remove scheduled dialog state and config compatibility**
+- [x] **Step 3: Remove scheduled dialog state and config compatibility**
 
 Remove only `isScheduledTasksDialogOpen` and `setScheduledTasksDialogOpen` from `useDialogStore` and its tests. Remove corresponding sidebar test mocks.
 
 In `openchamberConfig.ts`, keep `version` as the server-owned key, but remove `scheduledTasks` from the comment/copy logic and strip it from both the cloned existing object and incoming/merged config before generic spreads. `updateOpenChamberConfig` must not reintroduce the key after reading old disk data. Add focused tests through direct write, `updateOpenChamberConfig`, and `saveWorktreeSetupCommands`, proving ordinary config updates drop the obsolete key while preserving `version`, live config fields, project path, and setup-worktree commands. All browser preference persistence remains unchanged.
 
-- [ ] **Step 4: Verify and commit the client deletion**
+- [x] **Step 4: Verify and commit the client deletion**
 
 Run:
 
@@ -195,7 +208,7 @@ git commit -m "refactor: remove scheduled tasks ui"
 - Create: `packages/web/server/src/domains/opencode/routes/routes.test.ts`
 - Create: `packages/web/server/src/domains/git/routes.test.ts`
 
-- [ ] **Step 1: Prove the server ownership boundary before deletion**
+- [x] **Step 1: Prove the server ownership boundary before deletion**
 
 Run:
 
@@ -207,7 +220,7 @@ rg -n '/api/openchamber/events|openchamber:(scheduled-task-ran|event-stream-read
 
 Expected: project-config runtime/types and both dependencies are used only by scheduled-task construction/routes/runtime/tests; the dedicated OpenChamber SSE endpoint has no non-scheduled client.
 
-- [ ] **Step 2: Delete the scheduler and its project persistence owner**
+- [x] **Step 2: Delete the scheduler and its project persistence owner**
 
 Delete the complete `scheduled-tasks` domain, the scheduled-task-only `project-config` implementation/test/types, and `types/luxon.d.ts`. Reduce `domains/projects/index.ts` to its retained project-ID export(s); do not change project listing, worktrees, or normal project APIs.
 
@@ -220,7 +233,7 @@ In `index.ts`, remove:
 
 Remove `uiOpenChamberEventClients`, `OPENCHAMBER_PROJECTS_CONFIG_DIR`, `projectConfigRuntime`, and `getOpenChamberEventClients` from `index.ts` and feature-route dependencies. In the otherwise legacy `createEventStreamRuntime`, remove only its unused `uiOpenChamberEventClients` bounded set, getter, and disposal call. Remove the matching route registration and shutdown dependency/type/mock.
 
-- [ ] **Step 3: Remove the dedicated event protocol residue**
+- [x] **Step 3: Remove the dedicated event protocol residue**
 
 Remove `/api/openchamber/events` from `shared/types.ts` SSE prefixes and from both active reverse-proxy sources: `docs/REVERSE_PROXY.md` and `packages/docs/content/docs/reverse-proxy.mdx`.
 
@@ -236,7 +249,7 @@ Add focused preservation tests:
 - `routes.test.ts` captures `POST /api/opencode/directory`, supplies validated paths and existing/new project lists, and proves new projects receive `createProjectIdFromPath`, existing projects are not duplicated, and `projects`/`activeProjectId`/`lastDirectory` are persisted.
 - `git/routes.test.ts` captures `GET /api/git/worktrees`, mocks the lazy Git module, and proves the route forwards the validated directory to `getWorktrees` and returns its result. It must not execute a real Git process.
 
-- [ ] **Step 4: Remove exclusive dependencies and regenerate the lockfile**
+- [x] **Step 4: Remove exclusive dependencies and regenerate the lockfile**
 
 Remove `cron-parser` and `luxon` from `packages/web/package.json`, then run `bun install` to regenerate `bun.lock`.
 
@@ -249,7 +262,7 @@ bun install --frozen-lockfile
 
 Expected: neither package remains owned by the workspace/lockfile and the frozen install makes no changes.
 
-- [ ] **Step 5: Run focused server and protected workflow tests**
+- [x] **Step 5: Run focused server and protected workflow tests**
 
 Run:
 
@@ -263,7 +276,7 @@ git diff --check
 
 Expected: shutdown lifecycle, generic event serialization, WS status routing, bootstrap, server compile, and web integration pass without scheduler ownership.
 
-- [ ] **Step 6: Audit and commit the server deletion**
+- [x] **Step 6: Audit and commit the server deletion**
 
 Run:
 
@@ -290,7 +303,7 @@ git commit -m "refactor: remove scheduled tasks runtime"
 - Modify: `.superpawers/specs/2026-07-14-web-pwa-maintainability-program-design.md`
 - Modify: `.superpawers/OVERVIEW.md` only if its active validation block changes during fresh verification
 
-- [ ] **Step 1: Run exhaustive absence and preservation audits**
+- [x] **Step 1: Run exhaustive absence and preservation audits**
 
 Run:
 
@@ -316,7 +329,7 @@ test -f packages/ui/src/lib/config/openchamberConfig.test.ts
 
 Expected: no active scheduled capability or dependency remains; retained SSE transports, stall/resume protocol, and foreground session/tool paths remain.
 
-- [ ] **Step 2: Run full chunk-boundary verification**
+- [x] **Step 2: Run full chunk-boundary verification**
 
 Run:
 
@@ -336,13 +349,13 @@ scripts/verify.sh
 
 Expected: install, type-check, build, stores, React, performance, web, integration, server build, and docs pass. `scripts/verify.sh` may remain nonzero only because of inherited lint debt; its type-check/build phases must pass. Integration cleanup uses the existing PID-file/watchdog/reaper only. Never use process-name matching.
 
-- [ ] **Step 3: Compare lint with the inherited baseline**
+- [x] **Step 3: Compare lint with the inherited baseline**
 
 Run: `bun run lint`
 
 Expected: no surviving workspace exceeds the verified pre-chunk baseline: session-state 0 errors/5 warnings, web 378/236, tests 37/5, UI 41/722. This fresh baseline follows the completed VS Code/Electron contractions and supersedes the parent spec's original program-start aggregate. Reductions are expected from deleting large files; no new rule category is allowed.
 
-- [ ] **Step 4: Inspect repository state before tracking updates**
+- [x] **Step 4: Inspect repository state before tracking updates**
 
 Run:
 
@@ -354,13 +367,13 @@ git log --oneline -20
 
 Expected: clean worktree after implementation commits, no whitespace errors, and both task commits present.
 
-- [ ] **Step 5: Close plan and parent chunk**
+- [x] **Step 5: Close plan and parent chunk**
 
 Set this plan to `status: complete`, check every step, record exact fresh verification evidence, and set `next_action` to selecting the next uncovered maintainability chunk.
 
 In the parent spec, change only `scheduled-tasks-removal` from `Status: planned` to `Status: complete`. Update `.superpawers/OVERVIEW.md` only when fresh active validation counts differ; preserve its historical text.
 
-- [ ] **Step 6: Validate planning state and commit tracking**
+- [x] **Step 6: Validate planning state and commit tracking**
 
 Run:
 
