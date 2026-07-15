@@ -11,7 +11,7 @@ updated: 2026-07-14
 ## Implementation Chunks
 
 ### Chunk: electron-removal
-Status: planned
+Status: complete
 Goal: Remove the Electron product, native-shell behavior, SSH management, and all desktop-specific maintenance surfaces.
 Acceptance:
 - `packages/electron` and Electron-only UI, stores, globals, IPC shims, tests, scripts, dependencies, release jobs, assets, documentation, and configuration are deleted.

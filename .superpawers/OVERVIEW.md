@@ -153,11 +153,10 @@ Specs:
 ## Verification baseline
 
 ```bash
-bun run type-check           # ⚠ fails only in @openchamber/tests due pre-existing UI ambient gaps (`__OPENCHAMBER_*__`, `import.meta.env`/`glob`, `?worker&url`, `?raw`); ui/web/session-state clean
-bun run type-check:server    # ✅ clean
-bun run lint                 # ⚠ not clean: UI has 1 pre-existing `activeTransport` error + 787 warnings; web lint currently reports pre-existing server lint debt
-bun run test:stores          # ✅ 68 / 68 pass (15 store test files, ~1.1s)
-bun run test:integration     # ⚠ 50 / 54 pass (1 pre-existing liveness-fix test failure; 4 skipped)
+bun run type-check           # ✅ passes for all maintained workspaces and server
+bun run lint                 # ⚠ inherited debt: session-state 0/5, web 378/236, tests 37/5, UI 41/722 (errors/warnings)
+bun run test:stores          # ✅ 239 pass
+bun run test:integration     # ✅ 54 pass / 1 skip
 ```
 
 ## Out of scope for the rework (tracked elsewhere)

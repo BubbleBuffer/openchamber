@@ -1,13 +1,13 @@
 ---
 kind: plan
-status: active
+status: complete
 parent_spec: .superpawers/specs/2026-07-14-web-pwa-maintainability-program-design.md
 covers_chunks:
   - electron-removal
 coverage: completes
 created: 2026-07-15
 updated: 2026-07-15
-next_action: "Execute Task 1"
+next_action: "Select and plan the next uncovered maintainability chunk"
 ---
 
 # Electron Shared UI And Server Runtime Removal Implementation Plan
@@ -99,7 +99,7 @@ After this plan, `electron-removal` can be marked complete. Scheduled-task serve
 - Modify: `tests/react/settings-view.test.tsx` - remove deleted desktop/Remote Instances mocks and expectations
 - Modify: `tests/types.d.ts` - remove shell-only window globals
 
-- [ ] **Step 1: Capture the shell-owned vertical features**
+- [x] **Step 1: Capture the shell-owned vertical features**
 
 Run:
 
@@ -109,11 +109,11 @@ rg -n 'DesktopHostSwitcher|RemoteInstances|remote-instances|DesktopSsh|desktopSs
 
 Expected: matches are confined to the files listed in this task plus neutral persistence/server cleanup explicitly assigned to later tasks.
 
-- [ ] **Step 2: Delete the shell-owned modules, views, stores, and tests**
+- [x] **Step 2: Delete the shell-owned modules, views, stores, and tests**
 
 Delete the listed boot/recovery, host, SSH, remote-instance, desktop-network, native app-launch files, and static native-app catalog. Do not move SSH parsing, host persistence/probing, native launch, boot-outcome routing, or recovery variants elsewhere.
 
-- [ ] **Step 3: Collapse App and onboarding onto browser startup**
+- [x] **Step 3: Collapse App and onboarding onto browser startup**
 
 Target state:
 
@@ -129,13 +129,13 @@ export type OnboardingScreenMode = 'first-launch' | 'local-setup';
 
 In `ChooserScreen` and `LocalSetupScreen`, keep CLI installation guidance, health checks, manual `opencodeBinary` text input, `updateSettings`/settings PUT, `/api/config/reload`, errors, and mobile/browser layout. Remove native window dragging, Tauri file dialogs, local/remote tabs, host persistence, and app restart. Remote/self-hosted operation is reached through the server URL and authentication, not an in-app host switcher.
 
-- [ ] **Step 4: Remove shell feature entrypoints and state**
+- [x] **Step 4: Remove shell feature entrypoints and state**
 
 Remove host switcher imports/renders from `Header` and `SessionAuthGate`; remove Remote Instances from `SettingsView` and settings metadata; remove Desktop Network settings from `OpenChamberPage`; remove SSH forwarding options from project actions; remove native Open In actions/store usage from `Header`, project controls, and `FilesView`; remove the selected remote-instance field from `useUIStore`.
 
 Preserve normal project/worktree actions, file preview/download, settings navigation, auth, CLI settings, and responsive/mobile behavior.
 
-- [ ] **Step 5: Verify the vertical deletion**
+- [x] **Step 5: Verify the vertical deletion**
 
 Run:
 
@@ -148,7 +148,7 @@ bun run type-check
 
 Expected: store and React suites pass; type-check passes; the diff deletes shell-owned features without altering protected project/file/session behavior.
 
-- [ ] **Step 6: Commit the shell feature deletion**
+- [x] **Step 6: Commit the shell feature deletion**
 
 ```bash
 git add -A -- packages/ui/src/App.tsx packages/ui/src/components/desktop packages/ui/src/components/sections/remote-instances packages/ui/src/components/sections/openchamber/DesktopNetworkSettings.tsx packages/ui/src/components/onboarding/DesktopConnectionRecovery.tsx packages/ui/src/components/onboarding/RecoveryScreen.tsx packages/ui/src/components/onboarding/RemoteConnectionForm.tsx packages/ui/src/components/onboarding/desktopRecoveryConfig.ts packages/ui/src/components/onboarding/desktopRecoveryConfig.test.ts packages/ui/src/components/onboarding/desktopRecoveryRouting.ts packages/ui/src/components/onboarding/desktopRecoveryRouting.test.ts packages/ui/src/components/onboarding/OnboardingScreen.tsx packages/ui/src/components/onboarding/ChooserScreen.tsx packages/ui/src/components/onboarding/LocalSetupScreen.tsx packages/ui/src/components/layout/Header.tsx packages/ui/src/components/layout/ProjectActionsButton.tsx packages/ui/src/components/auth/SessionAuthGate.tsx packages/ui/src/components/views/SettingsView.tsx packages/ui/src/components/views/FilesView.tsx packages/ui/src/components/sections/openchamber/OpenChamberPage.tsx packages/ui/src/components/sections/projects/ProjectActionsSection.tsx packages/ui/src/lib/desktop/desktopBoot.ts packages/ui/src/lib/desktop/desktopBoot.test.ts packages/ui/src/lib/desktop/desktopSsh.ts packages/ui/src/lib/openInApps.ts packages/ui/src/lib/project/projectActions.ts packages/ui/src/lib/settings/metadata.ts packages/ui/src/lib/api/types.ts packages/ui/src/stores/useDesktopSshStore.ts packages/ui/src/stores/useDesktopSshStore.test.ts packages/ui/src/stores/files/useOpenInAppsStore.ts packages/ui/src/stores/useUIStore.ts tests/react/settings-view.test.tsx tests/types.d.ts
@@ -190,7 +190,7 @@ git commit -m "refactor: remove native shell features"
 - Modify: `packages/ui/src/lib/api/types.ts` - make `SettingsPayload` the exact neutral `AppSettings` contract and remove shell-only fields
 - Modify: `packages/web/src/api/settings.ts` - consume the neutral settings payload without changing GET/PUT behavior
 
-- [ ] **Step 1: Record the shell-era settings names and consumers**
+- [x] **Step 1: Record the shell-era settings names and consumers**
 
 Run:
 
@@ -200,7 +200,7 @@ rg -l 'DesktopSettings|syncDesktopSettings|updateDesktopSettings' packages/ui/sr
 
 Expected: every result is an existing settings persistence consumer; no shell behavior is required for the settings GET/PUT contract.
 
-- [ ] **Step 2: Create the neutral settings type owner**
+- [x] **Step 2: Create the neutral settings type owner**
 
 Create `settingsTypes.ts` with the complete surviving fields currently declared by `DesktopSettings`, excluding fields removed in Task 1 or later server cleanup (`desktopLanAccessEnabled`, `openInAppId`, `approvedDirectories`, `securityScopedBookmarks`, and other shell bookmark/access fields with no browser consumer). Preserve browser-used `pinnedDirectories`, `nativeNotificationsEnabled`, `notificationMode`, PWA fields, catalogs, projects, and all current preference fields. Keep `ProjectEntry` and `SkillCatalogConfig` typing. This is a type move and rename, not a settings redesign.
 
@@ -229,7 +229,7 @@ export type AppSettings = {
 };
 ```
 
-- [ ] **Step 3: Rename settings persistence exports mechanically**
+- [x] **Step 3: Rename settings persistence exports mechanically**
 
 In `persistence.ts`, use `AppSettings`; rename `syncDesktopSettings` to `syncSettings`, `updateDesktopSettings` to `updateSettings`, and internal desktop-named helpers/caches to settings-neutral names where they describe browser/server settings. Preserve:
 
@@ -241,11 +241,11 @@ In `persistence.ts`, use `AppSettings`; rename `syncDesktopSettings` to `syncSet
 
 Remove assignment to `window.__OPENCHAMBER_HOME__`; persist `homeDirectory` to localStorage and settings only.
 
-- [ ] **Step 4: Migrate all current consumers**
+- [x] **Step 4: Migrate all current consumers**
 
 Update every Step 1 result to the neutral type/functions. Do not create compatibility re-exports or deprecated aliases. The post-step search must return zero matches.
 
-- [ ] **Step 5: Verify the settings migration**
+- [x] **Step 5: Verify the settings migration**
 
 Run:
 
@@ -259,7 +259,7 @@ bun run type-check
 
 Expected: zero old settings names; settings/store/React tests and type-check pass.
 
-- [ ] **Step 6: Commit the settings contract migration**
+- [x] **Step 6: Commit the settings contract migration**
 
 ```bash
 git add -A -- packages/ui/src/lib/config/settingsTypes.ts packages/ui/src/lib/config/persistence.ts packages/ui/src/main.tsx packages/ui/src/contexts/ThemeSystemContext.tsx packages/ui/src/lib/theme/appearanceAutoSave.ts packages/ui/src/lib/config/modelPrefsAutoSave.ts packages/ui/src/lib/files/directoryShowHidden.ts packages/ui/src/lib/files/filesViewShowGitignored.ts packages/ui/src/lib/api/types.ts packages/ui/src/stores/projects/useProjectsStore.ts packages/ui/src/stores/files/useDirectoryStore.ts packages/ui/src/stores/quota/useQuotaStore.ts packages/ui/src/stores/messageQueueStore.ts packages/ui/src/stores/agents/useAgentConfigStore.ts packages/ui/src/stores/git/useGitIdentitiesStore.ts packages/ui/src/components/session/DirectoryTree.tsx packages/ui/src/components/session/sidebar/hooks/useSidebarPersistence.ts packages/ui/src/components/auth/SessionAuthGate.tsx packages/ui/src/components/sections/usage/UsagePage.tsx packages/ui/src/components/sections/usage/UsageSidebar.tsx packages/ui/src/components/sections/skills/catalog/AddCatalogDialog.tsx packages/ui/src/components/sections/skills/catalog/SkillsCatalogPage.tsx packages/ui/src/components/sections/openchamber/DefaultsSettings.tsx packages/ui/src/components/sections/openchamber/GitSettings.tsx packages/ui/src/components/sections/openchamber/OpenCodeCliSettings.tsx packages/ui/src/components/sections/openchamber/OpenChamberVisualSettings.tsx packages/ui/src/components/sections/openchamber/NotificationSettings.tsx packages/ui/src/components/onboarding/ChooserScreen.tsx packages/ui/src/components/onboarding/LocalSetupScreen.tsx packages/ui/src/components/layout/Header.tsx packages/web/src/api/settings.ts
@@ -343,7 +343,7 @@ git commit -m "refactor: rename browser settings contract"
 - Test: `tests/react/pwa-runtime.test.tsx` - PWA install prompt, manifest sync, and Window Controls Overlay browser behavior
 - Modify: current React mocks under `tests/react/`
 
-- [ ] **Step 1: Capture every remaining shell runtime reference**
+- [x] **Step 1: Capture every remaining shell runtime reference**
 
 Run:
 
@@ -353,7 +353,7 @@ rg -n '__TAURI__|__OPENCHAMBER_(ELECTRON|LOCAL_ORIGIN|DESKTOP_BOOT_OUTCOME|HOME|
 
 Expected: every production match is in the files listed for this task. Form-factor words without shell/runtime context are outside this zero-tolerance pattern.
 
-- [ ] **Step 2: Make runtime and device behavior browser-only**
+- [x] **Step 2: Make runtime and device behavior browser-only**
 
 Remove shell globals/detectors and delete `desktop.ts`, `desktopNative.ts`, `desktopHosts.ts`, and `desktop.d.ts` after consumers migrate. The generic runtime descriptor becomes web-only:
 
@@ -373,13 +373,13 @@ export interface SettingsLoadResult {
 
 In `device.ts`, remove shell forcing and `desktop-runtime` class toggling. Preserve width/pointer/touch-based `DeviceType`, `useRuntimeStore` updates, mobile safe areas, and breakpoint behavior. In CSS, delete dead `:root.desktop-runtime` rules, remove `:not(.desktop-runtime)` from normal mobile selectors, and retain responsive `.desktop-only`/`.mobile-only` form-factor behavior.
 
-- [ ] **Step 3: Collapse PWA, URL, settings, and home-directory helpers**
+- [x] **Step 3: Collapse PWA, URL, settings, and home-directory helpers**
 
 Make PWA hooks use their browser capability checks directly; remove `isWebRuntime` imports without weakening SSR guards. `openExternalUrl` uses the existing validated `window.open` path only. Home-directory resolution uses settings/localStorage and `/api/fs/home`, not an injected global. `gitApiHttp.ts` and the OpenCode client use the current browser origin/API bridge with no `__OPENCHAMBER_DESKTOP_SERVER__` override. Remove `desktopOpenSshForward` from project config parsing/serialization and action UI. Keep `__OPENCHAMBER_RUNTIME_APIS__` and its registered web APIs.
 
 Remove Tauri menu listeners, native title/resize/drag behavior, native file dialogs, native drag-drop, and native export/reveal/open flows. `DirectoryExplorerDialog` directly adds a validated path through the project store; it no longer requests or starts native access. `SessionNodeItem` always uses `downloadAsMarkdown`; remove native save/reveal helpers once their final consumers are gone. Keep DOM menu events, browser file inputs/drop, HTTP filesystem APIs, blob downloads, clipboard, URL validation, and ordinary browser title updates.
 
-- [ ] **Step 4: Make updates and notifications web-only**
+- [x] **Step 4: Make updates and notifications web-only**
 
 Create `packages/ui/src/lib/config/updateTypes.ts` as the neutral owner of `UpdateInfo`. Remove `UpdateProgress`, desktop runtime state, native download/restart methods, and `desktop-tauri` query values. `useUpdateStore.checkForUpdates` always calls `/api/openchamber/update-check` with `appType=web`. Simplify `UpdateDialog` props to the web behavior it actually consumes; remove `runtimeType`, download progress/native callbacks, and the default-to-desktop behavior while retaining web install/reconnect polling, command copy, release link, error states, and PWA-safe reload behavior. Update both mobile and desktop-browser renders in `AboutSettings` to pass only those web props.
 
@@ -389,7 +389,7 @@ Remove `FilesAPI.revealPath`, the web API implementation that calls `/api/fs/rev
 
 Add focused browser/PWA contracts rather than relying only on file existence: `pwa.test.ts` covers display-mode resolution; `pwa-runtime.test.tsx` covers install-prompt capture/action, manifest synchronization, and Window Controls Overlay layout updates; `url.test.ts` and `clipboard.test.ts` cover browser URL/clipboard behavior; web API tests cover the runtime bridge keys, file downloads, Push endpoints/options, and notification fallbacks. Existing `layout-shell.test.tsx`, `mobile-session-status-bar.test.tsx`, `settings-view.test.tsx`, store tests, and performance benchmarks remain the named regression coverage for responsive/mobile/theme/store/render boundaries.
 
-- [ ] **Step 5: Collapse all component branches onto existing browser behavior**
+- [x] **Step 5: Collapse all component branches onto existing browser behavior**
 
 Update the exact consumers identified by Step 1, including:
 
@@ -400,11 +400,11 @@ Update the exact consumers identified by Step 1, including:
 
 Do not replace platform branches with mobile prop plumbing. Keep existing leaf selectors and component memo boundaries.
 
-- [ ] **Step 6: Remove the Tauri dependency and regenerate the lockfile**
+- [x] **Step 6: Remove the Tauri dependency and regenerate the lockfile**
 
 Delete `@tauri-apps/api` from `packages/ui/package.json`, run `bun install`, and assert no first-party Tauri package remains in `bun.lock`. Do not remove unrelated file icons/provenance strings solely because they contain `tauri`.
 
-- [ ] **Step 7: Verify the browser/PWA contraction**
+- [x] **Step 7: Verify the browser/PWA contraction**
 
 Run:
 
@@ -423,7 +423,7 @@ bun run type-check
 
 Expected: zero shell runtime/global/IPC/dependency matches; browser/PWA tests, performance benchmarks, and type-check pass.
 
-- [ ] **Step 8: Commit the UI runtime contraction**
+- [x] **Step 8: Commit the UI runtime contraction**
 
 ```bash
 git add -A -- packages/ui/src/lib/desktop packages/ui/src/types/desktop.d.ts packages/ui/src/lib/api/types.ts packages/ui/src/lib/device.ts packages/ui/src/styles/design-system.css packages/ui/src/styles/mobile.css packages/ui/src/lib/url.ts packages/ui/src/lib/url.test.ts packages/ui/src/lib/pwa.test.ts packages/ui/src/lib/clipboard.test.ts packages/ui/src/lib/config/updateTypes.ts packages/ui/src/lib/errors/debug.ts packages/ui/src/lib/errors/openCodeStatus.ts packages/ui/src/lib/utils.ts packages/ui/src/lib/shortcuts.ts packages/ui/src/lib/exportSession.ts packages/ui/src/lib/config/openchamberConfig.ts packages/ui/src/lib/git/gitApiHttp.ts packages/ui/src/lib/opencode/client.ts packages/ui/src/hooks/useMenuActions.ts packages/ui/src/hooks/useFileSystemAccess.ts packages/ui/src/hooks/useWindowTitle.ts packages/ui/src/hooks/useWindowControlsOverlayLayout.ts packages/ui/src/hooks/usePwaManifestSync.ts packages/ui/src/hooks/usePwaInstallPrompt.ts packages/ui/src/hooks/usePushVisibilityBeacon.ts packages/ui/src/stores/useUpdateStore.ts packages/ui/src/stores/useUpdateStore.test.ts packages/ui/src/stores/files/useDirectoryStore.ts packages/ui/src/contexts/ThemeSystemContext.tsx packages/ui/src/components/session/SessionDialogs.tsx packages/ui/src/components/session/DirectoryTree.tsx packages/ui/src/components/session/DirectoryExplorerDialog.tsx packages/ui/src/components/session/SessionSidebar.tsx packages/ui/src/components/session/sidebar/SessionNodeItem.tsx packages/ui/src/components/session/sidebar/SidebarProjectsList.tsx packages/ui/src/components/session/sidebar/sortableItems.tsx packages/ui/src/components/session/sidebar/hooks/useStickyProjectHeaders.ts packages/ui/src/components/chat/ChatInput.tsx packages/ui/src/components/chat/mobile-session-status-bar/MobileSessionStatusBar.tsx packages/ui/src/components/chat/controls/ModelControls.tsx packages/ui/src/components/auth/SessionAuthGate.tsx packages/ui/src/components/ui/CommandPalette.tsx packages/ui/src/components/ui/AboutDialog.tsx packages/ui/src/components/ui/UpdateDialog.tsx packages/ui/src/components/layout/Header.tsx packages/ui/src/components/layout/MainLayout.tsx packages/ui/src/components/layout/RightSidebar.tsx packages/ui/src/components/layout/ProjectActionsButton.tsx packages/ui/src/components/layout/SidebarFilesTree.tsx packages/ui/src/components/multirun/MultiRunLauncher.tsx packages/ui/src/components/sections/projects/ProjectsSidebar.tsx packages/ui/src/components/sections/projects/ProjectActionsSection.tsx packages/ui/src/components/sections/openchamber/OpenChamberPage.tsx packages/ui/src/components/sections/openchamber/AboutSettings.tsx packages/ui/src/components/sections/openchamber/NotificationSettings.tsx packages/ui/src/components/sections/openchamber/OpenCodeCliSettings.tsx packages/ui/src/components/sections/openchamber/OpenChamberVisualSettings.tsx packages/ui/src/components/views/SettingsView.tsx packages/ui/src/components/views/FilesView.tsx packages/ui/package.json packages/web/src/api/index.ts packages/web/src/api/index.test.ts packages/web/src/api/permissions.ts packages/web/src/api/files.ts packages/web/src/api/files.test.ts packages/web/src/api/push.test.ts packages/web/src/api/notifications.ts packages/web/src/api/notifications.test.ts packages/web/src/api/settings.ts tests/react/pwa-runtime.test.tsx tests/react/settings-view.test.tsx tests/react/mobile-session-status-bar.test.tsx tests/react/helpers/chatInputMocks.tsx tests/react/helpers/sessionSidebarMocks.tsx bun.lock
@@ -454,7 +454,7 @@ git commit -m "refactor: remove desktop runtime compatibility"
 - Modify: `packages/web/server/src/domains/settings/normalization.ts` only if a removed shell field is normalized there
 - Test: focused notification/runtime/settings/package-manager tests under `packages/web/server/src/domains/`
 
-- [ ] **Step 1: Add focused failing assertions for the server contraction**
+- [x] **Step 1: Add focused failing assertions for the server contraction**
 
 Update `package-manager.test.ts` so the server no longer needs `OPENCHAMBER_RUNTIME=desktop` to bypass package-manager detection and never returns `packageManager: "electron"`. Use deterministic mocks/environment cleanup already established by the test.
 
@@ -466,21 +466,21 @@ Add a focused FS route registration test proving `POST /api/fs/reveal` is absent
 
 Run the focused tests before implementation. Expected: FAIL because desktop runtime/event/payload fields still exist.
 
-- [ ] **Step 2: Delete server desktop startup and callback state**
+- [x] **Step 2: Delete server desktop startup and callback state**
 
 Remove `onDesktopNotification`, `isDesktopNotifyEnabled`, `desktopNotifyEnabled`, `ENV_DESKTOP_NOTIFY`, `OPENCHAMBER_DESKTOP_NOTIFY`, and desktop readiness `process.send` behavior from both `runtime/server.ts` and `domains/bootstrap/server-startup.ts`. Keep ordinary host/port readiness, health fields unrelated to desktop, lifecycle cleanup, and startup logging.
 
 Set runtime identity to the maintained web product without reading `OPENCHAMBER_RUNTIME`. Remove the package-manager desktop short-circuit, its `electron` result, and acceptance of the `desktop-tauri` install scope/app type; unknown legacy values normalize to `web`. Normal host package-manager detection remains.
 
-- [ ] **Step 3: Delete the desktop notification event/emitter path**
+- [x] **Step 3: Delete the desktop notification event/emitter path**
 
 Remove `NOTIFICATION_SEND_DESKTOP`, `emitDesktopNotification`, stdout prefix/enablement dependencies, and `desktopStdoutActive`. At each trigger site, preserve `NOTIFICATION_SEND_UI` under the existing browser-notification preference and always preserve `NOTIFICATION_SEND_PUSH` behavior/options. Do not merge Push and UI delivery or change template resolution.
 
-- [ ] **Step 4: Remove shell-only settings fields**
+- [x] **Step 4: Remove shell-only settings fields**
 
 Remove `desktopLanAccessEnabled`, `openInAppId`, and shell bookmark/access fields that have no remaining browser consumer from settings sanitization/normalization and UI API payload types. Keep browser project/directory selection, normal settings validation, and notification/PWA settings.
 
-- [ ] **Step 5: Run focused server verification**
+- [x] **Step 5: Run focused server verification**
 
 Run:
 
@@ -494,7 +494,7 @@ bun run type-check
 
 Expected: focused tests, server build, and type-check pass.
 
-- [ ] **Step 6: Audit and commit the server contraction**
+- [x] **Step 6: Audit and commit the server contraction**
 
 Run:
 
@@ -514,7 +514,7 @@ Expected: zero production server desktop matches and only planned server/UI cont
 - Modify: `.superpawers/specs/2026-07-14-web-pwa-maintainability-program-design.md`
 - Modify: `.superpawers/OVERVIEW.md` only if its active validation status still names a removed shell path
 
-- [ ] **Step 1: Run exhaustive removal and preservation audits**
+- [x] **Step 1: Run exhaustive removal and preservation audits**
 
 Zero-tolerance production audit:
 
@@ -552,7 +552,7 @@ rg -n 'openssh-client' Dockerfile
 
 Named behavioral coverage for these boundaries is mandatory: `packages/ui/src/lib/pwa.test.ts`, `packages/ui/src/lib/url.test.ts`, `packages/ui/src/lib/clipboard.test.ts`, `tests/react/pwa-runtime.test.tsx`, `tests/react/layout-shell.test.tsx`, `tests/react/mobile-session-status-bar.test.tsx`, `tests/react/settings-view.test.tsx`, `packages/web/src/api/index.test.ts`, `packages/web/src/api/files.test.ts`, `packages/web/src/api/push.test.ts`, and `packages/web/src/api/notifications.test.ts`. The runtime API test must assert the preserved `git`, `github`, `files`, `terminal`, `permissions`, `settings`, `push`, `tools`, and notifications bridge keys. Store and performance suites remain the regression gate for referential/subscription and chat hot-path behavior; full web/integration suites protect server/client workflows. `openssh-client` is the explicit static assertion for ordinary Git SSH support.
 
-- [ ] **Step 2: Run full chunk-boundary verification**
+- [x] **Step 2: Run full chunk-boundary verification**
 
 Run:
 
@@ -572,13 +572,13 @@ scripts/verify.sh
 
 Expected: install, type-check, build, stores, React, performance, web, integration, server build, and docs pass. The completed Electron product-surface plan independently verified `bun run type-check` passing on the current surviving workspaces; the contradictory test-type-error line in `.superpawers/OVERVIEW.md` is stale status text, not an accepted baseline, and must be corrected during closure. `scripts/verify.sh` may remain nonzero only because of the inherited lint baseline; its type-check/build phases must pass. Integration cleanup uses the existing PID-file/watchdog/reaper only. Never use process-name matching.
 
-- [ ] **Step 3: Compare lint with the inherited baseline**
+- [x] **Step 3: Compare lint with the inherited baseline**
 
 Run: `bun run lint`
 
 Expected: no surviving workspace has more errors/warnings or a new rule category than the baseline recorded by the completed product-surface plan: session-state 0/5, web 379/237, tests 37/5, UI 43/766. Record exact fresh counts; reductions are allowed.
 
-- [ ] **Step 4: Inspect repository state before tracking updates**
+- [x] **Step 4: Inspect repository state before tracking updates**
 
 Run:
 
@@ -590,13 +590,13 @@ git log --oneline -20
 
 Expected: worktree clean after implementation commits; no whitespace errors; all task commits present.
 
-- [ ] **Step 5: Close plan and parent chunk**
+- [x] **Step 5: Close plan and parent chunk**
 
 Update this plan to `status: complete`, check every step, add a concise verification record, and set `next_action` to selecting the next uncovered maintainability chunk.
 
 In the parent spec, change only `electron-removal` from `Status: planned` to `Status: complete`. Update `.superpawers/OVERVIEW.md` only if its active status still contradicts the surviving product.
 
-- [ ] **Step 6: Validate planning state and commit tracking**
+- [x] **Step 6: Validate planning state and commit tracking**
 
 Run:
 
@@ -612,3 +612,14 @@ Expected: plan is complete with all tasks checked; `electron-removal` is complet
 git add .superpawers/plans/2026-07-14-electron-shared-runtime-removal.md .superpawers/specs/2026-07-14-web-pwa-maintainability-program-design.md .superpawers/OVERVIEW.md
 git commit -m "docs: complete electron removal chunk"
 ```
+
+## Final Verification Record (2026-07-15)
+
+- Exhaustive production/test audits pass: no shell runtime, mock, dependency, or reveal residue; preservation classifications are clean.
+- Frozen install: 1267 installs, no changes. Type-check passes all maintained workspaces and server. UI/web PWA build passes; no other product build is required.
+- Stores: 239 pass. React: 63 pass. Performance: 2 benchmarks pass. Web: 19 pass/1 skip. Integration: 54 pass/1 skip. Server build passes. Docs: 7 pages/7 links pass.
+- Focused checks pass: package-manager 2, filesystem 1, notifications 8, shutdown-runtime 3, and bootstrap 3.
+- `scripts/verify.sh` exits 1 solely on inherited lint; its type-check and build phases pass.
+- Current lint counts (errors/warnings): session-state 0/5, web 378/236, tests 37/5, UI 41/722; all are unchanged or reduced from baseline, with no new category.
+- `git diff --check` and clean-worktree checks pass. Docker runtime verification is not required here; `openssh-client` remains statically preserved.
+- Lifecycle-fix commits resolve stale `getPort` after stop and concurrent/retry/HMR reset behavior. Stale mocks and reveal documentation are removed.
