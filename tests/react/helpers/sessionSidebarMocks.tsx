@@ -636,13 +636,11 @@ vi.mock("@/stores/useDialogStore", () => ({
         setSettingsDialogOpen: vi.fn(),
         toggleHelpDialog: vi.fn(),
         setAboutDialogOpen: vi.fn(),
-        setScheduledTasksDialogOpen: vi.fn(),
         openMultiRunLauncher: vi.fn(),
         isSettingsDialogOpen: false,
         isCommandPaletteOpen: false,
         isHelpDialogOpen: false,
         isAboutDialogOpen: false,
-        isScheduledTasksDialogOpen: false,
         isMultiRunLauncherOpen: false,
       }),
     {
@@ -703,10 +701,6 @@ vi.mock("@/lib/session/sessionEvents", () => ({
     onGitRefreshHint: vi.fn(() => () => {}),
     requestGitRefresh: vi.fn(),
   },
-}))
-
-vi.mock("@/lib/config/openchamberEvents", () => ({
-  subscribeOpenchamberEvents: vi.fn(() => () => {}),
 }))
 
 vi.mock("@/lib/worktrees/worktreeManager", () => ({

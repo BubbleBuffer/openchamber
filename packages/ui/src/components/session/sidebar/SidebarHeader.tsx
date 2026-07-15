@@ -18,7 +18,6 @@ import {
   RiCloseLine,
   RiContractUpDownLine,
   RiExpandUpDownLine,
-  RiCalendarScheduleLine,
 } from '@remixicon/react';
 import { cn } from '@/lib/utils';
 import { ArrowsMerge } from '@/components/icons/ArrowsMerge';
@@ -42,7 +41,6 @@ type Props = {
   searchMatchCount: number;
   collapseAllProjects: () => void;
   expandAllProjects: () => void;
-  openScheduledTasksDialog: () => void;
   selectionModeEnabled: boolean;
   onToggleSelectionMode: () => void;
   showSidebarToggle?: boolean;
@@ -68,7 +66,6 @@ export function SidebarHeader(props: Props): React.ReactNode {
     searchMatchCount,
     collapseAllProjects,
     expandAllProjects,
-    openScheduledTasksDialog,
     selectionModeEnabled,
     onToggleSelectionMode,
     showSidebarToggle = false,
@@ -157,20 +154,6 @@ export function SidebarHeader(props: Props): React.ReactNode {
             </div>
 
             <div className="flex items-center gap-1.5">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={openScheduledTasksDialog}
-                    className={headerActionButtonClass}
-                    aria-label="Scheduled tasks"
-                  >
-                    <RiCalendarScheduleLine className={headerActionIconClass} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" sideOffset={4}><p>Scheduled tasks</p></TooltipContent>
-              </Tooltip>
-
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button

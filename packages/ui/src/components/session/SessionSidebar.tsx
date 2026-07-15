@@ -20,7 +20,6 @@ import { useDialogStore } from '@/stores/useDialogStore';
 import { getSafeStorage } from '@/stores/utils/safeStorage';
 import { useGitStore, useGitAllBranches, useGitRepoStatusMap } from '@/stores/git/useGitStore';
 import { NewWorktreeDialog } from './NewWorktreeDialog';
-import { ScheduledTasksDialog } from './ScheduledTasksDialog';
 import { useSessionFoldersStore } from '@/stores/session/useSessionFoldersStore';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useArchivedAutoFolders } from './sidebar/hooks/useArchivedAutoFolders';
@@ -76,7 +75,6 @@ import {
 import { refreshGlobalSessions, useGlobalSessionsStore } from '@/stores/useGlobalSessionsStore';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { useGitHubAuthStore } from '@/stores/github/useGitHubAuthStore';
-import { subscribeOpenchamberEvents } from '@/lib/config/openchamberEvents';
 
 /**
  * Owns the useAllSessionStatuses() subscription for active-now live session detection.
@@ -259,7 +257,6 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
   const setSettingsDialogOpen = useDialogStore((state) => state.setSettingsDialogOpen);
   const toggleHelpDialog = useDialogStore((state) => state.toggleHelpDialog);
   const setAboutDialogOpen = useDialogStore((state) => state.setAboutDialogOpen);
-  const setScheduledTasksDialogOpen = useDialogStore((state) => state.setScheduledTasksDialogOpen);
   const openMultiRunLauncher = useDialogStore((state) => state.openMultiRunLauncher);
   const notifyOnSubtasks = useNotificationSettingsStore((state) => state.notifyOnSubtasks);
   const showDeletionDialog = useChatRenderingStore((state) => state.showDeletionDialog);
@@ -388,27 +385,6 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
       cancelled = true;
     };
   }, [currentDirectory, syncSessionStructureSignature]);
-
-  React.useEffect(() => {
-    let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
-    const unsubscribe = subscribeOpenchamberEvents((event) => {
-      if (event.type !== 'scheduled-task-ran') {
-        return;
-      }
-      if (refreshTimeout) {
-        clearTimeout(refreshTimeout);
-      }
-      refreshTimeout = setTimeout(() => {
-        void refreshGlobalSessions(syncSessionsSnapshotRef.current);
-      }, 500);
-    });
-    return () => {
-      if (refreshTimeout) {
-        clearTimeout(refreshTimeout);
-      }
-      unsubscribe();
-    };
-  }, []);
 
   const {
     buildGroupSearchText,
@@ -1495,7 +1471,6 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
         searchMatchCount={searchMatchCount}
         collapseAllProjects={collapseAllProjects}
         expandAllProjects={expandAllProjects}
-        openScheduledTasksDialog={() => setScheduledTasksDialogOpen(true)}
         selectionModeEnabled={selectionModeEnabled}
         onToggleSelectionMode={handleToggleSelectionMode}
          showSidebarToggle={!mobileVariant}
@@ -1600,8 +1575,6 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
           openNewSessionDraft({ directoryOverride: worktreePath });
         }}
       />
-
-      <ScheduledTasksDialog />
 
       <SessionDeleteConfirmDialog
         value={deleteSessionConfirm}

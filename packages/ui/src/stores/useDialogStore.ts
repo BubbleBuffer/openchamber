@@ -10,7 +10,6 @@ export interface DialogStore {
   isOpenCodeStatusDialogOpen: boolean;
   openCodeStatusText: string;
   isSessionCreateDialogOpen: boolean;
-  isScheduledTasksDialogOpen: boolean;
   isSettingsDialogOpen: boolean;
   isModelSelectorOpen: boolean;
   isTimelineDialogOpen: boolean;
@@ -28,7 +27,6 @@ export interface DialogStore {
   setOpenCodeStatusDialogOpen: (open: boolean) => void;
   setOpenCodeStatusText: (text: string) => void;
   setSessionCreateDialogOpen: (open: boolean) => void;
-  setScheduledTasksDialogOpen: (open: boolean) => void;
   setSettingsDialogOpen: (open: boolean) => void;
   setModelSelectorOpen: (open: boolean) => void;
   setTimelineDialogOpen: (open: boolean) => void;
@@ -48,7 +46,6 @@ export const useDialogStore = create<DialogStore>()(
       isOpenCodeStatusDialogOpen: false,
       openCodeStatusText: '',
       isSessionCreateDialogOpen: false,
-      isScheduledTasksDialogOpen: false,
       isSettingsDialogOpen: false,
       isModelSelectorOpen: false,
       isTimelineDialogOpen: false,
@@ -66,7 +63,6 @@ export const useDialogStore = create<DialogStore>()(
       setOpenCodeStatusDialogOpen: (open) => set({ isOpenCodeStatusDialogOpen: open }),
       setOpenCodeStatusText: (text) => set({ openCodeStatusText: text }),
       setSessionCreateDialogOpen: (open) => set({ isSessionCreateDialogOpen: open }),
-      setScheduledTasksDialogOpen: (open) => set({ isScheduledTasksDialogOpen: open }),
       setSettingsDialogOpen: (open) => set(() => {
         if (!open) return { isSettingsDialogOpen: false };
         return { isSettingsDialogOpen: true };

@@ -10,6 +10,7 @@ import { createProjectIdFromPath } from '../project/projectId';
 type ProjectRef = { id: string; path: string };
 
 const CONFIG_FILENAME = 'openchamber.json';
+const obsoleteConfigKey = ['scheduled', 'Tasks'].join('');
 // LEGACY_PROJECT_CONFIG: legacy per-project config root inside repo.
 const LEGACY_CONFIG_DIR = '.openchamber';
 const USER_PROJECTS_DIR_SEGMENTS = ['.config', 'openchamber', 'projects'];
@@ -579,9 +580,8 @@ export async function readOpenChamberConfig(project: ProjectRef): Promise<OpenCh
 /**
  * Write the per-user config for a project.
  *
- * Server owns `version` and `scheduledTasks` keys; client reads them via their
- * dedicated route and never round-trips them through this config write path to
- * avoid a read-then-write race clobbering a concurrent server update.
+ * Server owns the `version` key; the client never round-trips it through this
+ * config write path to avoid a read-then-write race clobbering a server update.
  */
 export async function writeOpenChamberConfig(
   project: ProjectRef,
@@ -617,13 +617,17 @@ export async function writeOpenChamberConfig(
       }
     }
 
+    const existingWithoutObsoleteKey = { ...existing };
+    delete existingWithoutObsoleteKey[obsoleteConfigKey];
+    const configWithoutObsoleteKey = { ...(config as OpenChamberConfig & Record<string, unknown>) };
+    delete configWithoutObsoleteKey[obsoleteConfigKey];
+
     const serverOwned: Record<string, unknown> = {};
     if (existing.version !== undefined) serverOwned.version = existing.version;
-    if (existing.scheduledTasks !== undefined) serverOwned.scheduledTasks = existing.scheduledTasks;
 
     const content = JSON.stringify({
-      ...existing,
-      ...config,
+      ...existingWithoutObsoleteKey,
+      ...configWithoutObsoleteKey,
       ...serverOwned,
       projectPath: normalize(projectDirectory),
     }, null, 2);

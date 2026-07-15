@@ -9,7 +9,6 @@ const initialState = {
   isOpenCodeStatusDialogOpen: false,
   openCodeStatusText: "",
   isSessionCreateDialogOpen: false,
-  isScheduledTasksDialogOpen: false,
   isSettingsDialogOpen: false,
   isModelSelectorOpen: false,
   isTimelineDialogOpen: false,
@@ -32,7 +31,6 @@ describe("useDialogStore", () => {
       expect(state.isAboutDialogOpen).toBe(false);
       expect(state.isOpenCodeStatusDialogOpen).toBe(false);
       expect(state.isSessionCreateDialogOpen).toBe(false);
-      expect(state.isScheduledTasksDialogOpen).toBe(false);
       expect(state.isSettingsDialogOpen).toBe(false);
       expect(state.isModelSelectorOpen).toBe(false);
       expect(state.isTimelineDialogOpen).toBe(false);
@@ -80,10 +78,6 @@ describe("useDialogStore", () => {
     it("setSessionCreateDialogOpen sets the flag", () => {
       useDialogStore.getState().setSessionCreateDialogOpen(true);
       expect(useDialogStore.getState().isSessionCreateDialogOpen).toBe(true);
-    });
-    it("setScheduledTasksDialogOpen sets the flag", () => {
-      useDialogStore.getState().setScheduledTasksDialogOpen(true);
-      expect(useDialogStore.getState().isScheduledTasksDialogOpen).toBe(true);
     });
     it("setSettingsDialogOpen sets and unsets the flag", () => {
       useDialogStore.getState().setSettingsDialogOpen(true);
