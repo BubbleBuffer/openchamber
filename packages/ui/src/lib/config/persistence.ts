@@ -949,7 +949,7 @@ let _settingsFlushTimer: ReturnType<typeof setTimeout> | null = null;
 let _settingsFlushInflight: Promise<void> | null = null;
 const SETTINGS_DEBOUNCE_MS = 200;
 
-const _flushSettingsUpdate = async (): Promise<void> => {
+const _flushSettingsUpdate = async (propagateErrors = false): Promise<void> => {
   const changes = _pendingSettingsChanges;
   _pendingSettingsChanges = null;
   _settingsFlushTimer = null;
@@ -969,8 +969,9 @@ const _flushSettingsUpdate = async (): Promise<void> => {
     }
   }
 
+  let response: Response;
   try {
-    const response = await fetch('/api/config/settings', {
+    response = await fetch('/api/config/settings', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -978,27 +979,39 @@ const _flushSettingsUpdate = async (): Promise<void> => {
       },
       body: JSON.stringify(changes),
     });
-
-    if (!response.ok) {
-      console.warn('Failed to update shared settings via API:', response.status, response.statusText);
-      return;
-    }
-
-    const updated = (await response.json().catch(() => null)) as DesktopSettings | null;
-    if (updated) {
-      persistToLocalStorage(updated);
-      applyDesktopUiPreferences(updated);
-      // Invalidate GET cache so next read sees the fresh data
-      _settingsCache = null;
-    }
   } catch (error) {
     console.warn('Failed to update shared settings via API:', error);
+    if (propagateErrors) {
+      throw error;
+    }
+    return;
+  }
+
+  if (!response.ok) {
+    const error = new Error('Failed to persist settings');
+    console.warn('Failed to update shared settings via API:', response.status, response.statusText);
+    if (propagateErrors) {
+      throw error;
+    }
+    return;
+  }
+
+  const updated = (await response.json().catch(() => null)) as DesktopSettings | null;
+  if (updated) {
+    try {
+      persistToLocalStorage(updated);
+      applyDesktopUiPreferences(updated);
+    } catch (error) {
+      console.warn('Failed to apply updated shared settings:', error);
+    }
+    // Invalidate GET cache so next read sees the fresh data
+    _settingsCache = null;
   }
 };
 
-const startSettingsFlush = (): Promise<void> => {
+const startSettingsFlush = (propagateErrors = false): Promise<void> => {
   const previous = _settingsFlushInflight ?? Promise.resolve();
-  const current = previous.then(_flushSettingsUpdate);
+  const current = previous.then(() => _flushSettingsUpdate(propagateErrors));
   _settingsFlushInflight = current;
   void current.then(
     () => {
@@ -1042,7 +1055,7 @@ export const flushSettings = async (): Promise<void> => {
   }
 
   if (_pendingSettingsChanges) {
-    void startSettingsFlush();
+    void startSettingsFlush(true);
   }
 
   await _settingsFlushInflight;

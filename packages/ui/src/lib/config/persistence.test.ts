@@ -80,6 +80,85 @@ describe("settings persistence coordination", () => {
     }
   });
 
+  it("rejects an explicit flush when settings persistence is rejected", async () => {
+    const originalFetch = globalThis.fetch;
+    let resolvePutStarted: (() => void) | undefined;
+    const putStarted = new Promise<void>((resolve) => {
+      resolvePutStarted = resolve;
+    });
+    globalThis.fetch = (async (_input, init) => {
+      if (init?.method === "PUT") {
+        resolvePutStarted?.();
+        return {
+          ok: false,
+          status: 500,
+          statusText: "Internal Server Error",
+          json: async () => ({ error: "settings write failed" }),
+        } as Response;
+      }
+      return { ok: false, json: async () => null } as Response;
+    }) as typeof fetch;
+
+    try {
+      await updateDesktopSettings({ opencodeBinary: "/tmp/failing" });
+      const flushPromise = flushSettings();
+      await putStarted;
+      await expect(flushPromise).rejects.toThrow("Failed to persist settings");
+    } finally {
+      globalThis.fetch = originalFetch;
+      await flushSettings();
+    }
+  });
+
+  it("rejects an explicit flush when settings persistence cannot reach the server", async () => {
+    const originalFetch = globalThis.fetch;
+    let resolvePutStarted: (() => void) | undefined;
+    const putStarted = new Promise<void>((resolve) => {
+      resolvePutStarted = resolve;
+    });
+    globalThis.fetch = (async (_input, init) => {
+      if (init?.method === "PUT") {
+        resolvePutStarted?.();
+        throw new Error("network down");
+      }
+      return { ok: false, json: async () => null } as Response;
+    }) as typeof fetch;
+
+    try {
+      await updateDesktopSettings({ opencodeBinary: "/tmp/offline" });
+      const flushPromise = flushSettings();
+      await putStarted;
+      await expect(flushPromise).rejects.toThrow("network down");
+    } finally {
+      globalThis.fetch = originalFetch;
+      await flushSettings();
+    }
+  });
+
+  it("keeps debounced background persistence non-throwing", async () => {
+    const originalFetch = globalThis.fetch;
+    let resolvePutStarted: (() => void) | undefined;
+    const putStarted = new Promise<void>((resolve) => {
+      resolvePutStarted = resolve;
+    });
+    globalThis.fetch = (async (_input, init) => {
+      if (init?.method === "PUT") {
+        resolvePutStarted?.();
+        throw new Error("background network down");
+      }
+      return { ok: false, json: async () => null } as Response;
+    }) as typeof fetch;
+
+    try {
+      await updateDesktopSettings({ opencodeBinary: "/tmp/background" });
+      await putStarted;
+      await expect(flushSettings()).resolves.toBeUndefined();
+    } finally {
+      globalThis.fetch = originalFetch;
+      await flushSettings();
+    }
+  });
+
   it("normalizes reload request failures for callers to surface", async () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = (async () => {
