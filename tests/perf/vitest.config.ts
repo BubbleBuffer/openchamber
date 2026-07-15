@@ -5,7 +5,7 @@ import { defineConfig } from "vitest/config"
 
 const perfDir = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(perfDir, "../..")
-const uiSrc = path.resolve(repoRoot, "packages/ui/src")
+const uiSrc = path.resolve(repoRoot, "packages/web/src/ui")
 
 export default defineConfig({
   // @ts-expect-error vite 7.3.x type collision with @vitejs/plugin-react 5.x — see slice 1 infra
@@ -13,7 +13,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": uiSrc,
-      "@openchamber/ui": uiSrc,
     },
   },
   test: {

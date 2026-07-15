@@ -12,7 +12,7 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["../packages/ui/src/*"],
+      "@/*": ["../packages/web/src/ui/*"],
       "@tanstack/react-virtual": ["./react/mocks/tanstack-react-virtual.ts"]
     }
   },

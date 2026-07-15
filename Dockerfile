@@ -6,7 +6,6 @@ FROM base AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
 COPY packages/session-state/package.json ./packages/session-state/
-COPY packages/ui/package.json ./packages/ui/
 COPY packages/web/package.json ./packages/web/
 COPY tests/package.json ./tests/
 RUN bun install --frozen-lockfile --ignore-scripts

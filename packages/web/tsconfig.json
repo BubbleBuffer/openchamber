@@ -15,11 +15,10 @@
     "baseUrl": ".",
     "types": ["vite/client", "@types/dom-speech-recognition", "node", "bun"],
     "paths": {
-      "@/*": ["../ui/src/*", "./src/*"],
+      "@/*": ["./src/ui/*"],
       "@web/*": ["./src/*"],
-      "@openchamber/ui/*": ["../ui/src/*"],
       "@openchamber/web/*": ["./src/*"]
     }
   },
-  "include": ["src", "../ui/src", "../ui/src/types/**/*"]
+  "include": ["src"]
 }

@@ -6,7 +6,7 @@ import {
   closeTerminal,
   restartTerminalSession,
   forceKillTerminal,
-} from '@openchamber/ui/lib/terminal/terminalApi';
+} from '@/lib/terminal/terminalApi';
 import type {
   TerminalAPI,
   TerminalHandlers,
@@ -15,7 +15,7 @@ import type {
   ResizeTerminalPayload,
   TerminalSession,
   ForceKillOptions,
-} from '@openchamber/ui/lib/api/types';
+} from '@/lib/api/types';
 
 const getRetryPolicy = (options?: TerminalStreamOptions) => {
   const retry = options?.retry;

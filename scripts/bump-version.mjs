@@ -8,7 +8,7 @@ const ROOT = path.resolve(__dirname, '..');
 
 const PACKAGES = [
   'package.json',
-  'packages/ui/package.json',
+  'packages/session-state/package.json',
   'packages/web/package.json',
 ];
 

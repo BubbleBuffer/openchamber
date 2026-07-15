@@ -1,9 +1,9 @@
 import { createWebAPIs } from './api';
 import { registerSW } from 'virtual:pwa-register';
 
-import type { RuntimeAPIs } from '@openchamber/ui/lib/api/types';
-import '@openchamber/ui/index.css';
-import '@openchamber/ui/styles/fonts';
+import type { RuntimeAPIs } from '@/lib/api/types';
+import '@/index.css';
+import '@/styles/fonts';
 
 declare global {
   interface Window {
@@ -78,7 +78,7 @@ const unregisterDevelopmentServiceWorkers = (): void => {
   });
 };
 
-void import('@openchamber/ui/main');
+void import('@/main');
 
 if (import.meta.env.PROD) {
   registerPwaServiceWorker();

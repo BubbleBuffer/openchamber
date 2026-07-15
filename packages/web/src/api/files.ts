@@ -4,7 +4,7 @@ import type {
   FileSearchResult,
   FilesAPI,
   ListDirectoryOptions,
-} from '@openchamber/ui/lib/api/types';
+} from '@/lib/api/types';
 
 const normalizePath = (path: string): string => path.replace(/\\/g, '/');
 
