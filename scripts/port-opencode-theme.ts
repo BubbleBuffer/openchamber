@@ -116,7 +116,7 @@ const DEFAULT_CONTEXT_SOURCE_DIR = path.join(
   'context',
   'theme',
 );
-const DEFAULT_OUT_DIR = path.join(REPO_ROOT, 'packages', 'ui', 'src', 'lib', 'theme', 'themes');
+const DEFAULT_OUT_DIR = path.join(REPO_ROOT, 'packages', 'web', 'src', 'ui', 'lib', 'theme', 'themes');
 
 const DEFAULT_CONFIG = {
   fonts: {
@@ -153,7 +153,7 @@ const usage = () => {
       '',
       'Options:',
       '  --opencode-root <path>  OpenCode repo root (default: ~/projects/opencode)',
-      '  --out-dir <path>        Output directory (default: packages/ui/src/lib/theme/themes)',
+      '  --out-dir <path>        Output directory (default: packages/web/src/ui/lib/theme/themes)',
       '  --stdout                Print generated JSON instead of writing files',
       '  --force                 Overwrite existing files',
       '  --list                  List available OpenCode themes',

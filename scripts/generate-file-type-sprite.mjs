@@ -5,9 +5,9 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-const ICONS_DIR = path.join(ROOT, 'packages/ui/src/assets/icons/file-types');
+const ICONS_DIR = path.join(ROOT, 'packages/web/src/ui/assets/icons/file-types');
 const SPRITE_FILE = path.join(ICONS_DIR, 'sprite.svg');
-const IDS_FILE = path.join(ROOT, 'packages/ui/src/lib/fileTypeIconIds.ts');
+const IDS_FILE = path.join(ROOT, 'packages/web/src/ui/lib/files/fileTypeIconIds.ts');
 
 const OPEN_TAG_PATTERN = /<svg\b([^>]*)>([\s\S]*?)<\/svg>\s*$/i;
 const XML_DECL_PATTERN = /^\s*<\?xml[^>]*>\s*/i;
