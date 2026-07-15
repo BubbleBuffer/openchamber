@@ -2,7 +2,7 @@ import React from 'react';
 import { RiFileCopyLine, RiCheckLine, RiExternalLinkLine } from '@remixicon/react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { updateDesktopSettings } from '@/lib/config/persistence';
+import { flushSettings, requestConfigReload, updateDesktopSettings } from '@/lib/config/persistence';
 import { copyTextToClipboard } from '@/lib/clipboard';
 
 const INSTALL_COMMAND = 'curl -fsSL https://opencode.ai/install | bash';
@@ -45,6 +45,7 @@ export function ChooserScreen({ onCliAvailable }: ChooserScreenProps) {
   const [isRetrying, setIsRetrying] = React.useState(false);
   const [isChecking, setIsChecking] = React.useState(false);
   const [checkError, setCheckError] = React.useState<string | null>(null);
+  const [settingsError, setSettingsError] = React.useState<string | null>(null);
   const [opencodeBinary, setOpencodeBinary] = React.useState('');
   const [platform, setPlatform] = React.useState<OnboardingPlatform>('unknown');
 
@@ -109,9 +110,13 @@ export function ChooserScreen({ onCliAvailable }: ChooserScreenProps) {
 
   const handleApplyPath = React.useCallback(async () => {
     setIsRetrying(true);
+    setSettingsError(null);
     try {
       await updateDesktopSettings({ opencodeBinary: opencodeBinary.trim() });
-      await fetch('/api/config/reload', { method: 'POST' });
+      await flushSettings();
+      await requestConfigReload();
+    } catch (error) {
+      setSettingsError(error instanceof Error ? error.message : 'Failed to update OpenCode configuration. Please try again.');
     } finally {
       setTimeout(() => setIsRetrying(false), 1000);
     }
@@ -200,6 +205,12 @@ export function ChooserScreen({ onCliAvailable }: ChooserScreenProps) {
         {checkError && (
           <div className="mx-auto max-w-md rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
             {checkError}
+          </div>
+        )}
+
+        {settingsError && (
+          <div className="mx-auto max-w-md rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+            {settingsError}
           </div>
         )}
 

@@ -946,6 +946,7 @@ export const syncDesktopSettings = async (): Promise<void> => {
 // Coalesce rapid updateDesktopSettings calls into a single PUT
 let _pendingSettingsChanges: Partial<DesktopSettings> | null = null;
 let _settingsFlushTimer: ReturnType<typeof setTimeout> | null = null;
+let _settingsFlushInflight: Promise<void> | null = null;
 const SETTINGS_DEBOUNCE_MS = 200;
 
 const _flushSettingsUpdate = async (): Promise<void> => {
@@ -995,6 +996,25 @@ const _flushSettingsUpdate = async (): Promise<void> => {
   }
 };
 
+const startSettingsFlush = (): Promise<void> => {
+  const previous = _settingsFlushInflight ?? Promise.resolve();
+  const current = previous.then(_flushSettingsUpdate);
+  _settingsFlushInflight = current;
+  void current.then(
+    () => {
+      if (_settingsFlushInflight === current) {
+        _settingsFlushInflight = null;
+      }
+    },
+    () => {
+      if (_settingsFlushInflight === current) {
+        _settingsFlushInflight = null;
+      }
+    },
+  );
+  return current;
+};
+
 export const updateDesktopSettings = async (changes: Partial<DesktopSettings>): Promise<void> => {
   if (typeof window === 'undefined') {
     return;
@@ -1005,7 +1025,44 @@ export const updateDesktopSettings = async (changes: Partial<DesktopSettings>): 
   if (_settingsFlushTimer) {
     clearTimeout(_settingsFlushTimer);
   }
-  _settingsFlushTimer = setTimeout(() => void _flushSettingsUpdate(), SETTINGS_DEBOUNCE_MS);
+  _settingsFlushTimer = setTimeout(() => {
+    _settingsFlushTimer = null;
+    void startSettingsFlush();
+  }, SETTINGS_DEBOUNCE_MS);
+};
+
+export const flushSettings = async (): Promise<void> => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (_settingsFlushTimer) {
+    clearTimeout(_settingsFlushTimer);
+    _settingsFlushTimer = null;
+  }
+
+  if (_pendingSettingsChanges) {
+    void startSettingsFlush();
+  }
+
+  await _settingsFlushInflight;
+};
+
+export const requestConfigReload = async (): Promise<void> => {
+  let response: Response;
+  try {
+    response = await fetch('/api/config/reload', { method: 'POST' });
+  } catch {
+    throw new Error('Failed to reload configuration. Please try again.');
+  }
+
+  const payload = await response.json().catch(() => null) as { error?: unknown } | null;
+  if (!response.ok) {
+    const message = typeof payload?.error === 'string' && payload.error.trim().length > 0
+      ? payload.error
+      : 'Failed to reload configuration. Please try again.';
+    throw new Error(message);
+  }
 };
 
 export const initializeAppearancePreferences = async (): Promise<void> => {
