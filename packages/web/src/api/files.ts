@@ -3,6 +3,7 @@ import type {
   FileSearchQuery,
   FileSearchResult,
   FilesAPI,
+  ListDirectoryOptions,
 } from '@openchamber/ui/lib/api/types';
 
 const normalizePath = (path: string): string => path.replace(/\\/g, '/');
@@ -40,11 +41,14 @@ const toDirectoryListResult = (fallbackDirectory: string, payload: WebDirectoryL
 };
 
 export const createWebFilesAPI = (): FilesAPI => ({
-  async listDirectory(path: string): Promise<DirectoryListResult> {
+  async listDirectory(path: string, options?: ListDirectoryOptions): Promise<DirectoryListResult> {
     const target = normalizePath(path);
     const params = new URLSearchParams();
     if (target) {
       params.set('path', target);
+    }
+    if (typeof options?.respectGitignore === 'boolean') {
+      params.set('respectGitignore', String(options.respectGitignore));
     }
 
     const response = await fetch(`/api/fs/list${params.toString() ? `?${params.toString()}` : ''}`);

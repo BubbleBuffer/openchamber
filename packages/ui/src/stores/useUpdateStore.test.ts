@@ -4,8 +4,6 @@ import { useUpdateStore } from "./useUpdateStore";
 const initialState = {
   checking: false,
   available: false,
-  downloading: false,
-  downloaded: false,
   info: null,
   error: null,
   lastChecked: null,
@@ -17,17 +15,24 @@ describe("useUpdateStore", () => {
     useUpdateStore.setState(initialState, false);
   });
 
-  it("dismiss clears available + downloaded + info", () => {
+  it("dismiss clears available + info", () => {
     useUpdateStore.setState({
       available: true,
-      downloaded: true,
       info: { available: true } as never,
     });
     useUpdateStore.getState().dismiss();
     const s = useUpdateStore.getState();
     expect(s.available).toBe(false);
-    expect(s.downloaded).toBe(false);
     expect(s.info).toBe(null);
+  });
+
+  it("does not expose desktop update installation state or actions", () => {
+    const state = useUpdateStore.getState();
+
+    expect(state).not.toHaveProperty("downloading");
+    expect(state).not.toHaveProperty("downloaded");
+    expect(state).not.toHaveProperty("downloadUpdate");
+    expect(state).not.toHaveProperty("restartToUpdate");
   });
 
   it("reset returns to initial state", () => {

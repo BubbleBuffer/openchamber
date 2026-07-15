@@ -6,8 +6,6 @@ import { useUIStore } from './useUIStore';
 export type UpdateState = {
   checking: boolean;
   available: boolean;
-  downloading: boolean;
-  downloaded: boolean;
   info: UpdateInfo | null;
   error: string | null;
   lastChecked: number | null;
@@ -16,8 +14,6 @@ export type UpdateState = {
 
 interface UpdateStore extends UpdateState {
   checkForUpdates: () => Promise<number | null>;
-  downloadUpdate: () => Promise<void>;
-  restartToUpdate: () => Promise<void>;
   dismiss: () => void;
   reset: () => void;
 }
@@ -92,8 +88,6 @@ async function checkForWebUpdates(currentVersion?: string): Promise<UpdateInfo |
 const initialState: UpdateState = {
   checking: false,
   available: false,
-  downloading: false,
-  downloaded: false,
   info: null,
   error: null,
   lastChecked: null,
@@ -117,15 +111,6 @@ export const useUpdateStore = create<UpdateStore>()((set) => ({
     return suggestedSec;
   },
 
-  downloadUpdate: async () => {
-    // Web updates are installed by UpdateDialog so the reconnect/reload flow
-    // remains explicit and PWA-safe.
-  },
-
-  restartToUpdate: async () => {
-    // Browser updates never restart the hosting process.
-  },
-
-  dismiss: () => set({ available: false, downloaded: false, info: null }),
+  dismiss: () => set({ available: false, info: null }),
   reset: () => set(initialState),
 }));
