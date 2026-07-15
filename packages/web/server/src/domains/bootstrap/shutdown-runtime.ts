@@ -145,6 +145,11 @@ export function createGracefulShutdownRuntime(deps: ShutdownDeps): ShutdownRunti
       (error) => {
         shutdownPromise = null;
         setIsShuttingDown(false);
+        try {
+          syncToHmrState();
+        } catch (syncError) {
+          console.warn('Failed to synchronize shutdown state after shutdown error:', syncError);
+        }
         throw error;
       },
     );

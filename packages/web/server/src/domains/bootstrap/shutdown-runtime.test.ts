@@ -89,6 +89,8 @@ describe("graceful shutdown", () => {
 
   it("rejects concurrent callers and permits a failed shutdown to be retried", async () => {
     let shuttingDown = false;
+    let persistedShuttingDown = false;
+    const syncStates: boolean[] = [];
     const shutdownError = new Error("port release failed");
     const waitForPortRelease = vi.fn()
       .mockRejectedValueOnce(shutdownError)
@@ -101,7 +103,10 @@ describe("graceful shutdown", () => {
       setIsShuttingDown: (value) => {
         shuttingDown = value;
       },
-      syncToHmrState: vi.fn(),
+      syncToHmrState: vi.fn(() => {
+        syncStates.push(shuttingDown);
+        persistedShuttingDown = shuttingDown;
+      }),
       openCodeWatcherRuntime: { stop: vi.fn() },
       sessionRuntime: { dispose: vi.fn() },
       scheduledTasksRuntime: { stop: vi.fn() },
@@ -133,6 +138,44 @@ describe("graceful shutdown", () => {
     await expect(first).rejects.toBe(shutdownError);
     await expect(second).rejects.toBe(shutdownError);
     expect(shuttingDown).toBe(false);
+    expect(syncStates).toEqual([true, false]);
+    expect(persistedShuttingDown).toBe(false);
+
+    const recreatedServer = {
+      close: vi.fn((callback: () => void) => callback()),
+    };
+    const recreatedRuntime = createGracefulShutdownRuntime({
+      process,
+      shutdownTimeoutMs: 1,
+      getExitOnShutdown: () => false,
+      getIsShuttingDown: () => persistedShuttingDown,
+      setIsShuttingDown: (value) => {
+        persistedShuttingDown = value;
+      },
+      syncToHmrState: vi.fn(),
+      openCodeWatcherRuntime: { stop: vi.fn() },
+      sessionRuntime: { dispose: vi.fn() },
+      scheduledTasksRuntime: { stop: vi.fn() },
+      getHealthCheckInterval: () => null,
+      clearHealthCheckInterval: vi.fn(),
+      getTerminalRuntime: () => null,
+      setTerminalRuntime: vi.fn(),
+      getMessageStreamRuntime: () => null,
+      setMessageStreamRuntime: vi.fn(),
+      shouldSkipOpenCodeStop: () => true,
+      getOpenCodeRuntime: () => null,
+      killProcessOnPort: vi.fn(),
+      waitForPortRelease: vi.fn(async () => true),
+      getServer: () => recreatedServer,
+      getUiAuthController: () => null,
+      setUiAuthController: vi.fn(),
+      serverSessionMachineBridge: null,
+      sessionActorRegistry: null,
+      sessionEffectExecutor: null,
+    });
+
+    await expect(recreatedRuntime.gracefulShutdown({ exitProcess: false })).resolves.toBeUndefined();
+    expect(recreatedServer.close).toHaveBeenCalledOnce();
 
     await expect(runtime.gracefulShutdown({ exitProcess: false })).resolves.toBeUndefined();
     expect(waitForPortRelease).toHaveBeenCalledTimes(2);
