@@ -159,6 +159,76 @@ describe("settings persistence coordination", () => {
     }
   });
 
+  it("continues queued persistence after an explicit flush fails", async () => {
+    const originalFetch = globalThis.fetch;
+    const originalSetTimeout = globalThis.setTimeout;
+    const originalClearTimeout = globalThis.clearTimeout;
+    const requests: string[] = [];
+    let resolveFirstStarted: (() => void) | undefined;
+    let rejectFirst: ((error: Error) => void) | undefined;
+    let resolveSecondStarted: (() => void) | undefined;
+    const firstStarted = new Promise<void>((resolve) => {
+      resolveFirstStarted = resolve;
+    });
+    const secondStarted = new Promise<void>((resolve) => {
+      resolveSecondStarted = resolve;
+    });
+
+    globalThis.fetch = (async (_input, init) => {
+      if (init?.method !== "PUT") {
+        return { ok: false, json: async () => null } as Response;
+      }
+
+      requests.push(typeof init.body === "string" ? init.body : "{}");
+      if (requests.length === 1) {
+        resolveFirstStarted?.();
+        await new Promise<never>((_resolve, reject) => {
+          rejectFirst = reject;
+        });
+      }
+
+      resolveSecondStarted?.();
+      return {
+        ok: true,
+        json: async () => ({ opencodeBinary: "/tmp/queued" }),
+      } as Response;
+    }) as typeof fetch;
+
+    try {
+      await updateDesktopSettings({ opencodeBinary: "/tmp/explicit" });
+      const explicitFlush = flushSettings();
+      await firstStarted;
+
+      globalThis.setTimeout = ((handler: TimerHandler, ...args: unknown[]) => (
+        originalSetTimeout(handler, 0, ...args)
+      )) as typeof setTimeout;
+      globalThis.clearTimeout = originalClearTimeout;
+
+      await updateDesktopSettings({ opencodeBinary: "/tmp/queued" });
+      await new Promise<void>((resolve) => originalSetTimeout(resolve, 0));
+      if (!rejectFirst) throw new Error("first PUT was not held open");
+      rejectFirst(new Error("explicit settings failure"));
+      await expect(explicitFlush).rejects.toThrow("explicit settings failure");
+
+      await Promise.race([
+        secondStarted,
+        new Promise<never>((_, reject) => originalSetTimeout(
+          () => reject(new Error("queued settings flush did not start")),
+          100,
+        )),
+      ]);
+      expect(JSON.parse(requests[1] ?? "{}")).toMatchObject({
+        opencodeBinary: "/tmp/queued",
+      });
+    } finally {
+      rejectFirst?.(new Error("test cleanup"));
+      await flushSettings().catch(() => undefined);
+      globalThis.fetch = originalFetch;
+      globalThis.setTimeout = originalSetTimeout;
+      globalThis.clearTimeout = originalClearTimeout;
+    }
+  });
+
   it("normalizes reload request failures for callers to surface", async () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = (async () => {

@@ -1011,7 +1011,9 @@ const _flushSettingsUpdate = async (propagateErrors = false): Promise<void> => {
 
 const startSettingsFlush = (propagateErrors = false): Promise<void> => {
   const previous = _settingsFlushInflight ?? Promise.resolve();
-  const current = previous.then(() => _flushSettingsUpdate(propagateErrors));
+  const current = previous
+    .catch(() => undefined)
+    .then(() => _flushSettingsUpdate(propagateErrors));
   _settingsFlushInflight = current;
   void current.then(
     () => {
