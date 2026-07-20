@@ -11,7 +11,7 @@ updated: 2026-07-14
 ## Implementation Chunks
 
 ### Chunk: electron-removal
-Status: complete
+Status: completed
 Goal: Remove the Electron product, native-shell behavior, SSH management, and all desktop-specific maintenance surfaces.
 Acceptance:
 - `packages/electron` and Electron-only UI, stores, globals, IPC shims, tests, scripts, dependencies, release jobs, assets, documentation, and configuration are deleted.
@@ -20,7 +20,7 @@ Acceptance:
 - Root verification no longer invokes or describes Electron.
 
 ### Chunk: vscode-removal
-Status: complete
+Status: completed
 Goal: Remove the VS Code extension and its duplicated runtime implementations without weakening the web product.
 Acceptance:
 - `packages/vscode` and VS Code-only bridges, webview bootstraps, tests, scripts, dependencies, workflows, docs, and release configuration are deleted.
@@ -29,7 +29,7 @@ Acceptance:
 - No compatibility facade remains solely to make a future extension easier.
 
 ### Chunk: scheduled-tasks-removal
-Status: complete
+Status: completed
 Goal: Remove scheduled tasks as a product capability because background task orchestration is outside the OpenCode workspace scope.
 Acceptance:
 - Scheduled-task server domains, routes, settings, event types, client stores, UI, tests, prompts, and documentation are deleted.
@@ -37,7 +37,7 @@ Acceptance:
 - Session prompting and ordinary foreground tool execution continue to work.
 
 ### Chunk: web-product-consolidation
-Status: complete
+Status: completed
 Goal: Give the browser application, server, CLI, and network contracts one obvious product owner and remove shell-era package boundaries.
 Acceptance:
 - The maintained runtime topology is the web/PWA client plus one OpenChamber server and CLI.

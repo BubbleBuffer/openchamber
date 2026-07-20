@@ -1,13 +1,20 @@
 ---
 kind: plan
-status: complete
+status: completed
+base_branch: feature/web-pwa-maintainability
 parent_spec: .superpawers/specs/2026-07-14-web-pwa-maintainability-program-design.md
 covers_chunks:
   - web-product-consolidation
 coverage: completes
 created: 2026-07-15
 updated: 2026-07-20
-next_action: "Plan the domain-network-contracts chunk"
+closed: 2026-07-20
+verification:
+  - Clean-dist type-check and canonical build artifacts passed.
+  - Protected tests passed, including integration coverage.
+  - Both tarballs passed clean install/import/CLI verification.
+  - Docker and release dry-runs passed.
+  - Lint had no increases or new categories.
 ---
 
 # Web Product Consolidation Implementation Plan
