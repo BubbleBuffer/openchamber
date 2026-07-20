@@ -1,5 +1,10 @@
-import type { NotificationPayload, NotificationsAPI } from '@/lib/api/types';
 import { parseNotificationSseEvent } from '@contracts/notifications';
+
+export type NotificationPayload = { title?: string; body?: string; tag?: string };
+export interface NotificationsAPI {
+  notifyAgentCompletion(payload?: NotificationPayload): Promise<boolean>;
+  canNotify?: () => boolean | Promise<boolean>;
+}
 
 /** Decode only the OpenChamber synthetic outer SSE event; SDK payloads remain opaque. */
 export const parseNotificationStreamEvent = (value: unknown) => parseNotificationSseEvent(value);

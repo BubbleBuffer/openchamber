@@ -1,5 +1,20 @@
-import type { PushAPI, PushSubscribePayload, PushUnsubscribePayload } from '@/lib/api/types';
 import { parsePushResponse, parseVapidPublicKeyResponse } from '@contracts/notifications';
+import type {
+  PushResponse,
+  PushSubscribeRequest,
+  PushUnsubscribeRequest,
+  PushVisibilityRequest,
+  VapidPublicKeyResponse,
+} from '@contracts/notifications';
+
+export type PushSubscribePayload = PushSubscribeRequest & { origin?: string };
+export type PushUnsubscribePayload = PushUnsubscribeRequest;
+export interface PushAPI {
+  getVapidPublicKey(): Promise<VapidPublicKeyResponse | null>;
+  subscribe(payload: PushSubscribePayload): Promise<PushResponse | null>;
+  unsubscribe(payload: PushUnsubscribePayload): Promise<PushResponse | null>;
+  setVisibility(payload: PushVisibilityRequest): Promise<PushResponse | null>;
+}
 
 const fetchJson = async <T>(input: RequestInfo | URL, init?: RequestInit): Promise<T | null> => {
   try {
@@ -36,7 +51,7 @@ export const createWebPushAPI = (): PushAPI => ({
   },
 
   async subscribe(payload: PushSubscribePayload) {
-    return fetchJson<{ ok: true }>('/api/push/subscribe', {
+    return fetchJson<PushResponse>('/api/push/subscribe', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -46,7 +61,7 @@ export const createWebPushAPI = (): PushAPI => ({
   },
 
   async unsubscribe(payload: PushUnsubscribePayload) {
-    return fetchJson<{ ok: true }>('/api/push/subscribe', {
+    return fetchJson<PushResponse>('/api/push/subscribe', {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -55,8 +70,8 @@ export const createWebPushAPI = (): PushAPI => ({
     });
   },
 
-  async setVisibility(payload: { visible: boolean }) {
-    return fetchJson<{ ok: true }>('/api/push/visibility', {
+  async setVisibility(payload: PushVisibilityRequest) {
+    return fetchJson<PushResponse>('/api/push/visibility', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

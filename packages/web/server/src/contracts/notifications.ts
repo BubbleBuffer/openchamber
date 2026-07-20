@@ -2,6 +2,8 @@ import { parseJsonBoolean, parseJsonObject, parseJsonString, type ParseResult } 
 
 export const NOTIFICATION_ERROR_CODES = ["notification_invalid_request", "notification_unauthorized", "notification_unavailable"] as const;
 export type PushSubscribeRequest = { endpoint: string; keys: { p256dh: string; auth: string } };
+export type PushUnsubscribeRequest = { endpoint: string };
+export type PushVisibilityRequest = { visible: boolean };
 export type PushResponse = { ok: true };
 export type VapidPublicKeyResponse = { publicKey: string };
 export type NotificationSseEvent = { type: "openchamber:notification-stream-ready"; properties: Record<string, unknown> };
@@ -15,12 +17,12 @@ export function parsePushSubscribeRequest(value: unknown): ParseResult<PushSubsc
     ? { ok: true, value: { endpoint: endpoint.value, keys: { p256dh: p256dh.value, auth: auth.value } } }
     : invalid("invalid push keys");
 }
-export function parsePushUnsubscribeRequest(value: unknown): ParseResult<{ endpoint: string }> {
+export function parsePushUnsubscribeRequest(value: unknown): ParseResult<PushUnsubscribeRequest> {
   const object = parseJsonObject(value); if (!object.ok) return object;
   const endpoint = parseJsonString(object.value.endpoint);
   return endpoint.ok && endpoint.value.length > 0 ? { ok: true, value: { endpoint: endpoint.value } } : invalid("endpoint is required");
 }
-export function parseVisibilityRequest(value: unknown): ParseResult<{ visible: boolean }> {
+export function parseVisibilityRequest(value: unknown): ParseResult<PushVisibilityRequest> {
   const object = parseJsonObject(value); if (!object.ok) return object;
   const visible = parseJsonBoolean(object.value.visible);
   return visible.ok ? { ok: true, value: { visible: visible.value } } : invalid("visible is required");

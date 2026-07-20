@@ -1,3 +1,3 @@
-import type { PermissionsAPI } from '@/lib/api/types';
+export type PermissionsAPI = Record<string, never>;
 
 export const createWebPermissionsAPI = (): PermissionsAPI => ({});

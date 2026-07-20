@@ -1,4 +1,6 @@
-import type { ToolsAPI } from '@/lib/api/types';
+export interface ToolsAPI {
+  getAvailableTools(): Promise<string[]>;
+}
 
 /** SDK pass-through endpoint: validate only the ID list this feature uses. */
 export const parseToolIdList = (value: unknown): string[] | null => {

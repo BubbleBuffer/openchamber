@@ -1,4 +1,3 @@
-import type { GitHubAPI } from "@/lib/api/types";
 import {
   parseGitHubAuthStatusResponse, parseGitHubDeviceFlowCompleteResponse, parseGitHubDeviceFlowStartResponse,
   parseGitHubErrorResponse, parseGitHubIssueCommentsResponse, parseGitHubIssueGetResponse,
@@ -8,6 +7,26 @@ import {
   type GitHubPullRequestCreateInput, type GitHubPullRequestMergeInput, type GitHubPullRequestReadyInput, type GitHubPullRequestUpdateInput,
 } from "@contracts/github";
 import type { ParseResult } from "@contracts/common";
+import type * as GitHub from '@contracts/github';
+
+export interface GitHubAPI {
+  authStatus(): Promise<GitHub.GitHubAuthStatus>;
+  authStart(): Promise<GitHub.GitHubDeviceFlowStart>;
+  authComplete(deviceCode: string): Promise<GitHub.GitHubDeviceFlowComplete>;
+  authDisconnect(): Promise<GitHub.GitHubAuthDisconnectResult>;
+  authActivate(accountId: string): Promise<GitHub.GitHubAuthStatus>;
+  me?(): Promise<GitHub.GitHubUserSummary>;
+  prStatus(directory: string, branch: string, remote?: string): Promise<GitHub.GitHubPullRequestStatus>;
+  prCreate(payload: GitHub.GitHubPullRequestCreateInput): Promise<GitHub.GitHubPullRequest>;
+  prUpdate(payload: GitHub.GitHubPullRequestUpdateInput): Promise<GitHub.GitHubPullRequest>;
+  prMerge(payload: GitHub.GitHubPullRequestMergeInput): Promise<GitHub.GitHubPullRequestMergeResult>;
+  prReady(payload: GitHub.GitHubPullRequestReadyInput): Promise<GitHub.GitHubPullRequestReadyResult>;
+  prsList(directory: string, options?: { page?: number }): Promise<GitHub.GitHubPullRequestsListResult>;
+  prContext(directory: string, number: number, options?: { includeDiff?: boolean; includeCheckDetails?: boolean }): Promise<GitHub.GitHubPullRequestContextResult>;
+  issuesList(directory: string, options?: { page?: number }): Promise<GitHub.GitHubIssuesListResult>;
+  issueGet(directory: string, number: number): Promise<GitHub.GitHubIssueGetResult>;
+  issueComments(directory: string, number: number): Promise<GitHub.GitHubIssueCommentsResult>;
+}
 
 const read = async (response: Response) => response.json().catch(() => undefined);
 const decode = async <T>(response: Response, parser: (value: unknown) => ParseResult<T>, fallback: string): Promise<T> => {

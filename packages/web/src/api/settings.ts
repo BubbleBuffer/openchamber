@@ -1,5 +1,13 @@
-import type { SettingsAPI, SettingsLoadResult, SettingsPayload } from '@/lib/api/types';
 import { parseAppSettingsResponse, parseSettingsUpdateRequest } from '@contracts/settings';
+import type { AppSettings } from '@contracts/settings';
+
+export type SettingsPayload = AppSettings;
+export type SettingsLoadResult = { settings: SettingsPayload; source: 'web' };
+export interface SettingsAPI {
+  load(): Promise<SettingsLoadResult>;
+  save(changes: Partial<SettingsPayload>): Promise<SettingsPayload>;
+  restartOpenCode?: () => Promise<{ restarted: boolean }>;
+}
 
 const SETTINGS_ENDPOINT = '/api/config/settings';
 const RELOAD_ENDPOINT = '/api/config/reload';

@@ -7,15 +7,24 @@ import {
   restartTerminalSession,
   forceKillTerminal,
 } from '@/lib/terminal/terminalApi';
-import type {
-  TerminalAPI,
-  TerminalHandlers,
-  TerminalStreamOptions,
-  CreateTerminalOptions,
-  ResizeTerminalPayload,
-  TerminalSession,
-  ForceKillOptions,
-} from '@/lib/api/types';
+import type { TerminalCreateRequest, TerminalSessionResponse } from '@contracts/terminal';
+import type { TerminalStreamEvent } from '@/lib/terminal/terminalApi';
+
+export type CreateTerminalOptions = TerminalCreateRequest;
+export type TerminalSession = TerminalSessionResponse;
+export type TerminalStreamOptions = { retry?: Partial<{ maxRetries: number; initialDelayMs: number; maxDelayMs: number }>; connectionTimeoutMs?: number };
+export type TerminalHandlers = { onEvent: (event: TerminalStreamEvent) => void; onError?: (error: Error, fatal?: boolean) => void };
+export type ResizeTerminalPayload = { sessionId: string; cols: number; rows: number };
+export type ForceKillOptions = { sessionId?: string; cwd?: string };
+export interface TerminalAPI {
+  createSession(options: CreateTerminalOptions): Promise<TerminalSession>;
+  connect(sessionId: string, handlers: TerminalHandlers, options?: TerminalStreamOptions): { close: () => void };
+  sendInput(sessionId: string, input: string): Promise<void>;
+  resize(payload: ResizeTerminalPayload): Promise<void>;
+  close(sessionId: string): Promise<void>;
+  restartSession?(currentSessionId: string, options: CreateTerminalOptions): Promise<TerminalSession>;
+  forceKill?(options: ForceKillOptions): Promise<void>;
+}
 
 const getRetryPolicy = (options?: TerminalStreamOptions) => {
   const retry = options?.retry;

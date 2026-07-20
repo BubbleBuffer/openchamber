@@ -1,16 +1,30 @@
-import type {
-  DirectoryListResult,
-  FileSearchQuery,
-  FileSearchResult,
-  FilesAPI,
-  ListDirectoryOptions,
-} from '@/lib/api/types';
 import {
   parseFileListResponse,
   parseFsMutationResponse,
   parseStatResponse,
 } from '@contracts/files';
-import type { FsListResponse } from '@contracts/files';
+import type { FsDirectoryEntry, FsListResponse, FsMutationResponse, FsStatResponse } from '@contracts/files';
+
+export type ListDirectoryOptions = { respectGitignore?: boolean };
+export type DirectoryListResult = { directory: string; entries: FsDirectoryEntry[] };
+export type FileMutationResult = Omit<FsMutationResponse, 'path'> & { path: string };
+/** SDK pass-through feature shape; this endpoint returns only file identifiers. */
+export type FileSearchQuery = { directory: string; query: string; maxResults?: number; includeHidden?: boolean; respectGitignore?: boolean };
+export type FileSearchResult = { path: string; score?: number; preview?: string[] };
+export type CommandExecResult = { command: string; success: boolean; exitCode?: number; stdout?: string; stderr?: string; error?: string };
+export interface FilesAPI {
+  listDirectory(path: string, options?: ListDirectoryOptions): Promise<DirectoryListResult>;
+  search(payload: FileSearchQuery): Promise<FileSearchResult[]>;
+  createDirectory(path: string): Promise<FileMutationResult>;
+  statFile?(path: string): Promise<FsStatResponse>;
+  readFile?(path: string): Promise<{ content: string; path: string }>;
+  readFileBinary?(path: string): Promise<{ dataUrl: string; path: string }>;
+  writeFile?(path: string, content: string): Promise<FileMutationResult>;
+  delete?(path: string): Promise<{ success: boolean }>;
+  rename?(oldPath: string, newPath: string): Promise<FileMutationResult>;
+  execCommands?(commands: string[], cwd: string): Promise<{ success: boolean; results: CommandExecResult[] }>;
+  downloadFile?(path: string): Promise<void>;
+}
 
 const normalizePath = (path: string): string => path.replace(/\\/g, '/');
 
@@ -89,7 +103,7 @@ export const createWebFilesAPI = (): FilesAPI => ({
     }));
   },
 
-  async createDirectory(path: string): Promise<{ success: boolean; path: string }> {
+  async createDirectory(path: string): Promise<FileMutationResult> {
     const target = normalizePath(path);
     const response = await fetch('/api/fs/mkdir', {
       method: 'POST',
@@ -109,7 +123,7 @@ export const createWebFilesAPI = (): FilesAPI => ({
     };
   },
 
-  async statFile(path: string): Promise<{ path: string; isFile: boolean; size: number; mtimeMs?: number }> {
+  async statFile(path: string): Promise<FsStatResponse> {
     const target = normalizePath(path);
     const response = await fetch(`/api/fs/stat?path=${encodeURIComponent(target)}`);
 
@@ -140,7 +154,7 @@ export const createWebFilesAPI = (): FilesAPI => ({
     return { content, path: target };
   },
 
-  async writeFile(path: string, content: string): Promise<{ success: boolean; path: string }> {
+  async writeFile(path: string, content: string): Promise<FileMutationResult> {
     const target = normalizePath(path);
     const response = await fetch('/api/fs/write', {
       method: 'POST',
@@ -177,7 +191,7 @@ export const createWebFilesAPI = (): FilesAPI => ({
     return { success: result.value.success };
   },
 
-  async rename(oldPath: string, newPath: string): Promise<{ success: boolean; path: string }> {
+  async rename(oldPath: string, newPath: string): Promise<FileMutationResult> {
     const response = await fetch('/api/fs/rename', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
