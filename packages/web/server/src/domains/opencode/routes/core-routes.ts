@@ -1,4 +1,5 @@
 import type { Express, Request, Response, NextFunction } from "express";
+import { themesError } from "../../../contracts/themes.js";
 
 interface ServerStatusRoutesDeps {
   process: typeof import("process");
@@ -308,9 +309,7 @@ export function registerSettingsUtilityRoutes(
       res.json({ themes: customThemes });
     } catch (error) {
       console.error("Failed to load custom themes:", error);
-      res.status(500).json({
-        error: error instanceof Error ? error.message : "Failed to load custom themes",
-      });
+      res.status(500).json(themesError("themes_internal_error", "Failed to load custom themes"));
     }
   });
 

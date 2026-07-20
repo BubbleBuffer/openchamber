@@ -9,6 +9,13 @@ import { getSafeStorage } from '../utils/safeStorage';
 import { useDirectoryStore } from '../files/useDirectoryStore';
 import { streamDebugEnabled } from '@/stores/utils/streamDebug';
 import { PROJECT_COLORS } from '@/lib/project/projectMeta';
+import {
+  parseProjectIconDiscoverRequest,
+  parseProjectIconErrorResponse,
+  parseProjectIconId,
+  parseProjectIconMutationResponse,
+  parseProjectIconUploadRequest,
+} from '@contracts/project-assets';
 
 /** Pick a color key that's least used among existing projects */
 const pickAutoColor = (projects: ProjectEntry[]): string => {
@@ -445,6 +452,10 @@ export const useProjectsStore = create<ProjectsStore>()(
     },
 
     uploadProjectIcon: async (id: string, file: File) => {
+      const projectId = parseProjectIconId(id);
+      if (!projectId.ok) {
+        return { ok: false, error: 'Invalid project' };
+      }
       const mime = resolveUploadMime(file);
       if (!mime) {
         return { ok: false, error: 'Only PNG, JPEG, and SVG are supported' };
@@ -459,35 +470,46 @@ export const useProjectsStore = create<ProjectsStore>()(
       try {
         const dataUrl = await readFileAsDataUrl(file);
         const normalizedDataUrl = dataUrl.replace(/^data:[^;]+;/i, `data:${mime};`);
+        const request = parseProjectIconUploadRequest({ dataUrl: normalizedDataUrl });
+        if (!request.ok) {
+          return { ok: false, error: 'Failed to read icon file' };
+        }
 
-        const response = await fetch(`/api/projects/${encodeURIComponent(id)}/icon`, {
+        const response = await fetch(`/api/projects/${encodeURIComponent(projectId.value)}/icon`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
             Accept: 'application/json',
           },
-          body: JSON.stringify({ dataUrl: normalizedDataUrl }),
+          body: JSON.stringify(request.value),
         });
 
         if (!response.ok) {
-          const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-          return { ok: false, error: payload?.error || 'Failed to upload project icon' };
+          const error = parseProjectIconErrorResponse(await response.json().catch(() => undefined));
+          return { ok: false, error: error.ok ? error.value.error : 'Failed to upload project icon' };
         }
 
-        const payload = (await response.json().catch(() => null)) as { settings?: AppSettings } | null;
-        if (payload?.settings) {
-          get().synchronizeFromSettings(payload.settings);
+        const payload = parseProjectIconMutationResponse(await response.json().catch(() => undefined));
+        if (!payload.ok) {
+          return { ok: false, error: 'Invalid project icon response' };
+        }
+        if (payload.value.settings) {
+          get().synchronizeFromSettings(payload.value.settings);
         }
         return { ok: true };
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        return { ok: false, error: message || 'Failed to upload project icon' };
+        console.warn('Failed to upload project icon', error);
+        return { ok: false, error: 'Failed to upload project icon' };
       }
     },
 
     removeProjectIcon: async (id: string) => {
+      const projectId = parseProjectIconId(id);
+      if (!projectId.ok) {
+        return { ok: false, error: 'Invalid project' };
+      }
       try {
-        const response = await fetch(`/api/projects/${encodeURIComponent(id)}/icon`, {
+        const response = await fetch(`/api/projects/${encodeURIComponent(projectId.value)}/icon`, {
           method: 'DELETE',
           headers: {
             Accept: 'application/json',
@@ -495,55 +517,66 @@ export const useProjectsStore = create<ProjectsStore>()(
         });
 
         if (!response.ok) {
-          const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-          return { ok: false, error: payload?.error || 'Failed to remove project icon' };
+          const error = parseProjectIconErrorResponse(await response.json().catch(() => undefined));
+          return { ok: false, error: error.ok ? error.value.error : 'Failed to remove project icon' };
         }
 
-        const payload = (await response.json().catch(() => null)) as { settings?: AppSettings } | null;
-        if (payload?.settings) {
-          get().synchronizeFromSettings(payload.settings);
+        const payload = parseProjectIconMutationResponse(await response.json().catch(() => undefined));
+        if (!payload.ok) {
+          return { ok: false, error: 'Invalid project icon response' };
+        }
+        if (payload.value.settings) {
+          get().synchronizeFromSettings(payload.value.settings);
         }
         return { ok: true };
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        return { ok: false, error: message || 'Failed to remove project icon' };
+        console.warn('Failed to remove project icon', error);
+        return { ok: false, error: 'Failed to remove project icon' };
       }
     },
 
     discoverProjectIcon: async (id: string, options?: { force?: boolean }) => {
+      const projectId = parseProjectIconId(id);
+      if (!projectId.ok) {
+        return { ok: false, error: 'Invalid project' };
+      }
+      const request = parseProjectIconDiscoverRequest({ force: options?.force === true });
+      if (!request.ok) {
+        return { ok: false, error: 'Invalid icon discovery request' };
+      }
       try {
-        const response = await fetch(`/api/projects/${encodeURIComponent(id)}/icon/discover`, {
+        const response = await fetch(`/api/projects/${encodeURIComponent(projectId.value)}/icon/discover`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Accept: 'application/json',
           },
-          body: JSON.stringify({ force: options?.force === true }),
+          body: JSON.stringify(request.value),
         });
 
-        const payload = (await response.json().catch(() => null)) as {
-          error?: string;
-          skipped?: boolean;
-          reason?: string;
-          settings?: AppSettings;
-        } | null;
+        const body = await response.json().catch(() => undefined);
 
         if (!response.ok) {
-          return { ok: false, error: payload?.error || 'Failed to discover project icon' };
+          const error = parseProjectIconErrorResponse(body);
+          return { ok: false, error: error.ok ? error.value.error : 'Failed to discover project icon' };
         }
 
-        if (payload?.settings) {
-          get().synchronizeFromSettings(payload.settings);
+        const payload = parseProjectIconMutationResponse(body);
+        if (!payload.ok) {
+          return { ok: false, error: 'Invalid project icon response' };
+        }
+        if (payload.value.settings) {
+          get().synchronizeFromSettings(payload.value.settings);
         }
 
         return {
           ok: true,
-          skipped: payload?.skipped === true,
-          reason: typeof payload?.reason === 'string' ? payload.reason : undefined,
+          skipped: payload.value.skipped === true,
+          reason: payload.value.reason,
         };
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        return { ok: false, error: message || 'Failed to discover project icon' };
+        console.warn('Failed to discover project icon', error);
+        return { ok: false, error: 'Failed to discover project icon' };
       }
     },
 

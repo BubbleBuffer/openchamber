@@ -1,4 +1,11 @@
 import type { Express, Request, Response } from "express";
+import {
+  parseProjectIconDiscoverRequest,
+  parseProjectIconId,
+  parseProjectIconUploadRequest,
+  projectAssetsError,
+  type ProjectAssetsErrorCode,
+} from "../../../contracts/project-assets.js";
 
 interface ProjectIconRoutesDeps {
   fsPromises: typeof import("fs/promises");
@@ -33,6 +40,8 @@ interface ParsedDataUrl {
 interface ParseDataUrlError {
   ok: false;
   error: string;
+  code: ProjectAssetsErrorCode;
+  status: number;
 }
 
 type ParseDataUrlResult = ParsedDataUrl | ParseDataUrlError;
@@ -130,32 +139,32 @@ export function registerProjectIconRoutes(
 
   const parseProjectIconDataUrl = (value: unknown): ParseDataUrlResult => {
     if (typeof value !== "string") {
-      return { ok: false, error: "dataUrl is required" };
+      return { ok: false, error: "dataUrl is required", code: "project_assets_invalid_request", status: 400 };
     }
 
     const trimmed = value.trim();
     const match = trimmed.match(/^data:([^;,]+);base64,([A-Za-z0-9+/=\s]+)$/i);
     if (!match) {
-      return { ok: false, error: "Invalid dataUrl format" };
+      return { ok: false, error: "Invalid dataUrl format", code: "project_assets_invalid_request", status: 400 };
     }
 
     const mime = normalizeProjectIconMime(match[1]);
     if (!mime || !["image/png", "image/jpeg", "image/svg+xml"].includes(mime)) {
-      return { ok: false, error: "Icon must be PNG, JPEG, or SVG" };
+      return { ok: false, error: "Icon must be PNG, JPEG, or SVG", code: "project_assets_unsupported_media", status: 415 };
     }
 
     try {
       const base64 = match[2].replace(/\s+/g, "");
       const bytes = Buffer.from(base64, "base64");
       if (bytes.length === 0) {
-        return { ok: false, error: "Icon content is empty" };
+        return { ok: false, error: "Icon content is empty", code: "project_assets_invalid_request", status: 400 };
       }
       if (bytes.length > projectIconMaxBytes) {
-        return { ok: false, error: "Icon exceeds size limit (5 MB)" };
+        return { ok: false, error: "Icon exceeds size limit (5 MB)", code: "project_assets_payload_too_large", status: 400 };
       }
       return { ok: true, mime, bytes };
     } catch {
-      return { ok: false, error: "Failed to decode icon data" };
+      return { ok: false, error: "Failed to decode icon data", code: "project_assets_invalid_request", status: 400 };
     }
   };
 
@@ -231,26 +240,26 @@ export function registerProjectIconRoutes(
   });
 
   app.get("/api/projects/:projectId/icon", async (req: Request, res: Response) => {
-    const projectId =
-      typeof req.params.projectId === "string" ? req.params.projectId.trim() : "";
-    if (!projectId) {
-      res.status(400).json({ error: "projectId is required" });
+    const projectId = parseProjectIconId(req.params.projectId);
+    if (!projectId.ok) {
+      res.status(400).json(projectAssetsError("project_assets_invalid_request", "projectId is required"));
       return;
     }
+    const projectIdValue = projectId.value;
 
     try {
       const settings = await readSettingsFromDiskMigrated();
-      const { project } = findProjectById(settings, projectId);
+      const { project } = findProjectById(settings, projectIdValue);
       if (!project) {
-        res.status(404).json({ error: "Project not found" });
+        res.status(404).json(projectAssetsError("project_assets_not_found", "Project not found"));
         return;
       }
 
       const metadataMime = normalizeProjectIconMime((project as any).iconImage?.mime);
-      const preferredPath = metadataMime ? projectIconPathForMime(projectId, metadataMime) : null;
+      const preferredPath = metadataMime ? projectIconPathForMime(projectIdValue, metadataMime) : null;
       const candidates = preferredPath
-        ? [preferredPath, ...projectIconPathCandidates(projectId).filter((c) => c !== preferredPath)]
-        : projectIconPathCandidates(projectId);
+        ? [preferredPath, ...projectIconPathCandidates(projectIdValue).filter((c) => c !== preferredPath)]
+        : projectIconPathCandidates(projectIdValue);
 
       const themeQuery = Array.isArray(req.query?.theme)
         ? req.query.theme[0]
@@ -304,54 +313,59 @@ export function registerProjectIconRoutes(
           const err = error as { code?: string } | null;
           if (!err || typeof err !== "object" || err.code !== "ENOENT") {
             console.warn("Failed to read project icon:", error);
-            res.status(500).json({ error: "Failed to read project icon" });
+            res.status(500).json(projectAssetsError("project_assets_internal_error", "Failed to read project icon"));
             return;
           }
         }
       }
 
-      res.status(404).json({ error: "Project icon not found" });
+      res.status(404).json(projectAssetsError("project_assets_not_found", "Project icon not found"));
     } catch (error) {
       console.warn("Failed to load project icon:", error);
-      res.status(500).json({ error: "Failed to load project icon" });
+      res.status(500).json(projectAssetsError("project_assets_internal_error", "Failed to load project icon"));
     }
   });
 
   app.put("/api/projects/:projectId/icon", async (req: Request, res: Response) => {
-    const projectId =
-      typeof req.params.projectId === "string" ? req.params.projectId.trim() : "";
-    if (!projectId) {
-      res.status(400).json({ error: "projectId is required" });
+    const projectId = parseProjectIconId(req.params.projectId);
+    if (!projectId.ok) {
+      res.status(400).json(projectAssetsError("project_assets_invalid_request", "projectId is required"));
       return;
     }
+    const projectIdValue = projectId.value;
 
-    const parsed = parseProjectIconDataUrl(req.body?.dataUrl);
+    const request = parseProjectIconUploadRequest(req.body);
+    if (!request.ok) {
+      res.status(400).json(projectAssetsError("project_assets_invalid_request", "Invalid dataUrl format"));
+      return;
+    }
+    const parsed = parseProjectIconDataUrl(request.value.dataUrl);
     if (!parsed.ok) {
-      res.status(400).json({ error: parsed.error });
+      res.status(parsed.status).json(projectAssetsError(parsed.code, parsed.error));
       return;
     }
 
     try {
       const settings = await readSettingsFromDiskMigrated();
-      const { projects, project } = findProjectById(settings, projectId);
+      const { projects, project } = findProjectById(settings, projectIdValue);
       if (!project) {
-        res.status(404).json({ error: "Project not found" });
+        res.status(404).json(projectAssetsError("project_assets_not_found", "Project not found"));
         return;
       }
 
-      const iconPath = projectIconPathForMime(projectId, parsed.mime);
+      const iconPath = projectIconPathForMime(projectIdValue, parsed.mime);
       if (!iconPath) {
-        res.status(400).json({ error: "Unsupported icon format" });
+        res.status(415).json(projectAssetsError("project_assets_unsupported_media", "Unsupported icon format"));
         return;
       }
 
       await fsPromises.mkdir(projectIconsDirPath, { recursive: true });
       await fsPromises.writeFile(iconPath, parsed.bytes);
-      await removeProjectIconFiles(projectId, iconPath);
+      await removeProjectIconFiles(projectIdValue, iconPath);
 
       const updatedAt = Date.now();
       const nextProjects = projects.map((entry) =>
-        (entry as any).id === projectId
+        (entry as any).id === projectIdValue
           ? { ...entry, iconImage: { mime: parsed.mime, updatedAt, source: "custom" } }
           : entry
       );
@@ -362,30 +376,30 @@ export function registerProjectIconRoutes(
       res.json({ project: updatedProject, settings: updatedSettings });
     } catch (error) {
       console.warn("Failed to upload project icon:", error);
-      res.status(500).json({ error: "Failed to upload project icon" });
+      res.status(500).json(projectAssetsError("project_assets_internal_error", "Failed to upload project icon"));
     }
   });
 
   app.delete("/api/projects/:projectId/icon", async (req: Request, res: Response) => {
-    const projectId =
-      typeof req.params.projectId === "string" ? req.params.projectId.trim() : "";
-    if (!projectId) {
-      res.status(400).json({ error: "projectId is required" });
+    const projectId = parseProjectIconId(req.params.projectId);
+    if (!projectId.ok) {
+      res.status(400).json(projectAssetsError("project_assets_invalid_request", "projectId is required"));
       return;
     }
+    const projectIdValue = projectId.value;
 
     try {
       const settings = await readSettingsFromDiskMigrated();
-      const { projects, project } = findProjectById(settings, projectId);
+      const { projects, project } = findProjectById(settings, projectIdValue);
       if (!project) {
-        res.status(404).json({ error: "Project not found" });
+        res.status(404).json(projectAssetsError("project_assets_not_found", "Project not found"));
         return;
       }
 
-      await removeProjectIconFiles(projectId);
+      await removeProjectIconFiles(projectIdValue);
 
       const nextProjects = projects.map((entry) =>
-        (entry as any).id === projectId ? { ...entry, iconImage: null } : entry
+        (entry as any).id === projectIdValue ? { ...entry, iconImage: null } : entry
       );
       const updatedSettings = await persistSettings({ projects: nextProjects });
       const updatedProject =
@@ -394,27 +408,32 @@ export function registerProjectIconRoutes(
       res.json({ project: updatedProject, settings: updatedSettings });
     } catch (error) {
       console.warn("Failed to remove project icon:", error);
-      res.status(500).json({ error: "Failed to remove project icon" });
+      res.status(500).json(projectAssetsError("project_assets_internal_error", "Failed to remove project icon"));
     }
   });
 
   app.post("/api/projects/:projectId/icon/discover", async (req: Request, res: Response) => {
-    const projectId =
-      typeof req.params.projectId === "string" ? req.params.projectId.trim() : "";
-    if (!projectId) {
-      res.status(400).json({ error: "projectId is required" });
+    const projectId = parseProjectIconId(req.params.projectId);
+    if (!projectId.ok) {
+      res.status(400).json(projectAssetsError("project_assets_invalid_request", "projectId is required"));
       return;
     }
+    const projectIdValue = projectId.value;
 
     try {
       const settings = await readSettingsFromDiskMigrated();
-      const { projects, project } = findProjectById(settings, projectId);
+      const { projects, project } = findProjectById(settings, projectIdValue);
       if (!project) {
-        res.status(404).json({ error: "Project not found" });
+        res.status(404).json(projectAssetsError("project_assets_not_found", "Project not found"));
         return;
       }
 
-      const force = req.body?.force === true;
+      const request = parseProjectIconDiscoverRequest(req.body);
+      if (!request.ok) {
+        res.status(400).json(projectAssetsError("project_assets_invalid_request", "Invalid icon discovery request"));
+        return;
+      }
+      const force = request.value.force === true;
       if ((project as any).iconImage?.source === "custom" && !force) {
         res.json({
           project,
@@ -437,40 +456,40 @@ export function registerProjectIconRoutes(
 
       const selected = filtered[0];
       if (!selected) {
-        res.status(404).json({ error: "No favicon found in project" });
+        res.status(404).json(projectAssetsError("project_assets_not_found", "No favicon found in project"));
         return;
       }
 
       const ext = pathModule.extname(selected.path).slice(1).toLowerCase();
       const mime = projectIconExtensionToMime[ext] || null;
       if (!mime) {
-        res.status(415).json({ error: "Unsupported favicon format" });
+        res.status(415).json(projectAssetsError("project_assets_unsupported_media", "Unsupported favicon format"));
         return;
       }
 
       const bytes = await fsPromises.readFile(selected.path);
       if (bytes.length === 0) {
-        res.status(400).json({ error: "Discovered icon is empty" });
+        res.status(400).json(projectAssetsError("project_assets_invalid_request", "Discovered icon is empty"));
         return;
       }
       if (bytes.length > projectIconMaxBytes) {
-        res.status(400).json({ error: "Discovered icon exceeds size limit (5 MB)" });
+        res.status(400).json(projectAssetsError("project_assets_payload_too_large", "Discovered icon exceeds size limit (5 MB)"));
         return;
       }
 
-      const iconPath = projectIconPathForMime(projectId, mime);
+      const iconPath = projectIconPathForMime(projectIdValue, mime);
       if (!iconPath) {
-        res.status(415).json({ error: "Unsupported favicon format" });
+        res.status(415).json(projectAssetsError("project_assets_unsupported_media", "Unsupported favicon format"));
         return;
       }
 
       await fsPromises.mkdir(projectIconsDirPath, { recursive: true });
       await fsPromises.writeFile(iconPath, bytes);
-      await removeProjectIconFiles(projectId, iconPath);
+      await removeProjectIconFiles(projectIdValue, iconPath);
 
       const updatedAt = Date.now();
       const nextProjects = projects.map((entry) =>
-        (entry as any).id === projectId
+        (entry as any).id === projectIdValue
           ? { ...entry, iconImage: { mime, updatedAt, source: "auto" } }
           : entry
       );
@@ -485,7 +504,7 @@ export function registerProjectIconRoutes(
       });
     } catch (error) {
       console.warn("Failed to discover project icon:", error);
-      res.status(500).json({ error: "Failed to discover project icon" });
+      res.status(500).json(projectAssetsError("project_assets_internal_error", "Failed to discover project icon"));
     }
   });
 }
