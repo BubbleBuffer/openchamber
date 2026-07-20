@@ -1,6 +1,12 @@
 import type { Express, Request, Response } from "express";
 import { createProjectIdFromPath } from "../../projects/index.js";
 import { parseSettingsUpdateRequest } from "../../../contracts/settings.js";
+import {
+  parseDirectorySwitchRequest,
+  parsePendingMcpAuthRequest,
+  parseProviderSourceResponse,
+  type OpenCodeErrorCode,
+} from "../../../contracts/opencode.js";
 
 interface OpenCodeRoutesDeps {
   crypto: typeof import("crypto");
@@ -47,6 +53,9 @@ export function registerOpenCodeRoutes(
   let authLibrary: any = null;
   const pendingMcpAuthContextByState = new Map<string, PendingMcpAuthContext | undefined>();
   const PENDING_MCP_AUTH_TTL_MS = 30 * 60 * 1000;
+  const safeError = (res: Response, status: number, code: OpenCodeErrorCode): void => {
+    res.status(status).json({ error: "Request failed", code });
+  };
 
   const getAuthLibrary = async (): Promise<any> => {
     if (!authLibrary) {
@@ -113,22 +122,20 @@ export function registerOpenCodeRoutes(
   app.post("/api/mcp/auth/pending", async (req: Request, res: Response) => {
     try {
       pruneExpiredPendingMcpAuthContexts();
-
-      const state = normalizePendingString(req.body?.state);
+      const parsed = parsePendingMcpAuthRequest(req.body ?? {});
+      if (!parsed.ok) return safeError(res, 400, "opencode_invalid_request");
+      const { state, name, directory } = parsed.value;
       if (!state) {
         res.json({ success: true, context: null });
         return;
       }
-
-      const name = normalizePendingString(req.body?.name);
       if (!name) {
-        res.status(400).json({ error: "MCP server name is required" });
-        return;
+        return safeError(res, 400, "opencode_invalid_request");
       }
 
       const entry: PendingMcpAuthContext = {
         name,
-        directory: normalizePendingString(req.body?.directory),
+        directory,
         expiresAt: Date.now() + PENDING_MCP_AUTH_TTL_MS,
       };
       pendingMcpAuthContextByState.set(state, entry);
@@ -142,7 +149,7 @@ export function registerOpenCodeRoutes(
       });
     } catch (error) {
       console.error("Failed to store pending MCP auth context:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to store pending MCP auth context" });
+      safeError(res, 500, "opencode_internal_error");
     }
   });
 
@@ -167,7 +174,7 @@ export function registerOpenCodeRoutes(
       res.json(pendingMcpAuthContext);
     } catch (error) {
       console.error("Failed to read pending MCP auth context:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to read pending MCP auth context" });
+      safeError(res, 500, "opencode_internal_error");
     }
   });
 
@@ -185,17 +192,14 @@ export function registerOpenCodeRoutes(
       res.json({ success: true });
     } catch (error) {
       console.error("Failed to clear pending MCP auth context:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to clear pending MCP auth context" });
+      safeError(res, 500, "opencode_internal_error");
     }
   });
 
   app.get("/api/provider/:providerId/source", async (req: Request, res: Response) => {
     try {
       const { providerId } = req.params;
-      if (!providerId) {
-        res.status(400).json({ error: "Provider ID is required" });
-        return;
-      }
+      if (!normalizePendingString(providerId)) return safeError(res, 400, "opencode_invalid_request");
 
       const headerDirectory = typeof req.get === "function" ? req.get("x-opencode-directory") : null;
       const queryDirectory = Array.isArray(req.query?.directory)
@@ -208,8 +212,7 @@ export function registerOpenCodeRoutes(
       if (resolved.directory) {
         directory = resolved.directory;
       } else if (requestedDirectory) {
-        res.status(400).json({ error: resolved.error });
-        return;
+        return safeError(res, 400, "opencode_invalid_request");
       }
 
       const sources = getProviderSources(providerId, directory);
@@ -218,13 +221,15 @@ export function registerOpenCodeRoutes(
       const auth = getProviderAuth(providerId);
       (sources.sources as any).auth.exists = Boolean(auth);
 
-      res.json({
+      const response = {
         providerId,
         sources: sources.sources,
-      });
+      };
+      if (!parseProviderSourceResponse(response).ok) return safeError(res, 500, "opencode_invalid_response");
+      res.json(response);
     } catch (error) {
       console.error("Failed to get provider sources:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to get provider sources" });
+      safeError(res, 500, "opencode_internal_error");
     }
   });
 
@@ -298,17 +303,13 @@ export function registerOpenCodeRoutes(
 
   app.post("/api/opencode/directory", async (req: Request, res: Response) => {
     try {
-      const requestedPath =
-        typeof req.body?.path === "string" ? req.body.path.trim() : "";
-      if (!requestedPath) {
-        res.status(400).json({ error: "Path is required" });
-        return;
-      }
+      const parsed = parseDirectorySwitchRequest(req.body ?? {});
+      if (!parsed.ok) return safeError(res, 400, "opencode_invalid_request");
+      const requestedPath = parsed.value.path;
 
       const validated = await validateDirectoryPath(requestedPath);
       if (!validated.ok) {
-        res.status(400).json({ error: validated.error });
-        return;
+        return safeError(res, 400, "opencode_invalid_request");
       }
 
       const resolvedPath = validated.directory!;
@@ -344,7 +345,7 @@ export function registerOpenCodeRoutes(
       });
     } catch (error) {
       console.error("Failed to update OpenCode working directory:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to update working directory" });
+      safeError(res, 500, "opencode_internal_error");
     }
   });
 }

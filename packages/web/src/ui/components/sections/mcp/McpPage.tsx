@@ -1,4 +1,5 @@
 import React from 'react';
+import { parsePendingMcpAuthResponse } from '@contracts/opencode';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -510,14 +511,14 @@ const getPendingMcpAuthContext = async (stateKey: string): Promise<{ name: strin
     return null;
   }
 
-  const payload = await response.json().catch(() => null) as { name?: string; directory?: string | null } | null;
-  if (!payload?.name?.trim()) {
+  const parsed = parsePendingMcpAuthResponse(await response.json().catch(() => null));
+  if (!parsed.ok || !parsed.value || !('name' in parsed.value) || !parsed.value.name) {
     return null;
   }
 
   return {
-    name: payload.name.trim(),
-    directory: typeof payload.directory === 'string' && payload.directory.trim() ? payload.directory.trim() : null,
+    name: parsed.value.name,
+    directory: parsed.value.directory ?? null,
   };
 };
 

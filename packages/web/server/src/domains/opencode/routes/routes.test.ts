@@ -52,6 +52,23 @@ function registerDirectoryRoute(options: {
 }
 
 describe("OpenCode directory route", () => {
+  it("rejects malformed directory bodies before validation or persistence", async () => {
+    let persisted: unknown;
+    const route = registerDirectoryRoute({
+      settings: { projects: [] },
+      validatedPath: "/workspace/new-project",
+      persistSettings: async (changes) => {
+        persisted = changes;
+        return changes;
+      },
+    });
+    const response = createResponse();
+    await route({ body: { path: 42 } }, response);
+    expect(response.statusCode).toBe(400);
+    expect(response.body).toEqual({ error: "Request failed", code: "opencode_invalid_request" });
+    expect(persisted).toBeUndefined();
+  });
+
   it("registers a new project from the validated path and persists active directory state", async () => {
     const settings = { projects: [{ id: "existing", path: "/workspace/existing" }] };
     let persisted: any;

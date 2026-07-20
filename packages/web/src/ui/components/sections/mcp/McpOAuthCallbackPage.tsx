@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useMcpStore } from '@/stores/mcp/useMcpStore';
 import { parseMcpOAuthCallbackContext, parseMcpOAuthCallbackStateKey } from '@/components/sections/mcp/mcpOAuth';
+import { parsePendingMcpAuthResponse } from '@contracts/opencode';
 
 const parseQueryParam = (params: URLSearchParams, key: string): string | null => {
   const value = params.get(key);
@@ -59,11 +60,11 @@ export const McpOAuthCallbackPage: React.FC = () => {
         if (!pendingContext && callbackStateKey) {
           const response = await fetch(`/api/mcp/auth/pending?state=${encodeURIComponent(callbackStateKey)}`);
           if (response.ok) {
-            const payload = await response.json().catch(() => null) as { name?: string; directory?: string | null } | null;
-            if (payload?.name?.trim()) {
+            const parsed = parsePendingMcpAuthResponse(await response.json().catch(() => null));
+            if (parsed.ok && parsed.value && 'name' in parsed.value && parsed.value.name) {
               pendingContext = {
-                name: payload.name.trim(),
-                directory: typeof payload.directory === 'string' && payload.directory.trim() ? payload.directory.trim() : null,
+                name: parsed.value.name,
+                directory: parsed.value.directory ?? null,
               };
             }
           }

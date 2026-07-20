@@ -1,4 +1,5 @@
 import React from 'react';
+import { parseProviderSourceResponse } from '@contracts/opencode';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { ProviderLogo } from '@/components/ui/ProviderLogo';
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
@@ -299,8 +300,12 @@ export const ProvidersPage: React.FC = () => {
           throw new Error(payload?.error || 'Failed to load provider sources');
         }
 
-        const sources = (payload?.sources ?? payload?.data?.sources) as ProviderSources | undefined;
-        if (!cancelled && sources) {
+        const parsed = parseProviderSourceResponse(payload);
+        if (!parsed.ok) {
+          throw new Error('Invalid provider sources response');
+        }
+        const sources = parsed.value.sources as unknown as ProviderSources;
+        if (!cancelled) {
           setProviderSources((prev) => ({
             ...prev,
             [selectedProviderId]: sources,

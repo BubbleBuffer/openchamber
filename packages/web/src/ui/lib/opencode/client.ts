@@ -1,4 +1,5 @@
 import { createOpencodeClient, OpencodeClient } from "@opencode-ai/sdk/v2";
+import { parseDirectorySwitchResponse } from "@contracts/opencode";
 import type { FilesAPI, RuntimeAPIs } from "../api/types";
 import type {
   Session,
@@ -1557,8 +1558,9 @@ class OpencodeService {
         throw new Error(message);
       }
 
-      if (payload && typeof payload === 'object') {
-        return payload as DirectorySwitchResult;
+      const parsed = parseDirectorySwitchResponse(payload);
+      if (parsed.ok) {
+        return parsed.value as DirectorySwitchResult;
       }
 
       return {

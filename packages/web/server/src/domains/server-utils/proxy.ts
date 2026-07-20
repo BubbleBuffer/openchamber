@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createProxyMiddleware } from "http-proxy-middleware";
+import { apiError } from "../../contracts/common.js";
 
 import {
   applyForwardProxyResponseHeaders,
@@ -198,7 +199,7 @@ export const registerOpenCodeProxy = (app: any, deps: {
       }
       console.error("[proxy] OpenCode SSE proxy error:", (error as Error)?.message ?? error);
       if (!res.headersSent) {
-        res.status(503).json({ error: "OpenCode service unavailable" });
+        res.status(503).json(apiError("opencode_unavailable"));
       } else {
         res.end();
       }
@@ -243,10 +244,7 @@ export const registerOpenCodeProxy = (app: any, deps: {
       !openCodeRuntime.getPort();
 
     if (stillWaiting) {
-      return res.status(503).json({
-        error: "OpenCode is restarting",
-        restarting: true,
-      });
+      return res.status(503).json({ ...apiError("opencode_unavailable"), restarting: true });
     }
 
     next();
@@ -353,7 +351,7 @@ export const registerOpenCodeProxy = (app: any, deps: {
       error: (err: Error, _req: any, res: any) => {
         console.error("[proxy] OpenCode proxy error:", err.message);
         if (res && !res.headersSent && typeof res.status === "function") {
-          res.status(503).json({ error: "OpenCode service unavailable" });
+          res.status(503).json(apiError("opencode_unavailable"));
         }
       },
     },

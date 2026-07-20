@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Express, Request, Response } from "express";
+import { parseMcpConfigListResponse, parseMcpConfigRequest, parseMcpMutationResponse } from "../../../contracts/opencode.js";
 
 interface ConfigEntityRoutesDeps {
   resolveProjectDirectory: (req: Request) => Promise<{ directory?: string; error?: string }>;
@@ -57,22 +58,24 @@ export function registerConfigEntityRoutes(
 
     try {
       await refreshOpenCodeAfterConfigChange(`mcp ${action}`);
-      res.json({
-        success: true,
+        const response = {
+          success: true,
         requiresReload: true,
         message: `MCP server "${name}" ${action}d. Reloading interface…`,
-        reloadDelayMs: clientReloadDelayMs,
-      });
+          reloadDelayMs: clientReloadDelayMs,
+        };
+        if (!parseMcpMutationResponse(response).ok) throw new Error("invalid MCP mutation response");
+        res.json(response);
     } catch (error) {
       console.error(`[API:MCP ${action}] Reload failed after config write:`, error);
-      res.json({
+        const response = {
         success: true,
         requiresReload: false,
         reloadFailed: true,
         message: `MCP server "${name}" ${action}d, but OpenCode reload failed.`,
-        warning:
-          (error as Error)?.message || "OpenCode reload failed after the MCP configuration changed",
-      });
+          warning: "OpenCode reload failed after the MCP configuration changed",
+        };
+        res.json(response);
     }
   };
 
@@ -217,10 +220,12 @@ export function registerConfigEntityRoutes(
         return;
       }
       const configs = listMcpConfigs(directory);
-      res.json(configs);
+      const parsed = parseMcpConfigListResponse(configs);
+      if (!parsed.ok) return res.status(500).json({ error: "Failed to list MCP configs", code: "opencode_invalid_response" });
+      res.json(parsed.value);
     } catch (error) {
       console.error("[API:GET /api/config/mcp] Failed:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to list MCP configs" });
+      res.status(500).json({ error: "Failed to list MCP configs", code: "opencode_internal_error" });
     }
   });
 
@@ -240,7 +245,7 @@ export function registerConfigEntityRoutes(
       res.json(config);
     } catch (error) {
       console.error("[API:GET /api/config/mcp/:name] Failed:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to get MCP config" });
+      res.status(500).json({ error: "Failed to get MCP config", code: "opencode_internal_error" });
     }
   });
 
@@ -248,7 +253,9 @@ export function registerConfigEntityRoutes(
     try {
       const name = req.params.name;
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { scope, ...config } = (req.body as { scope?: string; [key: string]: any }) || {};
+      const parsed = parseMcpConfigRequest(req.body ?? {});
+      if (!parsed.ok) return res.status(400).json({ error: "Invalid MCP configuration", code: "opencode_invalid_request" });
+      const { scope, ...config } = parsed.value as { scope?: string; [key: string]: any };
       const { directory, error } = await resolveOptionalProjectDirectory(req);
       if (error) {
         res.status(400).json({ error });
@@ -261,14 +268,16 @@ export function registerConfigEntityRoutes(
       });
     } catch (error) {
       console.error("[API:POST /api/config/mcp/:name] Failed:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to create MCP server" });
+      res.status(500).json({ error: "Failed to create MCP server", code: "opencode_internal_error" });
     }
   });
 
   app.patch("/api/config/mcp/:name", async (req: Request, res: Response) => {
     try {
       const name = req.params.name;
-      const updates = req.body;
+      const parsed = parseMcpConfigRequest(req.body ?? {});
+      if (!parsed.ok) return res.status(400).json({ error: "Invalid MCP configuration", code: "opencode_invalid_request" });
+      const updates = parsed.value;
       const { directory, error } = await resolveOptionalProjectDirectory(req);
       if (error) {
         res.status(400).json({ error });
@@ -281,12 +290,7 @@ export function registerConfigEntityRoutes(
       });
     } catch (error) {
       console.error("[API:PATCH /api/config/mcp/:name] Failed:", error);
-      const err = error as { message?: string };
-      if (err?.message === `MCP server "${req.params.name}" not found`) {
-        res.status(404).json({ error: err.message });
-        return;
-      }
-      res.status(500).json({ error: err?.message || "Failed to update MCP server" });
+      res.status(500).json({ error: "Failed to update MCP server", code: "opencode_internal_error" });
     }
   });
 
@@ -305,7 +309,7 @@ export function registerConfigEntityRoutes(
       });
     } catch (error) {
       console.error("[API:DELETE /api/config/mcp/:name] Failed:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to delete MCP server" });
+      res.status(500).json({ error: "Failed to delete MCP server", code: "opencode_internal_error" });
     }
   });
 

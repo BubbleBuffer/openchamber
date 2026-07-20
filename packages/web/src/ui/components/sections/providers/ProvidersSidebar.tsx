@@ -3,6 +3,7 @@ import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { ProviderLogo } from '@/components/ui/ProviderLogo';
 import { Button } from '@/components/ui/button';
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
+import { parseProviderSourceResponse } from '@contracts/opencode';
 import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { RiAddLine, RiStackLine } from '@remixicon/react';
 import { cn } from '@/lib/utils';
@@ -66,11 +67,11 @@ export const ProvidersSidebar: React.FC<ProvidersSidebarProps> = ({ onItemSelect
           if (!response.ok) {
             return;
           }
-          const payload = await response.json().catch(() => null);
-          const sources = (payload?.sources ?? payload?.data?.sources) as ProviderSources | undefined;
-          if (!sources) {
+          const parsed = parseProviderSourceResponse(await response.json().catch(() => null));
+          if (!parsed.ok) {
             return;
           }
+          const sources = parsed.value.sources as unknown as ProviderSources;
           if (cancelled) {
             return;
           }
