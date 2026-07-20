@@ -64,6 +64,7 @@ jobs:
 
       - name: Create GitHub Release
         id: create_release
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
@@ -105,6 +106,7 @@ jobs:
           npm run --prefix packages/web pack
 
       - name: Upload npm tarball to release
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.create-release.outputs.version }}
@@ -130,6 +132,7 @@ jobs:
 
   finalize-release:
     needs: [create-release, publish-npm]
+    if: ${{ github.event.inputs.dry_run != 'true' }}
     runs-on: ubuntu-latest
     env:
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
