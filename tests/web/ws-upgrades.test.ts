@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "vitest"
+import { afterAll, expect, test } from "vitest"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -143,15 +143,10 @@ describeWithOpenChamber(
 
     test(
       "/api/event/ws with ?directory= upgrades and receives directory-scoped events",
+      // eslint-disable-next-line complexity -- exercises the complete WS lifecycle.
       async () => {
-        // The directory WS bridge creates its own upstream SSE reader to OpenCode's
-        // /event?directory= endpoint. When the global hub's reader was previously
-        // active, the directory bridge's upstream connection may hang. This is a
-        // known environmental limitation: OpenCode's SSE endpoint only accepts one
-        // active connection per endpoint path from a single client at a time.
-        // To work around this, we open the directory WS using a raw WebSocket with
-        // a generous timeout and fall back to a documented skip if "ready" never
-        // arrives.
+        // The directory bridge consumes the authoritative global stream and filters
+        // wrapped events by this requested directory.
         await wsCooldown()
 
         const url = new URL(ctx.openchamber.baseUrl)
@@ -165,6 +160,9 @@ describeWithOpenChamber(
 
         try {
           socket = new WebSocket(url.toString())
+          socket.on("message", (raw) => {
+            frames.push(JSON.parse(String(raw)) as WsFrame)
+          })
 
           // Wait for the WebSocket to open
           await new Promise<void>((resolve, reject) => {
@@ -184,7 +182,6 @@ describeWithOpenChamber(
               })
             })
             if (frame) {
-              frames.push(frame)
               if (frame.type === "ready") {
                 readyReceived = true
               }
@@ -197,8 +194,7 @@ describeWithOpenChamber(
             // rather than fail.
             console.log(
               "[dir-ws] directory WS did not receive 'ready';",
-              "upstream SSE connection to /event?directory= may be blocked",
-              "by the lingering global hub reader. Skipping assertion.",
+              "upstream SSE connection to /global/event may be unavailable.",
             )
             return
           }
@@ -223,7 +219,6 @@ describeWithOpenChamber(
               socket!.once("message", (raw) => {
                 clearTimeout(t)
                 const f = JSON.parse(String(raw)) as WsFrame
-                frames.push(f)
                 resolve(f)
               })
             })
