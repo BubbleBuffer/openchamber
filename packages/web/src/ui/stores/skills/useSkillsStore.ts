@@ -10,7 +10,12 @@ import {
 import { getSafeStorage } from "../utils/safeStorage";
 
 import { opencodeClient } from '@/lib/opencode/client';
-import { parseSkillsListResponse } from '@contracts/skills';
+import {
+  parseSkillDetailResponse,
+  parseSkillMutationResponse,
+  parseSkillsListResponse,
+  parseSkillsSupportingFileResponse,
+} from '@contracts/skills';
 
 const getCurrentDirectory = (): string | null => {
   const opencodeDirectory = opencodeClient.getDirectory();
@@ -255,7 +260,8 @@ export const useSkillsStore = create<SkillsStore>()(
               return null;
             }
 
-            return await response.json() as SkillDetail;
+            const decoded = parseSkillDetailResponse(await response.json());
+            return decoded.ok ? decoded.value : null;
           } catch {
             return null;
           }
@@ -290,12 +296,14 @@ export const useSkillsStore = create<SkillsStore>()(
               throw new Error(message);
             }
 
-            const needsReload = payload?.requiresReload ?? false;
+            const decoded = parseSkillMutationResponse(payload);
+            if (!decoded.ok) throw new Error('Malformed skill mutation response');
+            const needsReload = decoded.value.requiresReload ?? false;
             if (needsReload) {
               requiresReload = true;
               await refreshSkillsAfterOpenCodeRestart({
-                message: payload?.message,
-                delayMs: payload?.reloadDelayMs,
+                message: decoded.value.message,
+                delayMs: decoded.value.reloadDelayMs,
               });
               return true;
             }
@@ -339,12 +347,14 @@ export const useSkillsStore = create<SkillsStore>()(
               throw new Error(message);
             }
 
-            const needsReload = payload?.requiresReload ?? false;
+            const decoded = parseSkillMutationResponse(payload);
+            if (!decoded.ok) throw new Error('Malformed skill mutation response');
+            const needsReload = decoded.value.requiresReload ?? false;
             if (needsReload) {
               requiresReload = true;
               await refreshSkillsAfterOpenCodeRestart({
-                message: payload?.message,
-                delayMs: payload?.reloadDelayMs,
+                message: decoded.value.message,
+                delayMs: decoded.value.reloadDelayMs,
               });
               return true;
             }
@@ -380,12 +390,14 @@ export const useSkillsStore = create<SkillsStore>()(
               throw new Error(message);
             }
 
-            const needsReload = payload?.requiresReload ?? false;
+            const decoded = parseSkillMutationResponse(payload);
+            if (!decoded.ok) throw new Error('Malformed skill mutation response');
+            const needsReload = decoded.value.requiresReload ?? false;
             if (needsReload) {
               requiresReload = true;
               await refreshSkillsAfterOpenCodeRestart({
-                message: payload?.message,
-                delayMs: payload?.reloadDelayMs,
+                message: decoded.value.message,
+                delayMs: decoded.value.reloadDelayMs,
               });
               return true;
             }
@@ -426,8 +438,8 @@ export const useSkillsStore = create<SkillsStore>()(
               return null;
             }
 
-            const data = await response.json();
-            return data.content ?? null;
+            const decoded = parseSkillsSupportingFileResponse(await response.json());
+            return decoded.ok ? decoded.value.content : null;
           } catch {
             return null;
           }
@@ -447,7 +459,8 @@ export const useSkillsStore = create<SkillsStore>()(
               }
             );
 
-            return response.ok;
+            const decoded = parseSkillMutationResponse(await response.json().catch(() => null));
+            return response.ok && decoded.ok;
           } catch {
             return false;
           }
@@ -463,7 +476,8 @@ export const useSkillsStore = create<SkillsStore>()(
               { method: 'DELETE' }
             );
 
-            return response.ok;
+            const decoded = parseSkillMutationResponse(await response.json().catch(() => null));
+            return response.ok && decoded.ok;
           } catch {
             return false;
           }
