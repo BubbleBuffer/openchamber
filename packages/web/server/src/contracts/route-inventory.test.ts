@@ -14,6 +14,12 @@ describe("route inventory", () => {
     expect(new Set(endpoints).size).toBe(endpoints.length);
   });
 
+  it("includes the active connect endpoint from the core auth registrar", () => {
+    const coreSource = readFileSync(resolve(import.meta.dirname, "../domains/opencode/routes/core-routes.ts"), "utf8");
+    expect(coreSource).toContain('app.get("/connect"');
+    expect(ROUTE_INVENTORY.find((entry) => entry.registrar === "domains/opencode/routes/core-routes.ts")?.endpoints).toContain("get /connect");
+  });
+
   it("covers every literal endpoint registered by active route modules", () => {
     const root = resolve(import.meta.dirname, "..");
     const registrars = [
