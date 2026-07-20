@@ -136,7 +136,7 @@ export const InstallSkillDialog: React.FC<InstallSkillDialogProps> = ({ open, on
         skillDir: request.skillDir,
         directoryOverride: request.directoryOverride ?? null,
       });
-      setConflicts(result.error.conflicts);
+        setConflicts(result.error.conflicts || []);
       setConflictsOpen(true);
       return;
     }
@@ -244,7 +244,7 @@ export const InstallSkillDialog: React.FC<InstallSkillDialogProps> = ({ open, on
               onClick={() =>
                 void doInstall({
                   source: item.repoSource,
-                  subpath: item.repoSubpath,
+                  subpath: item.repoSubpath ?? undefined,
                   scope,
                   targetSource,
                   skillDir: item.skillDir,

@@ -10,6 +10,7 @@ import {
 import { getSafeStorage } from "../utils/safeStorage";
 
 import { opencodeClient } from '@/lib/opencode/client';
+import { parseSkillsListResponse } from '@contracts/skills';
 
 const getCurrentDirectory = (): string | null => {
   const opencodeDirectory = opencodeClient.getDirectory();
@@ -207,8 +208,11 @@ export const useSkillsStore = create<SkillsStore>()(
                   throw new Error(`Failed to list skills: ${response.status}`);
                 }
 
-                const data = await response.json();
-                const rawSkills: RawSkillResponse[] = data.skills || [];
+                const decoded = parseSkillsListResponse(await response.json());
+                if (!decoded.ok) {
+                  throw new Error("Malformed skills response");
+                }
+                const rawSkills: RawSkillResponse[] = decoded.value.skills;
                 const skills: DiscoveredSkill[] = rawSkills.map((s) => ({
                   name: s.name,
                   path: s.path,

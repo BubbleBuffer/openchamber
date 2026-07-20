@@ -1,6 +1,17 @@
 import type { WorktreeMetadata } from '@/types/worktree';
 import type { AppSettings } from '@contracts/settings';
 import type {
+  SkillsCatalogItem as ContractSkillsCatalogItem,
+  SkillsCatalogResponse as ContractSkillsCatalogResponse,
+  SkillsCatalogSource as ContractSkillsCatalogSource,
+  SkillsCatalogSourceResponse as ContractSkillsCatalogSourceResponse,
+  SkillsInstallRequest as ContractSkillsInstallRequest,
+  SkillsInstallResponse as ContractSkillsInstallResponse,
+  SkillsError as ContractSkillsError,
+  SkillsRepoScanRequest as ContractSkillsRepoScanRequest,
+  SkillsRepoScanResponse as ContractSkillsRepoScanResponse,
+} from '@contracts/skills';
+import type {
   GitHubAuthStatus,
   GitHubAuthDisconnectResult,
   GitHubDeviceFlowComplete,
@@ -457,120 +468,17 @@ export interface RuntimeAPIs {
 export type RuntimeAPISelector<TValue> = (apis: RuntimeAPIs) => TValue;
 
 // ============== Skills Catalog Types ==============
-
+// Transport shapes are owned by the runtime-neutral skills contract.
 export type SkillsCatalogSourceId = string;
-
 export type SkillsCatalogSourceType = 'github' | 'clawdhub';
-
-export interface SkillsCatalogSource {
-  id: SkillsCatalogSourceId;
-  label: string;
-  description?: string;
-  source: string;
-  defaultSubpath?: string;
-  sourceType?: SkillsCatalogSourceType;
-}
-
-export interface SkillsCatalogItemInstalledBadge {
-  isInstalled: boolean;
-  scope?: 'user' | 'project';
-  source?: 'opencode' | 'agents' | 'claude';
-}
-
-export interface ClawdHubSkillMetadata {
-  slug: string;
-  version: string;
-  displayName?: string;
-  owner?: string;
-  downloads?: number;
-  stars?: number;
-  versionsCount?: number;
-  createdAt?: number;
-  updatedAt?: number;
-}
-
-export interface SkillsCatalogItem {
-  sourceId: SkillsCatalogSourceId;
-  repoSource: string;
-  repoSubpath?: string;
-  gitIdentityId?: string;
-  skillDir: string;
-  skillName: string;
-  frontmatterName?: string;
-  description?: string;
-  installable: boolean;
-  warnings?: string[];
-  installed?: SkillsCatalogItemInstalledBadge;
-  /** ClawdHub-specific metadata (present only for ClawdHub sources) */
-  clawdhub?: ClawdHubSkillMetadata;
-}
-
-export interface SkillsCatalogResponse {
-  ok: boolean;
-  sources?: SkillsCatalogSource[];
-  itemsBySource?: Record<SkillsCatalogSourceId, SkillsCatalogItem[]>;
-  pageInfoBySource?: Record<SkillsCatalogSourceId, { nextCursor?: string | null }>;
-  error?: { kind: string; message: string };
-}
-
-export interface SkillsCatalogSourceResponse {
-  ok: boolean;
-  items?: SkillsCatalogItem[];
-  nextCursor?: string | null;
-  error?: { kind: string; message: string };
-}
-
-export interface SkillsRepoScanRequest {
-  source: string;
-  subpath?: string;
-  gitIdentityId?: string;
-}
-
-export type SkillsRepoScanError =
-  | { kind: 'authRequired'; message: string; sshOnly: true; identities?: Array<{ id: string; name: string }> }
-  | { kind: 'invalidSource'; message: string }
-  | { kind: 'gitUnavailable'; message: string }
-  | { kind: 'networkError'; message: string }
-  | { kind: 'unknown'; message: string };
-
-export interface SkillsRepoScanResponse {
-  ok: boolean;
-  items?: SkillsCatalogItem[];
-  error?: SkillsRepoScanError;
-}
-
-export interface SkillsInstallSelection {
-  skillDir: string;
-  /** ClawdHub-specific metadata for installation */
-  clawdhub?: {
-    slug: string;
-    version: string;
-  };
-}
-
-export interface SkillsInstallRequest {
-  source: string;
-  subpath?: string;
-  gitIdentityId?: string;
-  scope: 'user' | 'project';
-  targetSource?: 'opencode' | 'agents';
-  selections: SkillsInstallSelection[];
-  conflictPolicy?: 'prompt' | 'skipAll' | 'overwriteAll';
-  conflictDecisions?: Record<string, 'skip' | 'overwrite'>;
-}
-
-export type SkillsInstallError = SkillsRepoScanError | {
-  kind: 'conflicts';
-  message: string;
-  conflicts: Array<{ skillName: string; scope: 'user' | 'project'; source?: 'opencode' | 'agents' }>;
-};
-
-export interface SkillsInstallResponse {
-  ok: boolean;
-  installed?: Array<{ skillName: string; scope: 'user' | 'project'; source?: 'opencode' | 'agents' }>;
-  skipped?: Array<{ skillName: string; reason: string }>;
-  error?: SkillsInstallError;
-  requiresReload?: boolean;
-  message?: string;
-  reloadDelayMs?: number;
-}
+export type SkillsCatalogSource = ContractSkillsCatalogSource;
+export type SkillsCatalogItem = ContractSkillsCatalogItem;
+export type SkillsCatalogResponse = ContractSkillsCatalogResponse;
+export type SkillsCatalogSourceResponse = ContractSkillsCatalogSourceResponse;
+export type SkillsRepoScanRequest = ContractSkillsRepoScanRequest;
+export type SkillsRepoScanResponse = ContractSkillsRepoScanResponse;
+export type SkillsInstallRequest = ContractSkillsInstallRequest;
+export type SkillsInstallResponse = ContractSkillsInstallResponse;
+export type SkillsRepoScanError = ContractSkillsError;
+export type SkillsInstallError = ContractSkillsError;
+export type SkillsInstallSelection = SkillsInstallRequest['selections'][number];

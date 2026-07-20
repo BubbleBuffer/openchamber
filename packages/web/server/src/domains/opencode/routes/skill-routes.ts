@@ -1,4 +1,12 @@
 import type { Express, Request, Response, NextFunction } from "express";
+import {
+  parseSkillsInstallRequest,
+  parseSkillsInstallResponse,
+  parseSkillsRepoScanRequest,
+  parseSkillsScanResponse,
+  skillsError,
+  type SkillsErrorCode,
+} from "../../../contracts/skills.js";
 
 interface SkillRoutesDeps {
   fs: typeof import("fs");
@@ -44,7 +52,7 @@ interface SkillRoutesDeps {
     userSkillDir: string;
     selections?: any[];
     conflictPolicy?: string;
-    conflictDecisions?: any[];
+   conflictDecisions?: Record<string, "skip" | "overwrite">;
   }) => Promise<{ ok: true; installed: any[]; skipped: any[] } | { ok: false; error: any }>;
   scanClawdHubPage: (opts: { cursor?: string | null }) => Promise<{ ok: true; items: any[]; nextCursor?: string } | { ok: false; error: any }>;
   installSkillsFromClawdHub: (opts: {
@@ -54,7 +62,7 @@ interface SkillRoutesDeps {
     userSkillDir: string;
     selections?: any[];
     conflictPolicy?: string;
-    conflictDecisions?: any[];
+   conflictDecisions?: Record<string, "skip" | "overwrite">;
   }) => Promise<{ ok: true; installed: any[]; skipped: any[] } | { ok: false; error: any }>;
   isClawdHubSource: (source: string) => boolean;
   getProfiles: () => Array<{ id: string; name: string }>;
@@ -109,6 +117,14 @@ export function registerSkillRoutes(
     getProfiles,
     getProfile,
   } = dependencies;
+
+  const catalogFailure = (kind: unknown): SkillsErrorCode => {
+    if (kind === "conflicts") return "skills_conflict";
+    if (kind === "authRequired") return "skills_auth_required";
+    if (kind === "invalidSource") return "skills_invalid_request";
+    return "skills_provider_error";
+  };
+  const safeCatalogError = (kind: unknown, fallback: string) => skillsError(catalogFailure(kind), fallback);
 
   const findWorktreeRootForSkills = (workingDirectory: string | null): string | null => {
     if (!workingDirectory) return null;
@@ -456,11 +472,12 @@ export function registerSkillRoutes(
 
   app.post("/api/config/skills/scan", async (req: Request, res: Response) => {
     try {
-      const { source, subpath, gitIdentityId } = (req.body || {}) as {
-        source?: string;
-        subpath?: string;
-        gitIdentityId?: string;
-      };
+      const parsedRequest = parseSkillsRepoScanRequest(req.body);
+      if (!parsedRequest.ok) {
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid scan request"));
+        return;
+      }
+      const { source, subpath, gitIdentityId } = parsedRequest.value;
       const identity = resolveGitIdentity(gitIdentityId as any);
 
       const result = await scanSkillsRepository({
@@ -474,60 +491,41 @@ export function registerSkillRoutes(
           res.status(401).json({
             ok: false,
             error: {
-              ...result.error,
+              code: "skills_auth_required",
+              message: "Skill provider authentication is required",
               identities: listGitIdentitiesForResponse(),
             },
           });
           return;
         }
 
-        res.status(400).json({ ok: false, error: result.error });
+        res.status(400).json(safeCatalogError(result.error?.kind, "Unable to scan skill provider"));
         return;
       }
 
-      res.json({ ok: true, items: result.items });
+      const response = { ok: true as const, items: result.items };
+      if (!parseSkillsScanResponse(response).ok) throw new Error("Invalid skill scan response");
+      res.json(response);
     } catch (error) {
       console.error("Failed to scan skills repository:", error);
-      res.status(500).json({
-        ok: false,
-        error: { kind: "unknown", message: (error as Error)?.message || "Failed to scan repository" },
-      });
+      res.status(500).json(skillsError("skills_internal_error", "Failed to scan repository"));
     }
   });
 
   app.post("/api/config/skills/install", async (req: Request, res: Response) => {
     try {
-      const {
-        source,
-        subpath,
-        gitIdentityId,
-        scope,
-        targetSource,
-        selections,
-        conflictPolicy,
-        conflictDecisions,
-      } = (req.body || {}) as {
-        source?: string;
-        subpath?: string;
-        gitIdentityId?: string;
-        scope?: string;
-        targetSource?: string;
-        selections?: any[];
-        conflictPolicy?: string;
-        conflictDecisions?: any[];
-      };
+      const parsedRequest = parseSkillsInstallRequest(req.body);
+      if (!parsedRequest.ok) {
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid install request"));
+        return;
+      }
+      const { source, subpath, gitIdentityId, scope, targetSource, selections, conflictPolicy, conflictDecisions } = parsedRequest.value;
 
       let workingDirectory: string | null = null;
       if (scope === "project") {
         const resolved = await resolveProjectDirectory(req);
         if (!resolved.directory) {
-          res.status(400).json({
-            ok: false,
-            error: {
-              kind: "invalidSource",
-              message: resolved.error || "Project installs require a directory parameter",
-            },
-          });
+          res.status(400).json(skillsError("skills_invalid_request", "Project installs require a directory parameter"));
           return;
         }
         workingDirectory = resolved.directory;
@@ -546,10 +544,10 @@ export function registerSkillRoutes(
 
         if (!result.ok) {
           if (result.error?.kind === "conflicts") {
-            res.status(409).json({ ok: false, error: result.error });
+            res.status(409).json(safeCatalogError(result.error?.kind, "Skill installation conflicts with an existing skill"));
             return;
           }
-          res.status(400).json({ ok: false, error: result.error });
+          res.status(400).json(safeCatalogError(result.error?.kind, "Unable to install skills"));
           return;
         }
 
@@ -561,14 +559,16 @@ export function registerSkillRoutes(
           await refreshOpenCodeAfterConfigChange("skills install");
         }
 
-        res.json({
+        const response = {
           ok: true,
           installed,
           skipped,
           requiresReload,
           message: requiresReload ? "Skills installed successfully. Reloading interface…" : "No skills were installed",
           reloadDelayMs: requiresReload ? clientReloadDelayMs : undefined,
-        });
+        };
+        if (!parseSkillsInstallResponse(response).ok) throw new Error("Invalid skill install response");
+        res.json(response);
         return;
       }
 
@@ -589,7 +589,7 @@ export function registerSkillRoutes(
 
       if (!result.ok) {
         if (result.error?.kind === "conflicts") {
-          res.status(409).json({ ok: false, error: result.error });
+          res.status(409).json(safeCatalogError(result.error?.kind, "Skill installation conflicts with an existing skill"));
           return;
         }
 
@@ -597,14 +597,15 @@ export function registerSkillRoutes(
           res.status(401).json({
             ok: false,
             error: {
-              ...result.error,
+              code: "skills_auth_required",
+              message: "Skill provider authentication is required",
               identities: listGitIdentitiesForResponse(),
             },
           });
           return;
         }
 
-        res.status(400).json({ ok: false, error: result.error });
+        res.status(400).json(safeCatalogError(result.error?.kind, "Unable to install skills"));
         return;
       }
 
@@ -616,20 +617,19 @@ export function registerSkillRoutes(
         await refreshOpenCodeAfterConfigChange("skills install");
       }
 
-      res.json({
+      const response = {
         ok: true,
         installed,
         skipped,
         requiresReload,
         message: requiresReload ? "Skills installed successfully. Reloading interface…" : "No skills were installed",
         reloadDelayMs: requiresReload ? clientReloadDelayMs : undefined,
-      });
+      };
+      if (!parseSkillsInstallResponse(response).ok) throw new Error("Invalid skill install response");
+      res.json(response);
     } catch (error) {
       console.error("Failed to install skills:", error);
-      res.status(500).json({
-        ok: false,
-        error: { kind: "unknown", message: (error as Error)?.message || "Failed to install skills" },
-      });
+      res.status(500).json(skillsError("skills_internal_error", "Failed to install skills"));
     }
   });
 

@@ -16,6 +16,12 @@ import type {
 import { refreshSkillsAfterOpenCodeRestart, useSkillsStore } from '@/stores/skills/useSkillsStore';
 import { opencodeClient } from '@/lib/opencode/client';
 import { startConfigUpdate, finishConfigUpdate, updateConfigUpdateMessage } from '@/lib/config/configUpdate';
+import {
+  parseSkillsCatalogResponse,
+  parseSkillsCatalogSourceResponse,
+  parseSkillsInstallResponse,
+  parseSkillsScanResponse,
+} from '@contracts/skills';
 
 const FALLBACK_SOURCES: SkillsCatalogSource[] = [
   {
@@ -146,7 +152,8 @@ export const useSkillsCatalogStore = create<SkillsCatalogState>()(
                 signal: controller.signal,
               });
 
-              const payload = (await response.json().catch(() => null)) as SkillsCatalogResponse | null;
+              const decoded = parseSkillsCatalogResponse(await response.json().catch(() => null));
+              const payload = decoded.ok ? decoded.value : null;
               if (!response.ok || !payload?.ok) {
                 lastError = payload?.error || { kind: 'unknown', message: `Failed to load catalog (${response.status})` };
                 throw new Error(lastError.message);
@@ -222,14 +229,16 @@ export const useSkillsCatalogStore = create<SkillsCatalogState>()(
             headers: { Accept: 'application/json' },
           });
 
-          const payload = (await response.json().catch(() => null)) as SkillsCatalogSourceResponse | null;
+          const decoded = parseSkillsCatalogSourceResponse(await response.json().catch(() => null));
+          const payload = decoded.ok ? decoded.value : null;
           const hasItems = Array.isArray((payload as SkillsCatalogSourceResponse | null)?.items);
           if (!response.ok || (!payload?.ok && !hasItems)) {
             const fallback = await fetch(`/api/config/skills/catalog${queryParams}`, {
               method: 'GET',
               headers: { Accept: 'application/json' },
             });
-            const fallbackPayload = (await fallback.json().catch(() => null)) as SkillsCatalogResponse | null;
+            const fallbackDecoded = parseSkillsCatalogResponse(await fallback.json().catch(() => null));
+            const fallbackPayload = fallbackDecoded.ok ? fallbackDecoded.value : null;
             const fallbackItems = fallbackPayload?.itemsBySource?.[sourceId];
             if (fallback.ok && fallbackPayload?.ok && Array.isArray(fallbackItems)) {
               set((state) => ({
@@ -297,7 +306,8 @@ export const useSkillsCatalogStore = create<SkillsCatalogState>()(
             headers: { Accept: 'application/json' },
           });
 
-          const payload = (await response.json().catch(() => null)) as SkillsCatalogSourceResponse | null;
+          const decoded = parseSkillsCatalogSourceResponse(await response.json().catch(() => null));
+          const payload = decoded.ok ? decoded.value : null;
           if (!response.ok || !payload?.ok) {
             return false;
           }
@@ -353,7 +363,8 @@ export const useSkillsCatalogStore = create<SkillsCatalogState>()(
             body: JSON.stringify(request),
           });
 
-          const payload = (await response.json().catch(() => null)) as SkillsRepoScanResponse | null;
+          const decoded = parseSkillsScanResponse(await response.json().catch(() => null));
+          const payload = decoded.ok ? decoded.value : null;
           if (!response.ok || !payload) {
             const error = payload?.error || { kind: 'unknown', message: 'Failed to scan repository' };
             set({ lastScanError: error });
@@ -389,7 +400,8 @@ export const useSkillsCatalogStore = create<SkillsCatalogState>()(
             body: JSON.stringify(request),
           });
 
-          const payload = (await response.json().catch(() => null)) as SkillsInstallResponse | null;
+          const decoded = parseSkillsInstallResponse(await response.json().catch(() => null));
+          const payload = decoded.ok ? decoded.value : null;
           if (!payload) {
             const error = { kind: 'unknown', message: 'Failed to install skills' } as SkillsInstallError;
             set({ lastInstallError: error });

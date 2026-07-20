@@ -241,7 +241,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
 
     if (result.error?.kind === 'conflicts') {
       setBaseInstallRequest(request);
-      setConflicts(result.error.conflicts);
+        setConflicts(result.error.conflicts || []);
       setConflictsOpen(true);
       return;
     }
