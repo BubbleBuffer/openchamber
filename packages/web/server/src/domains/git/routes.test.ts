@@ -3,7 +3,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("./index.js", () => ({
-  getWorktrees: vi.fn(async (directory: string) => ({ directory, worktrees: ["feature/worktree"] })),
+  getWorktrees: vi.fn(async (directory: string) => [{ head: "abc123", name: "feature-worktree", branch: "feature/worktree", path: directory }]),
 }));
 
 import { registerGitRoutes } from "./routes.js";
@@ -24,6 +24,6 @@ describe("git worktree routes", () => {
     await routes.get("GET /api/git/worktrees")!({ query: { directory: "/validated/project" } }, response);
 
     expect(getWorktrees).toHaveBeenCalledWith("/validated/project");
-    expect(response.json).toHaveBeenCalledWith({ directory: "/validated/project", worktrees: ["feature/worktree"] });
+    expect(response.json).toHaveBeenCalledWith([{ head: "abc123", name: "feature-worktree", branch: "feature/worktree", path: "/validated/project" }]);
   });
 });
