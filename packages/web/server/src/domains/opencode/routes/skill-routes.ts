@@ -336,7 +336,7 @@ export function registerSkillRoutes(
       res.json(response);
     } catch (error) {
       console.error("Failed to list skills:", error);
-      res.status(500).json({ error: "Failed to list skills" });
+      res.status(500).json(skillsError("skills_internal_error", "Failed to list skills"));
     }
   });
 
@@ -344,7 +344,7 @@ export function registerSkillRoutes(
     try {
       const { error } = await resolveOptionalProjectDirectory(req);
       if (error) {
-        res.status(400).json({ error });
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid project directory"));
         return;
       }
 
@@ -677,7 +677,7 @@ export function registerSkillRoutes(
       res.json(response);
     } catch (error) {
       console.error("Failed to get skill sources:", error);
-      res.status(500).json({ error: "Failed to get skill configuration metadata" });
+      res.status(500).json(skillsError("skills_internal_error", "Failed to get skill configuration metadata"));
     }
   });
 
@@ -703,13 +703,13 @@ export function registerSkillRoutes(
         ) || null;
       const sources = getSkillSources(validatedName, directory, discoveredSkill);
       if (!sources.md.exists || !sources.md.dir) {
-        res.status(404).json({ error: "Skill not found" });
+        res.status(404).json(skillsError("skills_not_found", "Skill not found"));
         return;
       }
 
       const content = readSkillSupportingFile(sources.md.dir, filePath);
       if (content === null) {
-        res.status(404).json({ error: "File not found" });
+        res.status(404).json(skillsError("skills_not_found", "File not found"));
         return;
       }
 
@@ -719,11 +719,11 @@ export function registerSkillRoutes(
     } catch (error) {
       const err = error as { code?: string };
       if (err && typeof err === "object" && (err.code === "EACCES" || err.code === "EPERM")) {
-        res.status(403).json({ error: "Access to file denied" });
+        res.status(403).json(skillsError("skills_not_found", "Access to file denied"));
         return;
       }
       console.error("Failed to read skill file:", error);
-      res.status(500).json({ error: "Failed to read skill file" });
+      res.status(500).json(skillsError("skills_internal_error", "Failed to read skill file"));
     }
   });
 
@@ -761,7 +761,7 @@ export function registerSkillRoutes(
       res.json(response);
     } catch (error) {
       console.error("Failed to create skill:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to create skill" });
+      res.status(500).json(skillsError("skills_internal_error", "Failed to create skill"));
     }
   });
 
@@ -794,7 +794,7 @@ export function registerSkillRoutes(
       res.json(response);
     } catch (error) {
       console.error("[Server] Failed to update skill:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to update skill" });
+      res.status(500).json(skillsError("skills_internal_error", "Failed to update skill"));
     }
   });
 
@@ -840,7 +840,7 @@ export function registerSkillRoutes(
         return;
       }
       console.error("Failed to write skill file:", error);
-      res.status(500).json({ error: "Failed to write skill file" });
+      res.status(500).json(skillsError("skills_internal_error", "Failed to write skill file"));
     }
   });
 
@@ -885,7 +885,7 @@ export function registerSkillRoutes(
         return;
       }
       console.error("Failed to delete skill file:", error);
-      res.status(500).json({ error: "Failed to delete skill file" });
+      res.status(500).json(skillsError("skills_internal_error", "Failed to delete skill file"));
     }
   });
 
@@ -913,7 +913,7 @@ export function registerSkillRoutes(
       res.json(response);
     } catch (error) {
       console.error("Failed to delete skill:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to delete skill" });
+      res.status(500).json(skillsError("skills_internal_error", "Failed to delete skill"));
     }
   });
 }

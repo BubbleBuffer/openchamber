@@ -41,7 +41,7 @@ const nullableString = (value: unknown) => value === null || string(value);
 const scope = (value: unknown): value is SkillScope => value === "user" || value === "project";
 const source = (value: unknown): value is SkillSource => value === "opencode" || value === "claude" || value === "agents";
 const skillName = (value: unknown): value is string => nonEmpty(value) && /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/.test(value) && value.length <= 64;
-const safeRelativePath = (value: unknown): value is string => nonEmpty(value) && !value.startsWith("/") && !value.includes("\\") && !value.includes("%") && value.split("/").every((part) => part !== "" && part !== "." && part !== "..");
+const safeRelativePath = (value: unknown): value is string => nonEmpty(value) && value === value.trim() && !value.startsWith("/") && !value.includes("\\") && value.split("/").every((part) => part !== "" && part !== "." && part !== "..");
 /** Repository-relative POSIX path: safe for sparse checkout and clone-root joins. */
 export const isSafeSkillRepositoryPath = (value: unknown): value is string => safeRelativePath(value) && !/^[a-zA-Z]:/.test(value);
 const error = (value: unknown): value is SkillsError => { const input = object(value); return !!input && typeof input.code === "string" && (SKILLS_ERROR_CODES as readonly string[]).includes(input.code) && nonEmpty(input.message); };

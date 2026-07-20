@@ -26,6 +26,19 @@ const getCurrentDirectory = (): string | null => {
   return null;
 };
 
+const skillFailureMessage = (payload: unknown, fallback: string): string => {
+  const error = payload && typeof payload === 'object' && 'error' in payload
+    ? (payload as { error?: unknown }).error
+    : null;
+  if (error && typeof error === 'object') {
+    const details = error as { message?: unknown; code?: unknown };
+    if (typeof details.message === 'string') {
+      return typeof details.code === 'string' ? `${details.code}: ${details.message}` : details.message;
+    }
+  }
+  return fallback;
+};
+
 export type SkillScope = 'user' | 'project';
 export type SkillSource = 'opencode' | 'claude' | 'agents';
 
@@ -292,7 +305,7 @@ export const useSkillsStore = create<SkillsStore>()(
 
             const payload = await response.json().catch(() => null);
             if (!response.ok) {
-              const message = payload?.error || 'Failed to create skill';
+              const message = skillFailureMessage(payload, 'Failed to create skill');
               throw new Error(message);
             }
 
@@ -343,7 +356,7 @@ export const useSkillsStore = create<SkillsStore>()(
 
             const payload = await response.json().catch(() => null);
             if (!response.ok) {
-              const message = payload?.error || 'Failed to update skill';
+              const message = skillFailureMessage(payload, 'Failed to update skill');
               throw new Error(message);
             }
 
@@ -386,7 +399,7 @@ export const useSkillsStore = create<SkillsStore>()(
 
             const payload = await response.json().catch(() => null);
             if (!response.ok) {
-              const message = payload?.error || 'Failed to delete skill';
+              const message = skillFailureMessage(payload, 'Failed to delete skill');
               throw new Error(message);
             }
 
