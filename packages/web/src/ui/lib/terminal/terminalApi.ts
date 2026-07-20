@@ -1,24 +1,18 @@
-export interface TerminalWebSocketDescriptor {
-  path: string;
-  v?: number;
-  enc?: string;
-}
+import {
+  TERMINAL_WS_CONTROL_TAG_JSON,
+  TERMINAL_WS_PATH,
+  parseTerminalErrorResponse,
+  parseTerminalSessionResponse,
+  parseTerminalSuccessResponse,
+  parseTerminalWsControlFrame,
+  type TerminalCreateRequest,
+  type TerminalSessionResponse,
+  type TerminalTransportCapability,
+  type TerminalWsControlFrame,
+} from '@contracts/terminal';
 
-export interface TerminalTransportCapability {
-  preferred?: 'ws' | 'http' | 'sse';
-  transports?: Array<'ws' | 'http' | 'sse'>;
-  ws?: TerminalWebSocketDescriptor;
-}
-
-export interface TerminalSession {
-  sessionId: string;
-  cols: number;
-  rows: number;
-  capabilities?: {
-    input?: TerminalTransportCapability;
-    stream?: TerminalTransportCapability;
-  };
-}
+export type TerminalWebSocketDescriptor = NonNullable<TerminalTransportCapability['ws']>;
+export type TerminalSession = TerminalSessionResponse;
 
 export interface TerminalStreamEvent {
   type: 'connected' | 'data' | 'exit' | 'reconnecting';
@@ -31,11 +25,7 @@ export interface TerminalStreamEvent {
   ptyBackend?: string;
 }
 
-export interface CreateTerminalOptions {
-  cwd: string;
-  cols?: number;
-  rows?: number;
-}
+export type CreateTerminalOptions = TerminalCreateRequest;
 
 export interface ConnectStreamOptions {
   maxRetries?: number;
@@ -44,17 +34,7 @@ export interface ConnectStreamOptions {
   connectionTimeout?: number;
 }
 
-type TerminalControlMessage = {
-  t: string;
-  s?: string;
-  c?: string;
-  f?: boolean;
-  v?: number;
-  exitCode?: number;
-  signal?: number | null;
-  runtime?: 'node' | 'bun';
-  ptyBackend?: string;
-};
+type TerminalControlMessage = TerminalWsControlFrame;
 
 type StreamSubscription = {
   token: symbol;
@@ -70,10 +50,10 @@ type StreamSubscription = {
   connectionTimeoutId: ReturnType<typeof setTimeout> | null;
 };
 
-const CONTROL_TAG_JSON = 0x01;
+const CONTROL_TAG_JSON = TERMINAL_WS_CONTROL_TAG_JSON;
 const WS_READY_STATE_OPEN = 1;
 const WS_READY_STATE_CONNECTING = 0;
-const DEFAULT_TERMINAL_WS_PATH = '/api/terminal/ws';
+const DEFAULT_TERMINAL_WS_PATH = TERMINAL_WS_PATH;
 const WS_SEND_WAIT_MS = 1200;
 const WS_RECONNECT_INITIAL_DELAY_MS = 1000;
 const WS_RECONNECT_MAX_DELAY_MS = 30000;
@@ -128,19 +108,30 @@ const getPreferredTerminalWsPath = (state: TerminalTransportGlobalState): string
 
 const createTransportError = (code: string | undefined): Error => {
   switch (code) {
-    case 'SESSION_NOT_FOUND':
+    case 'terminal_session_not_found':
       return new Error('Terminal session not found');
-    case 'NOT_BOUND':
+    case 'terminal_not_bound':
       return new Error('Terminal session is not bound');
-    case 'WRITE_FAIL':
+    case 'terminal_process_failed':
       return new Error('Failed to write to terminal');
-    case 'RATE_LIMIT':
+    case 'terminal_rate_limited':
       return new Error('Terminal websocket is rate limited');
-    case 'BAD_FRAME':
+    case 'terminal_bad_frame':
       return new Error('Terminal websocket protocol violation');
     default:
       return new Error('Terminal websocket error');
   }
+};
+
+const readTerminalError = async (response: Response, fallback: string): Promise<Error> => {
+  const parsed = parseTerminalErrorResponse(await response.json().catch(() => null));
+  return new Error(parsed.ok ? parsed.value.error : fallback);
+};
+
+const readTerminalSuccess = async (response: Response, fallback: string): Promise<void> => {
+  if (!response.ok) throw await readTerminalError(response, fallback);
+  const parsed = parseTerminalSuccessResponse(await response.json().catch(() => null));
+  if (!parsed.ok) throw new Error(fallback);
 };
 
 class TerminalTransportManager {
@@ -549,13 +540,19 @@ class TerminalTransportManager {
       return;
     }
 
-    let payload: TerminalControlMessage;
+    let rawPayload: unknown;
     try {
-      payload = JSON.parse(textDecoder.decode(bytes.subarray(1))) as TerminalControlMessage;
+      rawPayload = JSON.parse(textDecoder.decode(bytes.subarray(1)));
     } catch {
       this.handleSocketFailure(new Error('Terminal websocket control parse failed'));
       return;
     }
+    const parsedPayload = parseTerminalWsControlFrame(rawPayload);
+    if (!parsedPayload.ok) {
+      this.handleSocketFailure(new Error('Terminal websocket control parse failed'));
+      return;
+    }
+    const payload = parsedPayload.value;
 
     const activeSubscription = this.getActiveSubscription();
 
@@ -603,9 +600,9 @@ class TerminalTransportManager {
       }
       case 'e': {
         const error = createTransportError(payload.c);
-        const isFatal = payload.f === true || payload.c === 'SESSION_NOT_FOUND';
+        const isFatal = payload.f === true || payload.c === 'terminal_session_not_found';
 
-        if (payload.c === 'NOT_BOUND' || payload.c === 'SESSION_NOT_FOUND') {
+        if (payload.c === 'terminal_not_bound' || payload.c === 'terminal_session_not_found') {
           this.boundSessionId = null;
         }
 
@@ -739,10 +736,7 @@ const sendTerminalInputHttp = async (sessionId: string, data: string): Promise<v
     body: data,
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to send terminal input' }));
-    throw new Error(error.error || 'Failed to send terminal input');
-  }
+  await readTerminalSuccess(response, 'Failed to send terminal input');
 };
 
 export async function createTerminalSession(options: CreateTerminalOptions): Promise<TerminalSession> {
@@ -756,12 +750,10 @@ export async function createTerminalSession(options: CreateTerminalOptions): Pro
     }),
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to create terminal' }));
-    throw new Error(error.error || 'Failed to create terminal session');
-  }
-
-  const session = await response.json() as TerminalSession;
+  if (!response.ok) throw await readTerminalError(response, 'Failed to create terminal session');
+  const parsedSession = parseTerminalSessionResponse(await response.json().catch(() => null));
+  if (!parsedSession.ok) throw new Error('Malformed terminal session response');
+  const session = parsedSession.value;
   applyTerminalTransportCapabilities(session.capabilities);
   return session;
 }
@@ -941,10 +933,7 @@ export async function resizeTerminal(
     body: JSON.stringify({ cols, rows }),
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to resize terminal' }));
-    throw new Error(error.error || 'Failed to resize terminal');
-  }
+  await readTerminalSuccess(response, 'Failed to resize terminal');
 }
 
 export async function closeTerminal(sessionId: string): Promise<void> {
@@ -954,10 +943,7 @@ export async function closeTerminal(sessionId: string): Promise<void> {
     method: 'DELETE',
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to close terminal' }));
-    throw new Error(error.error || 'Failed to close terminal');
-  }
+  await readTerminalSuccess(response, 'Failed to close terminal');
 }
 
 export async function restartTerminalSession(
@@ -976,12 +962,10 @@ export async function restartTerminalSession(
     }),
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to restart terminal' }));
-    throw new Error(error.error || 'Failed to restart terminal');
-  }
-
-  const session = await response.json() as TerminalSession;
+  if (!response.ok) throw await readTerminalError(response, 'Failed to restart terminal');
+  const parsedSession = parseTerminalSessionResponse(await response.json().catch(() => null));
+  if (!parsedSession.ok) throw new Error('Malformed terminal session response');
+  const session = parsedSession.value;
   applyTerminalTransportCapabilities(session.capabilities);
   return session;
 }
@@ -996,10 +980,7 @@ export async function forceKillTerminal(options: {
     body: JSON.stringify(options),
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to force kill terminal' }));
-    throw new Error(error.error || 'Failed to force kill terminal');
-  }
+  await readTerminalSuccess(response, 'Failed to force kill terminal');
 
   if (options.sessionId) {
     getTerminalTransportGlobalState().manager?.unbindSession(options.sessionId);

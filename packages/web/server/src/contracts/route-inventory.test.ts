@@ -48,7 +48,7 @@ describe("route inventory", () => {
       }
     }
     const terminalWsSource = readFileSync(resolve(root, "domains/terminal/ws-server.ts"), "utf8");
-    const terminalWsPath = readFileSync(resolve(root, "domains/terminal/types.ts"), "utf8").match(/TERMINAL_WS_PATH\s*=\s*["']([^"']+)["']/)?.[1];
+    const terminalWsPath = readFileSync(resolve(root, "contracts/terminal.ts"), "utf8").match(/TERMINAL_WS_PATH\s*=\s*["']([^"']+)["']/)?.[1];
     if (terminalWsSource.includes("TERMINAL_WS_PATH as WS_PATH") && terminalWsPath) {
       actual.add(`domains/terminal/ws-server.ts:get ${terminalWsPath}`);
     }

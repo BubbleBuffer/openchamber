@@ -1,6 +1,11 @@
 import type { WorktreeMetadata } from '@/types/worktree';
 import type { AppSettings } from '@contracts/settings';
 import type {
+  TerminalCreateRequest as ContractTerminalCreateRequest,
+  TerminalSessionResponse as ContractTerminalSessionResponse,
+  TerminalTransportCapability as ContractTerminalTransportCapability,
+} from '@contracts/terminal';
+import type {
   SkillsCatalogItem as ContractSkillsCatalogItem,
   SkillsCatalogResponse as ContractSkillsCatalogResponse,
   SkillsCatalogSource as ContractSkillsCatalogSource,
@@ -126,25 +131,8 @@ export interface RetryPolicy {
   maxDelayMs: number;
 }
 
-export interface TerminalTransportCapability {
-  preferred?: 'ws' | 'http' | 'sse';
-  transports?: Array<'ws' | 'http' | 'sse'>;
-  ws?: {
-    path: string;
-    v?: number;
-    enc?: string;
-  };
-}
-
-export interface TerminalSession {
-  sessionId: string;
-  cols: number;
-  rows: number;
-  capabilities?: {
-    input?: TerminalTransportCapability;
-    stream?: TerminalTransportCapability;
-  };
-}
+export type TerminalTransportCapability = ContractTerminalTransportCapability;
+export type TerminalSession = ContractTerminalSessionResponse;
 
 export interface TerminalStreamEvent {
   type: 'connected' | 'data' | 'exit' | 'reconnecting';
@@ -158,11 +146,7 @@ export interface TerminalStreamEvent {
   ptyBackend?: string;
 }
 
-export interface CreateTerminalOptions {
-  cwd: string;
-  cols?: number;
-  rows?: number;
-}
+export type CreateTerminalOptions = ContractTerminalCreateRequest;
 
 export interface TerminalStreamOptions {
   retry?: Partial<RetryPolicy>;
