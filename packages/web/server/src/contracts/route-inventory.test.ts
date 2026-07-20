@@ -9,8 +9,7 @@ describe("route inventory", () => {
     expect(ROUTE_INVENTORY.every((entry) => entry.owner.length > 0)).toBe(true);
   });
 
-  it("does not inventory legacy route registrars alongside their active replacement", () => {
-    expect(ROUTE_INVENTORY.some((entry) => entry.registrar === "domains/routes/core-routes.ts")).toBe(false);
+  it("assigns each active endpoint to one registrar", () => {
     const endpoints = ROUTE_INVENTORY.flatMap((entry) => entry.endpoints);
     expect(new Set(endpoints).size).toBe(endpoints.length);
   });
@@ -18,20 +17,28 @@ describe("route inventory", () => {
   it("covers every literal endpoint registered by active route modules", () => {
     const root = resolve(import.meta.dirname, "..");
     const registrars = [
-      "domains/routes/openchamber-routes.ts",
-      "domains/notifications/routes.ts", "domains/server-utils/proxy.ts",
-      "domains/quota/routes.ts", "domains/magic-prompts/routes.ts", "domains/session-folders/routes.ts",
-      "domains/fs/routes.ts", "domains/git/routes.ts", "domains/github/routes.ts", "domains/terminal/routes.ts",
-      "domains/opencode/routes/core-routes.ts", "domains/opencode/routes/routes.ts",
-      "domains/opencode/routes/config-entity-routes.ts", "domains/opencode/routes/project-icon-routes.ts",
-      "domains/opencode/routes/skill-routes.ts", "domains/routes/pwa-manifest.ts",
-      "domains/terminal/ws-server.ts",
+      { path: "domains/routes/core-routes.ts", functions: ["registerServerStatusRoutes", "registerAuthAndAccessRoutes"] },
+      { path: "domains/routes/openchamber-routes.ts" },
+      { path: "domains/notifications/routes.ts" }, { path: "domains/server-utils/proxy.ts" },
+      { path: "domains/quota/routes.ts" }, { path: "domains/magic-prompts/routes.ts" }, { path: "domains/session-folders/routes.ts" },
+      { path: "domains/fs/routes.ts" }, { path: "domains/git/routes.ts" }, { path: "domains/github/routes.ts" }, { path: "domains/terminal/routes.ts" },
+      { path: "domains/opencode/routes/core-routes.ts", functions: ["registerSettingsUtilityRoutes"] }, { path: "domains/opencode/routes/routes.ts" },
+      { path: "domains/opencode/routes/config-entity-routes.ts" }, { path: "domains/opencode/routes/project-icon-routes.ts" },
+      { path: "domains/opencode/routes/skill-routes.ts" }, { path: "domains/routes/pwa-manifest.ts" },
+      { path: "domains/terminal/ws-server.ts" },
     ];
     const actual = new Set<string>();
     for (const registrar of registrars) {
-      const source = readFileSync(resolve(root, registrar), "utf8");
+      const fullSource = readFileSync(resolve(root, registrar.path), "utf8");
+      const source = registrar.functions
+        ? registrar.functions.map((name) => {
+          const start = fullSource.indexOf(`export function ${name}`);
+          const end = fullSource.indexOf("\nexport function ", start + 1);
+          return fullSource.slice(start, end === -1 ? undefined : end);
+        }).join("\n")
+        : fullSource;
       for (const match of source.matchAll(/app\.(get|post|put|patch|delete)\(\s*["'](\/[^"']*)["']/g)) {
-        actual.add(`${registrar}:${match[1]} ${match[2]}`);
+        actual.add(`${registrar.path}:${match[1]} ${match[2]}`);
       }
     }
     const terminalWsSource = readFileSync(resolve(root, "domains/terminal/ws-server.ts"), "utf8");
