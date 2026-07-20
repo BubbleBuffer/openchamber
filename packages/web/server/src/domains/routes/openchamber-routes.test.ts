@@ -32,4 +32,14 @@ describe("OpenChamber system routes", () => {
     expect(zen.status).toBe(200);
     expect(zen.body).toEqual({ models: [{ id: "zen" }] });
   });
+
+  it("rejects invalid successful model metadata and Zen payloads", async () => {
+    globalThis.fetch = vi.fn(async () => ({ ok: true, json: async () => ({ zen: { models: "invalid" } }) })) as unknown as typeof fetch;
+    const metadata = await request(appWith(async () => "invalid" as never)).get("/api/openchamber/models-metadata");
+    expect(metadata.status).toBe(502);
+    expect(metadata.body).toEqual({ error: "Failed to retrieve model metadata", code: "upstream_error" });
+    const zen = await request(appWith(async () => "invalid" as never)).get("/api/zen/models");
+    expect(zen.status).toBe(502);
+    expect(zen.body).toEqual({ error: "Failed to retrieve zen models", code: "upstream_error" });
+  });
 });

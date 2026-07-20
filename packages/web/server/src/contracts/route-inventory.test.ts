@@ -19,6 +19,7 @@ describe("route inventory", () => {
       "domains/opencode/routes/core-routes.ts", "domains/opencode/routes/routes.ts",
       "domains/opencode/routes/config-entity-routes.ts", "domains/opencode/routes/project-icon-routes.ts",
       "domains/opencode/routes/skill-routes.ts", "domains/routes/pwa-manifest.ts",
+      "domains/terminal/ws-server.ts",
     ];
     const actual = new Set<string>();
     for (const registrar of registrars) {
@@ -26,6 +27,14 @@ describe("route inventory", () => {
       for (const match of source.matchAll(/app\.(get|post|put|patch|delete)\(\s*["'](\/[^"']*)["']/g)) {
         actual.add(`${registrar}:${match[1]} ${match[2]}`);
       }
+    }
+    const terminalWsSource = readFileSync(resolve(root, "domains/terminal/ws-server.ts"), "utf8");
+    const terminalWsPath = readFileSync(resolve(root, "domains/terminal/types.ts"), "utf8").match(/TERMINAL_WS_PATH\s*=\s*["']([^"']+)["']/)?.[1];
+    if (terminalWsSource.includes("TERMINAL_WS_PATH as WS_PATH") && terminalWsPath) {
+      actual.add(`domains/terminal/ws-server.ts:get ${terminalWsPath}`);
+    }
+    for (const path of ["/api/event/ws", "/api/global/event/ws"]) {
+      actual.add(`domains/event-stream:get ${path}`);
     }
     const declared = new Set(ROUTE_INVENTORY.flatMap((entry) => entry.endpoints.map((endpoint) => `${entry.registrar}:${endpoint}`)));
     expect([...actual].filter((endpoint) => !declared.has(endpoint))).toEqual([]);

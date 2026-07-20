@@ -2,6 +2,7 @@ import type { Application, Request, Response } from "express";
 import type { OpenChamberRoutesDeps } from "./types.js";
 import { checkForUpdates, getUpdateCommand, detectPackageManagerDetails } from "../package-manager/index.js";
 import { apiError } from "../../contracts/common.js";
+import { parseModelMetadataResponse, parseZenModelsResponse } from "../../contracts/system.js";
 
 type RestartOptions = {
   port: number;
@@ -274,7 +275,11 @@ export function registerOpenChamberRoutes(app: Application, deps: OpenChamberRou
         throw new Error(`models.dev responded with status ${response.status}`);
       }
 
-      const metadata = await response.json();
+      const parsedMetadata = parseModelMetadataResponse(await response.json());
+      if (!parsedMetadata.ok) {
+        throw new Error(parsedMetadata.error);
+      }
+      const metadata = parsedMetadata.value;
       cachedModelsMetadata = metadata;
       cachedModelsMetadataTimestamp = Date.now();
 
@@ -299,7 +304,11 @@ export function registerOpenChamberRoutes(app: Application, deps: OpenChamberRou
 
   app.get('/api/zen/models', async (_req: Request, res: Response) => {
     try {
-      const models = await fetchFreeZenModels();
+      const parsedModels = parseZenModelsResponse({ models: await fetchFreeZenModels() });
+      if (!parsedModels.ok) {
+        throw new Error(parsedModels.error);
+      }
+      const models = parsedModels.value.models;
       res.setHeader('Cache-Control', 'public, max-age=300');
       res.json({ models });
     } catch (error) {

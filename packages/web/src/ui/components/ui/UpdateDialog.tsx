@@ -12,6 +12,7 @@ import type { UpdateInfo } from '@/lib/config/updateTypes';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { openExternalUrl } from '@/lib/url';
 import { parseUpdateInstallResult } from '@contracts/system';
+import { waitForUpdateApplied } from './update-dialog-utils';
 
 type WebUpdateState = 'idle' | 'updating' | 'restarting' | 'reconnecting' | 'error';
 
@@ -109,9 +110,6 @@ type InstallWebUpdateResult = {
   autoRestart?: boolean;
 };
 
-const WEB_UPDATE_POLL_INTERVAL_MS = 2000;
-const WEB_UPDATE_MAX_WAIT_MS = 10 * 60 * 1000;
-
 async function installWebUpdate(): Promise<InstallWebUpdateResult> {
   try {
     const response = await fetch('/api/openchamber/update-install', {
@@ -148,40 +146,6 @@ async function isServerReachable(): Promise<boolean> {
   }
 }
 
-async function waitForUpdateApplied(
-  previousVersion?: string,
-  maxAttempts = Math.ceil(WEB_UPDATE_MAX_WAIT_MS / WEB_UPDATE_POLL_INTERVAL_MS),
-  intervalMs = WEB_UPDATE_POLL_INTERVAL_MS,
-): Promise<boolean> {
-  for (let i = 0; i < maxAttempts; i++) {
-    try {
-      const response = await fetch('/api/openchamber/update-check', {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-      });
-      if (response.ok) {
-        const data = await response.json().catch(() => null);
-        if (data && data.available === false) {
-          return true;
-        }
-        if (
-          data &&
-          typeof data.currentVersion === 'string' &&
-          typeof previousVersion === 'string' &&
-          data.currentVersion !== previousVersion
-        ) {
-          return true;
-        }
-      } else if ((response.status === 401 || response.status === 403) && await isServerReachable()) {
-        return true;
-      }
-    } catch {
-      // Server may be restarting
-    }
-    await new Promise(resolve => setTimeout(resolve, intervalMs));
-  }
-  return false;
-}
 
 export const UpdateDialog: React.FC<UpdateDialogProps> = ({
   open,
@@ -237,7 +201,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
 
     setWebUpdateState('reconnecting');
 
-    const applied = await waitForUpdateApplied(info?.currentVersion);
+    const applied = await waitForUpdateApplied(info?.currentVersion, undefined, undefined, isServerReachable);
 
     if (applied) {
       window.location.reload();
