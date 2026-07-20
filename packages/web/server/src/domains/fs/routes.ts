@@ -3,6 +3,10 @@ import type { SpawnOptions } from "child_process";
 import { parseFsExecRequest, parseFsExecResponse, parseFsListQuery, parseFsPathQuery, parseFsPathRequest, parseFsRawQuery, parseFsRenameRequest, parseFsWriteRequest } from "../../contracts/files.js";
 
 const fsError = (code: "fs_invalid_path" | "fs_invalid_content" | "fs_not_found" | "fs_forbidden" | "fs_internal_error", error?: string) => ({ error: error ?? (code === "fs_internal_error" ? "Internal server error" : "Request failed"), code });
+export const workspaceResolutionFailure = (error: string) => ({
+  status: 403,
+  body: fsError("fs_forbidden", error),
+});
 
 const EXEC_JOB_TTL_MS = 30 * 60 * 1000;
 
@@ -404,7 +408,8 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
           openchamberUserConfigRoot,
         });
         if (!resolved.ok) {
-          return res.status(400).json(fsError("fs_invalid_path", resolved.error));
+          const failure = workspaceResolutionFailure(resolved.error);
+          return res.status(failure.status).json(failure.body);
         }
         resolvedPath = resolved.resolved;
       }
@@ -435,7 +440,8 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         openchamberUserConfigRoot,
       });
       if (!resolved.ok) {
-        return res.status(400).json(fsError("fs_invalid_path", resolved.error));
+        const failure = workspaceResolutionFailure(resolved.error);
+        return res.status(failure.status).json(failure.body);
       }
 
       const [canonicalPath, canonicalBase] = await Promise.all([
@@ -487,7 +493,8 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         openchamberUserConfigRoot,
       });
       if (!resolved.ok) {
-        return res.status(400).json(fsError("fs_invalid_path", resolved.error));
+        const failure = workspaceResolutionFailure(resolved.error);
+        return res.status(failure.status).json(failure.body);
       }
 
       const [canonicalPath, canonicalBase] = await Promise.all([
@@ -535,7 +542,8 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         openchamberUserConfigRoot,
       });
       if (!resolved.ok) {
-        return res.status(400).json(fsError("fs_invalid_path", resolved.error));
+        const failure = workspaceResolutionFailure(resolved.error);
+        return res.status(failure.status).json(failure.body);
       }
 
       const [canonicalPath, canonicalBase] = await Promise.all([
@@ -604,7 +612,8 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         openchamberUserConfigRoot,
       });
       if (!resolved.ok) {
-        return res.status(400).json(fsError("fs_invalid_path", resolved.error));
+        const failure = workspaceResolutionFailure(resolved.error);
+        return res.status(failure.status).json(failure.body);
       }
 
       await fsPromises.mkdir(pathModule.dirname(resolved.resolved), { recursive: true });
@@ -636,7 +645,8 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         openchamberUserConfigRoot,
       });
       if (!resolved.ok) {
-        return res.status(400).json(fsError("fs_invalid_path", resolved.error));
+        const failure = workspaceResolutionFailure(resolved.error);
+        return res.status(failure.status).json(failure.body);
       }
 
       await fsPromises.rm(resolved.resolved, { recursive: true, force: true });
@@ -670,7 +680,8 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         openchamberUserConfigRoot,
       });
       if (!resolvedOld.ok) {
-        return res.status(400).json(fsError("fs_invalid_path", resolvedOld.error));
+        const failure = workspaceResolutionFailure(resolvedOld.error);
+        return res.status(failure.status).json(failure.body);
       }
 
       const resolvedNew = await resolveWorkspacePathFromContext({
@@ -683,7 +694,8 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         openchamberUserConfigRoot,
       });
       if (!resolvedNew.ok) {
-        return res.status(400).json(fsError("fs_invalid_path", resolvedNew.error));
+        const failure = workspaceResolutionFailure(resolvedNew.error);
+        return res.status(failure.status).json(failure.body);
       }
 
       if (resolvedOld.base !== resolvedNew.base) {

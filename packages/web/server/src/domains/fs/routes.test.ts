@@ -1,7 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
 import path from "node:path";
 
-import { registerFsRoutes } from "./routes.js";
+import { registerFsRoutes, workspaceResolutionFailure } from "./routes.js";
+import { parseFsPathRequest } from "../../contracts/files.js";
+
+describe("workspace resolver failures", () => {
+  it("classifies resolver denials as forbidden while malformed paths remain invalid requests", () => {
+    expect(workspaceResolutionFailure("Path is outside of active workspace")).toEqual({
+      status: 403,
+      body: { error: "Path is outside of active workspace", code: "fs_forbidden" },
+    });
+    expect(workspaceResolutionFailure("Active workspace is required")).toEqual({
+      status: 403,
+      body: { error: "Active workspace is required", code: "fs_forbidden" },
+    });
+    expect(parseFsPathRequest({ path: "   " }).ok).toBe(false);
+  });
+});
 
 describe("filesystem route registration", () => {
   it("does not register reveal while retaining raw/download access", () => {
