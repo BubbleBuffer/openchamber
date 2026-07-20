@@ -20,6 +20,10 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
   type Handler = (req: Request, res: Response) => Promise<unknown>;
   const wrap = (key: string, handler: Handler): Handler => async (req, res) => {
     const contract = GITHUB_ROUTE_CONTRACTS[key];
+    const request = key.startsWith("GET ") ? req.query : req.body;
+    if (contract && !contract.request(request).ok) {
+      return res.status(400).json(githubError("github_invalid_request"));
+    }
     const send = res.json.bind(res);
     res.json = ((payload: unknown) => {
       if (res.statusCode >= 400 || parseGitHubErrorResponse(payload).ok || !contract) return send(payload);

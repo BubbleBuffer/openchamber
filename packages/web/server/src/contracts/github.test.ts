@@ -37,6 +37,11 @@ describe("GitHub contracts", () => {
     expect(parseGitHubPullRequestContextResponse({ connected: true, repo: { owner: "o", repo: "r" }, pr: null, checks: null, checkRuns: [{ name: "build", conclusion: null, annotations: [{ message: "partial" }] }] }).ok).toBe(true);
   });
 
+  it("rejects malformed PR-context nested collections", () => {
+    expect(parseGitHubPullRequestContextResponse({ connected: true, repo: { owner: "o", repo: "r" }, pr: null, issueComments: [{}] }).ok).toBe(false);
+    expect(parseGitHubPullRequestContextResponse({ connected: true, repo: { owner: "o", repo: "r" }, pr: null, files: [{}] }).ok).toBe(false);
+  });
+
   it("only accepts stable safe GitHub errors", () => {
     expect(parseGitHubErrorResponse({ error: "GitHub request failed", code: "github_unauthorized" }).ok).toBe(true);
     expect(parseGitHubErrorResponse({ error: "secret", code: "internal_error" }).ok).toBe(false);
