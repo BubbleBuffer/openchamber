@@ -46,4 +46,4 @@ export const createWebGitHubAPI = (): GitHubAPI => ({
   issuesList(directory, options) { const page = options?.page ?? 1; return fetch(`/api/github/issues/list?directory=${encodeURIComponent(directory)}&page=${page}`, { headers: { Accept: "application/json" } }).then((res) => decode(res, parseGitHubIssuesListResponse, "Failed to load issues")); },
   issueGet(directory, number) { return fetch(`/api/github/issues/get?directory=${encodeURIComponent(directory)}&number=${number}`, { headers: { Accept: "application/json" } }).then((res) => decode(res, parseGitHubIssueGetResponse, "Failed to load issue")); },
   issueComments(directory, number) { return fetch(`/api/github/issues/comments?directory=${encodeURIComponent(directory)}&number=${number}`, { headers: { Accept: "application/json" } }).then((res) => decode(res, parseGitHubIssueCommentsResponse, "Failed to load issue comments")); },
-}) as GitHubAPI;
+});

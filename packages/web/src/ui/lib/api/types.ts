@@ -1,6 +1,26 @@
 import type { WorktreeMetadata } from '@/types/worktree';
 import type { AppSettings } from '@contracts/settings';
 import type {
+  GitHubAuthStatus,
+  GitHubAuthDisconnectResult,
+  GitHubDeviceFlowComplete,
+  GitHubDeviceFlowStart,
+  GitHubIssueCommentsResult,
+  GitHubIssueGetResult,
+  GitHubIssuesListResult,
+  GitHubPullRequest,
+  GitHubPullRequestContextResult,
+  GitHubPullRequestCreateInput,
+  GitHubPullRequestMergeInput,
+  GitHubPullRequestMergeResult,
+  GitHubPullRequestReadyInput,
+  GitHubPullRequestReadyResult,
+  GitHubPullRequestStatus,
+  GitHubPullRequestUpdateInput,
+  GitHubPullRequestsListResult,
+  GitHubUserSummary,
+} from '@contracts/github';
+import type {
   GitBranchResponse,
   GitBranchDetails,
   GitCommitFilesResponse,
@@ -38,6 +58,38 @@ import type {
   GitWorktreeValidationResult,
 } from '@contracts/git';
 export type { ProjectEntry } from '@contracts/settings';
+export type {
+  GitHubAuthAccount,
+  GitHubAuthDisconnectResult,
+  GitHubAuthStatus,
+  GitHubCheckRun,
+  GitHubChecksSummary,
+  GitHubDeviceFlowComplete,
+  GitHubDeviceFlowStart,
+  GitHubIssue,
+  GitHubIssueComment,
+  GitHubIssueCommentsResult,
+  GitHubIssueGetResult,
+  GitHubIssueLabel,
+  GitHubIssuesListResult,
+  GitHubIssueSummary,
+  GitHubPullRequest,
+  GitHubPullRequestContextResult,
+  GitHubPullRequestCreateInput,
+  GitHubPullRequestFile,
+  GitHubPullRequestHeadRepo,
+  GitHubPullRequestMergeInput,
+  GitHubPullRequestMergeResult,
+  GitHubPullRequestReadyInput,
+  GitHubPullRequestReadyResult,
+  GitHubPullRequestReviewComment,
+  GitHubPullRequestStatus,
+  GitHubPullRequestSummary,
+  GitHubPullRequestUpdateInput,
+  GitHubPullRequestsListResult,
+  GitHubRepoRef,
+  GitHubUserSummary,
+} from '@contracts/github';
 
 export type RuntimePlatform = 'web';
 
@@ -360,275 +412,11 @@ export interface PushAPI {
   setVisibility(payload: { visible: boolean }): Promise<{ ok: true } | null>;
 }
 
-export type GitHubUserSummary = {
-  login: string;
-  id?: number;
-  avatarUrl?: string;
-  name?: string;
-  email?: string;
-};
-
-export type GitHubRepoRef = {
-  owner: string;
-  repo: string;
-  url: string;
-};
-
-export type GitHubChecksSummary = {
-  state: 'success' | 'failure' | 'pending' | 'unknown';
-  total: number;
-  success: number;
-  failure: number;
-  pending: number;
-};
-
-export type GitHubCheckRun = {
-  id?: number;
-  name: string;
-  app?: {
-    name?: string;
-    slug?: string;
-  };
-  status?: string;
-  conclusion?: string | null;
-  detailsUrl?: string;
-  output?: {
-    title?: string;
-    summary?: string;
-    text?: string;
-  };
-  job?: {
-    runId?: number;
-    jobId?: number;
-    url?: string;
-    name?: string;
-    conclusion?: string | null;
-    steps?: Array<{
-      name: string;
-      status?: string;
-      conclusion?: string | null;
-      number?: number;
-      startedAt?: string;
-      completedAt?: string;
-    }>;
-  };
-  annotations?: Array<{
-    path?: string;
-    startLine?: number;
-    endLine?: number;
-    level?: string;
-    message: string;
-    title?: string;
-    rawDetails?: string;
-  }>;
-};
-
-export type GitHubPullRequest = {
-  number: number;
-  title: string;
-  body?: string;
-  url: string;
-  state: 'open' | 'closed' | 'merged';
-  draft: boolean;
-  base: string;
-  head: string;
-  headSha?: string;
-  mergeable?: boolean | null;
-  mergeableState?: string | null;
-};
-
-export type GitHubPullRequestHeadRepo = {
-  owner: string;
-  repo: string;
-  url: string;
-  cloneUrl?: string;
-  sshUrl?: string;
-};
-
-export type GitHubPullRequestSummary = GitHubPullRequest & {
-  author?: GitHubUserSummary | null;
-  body?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  headLabel?: string;
-  headRepo?: GitHubPullRequestHeadRepo | null;
-};
-
-export type GitHubPullRequestFile = {
-  filename: string;
-  status?: string;
-  additions?: number;
-  deletions?: number;
-  changes?: number;
-  patch?: string;
-};
-
-export type GitHubPullRequestReviewComment = {
-  id: number;
-  url: string;
-  body: string;
-  author?: GitHubUserSummary | null;
-  path?: string;
-  line?: number | null;
-  position?: number | null;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-export type GitHubPullRequestsListResult = {
-  connected: boolean;
-  repo?: GitHubRepoRef | null;
-  prs?: GitHubPullRequestSummary[];
-  page?: number;
-  hasMore?: boolean;
-};
-
-export type GitHubPullRequestContextResult = {
-  connected: boolean;
-  repo?: GitHubRepoRef | null;
-  pr?: GitHubPullRequestSummary | null;
-  issueComments?: GitHubIssueComment[];
-  reviewComments?: GitHubPullRequestReviewComment[];
-  files?: GitHubPullRequestFile[];
-  diff?: string;
-  checks?: GitHubChecksSummary | null;
-  checkRuns?: GitHubCheckRun[];
-};
-
-export type GitHubPullRequestStatus = {
-  connected: boolean;
-  repo?: GitHubRepoRef | null;
-  branch?: string;
-  pr?: GitHubPullRequest | null;
-  checks?: GitHubChecksSummary | null;
-  canMerge?: boolean;
-  defaultBranch?: string | null;
-  resolvedRemoteName?: string | null;
-};
-
-export type GitHubPullRequestCreateInput = {
-  directory: string;
-  title: string;
-  head: string;
-  base: string;
-  body?: string;
-  draft?: boolean;
-  /** Remote to create the PR against (target repo, e.g., 'upstream' for forks) */
-  remote?: string;
-  /** Remote where the head branch lives (source repo, e.g., 'origin' for forks) */
-  headRemote?: string;
-};
-
-export type GitHubPullRequestUpdateInput = {
-  directory: string;
-  number: number;
-  title: string;
-  body?: string;
-};
-
-export type GitHubPullRequestMergeInput = {
-  directory: string;
-  number: number;
-  method: 'merge' | 'squash' | 'rebase';
-};
-
-export type GitHubPullRequestReadyInput = {
-  directory: string;
-  number: number;
-};
-
-export type GitHubPullRequestReadyResult = {
-  ready: boolean;
-};
-
-export type GitHubPullRequestMergeResult = {
-  merged: boolean;
-  message?: string;
-};
-
-export type GitHubIssueLabel = {
-  name: string;
-  color?: string;
-};
-
-export type GitHubIssueSummary = {
-  number: number;
-  title: string;
-  url: string;
-  state: 'open' | 'closed';
-  author?: GitHubUserSummary | null;
-  labels?: GitHubIssueLabel[];
-};
-
-export type GitHubIssue = GitHubIssueSummary & {
-  body?: string;
-  assignees?: GitHubUserSummary[];
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-export type GitHubIssueComment = {
-  id: number;
-  url: string;
-  body: string;
-  author?: GitHubUserSummary | null;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-export type GitHubIssuesListResult = {
-  connected: boolean;
-  repo?: GitHubRepoRef | null;
-  issues?: GitHubIssueSummary[];
-  page?: number;
-  hasMore?: boolean;
-};
-
-export type GitHubIssueGetResult = {
-  connected: boolean;
-  repo?: GitHubRepoRef | null;
-  issue?: GitHubIssue | null;
-};
-
-export type GitHubIssueCommentsResult = {
-  connected: boolean;
-  repo?: GitHubRepoRef | null;
-  comments?: GitHubIssueComment[];
-};
-
-export type GitHubAuthStatus = {
-  connected: boolean;
-  user?: GitHubUserSummary | null;
-  scope?: string;
-  accounts?: GitHubAuthAccount[];
-};
-
-export type GitHubAuthAccount = {
-  id: string;
-  user: GitHubUserSummary;
-  scope?: string;
-  current?: boolean;
-};
-
-export type GitHubDeviceFlowStart = {
-  deviceCode: string;
-  userCode: string;
-  verificationUri: string;
-  verificationUriComplete?: string;
-  expiresIn: number;
-  interval: number;
-  scope?: string;
-};
-
-export type GitHubDeviceFlowComplete =
-  | { connected: true; user: GitHubUserSummary; scope?: string }
-  | { connected: false; status?: string; error?: string };
-
 export interface GitHubAPI {
   authStatus(): Promise<GitHubAuthStatus>;
   authStart(): Promise<GitHubDeviceFlowStart>;
   authComplete(deviceCode: string): Promise<GitHubDeviceFlowComplete>;
-  authDisconnect(): Promise<{ removed: boolean }>;
+  authDisconnect(): Promise<GitHubAuthDisconnectResult>;
   authActivate(accountId: string): Promise<GitHubAuthStatus>;
   me?(): Promise<GitHubUserSummary>;
 

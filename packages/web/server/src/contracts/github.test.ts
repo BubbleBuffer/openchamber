@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import {
   parseGitHubAuthStatusResponse,
   parseGitHubDeviceFlowCompleteResponse,
@@ -40,5 +42,26 @@ describe("GitHub contracts", () => {
   it("owns every active GitHub route with named request and response parsers", () => {
     expect(Object.keys(GITHUB_ROUTE_CONTRACTS)).toHaveLength(16);
     expect(GITHUB_ROUTE_CONTRACTS["GET /api/github/pulls/context"].response).toBe(parseGitHubPullRequestContextResponse);
+  });
+
+  it("keeps GitHub wire DTOs out of the browser API type aggregate", async () => {
+    const apiTypesPath = fileURLToPath(new URL("../../../src/ui/lib/api/types.ts", import.meta.url));
+    const apiTypes = await readFile(apiTypesPath, "utf8");
+    const wireTypeNames = [
+      "GitHubUserSummary", "GitHubRepoRef", "GitHubChecksSummary", "GitHubCheckRun",
+      "GitHubPullRequest", "GitHubPullRequestHeadRepo", "GitHubPullRequestSummary",
+      "GitHubPullRequestFile", "GitHubPullRequestReviewComment", "GitHubPullRequestsListResult",
+      "GitHubPullRequestContextResult", "GitHubPullRequestStatus", "GitHubPullRequestCreateInput",
+      "GitHubPullRequestUpdateInput", "GitHubPullRequestMergeInput", "GitHubPullRequestReadyInput",
+      "GitHubPullRequestReadyResult", "GitHubPullRequestMergeResult", "GitHubIssueLabel",
+      "GitHubIssueSummary", "GitHubIssue", "GitHubIssueComment", "GitHubIssuesListResult",
+      "GitHubIssueGetResult", "GitHubIssueCommentsResult", "GitHubAuthDisconnectResult", "GitHubAuthStatus", "GitHubAuthAccount",
+      "GitHubDeviceFlowStart", "GitHubDeviceFlowComplete",
+    ];
+
+    expect(apiTypes).toMatch(/from ['"]@contracts\/github['"]/);
+    for (const name of wireTypeNames) {
+      expect(apiTypes).not.toMatch(new RegExp(`export (?:type|interface) ${name}(?:\\s*=|\\s*\\{)`));
+    }
   });
 });

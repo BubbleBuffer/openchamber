@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { GitHubAuthStatus, RuntimeAPIs } from '@/lib/api/types';
+import type { RuntimeAPIs } from '@/lib/api/types';
+import type { GitHubAuthStatus } from '@contracts/github';
 
 type GitHubAuthStatusWithError = GitHubAuthStatus & { error?: string };
 

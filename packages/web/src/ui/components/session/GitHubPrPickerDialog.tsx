@@ -25,7 +25,7 @@ import { useRuntimeStore } from '@/stores/useRuntimeStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { useGitHubAuthStore } from '@/stores/github/useGitHubAuthStore';
 import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
-import type { GitHubPullRequestContextResult, GitHubPullRequestSummary, GitHubPullRequestsListResult } from '@/lib/api/types';
+import type { GitHubPullRequestContextResult, GitHubPullRequestSummary, GitHubPullRequestsListResult } from '@contracts/github';
 
 const parsePrNumber = (value: string): number | null => {
   const trimmed = value.trim();
@@ -241,10 +241,10 @@ export function GitHubPrPickerDialog({
           includeDiff,
           instructionsText,
           contextText: buildPullRequestContextText(context),
-          author: context.pr.author
+          author: typeof context.pr.author?.login === 'string'
             ? {
               login: context.pr.author.login,
-              avatarUrl: context.pr.author.avatarUrl,
+              avatarUrl: context.pr.author.avatarUrl ?? undefined,
             }
             : undefined,
         });

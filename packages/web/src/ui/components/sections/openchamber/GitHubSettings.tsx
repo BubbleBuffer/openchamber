@@ -3,34 +3,12 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 import { useGitHubAuthStore } from '@/stores/github/useGitHubAuthStore';
-import type { GitHubAuthStatus } from '@/lib/api/types';
+import type { GitHubAuthStatus, GitHubDeviceFlowComplete, GitHubDeviceFlowStart } from '@contracts/github';
 import { useDeviceInfo } from '@/lib/device';
 import { cn } from '@/lib/utils';
 import { openExternalUrl } from '@/lib/url';
 import { RiGithubFill, RiInformationLine } from '@remixicon/react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-
-type GitHubUser = {
-  login: string;
-  id?: number;
-  avatarUrl?: string;
-  name?: string;
-  email?: string;
-};
-
-type DeviceFlowStartResponse = {
-  deviceCode: string;
-  userCode: string;
-  verificationUri: string;
-  verificationUriComplete?: string;
-  expiresIn: number;
-  interval: number;
-  scope?: string;
-};
-
-type DeviceFlowCompleteResponse =
-  | { connected: true; user: GitHubUser; scope?: string }
-  | { connected: false; status?: string; error?: string };
 
 export const GitHubSettings: React.FC = () => {
   const { isMobile } = useDeviceInfo();
@@ -46,7 +24,7 @@ export const GitHubSettings: React.FC = () => {
   }, []);
 
   const [isBusy, setIsBusy] = React.useState(false);
-  const [flow, setFlow] = React.useState<DeviceFlowStartResponse | null>(null);
+  const [flow, setFlow] = React.useState<GitHubDeviceFlowStart | null>(null);
   const [pollIntervalMs, setPollIntervalMs] = React.useState<number | null>(null);
   const pollTimerRef = React.useRef<number | null>(null);
 
@@ -87,7 +65,7 @@ export const GitHubSettings: React.FC = () => {
               },
               body: JSON.stringify({}),
             });
-            const body = (await response.json().catch(() => null)) as DeviceFlowStartResponse | { error?: string } | null;
+            const body = (await response.json().catch(() => null)) as GitHubDeviceFlowStart | { error?: string } | null;
             if (!response.ok || !body || !('deviceCode' in body)) {
               throw new Error((body as { error?: string } | null)?.error || response.statusText);
             }
@@ -108,9 +86,7 @@ export const GitHubSettings: React.FC = () => {
   }, [openExternal, runtimeGitHub]);
 
   const pollOnce = React.useCallback(async (deviceCode: string) => {
-    if (runtimeGitHub) {
-      return runtimeGitHub.authComplete(deviceCode) as Promise<DeviceFlowCompleteResponse>;
-    }
+    if (runtimeGitHub) return runtimeGitHub.authComplete(deviceCode);
 
     const response = await fetch('/api/github/auth/complete', {
       method: 'POST',
@@ -121,11 +97,11 @@ export const GitHubSettings: React.FC = () => {
       body: JSON.stringify({ deviceCode }),
     });
 
-    const payload = (await response.json().catch(() => null)) as DeviceFlowCompleteResponse | { error?: string } | null;
+    const payload = (await response.json().catch(() => null)) as GitHubDeviceFlowComplete | { error?: string } | null;
     if (!response.ok || !payload) {
       throw new Error((payload as { error?: string } | null)?.error || response.statusText);
     }
-    return payload as DeviceFlowCompleteResponse;
+    return payload as GitHubDeviceFlowComplete;
   }, [runtimeGitHub]);
 
   React.useEffect(() => {

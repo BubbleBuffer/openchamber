@@ -35,7 +35,7 @@ import { opencodeClient } from '@/lib/opencode/client';
 import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
 import { createWorktreeSessionForNewBranch } from '@/lib/session/worktreeSessionCreator';
 import { generateBranchSlug } from '@/lib/git/branchNameGenerator';
-import type { GitHubIssue, GitHubIssueComment, GitHubIssuesListResult, GitHubIssueSummary } from '@/lib/api/types';
+import type { GitHubIssue, GitHubIssueComment, GitHubIssuesListResult, GitHubIssueSummary } from '@contracts/github';
 
 const parseIssueNumber = (value: string): number | null => {
   const trimmed = value.trim();
@@ -320,9 +320,9 @@ export function GitHubIssuePickerDialog({
             title: issue.title,
             url: issue.url,
             contextText,
-            author: issue.author ? {
+            author: typeof issue.author?.login === 'string' ? {
               login: issue.author.login,
-              avatarUrl: issue.author.avatarUrl,
+              avatarUrl: issue.author.avatarUrl ?? undefined,
             } : undefined,
           });
         }

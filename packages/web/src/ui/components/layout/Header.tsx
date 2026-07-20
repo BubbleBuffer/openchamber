@@ -61,7 +61,7 @@ import {
 } from '@/components/ui/collapsible';
 import { RiArrowDownSLine, RiArrowRightSLine } from '@remixicon/react';
 import type { UsageWindow } from '@/types';
-import type { GitHubAuthStatus } from '@/lib/api/types';
+import type { GitHubAuthStatus } from '@contracts/github';
 import type { SessionContextUsage } from '@/stores/types/sessionTypes';
 import { ProjectActionsButton } from '@/components/layout/ProjectActionsButton';
 import { resolveSessionDiffStats } from '@/components/session/sidebar/utils';
