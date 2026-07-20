@@ -26,7 +26,14 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
     }
     const send = res.json.bind(res);
     res.json = ((payload: unknown) => {
-      if (res.statusCode >= 400 || parseGitHubErrorResponse(payload).ok || !contract) return send(payload);
+      if (res.statusCode >= 400) {
+        const error = parseGitHubErrorResponse(payload);
+        if (error.ok) return send(error.value);
+        console.error("Invalid GitHub route error", { route: key });
+        res.status(500);
+        return send(githubError("github_internal_error"));
+      }
+      if (parseGitHubErrorResponse(payload).ok || !contract) return send(payload);
       const parsed = contract.response(payload);
       if (parsed.ok) return send(parsed.value);
       console.error("Invalid GitHub route response", { route: key, error: parsed.error });
@@ -175,7 +182,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
 
       const accessToken = payload?.access_token as string | undefined | null;
       if (!accessToken) {
-        return res.status(500).json({ error: "Missing access_token from GitHub" });
+        return res.status(500).json(githubError("github_upstream_error"));
       }
 
       const { Octokit } = await import("@octokit/rest");
@@ -209,7 +216,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       const accountId = parsedRequest.value.accountId;
       const activated = libs.activateGitHubAuth(accountId);
       if (!activated) {
-        return res.status(404).json({ error: "GitHub account not found" });
+        return res.status(404).json(githubError("github_not_found"));
       }
 
       const auth = libs.getGitHubAuth();
@@ -269,7 +276,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       } catch (error) {
         if (isGitHubAuthInvalid(error)) {
           libs.clearGitHubAuth();
-          return res.status(401).json({ error: "GitHub token expired or revoked" });
+          return res.status(401).json(githubError("github_unauthorized"));
         }
         throw error;
       }
@@ -290,7 +297,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       const remote =
         typeof req.query?.remote === "string" ? req.query.remote.trim() : "origin";
       if (!directory || !branch) {
-        return res.status(400).json({ error: "directory and branch are required" });
+        return res.status(400).json(githubError("github_invalid_request"));
       }
 
       const libs = await getGitHubLibraries();
@@ -510,7 +517,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       const headRemote =
         typeof req.body?.headRemote === "string" ? req.body.headRemote.trim() : "";
       if (!directory || !title || !head || !requestedBase) {
-        return res.status(400).json({ error: "directory, title, head, base are required" });
+        return res.status(400).json(githubError("github_invalid_request"));
       }
 
       const libs = await getGitHubLibraries();
@@ -520,7 +527,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       const ghLib: typeof import("./index.js") = await import("./index.js");
       const { repo } = await ghLib.resolveGitHubRepoFromDirectory(directory, remote);
       if (!repo) {
-        return res.status(400).json({ error: "Unable to resolve GitHub repo from git remote" });
+        return res.status(400).json(githubError("github_repo_unavailable"));
       }
 
       const normalizeBranchRef = (value: string, remoteNames = new Set<string>()) => {
@@ -588,7 +595,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
 
       const base = normalizeBranchRef(requestedBase, remoteNames);
       if (!base) {
-        return res.status(400).json({ error: "Invalid base branch name" });
+        return res.status(400).json(githubError("github_invalid_request"));
       }
 
       // For fork workflows: we need to determine the correct head reference
@@ -644,7 +651,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
 
       const pr = created?.data;
       if (!pr) {
-        return res.status(500).json({ error: "Failed to create PR" });
+        return res.status(500).json(githubError("github_upstream_error"));
       }
 
       return res.json({
@@ -690,7 +697,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       const title = typeof req.body?.title === "string" ? req.body.title.trim() : "";
       const body = typeof req.body?.body === "string" ? req.body.body : undefined;
       if (!directory || !number || !title) {
-        return res.status(400).json({ error: "directory, number, title are required" });
+        return res.status(400).json(githubError("github_invalid_request"));
       }
 
       const libs = await getGitHubLibraries();
@@ -700,7 +707,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       const ghLib: typeof import("./index.js") = await import("./index.js");
       const { repo } = await ghLib.resolveGitHubRepoFromDirectory(directory);
       if (!repo) {
-        return res.status(400).json({ error: "Unable to resolve GitHub repo from git remote" });
+        return res.status(400).json(githubError("github_repo_unavailable"));
       }
 
       let updated: any;
@@ -720,7 +727,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
           return res.status(403).json(githubError("github_forbidden"));
         }
         if (error?.status === 404) {
-          return res.status(404).json({ error: "PR not found in this repository" });
+          return res.status(404).json(githubError("github_not_found"));
         }
         if (error?.status === 422) {
           return res.status(422).json(githubError("github_invalid_request"));
@@ -730,7 +737,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
 
       const pr = updated?.data;
       if (!pr) {
-        return res.status(500).json({ error: "Failed to update PR" });
+        return res.status(500).json(githubError("github_upstream_error"));
       }
 
       return res.json({
@@ -761,7 +768,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       const method =
         typeof req.body?.method === "string" ? req.body.method : "merge";
       if (!directory || !number) {
-        return res.status(400).json({ error: "directory and number are required" });
+        return res.status(400).json(githubError("github_invalid_request"));
       }
 
       const libs = await getGitHubLibraries();
@@ -773,7 +780,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       const ghLib: typeof import("./index.js") = await import("./index.js");
       const { repo } = await ghLib.resolveGitHubRepoFromDirectory(directory);
       if (!repo) {
-        return res.status(400).json({ error: "Unable to resolve GitHub repo from git remote" });
+        return res.status(400).json(githubError("github_repo_unavailable"));
       }
 
       try {
@@ -806,7 +813,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         typeof req.body?.directory === "string" ? req.body.directory.trim() : "";
       const number = typeof req.body?.number === "number" ? req.body.number : null;
       if (!directory || !number) {
-        return res.status(400).json({ error: "directory and number are required" });
+        return res.status(400).json(githubError("github_invalid_request"));
       }
 
       const libs = await getGitHubLibraries();
@@ -818,13 +825,13 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       const ghLib: typeof import("./index.js") = await import("./index.js");
       const { repo } = await ghLib.resolveGitHubRepoFromDirectory(directory);
       if (!repo) {
-        return res.status(400).json({ error: "Unable to resolve GitHub repo from git remote" });
+        return res.status(400).json(githubError("github_repo_unavailable"));
       }
 
       const pr = await octokit.rest.pulls.get({ owner: repo.owner, repo: repo.repo, pull_number: number });
       const nodeId = pr?.data?.node_id;
       if (!nodeId) {
-        return res.status(500).json({ error: "Failed to resolve PR node id" });
+        return res.status(500).json(githubError("github_upstream_error"));
       }
 
       if (pr?.data?.draft === false) {
@@ -859,7 +866,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       const page =
         typeof req.query?.page === "string" ? Number(req.query.page) : 1;
       if (!directory) {
-        return res.status(400).json({ error: "directory is required" });
+        return res.status(400).json(githubError("github_invalid_request"));
       }
 
       const libs = await getGitHubLibraries();
@@ -925,7 +932,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       const number =
         typeof req.query?.number === "string" ? Number(req.query.number) : null;
       if (!directory || !number) {
-        return res.status(400).json({ error: "directory and number are required" });
+        return res.status(400).json(githubError("github_invalid_request"));
       }
 
       const libs = await getGitHubLibraries();
@@ -947,7 +954,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       });
       const issue = result?.data;
       if (!issue || issue.pull_request) {
-        return res.status(400).json({ error: "Not a GitHub issue" });
+        return res.status(400).json(githubError("github_invalid_request"));
       }
 
       return res.json({
@@ -996,7 +1003,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       const number =
         typeof req.query?.number === "string" ? Number(req.query.number) : null;
       if (!directory || !number) {
-        return res.status(400).json({ error: "directory and number are required" });
+        return res.status(400).json(githubError("github_invalid_request"));
       }
 
       const libs = await getGitHubLibraries();
@@ -1044,7 +1051,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       const page =
         typeof req.query?.page === "string" ? Number(req.query.page) : 1;
       if (!directory) {
-        return res.status(400).json({ error: "directory is required" });
+        return res.status(400).json(githubError("github_invalid_request"));
       }
 
       const libs = await getGitHubLibraries();
@@ -1128,7 +1135,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       const includeDiff = req.query?.diff === "1" || req.query?.diff === "true";
       const includeCheckDetails = req.query?.checkDetails === "1" || req.query?.checkDetails === "true";
       if (!directory || !number) {
-        return res.status(400).json({ error: "directory and number are required" });
+        return res.status(400).json(githubError("github_invalid_request"));
       }
 
       const libs = await getGitHubLibraries();
@@ -1150,7 +1157,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       });
       const prData = prResp?.data;
       if (!prData) {
-        return res.status(404).json({ error: "PR not found" });
+        return res.status(404).json(githubError("github_not_found"));
       }
 
       const headRepo = prData.head?.repo
