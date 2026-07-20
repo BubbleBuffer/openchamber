@@ -103,3 +103,31 @@ describe("settings persistence queue", () => {
     expect(JSON.parse(await readFile(settingsPath, "utf8"))).toMatchObject({ themeId: "second" });
   });
 });
+
+describe("persisted settings boundary", () => {
+  it("removes obsolete fields without dropping server-only push state on unrelated saves", async () => {
+    const directory = await mkdtemp(path.join("/tmp", "openchamber-settings-runtime-"));
+    tempDirectories.push(directory);
+    const settingsPath = path.join(directory, "settings.json");
+    await writeFile(settingsPath, JSON.stringify({
+      publicOrigin: "https://openchamber.test",
+      vapidKeys: { publicKey: "public", privateKey: "secret" },
+      obsolete: true,
+    }));
+    const runtime = createSettingsRuntime({
+      fsPromises: fs, path, crypto, SETTINGS_FILE_PATH: settingsPath,
+      sanitizeProjects: (projects) => Array.isArray(projects) ? projects : [],
+      sanitizeSettingsUpdate: (changes) => changes,
+      mergePersistedSettings: (current, changes) => ({ ...current, ...changes }),
+      normalizeSettingsPaths: (settings) => ({ settings, changed: false }),
+      normalizeStringArray: () => [], formatSettingsResponse: (settings) => settings,
+      resolveDirectoryCandidate: () => null,
+    });
+    await runtime.persistSettings({ themeId: "dark" });
+    expect(JSON.parse(await readFile(settingsPath, "utf8"))).toEqual({
+      publicOrigin: "https://openchamber.test",
+      vapidKeys: { publicKey: "public", privateKey: "secret" },
+      themeId: "dark",
+    });
+  });
+});

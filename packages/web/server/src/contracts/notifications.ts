@@ -3,6 +3,7 @@ import { parseJsonBoolean, parseJsonObject, parseJsonString, type ParseResult } 
 export const NOTIFICATION_ERROR_CODES = ["notification_invalid_request", "notification_unauthorized", "notification_unavailable"] as const;
 export type PushSubscribeRequest = { endpoint: string; keys: { p256dh: string; auth: string } };
 export type PushResponse = { ok: true };
+export type NotificationSseEvent = { type: "openchamber:notification-stream-ready"; properties: Record<string, unknown> };
 const invalid = <T = never>(error: string): ParseResult<T> => ({ ok: false, error });
 export function parsePushSubscribeRequest(value: unknown): ParseResult<PushSubscribeRequest> {
   const object = parseJsonObject(value); if (!object.ok) return object;
@@ -24,4 +25,10 @@ export function parseVisibilityRequest(value: unknown): ParseResult<{ visible: b
 export function parsePushResponse(value: unknown): ParseResult<PushResponse> {
   const object = parseJsonObject(value); if (!object.ok) return object;
   const ok = parseJsonBoolean(object.value.ok); return ok.ok && ok.value ? { ok: true, value: { ok: true } } : invalid("invalid push response");
+}
+export function parseNotificationSseEvent(value: unknown): ParseResult<NotificationSseEvent> {
+  const object = parseJsonObject(value); if (!object.ok) return object;
+  if (object.value.type !== "openchamber:notification-stream-ready") return invalid("unknown notification event");
+  const properties = parseJsonObject(object.value.properties);
+  return properties.ok ? { ok: true, value: { type: "openchamber:notification-stream-ready", properties: properties.value } } : invalid("invalid notification event");
 }

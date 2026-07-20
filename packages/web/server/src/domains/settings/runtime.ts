@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { SettingsRuntimeDeps, SettingsRuntime } from "./types.js";
 import { createProjectIdFromPath } from "../projects/index.js";
+import { parsePersistedSettings } from "../../contracts/settings.js";
 
 const DEFAULT_NOTIFICATION_TEMPLATES = {
   completion: { title: "{agent_name} is ready", message: "{model_name} completed the task" },
@@ -473,7 +474,8 @@ export function createSettingsRuntime(deps: SettingsRuntimeDeps): SettingsRuntim
       const raw = await fsPromises.readFile(SETTINGS_FILE_PATH, "utf8");
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === "object") {
-        return parsed;
+        const sanitized = parsePersistedSettings(parsed);
+        return sanitized.ok ? sanitized.value : {};
       }
       return {};
     } catch (error) {
@@ -493,7 +495,8 @@ export function createSettingsRuntime(deps: SettingsRuntimeDeps): SettingsRuntim
       // partial read during a non-atomic writeFile would make their next
       // read-modify-write wipe the settings file.
       const tmp = `${SETTINGS_FILE_PATH}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      await fsPromises.writeFile(tmp, JSON.stringify(settings, null, 2), "utf8");
+      const sanitized = parsePersistedSettings(settings);
+      await fsPromises.writeFile(tmp, JSON.stringify(sanitized.ok ? sanitized.value : {}, null, 2), "utf8");
       await fsPromises.rename(tmp, SETTINGS_FILE_PATH);
     } catch (error) {
       console.warn("Failed to write settings file:", error);

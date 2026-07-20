@@ -1,4 +1,8 @@
 import type { NotificationPayload, NotificationsAPI } from '@/lib/api/types';
+import { parseNotificationSseEvent } from '@contracts/notifications';
+
+/** Decode only the OpenChamber synthetic outer SSE event; SDK payloads remain opaque. */
+export const parseNotificationStreamEvent = (value: unknown) => parseNotificationSseEvent(value);
 
 const SW_READY_TIMEOUT_MS = 1500;
 

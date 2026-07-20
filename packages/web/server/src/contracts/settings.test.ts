@@ -3,9 +3,9 @@ import { parseAppSettingsResponse, parsePersistedSettings } from "./settings.js"
 
 describe("settings contract", () => {
   it("removes unknown persisted fields while preserving server-only fields", () => {
-    expect(parsePersistedSettings({ themeId: "dark", publicOrigin: "https://app.test", vapidKeys: { publicKey: "key" }, obsolete: true })).toEqual({
+    expect(parsePersistedSettings({ themeId: "dark", publicOrigin: "https://app.test", vapidKeys: { publicKey: "key", privateKey: "secret" }, obsolete: true })).toEqual({
       ok: true,
-      value: { themeId: "dark", publicOrigin: "https://app.test", vapidKeys: { publicKey: "key" } },
+      value: { themeId: "dark", publicOrigin: "https://app.test", vapidKeys: { publicKey: "key", privateKey: "secret" } },
     });
   });
 

@@ -188,7 +188,7 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
     try {
       writeSseEvent(res, {
         type: "openchamber:notification-stream-ready",
-        properties: { uiToken },
+        properties: {},
       });
     } catch {
     }

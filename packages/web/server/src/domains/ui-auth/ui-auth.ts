@@ -5,6 +5,7 @@ import path from "path";
 import os from "os";
 import type { Request, Response } from "express";
 import { createUiPasskeys } from "./ui-passkeys.js";
+import { parsePasswordSessionRequest } from "../../contracts/ui-auth.js";
 import type {
   UiAuthDeps,
   UiAuthController,
@@ -728,7 +729,7 @@ export function createUiAuth({
     clearSessionCookie(req, res);
     res
       .status(401)
-      .json({ authenticated: false, locked: true });
+        .json({ authenticated: false, locked: true, code: "ui_auth_unauthorized" });
   };
 
   const handleSessionCreate = async (
@@ -759,20 +760,19 @@ export function createUiAuth({
         error:
           "Too many login attempts, please try again later",
         retryAfter: rateLimitResult.retryAfter,
+        code: "ui_auth_rate_limited",
       });
       return;
     }
 
-    const candidate =
-      typeof req.body?.password === "string"
-        ? req.body.password
-        : "";
+    const request = parsePasswordSessionRequest(req.body);
+    const candidate = request.ok ? request.value.password : "";
     if (!verifyPassword(candidate)) {
       await recordFailedAttempt(req);
       clearSessionCookie(req, res);
       res
         .status(401)
-        .json({ error: "Invalid credentials" });
+        .json({ error: "Invalid credentials", code: "ui_auth_unauthorized" });
       return;
     }
 

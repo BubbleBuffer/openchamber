@@ -46,8 +46,9 @@ export function registerAuthAndAccessRoutes(app: Express, deps: AuthRoutesDeps):
   app.get('/auth/session', async (req: Request, res: Response) => {
     try {
       await uiAuthController.handleSessionStatus(req, res);
-    } catch {
-      res.status(500).json({ error: 'Internal server error' });
+    } catch (error) {
+      console.error('Failed to read owner session status:', error);
+      res.status(500).json({ error: 'Internal server error', code: 'internal_error' });
     }
   });
 
