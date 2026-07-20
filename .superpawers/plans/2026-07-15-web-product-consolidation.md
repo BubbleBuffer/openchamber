@@ -1,7 +1,7 @@
 ---
 kind: plan
 status: completed
-base_branch: feature/web-pwa-maintainability
+base_branch: feature/lint-integration-readiness
 parent_spec: .superpawers/specs/2026-07-14-web-pwa-maintainability-program-design.md
 covers_chunks:
   - web-product-consolidation
