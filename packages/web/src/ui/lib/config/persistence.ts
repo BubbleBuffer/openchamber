@@ -1,4 +1,5 @@
 import type { AppSettings } from '@/lib/config/settingsTypes';
+import { parseAppSettingsResponse } from '@contracts/settings';
 import { createProjectIdFromPath } from '@/lib/project/projectId';
 import { useUIStore } from '@/stores/useUIStore';
 import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
@@ -448,7 +449,10 @@ const applyUiPreferences = (settings: AppSettings) => {
   }
 };
 
-const sanitizeWebSettings = (payload: unknown): AppSettings | null => {
+// Retained for the local normalization helpers below; browser transport uses
+// the authoritative contract parser declared after this helper.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const sanitizeLegacyWebSettings = (payload: unknown): AppSettings | null => {
   if (!payload || typeof payload !== 'object') {
     return null;
   }
@@ -807,6 +811,13 @@ const sanitizeWebSettings = (payload: unknown): AppSettings | null => {
   return result;
 };
 
+// Successful browser settings payloads are contract-validated before any UI
+// state is touched. The legacy normalizer remains only for local helpers.
+const sanitizeWebSettings = (payload: unknown): AppSettings | null => {
+  const parsed = parseAppSettingsResponse(payload);
+  return parsed.ok ? parsed.value : null;
+};
+
 // Short-lived cache + in-flight dedup for settings fetches to avoid repeated GET calls during startup
 let _settingsCache: { value: AppSettings | null; at: number } | null = null;
 let _settingsInflight: Promise<AppSettings | null> | null = null;
@@ -940,10 +951,11 @@ const _flushSettingsUpdate = async (propagateErrors = false): Promise<void> => {
   const runtimeSettings = getRuntimeSettingsAPI();
   if (runtimeSettings) {
     try {
-      const updated = await runtimeSettings.save(changes);
-      if (updated) {
-        persistToLocalStorage(updated);
-        applyUiPreferences(updated);
+        const updated = await runtimeSettings.save(changes);
+        const parsed = parseAppSettingsResponse(updated);
+        if (parsed.ok) {
+          persistToLocalStorage(parsed.value);
+          applyUiPreferences(parsed.value);
       }
       return;
     } catch (error) {
@@ -978,11 +990,11 @@ const _flushSettingsUpdate = async (propagateErrors = false): Promise<void> => {
     return;
   }
 
-  const updated = (await response.json().catch(() => null)) as AppSettings | null;
-  if (updated) {
+  const parsed = parseAppSettingsResponse(await response.json().catch(() => null));
+  if (parsed.ok) {
     try {
-      persistToLocalStorage(updated);
-      applyUiPreferences(updated);
+      persistToLocalStorage(parsed.value);
+      applyUiPreferences(parsed.value);
     } catch (error) {
       console.warn('Failed to apply updated shared settings:', error);
     }

@@ -1,5 +1,6 @@
 import type { WorktreeMetadata } from '@/types/worktree';
-import type { AppSettings } from '@/lib/config/settingsTypes';
+import type { AppSettings } from '@contracts/settings';
+export type { ProjectEntry } from '@contracts/settings';
 
 export type RuntimePlatform = 'web';
 
@@ -517,23 +518,6 @@ export interface FilesAPI {
   rename?(oldPath: string, newPath: string): Promise<{ success: boolean; path: string }>;
   execCommands?(commands: string[], cwd: string): Promise<{ success: boolean; results: CommandExecResult[] }>;
   downloadFile?(path: string): Promise<void>;
-}
-
-export interface ProjectEntry {
-  id: string;
-  path: string;
-  label?: string;
-  icon?: string | null;
-  iconImage?: {
-    mime: string;
-    updatedAt: number;
-    source: 'custom' | 'auto';
-  } | null;
-  iconBackground?: string | null;
-  color?: string | null;
-  addedAt?: number;
-  lastOpenedAt?: number;
-  sidebarCollapsed?: boolean;
 }
 
 export type SettingsPayload = AppSettings;

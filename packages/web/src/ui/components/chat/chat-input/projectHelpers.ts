@@ -25,7 +25,7 @@ export const normalizePath = (value?: string | null): string | null => {
     return normalized.length > 1 ? normalized.replace(/\/+$/, '') : normalized;
 };
 
-export const getProjectDisplayLabel = (project: { label?: string; path: string }): string => {
+export const getProjectDisplayLabel = (project: { label?: string | null; path: string }): string => {
     const label = project.label?.trim();
     if (label) {
         return label;

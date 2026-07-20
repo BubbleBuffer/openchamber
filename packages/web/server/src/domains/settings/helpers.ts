@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { SettingsHelpersDeps, SettingsHelpers } from "./types.js";
+import { SETTINGS_FIELDS } from "../../contracts/settings.js";
 
 export function createSettingsHelpers(deps: SettingsHelpersDeps): SettingsHelpers {
   const {
@@ -194,6 +195,9 @@ export function createSettingsHelpers(deps: SettingsHelpersDeps): SettingsHelper
     if (typeof candidate.autoDeleteAfterDays === "number" && Number.isFinite(candidate.autoDeleteAfterDays as number)) {
       const normalizedDays = Math.max(1, Math.min(365, Math.round(candidate.autoDeleteAfterDays as number)));
       result.autoDeleteAfterDays = normalizedDays;
+    }
+    if (candidate.sessionRetentionAction === "archive" || candidate.sessionRetentionAction === "delete") {
+      result.sessionRetentionAction = candidate.sessionRetentionAction;
     }
     const typography = sanitizeTypographySizesPartial(candidate.typographySizes);
     if (typography) {
@@ -481,7 +485,9 @@ export function createSettingsHelpers(deps: SettingsHelpersDeps): SettingsHelper
       result.reportUsage = candidate.reportUsage;
     }
 
-    return result;
+    return Object.fromEntries(
+      Object.entries(result).filter(([key, value]) => key in SETTINGS_FIELDS && value !== undefined),
+    );
   };
 
   const mergePersistedSettings = (current: any, changes: any): any => {

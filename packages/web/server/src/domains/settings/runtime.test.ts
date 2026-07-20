@@ -130,4 +130,34 @@ describe("persisted settings boundary", () => {
       themeId: "dark",
     });
   });
+
+  it("keeps server-only and unrelated settings when a direct writer saves a complete state", async () => {
+    const directory = await mkdtemp(path.join("/tmp", "openchamber-settings-runtime-"));
+    tempDirectories.push(directory);
+    const settingsPath = path.join(directory, "settings.json");
+    const runtime = createSettingsRuntime({
+      fsPromises: fs, path, crypto, SETTINGS_FILE_PATH: settingsPath,
+      sanitizeProjects: (projects) => Array.isArray(projects) ? projects : [],
+      sanitizeSettingsUpdate: (changes) => changes,
+      mergePersistedSettings: (current, changes) => ({ ...current, ...changes }),
+      normalizeSettingsPaths: (settings) => ({ settings, changed: false }),
+      normalizeStringArray: () => [], formatSettingsResponse: (settings) => settings,
+      resolveDirectoryCandidate: () => null,
+    });
+
+    await runtime.writeSettingsToDisk({
+      publicOrigin: "https://openchamber.test",
+      vapidKeys: { publicKey: "public", privateKey: "secret" },
+      themeId: "dark",
+      zenModel: "zen",
+      obsolete: true,
+    });
+
+    expect(JSON.parse(await readFile(settingsPath, "utf8"))).toEqual({
+      publicOrigin: "https://openchamber.test",
+      vapidKeys: { publicKey: "public", privateKey: "secret" },
+      themeId: "dark",
+      zenModel: "zen",
+    });
+  });
 });
