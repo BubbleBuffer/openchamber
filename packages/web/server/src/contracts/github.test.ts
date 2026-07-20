@@ -6,6 +6,7 @@ import {
   parseGitHubPullRequestContextResponse,
   parseGitHubPullRequestStatusResponse,
   parseGitHubPullRequestUpdateRequest,
+  GITHUB_ROUTE_CONTRACTS,
 } from "./github.js";
 
 describe("GitHub contracts", () => {
@@ -34,5 +35,10 @@ describe("GitHub contracts", () => {
   it("only accepts stable safe GitHub errors", () => {
     expect(parseGitHubErrorResponse({ error: "GitHub request failed", code: "github_unauthorized" }).ok).toBe(true);
     expect(parseGitHubErrorResponse({ error: "secret", code: "internal_error" }).ok).toBe(false);
+  });
+
+  it("owns every active GitHub route with named request and response parsers", () => {
+    expect(Object.keys(GITHUB_ROUTE_CONTRACTS)).toHaveLength(16);
+    expect(GITHUB_ROUTE_CONTRACTS["GET /api/github/pulls/context"].response).toBe(parseGitHubPullRequestContextResponse);
   });
 });

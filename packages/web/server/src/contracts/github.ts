@@ -23,6 +23,9 @@ export type GitHubIssueComment = { id: number; url: string; body: string; author
 export type GitHubCheckRun = { id?: number; name: string; app?: { name?: string; slug?: string }; status?: string; conclusion?: string | null; detailsUrl?: string; output?: { title?: string; summary?: string; text?: string }; job?: { runId?: number; jobId?: number; url?: string; name?: string; conclusion?: string | null; steps?: Array<{ name: string; status?: string; conclusion?: string | null; number?: number; startedAt?: string; completedAt?: string }> }; annotations?: Array<{ path?: string; startLine?: number; endLine?: number; level?: string; message: string; title?: string; rawDetails?: string }> };
 export type GitHubPullRequestStatus = { connected: false } | { connected: true; repo: GitHubRepoRef | null; branch?: string; pr: GitHubPullRequest | null; checks: GitHubChecksSummary | null; canMerge: boolean; defaultBranch?: string | null; resolvedRemoteName?: string | null };
 export type GitHubPullRequestSummary = GitHubPullRequest & { author?: GitHubUserSummary | null; createdAt?: string; updatedAt?: string; headLabel?: string; headRepo?: { owner: string; repo: string; url: string; cloneUrl?: string; sshUrl?: string } | null };
+export type GitHubPullRequestHeadRepo = NonNullable<GitHubPullRequestSummary["headRepo"]>;
+export type GitHubPullRequestFile = NonNullable<GitHubPullRequestContextResult extends infer T ? T extends { files?: infer F } ? F : never : never>[number];
+export type GitHubPullRequestReviewComment = GitHubIssueComment & { path?: string; line?: number | null; position?: number | null };
 export type GitHubPullRequestsListResult = { connected: false } | { connected: true; repo: GitHubRepoRef | null; prs: GitHubPullRequestSummary[]; page?: number; hasMore?: boolean };
 export type GitHubPullRequestContextResult = { connected: false } | { connected: true; repo: GitHubRepoRef | null; pr: GitHubPullRequestSummary | null; issueComments?: GitHubIssueComment[]; reviewComments?: Array<GitHubIssueComment & { path?: string; line?: number | null; position?: number | null }>; files?: Array<{ filename: string; status?: string; additions?: number; deletions?: number; changes?: number; patch?: string }>; diff?: string; checks?: GitHubChecksSummary | null; checkRuns?: GitHubCheckRun[] };
 export type GitHubIssuesListResult = { connected: false } | { connected: true; repo: GitHubRepoRef | null; issues: GitHubIssueSummary[]; page?: number; hasMore?: boolean };
@@ -73,3 +76,27 @@ export const parseGitHubPullRequestMergeRequest = (value: unknown) => request<Gi
 export const parseGitHubPullRequestReadyRequest = (value: unknown) => request<GitHubPullRequestReadyInput>(value, { directory: "string", number: "number" });
 export const parseGitHubAuthActivateRequest = (value: unknown) => request<{ accountId: string }>(value, { accountId: "string" });
 export const parseGitHubDeviceFlowCompleteRequest = (value: unknown) => request<{ deviceCode: string }>(value, { deviceCode: "string" });
+
+type RouteParser = (value: unknown) => ParseResult<unknown>;
+const emptyRequest = (value: unknown): ParseResult<Record<string, never>> => value === undefined || object(value) !== null ? { ok: true, value: {} } : invalid("invalid GitHub request");
+const directoryRequest = (value: unknown) => request<{ directory: string }>(value, { directory: "string" });
+const directoryNumberRequest = (value: unknown) => request<{ directory: string; number: number }>(value, { directory: "string", number: "number" });
+const directoryBranchRequest = (value: unknown) => request<{ directory: string; branch: string }>(value, { directory: "string", branch: "string" });
+export const GITHUB_ROUTE_CONTRACTS: Record<string, { request: RouteParser; response: RouteParser }> = {
+  "GET /api/github/auth/status": { request: emptyRequest, response: parseGitHubAuthStatusResponse },
+  "POST /api/github/auth/start": { request: emptyRequest, response: parseGitHubDeviceFlowStartResponse },
+  "POST /api/github/auth/complete": { request: parseGitHubDeviceFlowCompleteRequest, response: parseGitHubDeviceFlowCompleteResponse },
+  "POST /api/github/auth/activate": { request: parseGitHubAuthActivateRequest, response: parseGitHubAuthStatusResponse },
+  "DELETE /api/github/auth": { request: emptyRequest, response: (value) => { const input = object(value); return input && typeof input.removed === "boolean" ? { ok: true, value: input } : invalid("invalid GitHub disconnect response"); } },
+  "GET /api/github/me": { request: emptyRequest, response: parseGitHubUserResponse },
+  "GET /api/github/pr/status": { request: directoryBranchRequest, response: parseGitHubPullRequestStatusResponse },
+  "POST /api/github/pr/create": { request: parseGitHubPullRequestCreateRequest, response: parseGitHubPullRequestResponse },
+  "POST /api/github/pr/update": { request: parseGitHubPullRequestUpdateRequest, response: parseGitHubPullRequestResponse },
+  "POST /api/github/pr/merge": { request: parseGitHubPullRequestMergeRequest, response: parseGitHubPullRequestMergeResponse },
+  "POST /api/github/pr/ready": { request: parseGitHubPullRequestReadyRequest, response: parseGitHubPullRequestReadyResponse },
+  "GET /api/github/issues/list": { request: directoryRequest, response: parseGitHubIssuesListResponse },
+  "GET /api/github/issues/get": { request: directoryNumberRequest, response: parseGitHubIssueGetResponse },
+  "GET /api/github/issues/comments": { request: directoryNumberRequest, response: parseGitHubIssueCommentsResponse },
+  "GET /api/github/pulls/list": { request: directoryRequest, response: parseGitHubPullRequestsListResponse },
+  "GET /api/github/pulls/context": { request: directoryNumberRequest, response: parseGitHubPullRequestContextResponse },
+};
