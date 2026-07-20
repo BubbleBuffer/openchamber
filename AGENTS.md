@@ -49,15 +49,15 @@ Skills live in `.opencode/skills/<name>/SKILL.md`. Load the matching skill befor
 ## Entry points
 
 - Web bootstrap: `packages/web/src/ui/main.tsx`
-- Web server: `packages/web/server/index.js`
+- Web server: `packages/web/server/src/index.ts`
 - Web CLI: `packages/web/bin/cli.js`
 
 ## OpenCode integration
 
 - UI client wrapper: `packages/web/src/ui/lib/opencode/client.ts` (imports `@opencode-ai/sdk/v2`)
 - Live event stream: `SyncProvider` in `packages/web/src/ui/sync/sync-context.tsx`
-- Server boot: `createOpencodeServer` in `packages/web/server/index.js`
-- Filesystem endpoints: search `packages/web/server/index.js` for `/api/fs/`
+- Server boot: `startWebUiServer` in `packages/web/server/src/index.ts`
+- Filesystem endpoints: `packages/web/server/src/domains/fs/routes.ts`
 - External server: set `OPENCODE_HOST` (full base URL) or `OPENCODE_PORT`, plus `OPENCODE_SKIP_START=true`, to connect to an existing OpenCode instance.
 
 ## Documentation map

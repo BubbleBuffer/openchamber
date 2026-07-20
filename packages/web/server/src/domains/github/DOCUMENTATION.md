@@ -14,7 +14,7 @@
 - `packages/web/server/src/domains/github/octokit.ts`: Octokit factory for the current auth.
 - `packages/web/server/src/domains/github/repo/index.ts`: remote URL parsing and directory-to-repo resolution.
 - `packages/web/server/src/domains/github/pr-status.ts`: PR lookup across remotes, forks, and upstreams.
-- `packages/web/server/index.js`: API route layer that calls this module.
+- `packages/web/server/src/domains/routes/feature-routes-runtime.ts`: composes this module's API routes into the server.
 - `packages/web/src/api/github.ts`: web client wrapper for GitHub endpoints.
 
 ## Public exports
@@ -55,7 +55,7 @@
 ## PR integration overview
 
 - The UI asks `github.prStatus(directory, branch, remote?)` from `packages/web/src/api/github.ts`.
-- That hits `GET /api/github/pr/status` in `packages/web/server/index.js`.
+- `registerGitHubRoutes(...)` in `packages/web/server/src/domains/github/routes.ts` registers `GET /api/github/pr/status`; `createFeatureRoutesRuntime` composes it into the server.
 - The route calls `resolveGitHubPrStatus(...)` in `packages/web/server/src/domains/github/pr-status.ts`.
 - The resolver finds the most likely repo and PR for a local branch.
 - The route then enriches that result with checks, mergeability, and permission-related fields.
