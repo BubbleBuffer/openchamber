@@ -65,6 +65,17 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
     }
   };
 
+  const requireUiSession = async (req: any, res: any): Promise<string | null> => {
+    const token = uiAuthController?.ensureSessionToken
+      ? await uiAuthController.ensureSessionToken(req, res)
+      : getUiSessionTokenFromRequest(req);
+    if (!token) {
+      res.status(401).json({ error: "UI authentication required", code: "ui_auth_unauthorized" });
+      return null;
+    }
+    return token;
+  };
+
   app.get("/api/push/vapid-public-key", async (_req: any, res: any) => {
     try {
       await ensurePushInitialized();
@@ -81,12 +92,7 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
       await ensurePushInitialized();
       await ensureSessionWatcher();
 
-    const uiToken = uiAuthController?.ensureSessionToken
-      ? await uiAuthController.ensureSessionToken(req, res)
-      : getUiSessionTokenFromRequest(req);
-    if (!uiToken) {
-      return res.status(401).json({ error: "UI session missing" });
-    }
+    const uiToken = await requireUiSession(req, res); if (!uiToken) return;
 
     const parsedResult = parsePushSubscribeRequest(req.body);
     if (!parsedResult.ok) {
@@ -132,12 +138,7 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
     try {
       await ensurePushInitialized();
 
-    const uiToken = uiAuthController?.ensureSessionToken
-      ? await uiAuthController.ensureSessionToken(req, res)
-      : getUiSessionTokenFromRequest(req);
-    if (!uiToken) {
-      return res.status(401).json({ error: "UI session missing" });
-    }
+    const uiToken = await requireUiSession(req, res); if (!uiToken) return;
 
     const parsedResult = parsePushUnsubscribeRequest(req.body);
     if (!parsedResult.ok) {
@@ -155,12 +156,7 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
 
   app.post("/api/push/visibility", async (req: any, res: any) => {
     try {
-    const uiToken = uiAuthController?.ensureSessionToken
-      ? await uiAuthController.ensureSessionToken(req, res)
-      : getUiSessionTokenFromRequest(req);
-    if (!uiToken) {
-      return res.status(401).json({ error: "UI session missing" });
-    }
+    const uiToken = await requireUiSession(req, res); if (!uiToken) return;
 
     const parsed = parseVisibilityRequest(req.body);
     if (!parsed.ok) return res.status(400).json({ error: "Invalid body", code: "notification_invalid_request" });
@@ -172,11 +168,8 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
     }
   });
 
-  app.get("/api/push/visibility", (req: any, res: any) => {
-    const uiToken = getUiSessionTokenFromRequest(req);
-    if (!uiToken) {
-      return res.status(401).json({ error: "UI session missing" });
-    }
+  app.get("/api/push/visibility", async (req: any, res: any) => {
+    const uiToken = await requireUiSession(req, res); if (!uiToken) return;
 
     return res.json({
       ok: true,
@@ -185,12 +178,7 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
   });
 
   app.get("/api/notifications/stream", async (req: any, res: any) => {
-    const uiToken = uiAuthController?.ensureSessionToken
-      ? await uiAuthController.ensureSessionToken(req, res)
-      : getUiSessionTokenFromRequest(req);
-    if (!uiToken) {
-      return;
-    }
+    const uiToken = await requireUiSession(req, res); if (!uiToken) return;
 
     res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
     res.setHeader("Cache-Control", "no-cache, no-transform");

@@ -37,6 +37,16 @@ describe("UI auth session controller", () => {
     auth.dispose();
   });
 
+  it("returns coded invalid-request errors for disabled passkey and reset handlers", async () => {
+    const auth = createUiAuth({ password: "", readSettingsFromDiskMigrated: async () => ({}) });
+    for (const handler of [auth.handlePasskeyRegistrationOptions, auth.handlePasskeyRegistrationVerify, auth.handlePasskeyAuthenticationOptions, auth.handlePasskeyAuthenticationVerify, auth.handlePasskeyRevoke, auth.handleResetAuth]) {
+      const response = createResponse();
+      await handler(createRequest({}) as never, response as never);
+      expect(response.statusCode).toBe(400);
+      expect(response.body).toEqual({ error: "UI password not configured", code: "ui_auth_invalid_request" });
+    }
+  });
+
   it("accepts a valid owner session and rejects its expired session", async () => {
     vi.stubEnv("OPENCODE_JWT_SECRET", "test-secret");
     const validAuth = createUiAuth({ password: "correct password", readSettingsFromDiskMigrated: async () => ({}) });

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   parseFileListResponse,
+  parseFsExecRequest,
+  parseFsExecResponse,
   parseFsPathQuery,
   parseFsRawQuery,
   parseFsWriteRequest,
@@ -30,5 +32,13 @@ describe("files contract", () => {
     expect(parseFsPathQuery({ path: "   " }).ok).toBe(false);
     expect(parseFsRawQuery({ path: "/work/a.png", download: "true" })).toEqual({ ok: true, value: { path: "/work/a.png", download: true } });
     expect(parseFsRawQuery({ path: "/work/a.png", download: "yes" }).ok).toBe(false);
+  });
+
+  it("validates exec start requests and job responses", () => {
+    expect(parseFsExecRequest({ commands: ["bun test"], cwd: "/work", background: true }).ok).toBe(true);
+    expect(parseFsExecRequest({ commands: [1], cwd: "/work" }).ok).toBe(false);
+    expect(parseFsExecRequest({ commands: [], cwd: "/work" }).ok).toBe(false);
+    expect(parseFsExecResponse({ jobId: "job", status: "running" }).ok).toBe(true);
+    expect(parseFsExecResponse({ jobId: "job", status: "unknown" }).ok).toBe(false);
   });
 });

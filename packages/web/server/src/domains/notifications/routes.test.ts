@@ -90,6 +90,17 @@ const createMockResponse = () => {
 };
 
 describe("notifications SSE routes", () => {
+  it("returns a coded unauthorized response for every protected push route", async () => {
+    const { app, getRoute } = createRouteRegistry();
+    registerNotificationRoutes(app, { ensurePushInitialized: async () => {}, uiAuthController: { ensureSessionToken: async () => null }, getUiSessionTokenFromRequest: () => "forged" } as never);
+    for (const [method, path] of [["POST", "/api/push/subscribe"], ["DELETE", "/api/push/subscribe"], ["POST", "/api/push/visibility"], ["GET", "/api/push/visibility"], ["GET", "/api/notifications/stream"]] as const) {
+      const res = createMockResponse();
+      await getRoute(method, path)?.({ ...createMockRequest(), body: {} }, res);
+      expect(res.statusCode).toBe(401);
+      expect(JSON.parse(res.body)).toEqual({ error: "UI authentication required", code: "ui_auth_unauthorized" });
+    }
+  });
+
   it("serves notification SSE with nginx-safe headers", async () => {
     const { app, getRoute } = createRouteRegistry();
     const clients = new Set<unknown>();

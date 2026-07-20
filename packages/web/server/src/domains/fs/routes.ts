@@ -1,7 +1,8 @@
 import type { Express, Request, Response } from "express";
 import type { SpawnOptions } from "child_process";
-import { apiError } from "../../contracts/common.js";
-import { parseFsListQuery, parseFsPathQuery, parseFsPathRequest, parseFsRawQuery, parseFsRenameRequest, parseFsWriteRequest } from "../../contracts/files.js";
+import { parseFsExecRequest, parseFsExecResponse, parseFsListQuery, parseFsPathQuery, parseFsPathRequest, parseFsRawQuery, parseFsRenameRequest, parseFsWriteRequest } from "../../contracts/files.js";
+
+const fsError = (code: "fs_invalid_path" | "fs_invalid_content" | "fs_not_found" | "fs_forbidden" | "fs_internal_error", error?: string) => ({ error: error ?? (code === "fs_internal_error" ? "Internal server error" : "Request failed"), code });
 
 const EXEC_JOB_TTL_MS = 30 * 60 * 1000;
 
@@ -376,7 +377,7 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
       console.error("Failed to resolve home directory:", error);
       return res
         .status(500)
-        .json(apiError("internal_error"));
+        .json(fsError("fs_internal_error"));
     }
   });
 
@@ -403,7 +404,7 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
           openchamberUserConfigRoot,
         });
         if (!resolved.ok) {
-          return res.status(400).json({ error: resolved.error });
+          return res.status(400).json(fsError("fs_invalid_path", resolved.error));
         }
         resolvedPath = resolved.resolved;
       }
@@ -414,7 +415,7 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
       console.error("Failed to create directory:", error);
       return res
         .status(500)
-        .json(apiError("internal_error"));
+        .json(fsError("fs_internal_error"));
     }
   });
 
@@ -434,7 +435,7 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         openchamberUserConfigRoot,
       });
       if (!resolved.ok) {
-        return res.status(400).json({ error: resolved.error });
+        return res.status(400).json(fsError("fs_invalid_path", resolved.error));
       }
 
       const [canonicalPath, canonicalBase] = await Promise.all([
@@ -443,12 +444,12 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
       ]);
 
       if (!isPathWithinRoot(canonicalPath, canonicalBase, pathModule)) {
-        return res.status(403).json({ error: "Access to file denied" });
+        return res.status(403).json(fsError("fs_forbidden", "Access to file denied"));
       }
 
       const stats = await fsPromises.stat(canonicalPath);
       if (!stats.isFile()) {
-        return res.status(400).json({ error: "Specified path is not a file" });
+        return res.status(400).json(fsError("fs_invalid_path", "Specified path is not a file"));
       }
 
       return res.json({
@@ -460,13 +461,13 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
     } catch (error) {
       const err = error as { code?: string };
       if (err && typeof err === "object" && err.code === "ENOENT") {
-        return res.status(404).json({ error: "File not found" });
+        return res.status(404).json(fsError("fs_not_found", "File not found"));
       }
       if (err && typeof err === "object" && err.code === "EACCES") {
-        return res.status(403).json({ error: "Access to file denied" });
+        return res.status(403).json(fsError("fs_forbidden", "Access to file denied"));
       }
       console.error("Failed to stat file:", error);
-      return res.status(500).json(apiError("internal_error"));
+      return res.status(500).json(fsError("fs_internal_error"));
     }
   });
 
@@ -486,7 +487,7 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         openchamberUserConfigRoot,
       });
       if (!resolved.ok) {
-        return res.status(400).json({ error: resolved.error });
+        return res.status(400).json(fsError("fs_invalid_path", resolved.error));
       }
 
       const [canonicalPath, canonicalBase] = await Promise.all([
@@ -495,12 +496,12 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
       ]);
 
       if (!isPathWithinRoot(canonicalPath, canonicalBase, pathModule)) {
-        return res.status(403).json({ error: "Access to file denied" });
+        return res.status(403).json(fsError("fs_forbidden", "Access to file denied"));
       }
 
       const stats = await fsPromises.stat(canonicalPath);
       if (!stats.isFile()) {
-        return res.status(400).json({ error: "Specified path is not a file" });
+        return res.status(400).json(fsError("fs_invalid_path", "Specified path is not a file"));
       }
 
       const content = await fsPromises.readFile(canonicalPath, "utf8");
@@ -508,13 +509,13 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
     } catch (error) {
       const err = error as { code?: string };
       if (err && typeof err === "object" && err.code === "ENOENT") {
-        return res.status(404).json({ error: "File not found" });
+        return res.status(404).json(fsError("fs_not_found", "File not found"));
       }
       if (err && typeof err === "object" && err.code === "EACCES") {
-        return res.status(403).json({ error: "Access to file denied" });
+        return res.status(403).json(fsError("fs_forbidden", "Access to file denied"));
       }
       console.error("Failed to read file:", error);
-      return res.status(500).json(apiError("internal_error"));
+      return res.status(500).json(fsError("fs_internal_error"));
     }
   });
 
@@ -534,7 +535,7 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         openchamberUserConfigRoot,
       });
       if (!resolved.ok) {
-        return res.status(400).json({ error: resolved.error });
+        return res.status(400).json(fsError("fs_invalid_path", resolved.error));
       }
 
       const [canonicalPath, canonicalBase] = await Promise.all([
@@ -543,12 +544,12 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
       ]);
 
       if (!isPathWithinRoot(canonicalPath, canonicalBase, pathModule)) {
-        return res.status(403).json({ error: "Access to file denied" });
+        return res.status(403).json(fsError("fs_forbidden", "Access to file denied"));
       }
 
       const stats = await fsPromises.stat(canonicalPath);
       if (!stats.isFile()) {
-        return res.status(400).json({ error: "Specified path is not a file" });
+        return res.status(400).json(fsError("fs_invalid_path", "Specified path is not a file"));
       }
 
       const ext = pathModule.extname(canonicalPath).toLowerCase();
@@ -577,13 +578,13 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
     } catch (error) {
       const err = error as { code?: string };
       if (err && typeof err === "object" && err.code === "ENOENT") {
-        return res.status(404).json({ error: "File not found" });
+        return res.status(404).json(fsError("fs_not_found", "File not found"));
       }
       if (err && typeof err === "object" && err.code === "EACCES") {
-        return res.status(403).json({ error: "Access to file denied" });
+        return res.status(403).json(fsError("fs_forbidden", "Access to file denied"));
       }
       console.error("Failed to read raw file:", error);
-      return res.status(500).json(apiError("internal_error"));
+      return res.status(500).json(fsError("fs_internal_error"));
     }
   });
 
@@ -603,7 +604,7 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         openchamberUserConfigRoot,
       });
       if (!resolved.ok) {
-        return res.status(400).json({ error: resolved.error });
+        return res.status(400).json(fsError("fs_invalid_path", resolved.error));
       }
 
       await fsPromises.mkdir(pathModule.dirname(resolved.resolved), { recursive: true });
@@ -612,10 +613,10 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
     } catch (error) {
       const err = error as { code?: string };
       if (err && typeof err === "object" && err.code === "EACCES") {
-        return res.status(403).json({ error: "Access denied" });
+        return res.status(403).json(fsError("fs_forbidden", "Access denied"));
       }
       console.error("Failed to write file:", error);
-      return res.status(500).json(apiError("internal_error"));
+      return res.status(500).json(fsError("fs_internal_error"));
     }
   });
 
@@ -635,7 +636,7 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         openchamberUserConfigRoot,
       });
       if (!resolved.ok) {
-        return res.status(400).json({ error: resolved.error });
+        return res.status(400).json(fsError("fs_invalid_path", resolved.error));
       }
 
       await fsPromises.rm(resolved.resolved, { recursive: true, force: true });
@@ -643,13 +644,13 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
     } catch (error) {
       const err = error as { code?: string };
       if (err && typeof err === "object" && err.code === "ENOENT") {
-        return res.status(404).json({ error: "File or directory not found" });
+        return res.status(404).json(fsError("fs_not_found", "File or directory not found"));
       }
       if (err && typeof err === "object" && err.code === "EACCES") {
-        return res.status(403).json({ error: "Access denied" });
+        return res.status(403).json(fsError("fs_forbidden", "Access denied"));
       }
       console.error("Failed to delete path:", error);
-      return res.status(500).json(apiError("internal_error"));
+      return res.status(500).json(fsError("fs_internal_error"));
     }
   });
 
@@ -669,7 +670,7 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         openchamberUserConfigRoot,
       });
       if (!resolvedOld.ok) {
-        return res.status(400).json({ error: resolvedOld.error });
+        return res.status(400).json(fsError("fs_invalid_path", resolvedOld.error));
       }
 
       const resolvedNew = await resolveWorkspacePathFromContext({
@@ -682,13 +683,13 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         openchamberUserConfigRoot,
       });
       if (!resolvedNew.ok) {
-        return res.status(400).json({ error: resolvedNew.error });
+        return res.status(400).json(fsError("fs_invalid_path", resolvedNew.error));
       }
 
       if (resolvedOld.base !== resolvedNew.base) {
         return res
           .status(400)
-          .json({ error: "Source and destination must share the same workspace root" });
+          .json(fsError("fs_invalid_path", "Source and destination must share the same workspace root"));
       }
 
       await fsPromises.rename(resolvedOld.resolved, resolvedNew.resolved);
@@ -696,24 +697,20 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
     } catch (error) {
       const err = error as { code?: string };
       if (err && typeof err === "object" && err.code === "ENOENT") {
-        return res.status(404).json({ error: "Source path not found" });
+        return res.status(404).json(fsError("fs_not_found", "Source path not found"));
       }
       if (err && typeof err === "object" && err.code === "EACCES") {
-        return res.status(403).json({ error: "Access denied" });
+        return res.status(403).json(fsError("fs_forbidden", "Access denied"));
       }
       console.error("Failed to rename path:", error);
-      return res.status(500).json(apiError("internal_error"));
+      return res.status(500).json(fsError("fs_internal_error"));
     }
   });
 
   app.post("/api/fs/exec", async (req: Request, res: Response) => {
-    const { commands, cwd, background } = req.body || {};
-    if (!Array.isArray(commands) || commands.length === 0) {
-      return res.status(400).json({ error: "Commands array is required" });
-    }
-    if (!cwd || typeof cwd !== "string") {
-      return res.status(400).json({ error: "Working directory (cwd) is required" });
-    }
+    const request = parseFsExecRequest(req.body);
+    if (!request.ok) return res.status(400).json(fsError("fs_invalid_content", "Invalid exec request"));
+    const { commands, cwd, background } = request.value;
 
     pruneExecJobs();
 
@@ -721,7 +718,7 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
       const resolvedCwd = pathModule.resolve(normalizeDirectoryPath(cwd) || cwd);
       const stats = await fsPromises.stat(resolvedCwd);
       if (!stats.isDirectory()) {
-        return res.status(400).json({ error: "Specified cwd is not a directory" });
+        return res.status(400).json(fsError("fs_invalid_path", "Specified cwd is not a directory"));
       }
 
       const shell = process.env.SHELL || (process.platform === "win32" ? "cmd.exe" : "/bin/sh");
@@ -762,38 +759,42 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
           job.updatedAt = Date.now();
         });
 
-        return res.status(202).json({
+        const response = {
           jobId,
           status: "running",
-        });
+        } as const;
+        if (!parseFsExecResponse(response).ok) return res.status(500).json(fsError("fs_internal_error"));
+        return res.status(202).json(response);
       }
 
       await runExecJob(job);
-      return res.json({
+      const response = {
         jobId,
         status: job.status,
         success: job.success === true,
         results: job.results,
-      });
+      };
+      if (!parseFsExecResponse(response).ok) return res.status(500).json(fsError("fs_internal_error"));
+      return res.json(response);
     } catch (error) {
       console.error("Failed to execute commands:", error);
       return res
         .status(500)
-        .json(apiError("internal_error"));
+        .json(fsError("fs_internal_error"));
     }
   });
 
   app.get("/api/fs/exec/:jobId", (req: Request, res: Response) => {
     const jobId = typeof req.params?.jobId === "string" ? req.params.jobId : "";
     if (!jobId) {
-      return res.status(400).json({ error: "Job id is required" });
+      return res.status(400).json(fsError("fs_invalid_path", "Job id is required"));
     }
 
     pruneExecJobs();
 
     const job = execJobs.get(jobId);
     if (!job) {
-      return res.status(404).json({ error: "Job not found" });
+      return res.status(404).json(fsError("fs_not_found", "Job not found"));
     }
 
     job.updatedAt = Date.now();
@@ -823,7 +824,7 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
 
       const stats = await fsPromises.stat(resolvedPath);
       if (!stats.isDirectory()) {
-        return res.status(400).json({ error: "Specified path is not a directory" });
+        return res.status(400).json(fsError("fs_invalid_path", "Specified path is not a directory"));
       }
 
       const dirents = await fsPromises.readdir(resolvedPath, { withFileTypes: true });
@@ -910,14 +911,14 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         if (isPlansPath) {
           return res.json({ path: resolvedPath || rawPath, entries: [] });
         }
-        return res.status(404).json({ error: "Directory not found" });
+        return res.status(404).json(fsError("fs_not_found", "Directory not found"));
       }
       if (code === "EACCES") {
-        return res.status(403).json({ error: "Access to directory denied" });
+        return res.status(403).json(fsError("fs_forbidden", "Access to directory denied"));
       }
       return res
         .status(500)
-        .json(apiError("internal_error"));
+        .json(fsError("fs_internal_error"));
     }
   });
 }

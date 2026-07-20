@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { createProjectIdFromPath } from "../../projects/index.js";
+import { parseSettingsUpdateRequest } from "../../../contracts/settings.js";
 
 interface OpenCodeRoutesDeps {
   crypto: typeof import("crypto");
@@ -97,13 +98,15 @@ export function registerOpenCodeRoutes(
   app.put("/api/config/settings", async (req: Request, res: Response) => {
     console.log("[API:PUT /api/config/settings] Received request");
     try {
-      const updated = await persistSettings(req.body ?? {});
+      const request = parseSettingsUpdateRequest(req.body ?? {});
+      if (!request.ok) return res.status(400).json({ error: "Invalid settings request", code: "settings_invalid_request" });
+      const updated = await persistSettings(request.value);
       console.log(`[API:PUT /api/config/settings] Success, returning ${updated.projects?.length || 0} projects`);
       res.json(updated);
     } catch (error) {
       console.error("[API:PUT /api/config/settings] Failed to save settings:", error);
       console.error("[API:PUT /api/config/settings] Error stack:", (error as Error)?.stack);
-      res.status(500).json({ error: "Failed to save settings" });
+      res.status(500).json({ error: "Failed to save settings", code: "settings_write_failed" });
     }
   });
 

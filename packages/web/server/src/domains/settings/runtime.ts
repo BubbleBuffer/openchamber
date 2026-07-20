@@ -472,10 +472,14 @@ export function createSettingsRuntime(deps: SettingsRuntimeDeps): SettingsRuntim
   const readSettingsFromDisk = async (): Promise<any> => {
     try {
       const raw = await fsPromises.readFile(SETTINGS_FILE_PATH, "utf8");
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object") {
-        const sanitized = parsePersistedSettings(parsed);
-        return sanitized.ok ? sanitized.value : {};
+       const parsed = JSON.parse(raw);
+       if (parsed && typeof parsed === "object") {
+         const sanitized = parsePersistedSettings(parsed);
+        if (!sanitized.ok) return {};
+        // Keep this legacy migration input until migration has consumed it.
+        return Object.prototype.hasOwnProperty.call(parsed, "collapsedProjects")
+          ? { ...sanitized.value, collapsedProjects: (parsed as any).collapsedProjects }
+          : sanitized.value;
       }
       return {};
     } catch (error) {
@@ -496,7 +500,8 @@ export function createSettingsRuntime(deps: SettingsRuntimeDeps): SettingsRuntim
       // read-modify-write wipe the settings file.
       const tmp = `${SETTINGS_FILE_PATH}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const sanitized = parsePersistedSettings(settings);
-      await fsPromises.writeFile(tmp, JSON.stringify(sanitized.ok ? sanitized.value : {}, null, 2), "utf8");
+      if (!sanitized.ok) throw new Error("Invalid settings payload");
+      await fsPromises.writeFile(tmp, JSON.stringify(sanitized.value, null, 2), "utf8");
       await fsPromises.rename(tmp, SETTINGS_FILE_PATH);
     } catch (error) {
       console.warn("Failed to write settings file:", error);

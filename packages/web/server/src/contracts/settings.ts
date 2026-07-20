@@ -84,18 +84,26 @@ export function parsePersistedSettings(value: unknown): ParseResult<PersistedSet
   const object = parseJsonObject(value); if (!object.ok) return object;
   const result: Record<string, unknown> = {};
   for (const [key, entry] of Object.entries(object.value)) {
-    const descriptor = (SETTINGS_FIELDS as Record<string, FieldDescriptor>)[key] ?? (SERVER_ONLY_FIELDS as Record<string, FieldDescriptor>)[key];
+    const descriptor = Object.prototype.hasOwnProperty.call(SETTINGS_FIELDS, key)
+      ? (SETTINGS_FIELDS as Record<string, FieldDescriptor>)[key]
+      : Object.prototype.hasOwnProperty.call(SERVER_ONLY_FIELDS, key)
+        ? (SERVER_ONLY_FIELDS as Record<string, FieldDescriptor>)[key]
+        : undefined;
     if (!descriptor) continue;
-    if (!descriptor.validate(entry)) return invalid(`invalid ${key}`);
+    if (!descriptor.validate(entry)) continue;
     result[key] = entry;
   }
   return { ok: true, value: result as PersistedSettings };
 }
 
 export function parseAppSettingsResponse(value: unknown): ParseResult<AppSettings> {
+  const object = parseJsonObject(value); if (!object.ok) return object;
+  for (const [key, entry] of Object.entries(object.value)) {
+    if (Object.prototype.hasOwnProperty.call(SETTINGS_FIELDS, key) && !(SETTINGS_FIELDS as Record<string, FieldDescriptor>)[key].validate(entry)) return invalid(`invalid ${key}`);
+  }
   const persisted = parsePersistedSettings(value); if (!persisted.ok) return persisted;
   const settings: Record<string, unknown> = {};
-  for (const [key, entry] of Object.entries(persisted.value)) if (key in SETTINGS_FIELDS) settings[key] = entry;
+  for (const [key, entry] of Object.entries(persisted.value)) if (Object.prototype.hasOwnProperty.call(SETTINGS_FIELDS, key)) settings[key] = entry;
   return { ok: true, value: settings as AppSettings };
 }
 

@@ -105,6 +105,28 @@ describe("settings persistence queue", () => {
 });
 
 describe("persisted settings boundary", () => {
+  it("sanitizes malformed persisted fields without erasing valid settings or push secrets", async () => {
+    const directory = await mkdtemp(path.join("/tmp", "openchamber-settings-runtime-"));
+    tempDirectories.push(directory);
+    const settingsPath = path.join(directory, "settings.json");
+    await writeFile(settingsPath, JSON.stringify({ themeId: "dark", fontSize: "bad", publicOrigin: "https://openchamber.test", vapidKeys: { publicKey: "public", privateKey: "secret" } }));
+    const runtime = createSettingsRuntime({ fsPromises: fs, path, crypto, SETTINGS_FILE_PATH: settingsPath, sanitizeProjects: (v) => Array.isArray(v) ? v : [], sanitizeSettingsUpdate: (v) => v, mergePersistedSettings: (a, b) => ({ ...a, ...b }), normalizeSettingsPaths: (settings) => ({ settings, changed: false }), normalizeStringArray: () => [], formatSettingsResponse: (settings) => settings, resolveDirectoryCandidate: () => null });
+    await runtime.persistSettings({ zenModel: "zen" });
+    expect(JSON.parse(await readFile(settingsPath, "utf8"))).toEqual({ themeId: "dark", publicOrigin: "https://openchamber.test", vapidKeys: { publicKey: "public", privateKey: "secret" }, zenModel: "zen" });
+  });
+
+  it("migrates legacy collapsed projects before removing their legacy key", async () => {
+    const directory = await mkdtemp(path.join("/tmp", "openchamber-settings-runtime-"));
+    tempDirectories.push(directory);
+    const settingsPath = path.join(directory, "settings.json");
+    await writeFile(settingsPath, JSON.stringify({ projects: [{ id: "one", path: "/one" }], collapsedProjects: ["one"], vapidKeys: { publicKey: "public", privateKey: "secret" } }));
+    const runtime = createSettingsRuntime({ fsPromises: fs, path, crypto, SETTINGS_FILE_PATH: settingsPath, sanitizeProjects: (v) => Array.isArray(v) ? v : [], sanitizeSettingsUpdate: (v) => v, mergePersistedSettings: (a, b) => ({ ...a, ...b }), normalizeSettingsPaths: (settings) => ({ settings, changed: false }), normalizeStringArray: (v) => Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [], formatSettingsResponse: (settings) => settings, resolveDirectoryCandidate: () => null });
+    const migrated = await runtime.readSettingsFromDiskMigrated();
+    expect(migrated.projects[0].sidebarCollapsed).toBe(true);
+    expect(migrated.collapsedProjects).toBeUndefined();
+    expect(migrated.vapidKeys).toEqual({ publicKey: "public", privateKey: "secret" });
+  });
+
   it("removes obsolete fields without dropping server-only push state on unrelated saves", async () => {
     const directory = await mkdtemp(path.join("/tmp", "openchamber-settings-runtime-"));
     tempDirectories.push(directory);

@@ -11,6 +11,8 @@ export type FsStatResponse = { path: string; isFile: boolean; size: number; mtim
 export type FsMutationResponse = { success: boolean; path?: string };
 export type FsRawQuery = FsPathRequest & { download: boolean };
 export type FsListQuery = { path?: string; respectGitignore: boolean };
+export type FsExecRequest = { commands: string[]; cwd: string; background: boolean };
+export type FsExecResponse = { jobId: string; status: "queued" | "running" | "done"; success?: boolean; results?: Array<{ command: string; success: boolean; exitCode?: number; stdout: string; stderr: string; error?: string }> };
 
 const invalid = <T = never>(error: string): ParseResult<T> => ({ ok: false, error });
 const path = (value: unknown): ParseResult<string> => {
@@ -47,6 +49,20 @@ export function parseFsRenameRequest(value: unknown): ParseResult<FsRenameReques
   const object = parseJsonObject(value); if (!object.ok) return object;
   const oldPath = path(object.value.oldPath); const newPath = path(object.value.newPath);
   return oldPath.ok && newPath.ok ? { ok: true, value: { oldPath: oldPath.value, newPath: newPath.value } } : invalid("oldPath and newPath are required");
+}
+export function parseFsExecRequest(value: unknown): ParseResult<FsExecRequest> {
+  const object = parseJsonObject(value); if (!object.ok) return object;
+  const commands = parseJsonArray(object.value.commands); const cwd = path(object.value.cwd);
+  if (!commands.ok || commands.value.length === 0 || !commands.value.every((command) => typeof command === "string") || !cwd.ok || (object.value.background !== undefined && !parseJsonBoolean(object.value.background).ok)) return invalid("invalid exec request");
+  return { ok: true, value: { commands: commands.value as string[], cwd: cwd.value, background: object.value.background === true } };
+}
+export function parseFsExecResponse(value: unknown): ParseResult<FsExecResponse> {
+  const object = parseJsonObject(value); if (!object.ok) return object;
+  const jobId = parseJsonString(object.value.jobId); const status = object.value.status;
+  if (!jobId.ok || (status !== "queued" && status !== "running" && status !== "done")) return invalid("invalid exec response");
+  if (object.value.success !== undefined && !parseJsonBoolean(object.value.success).ok) return invalid("invalid exec response");
+  if (object.value.results !== undefined && !parseJsonArray(object.value.results).ok) return invalid("invalid exec response");
+  return { ok: true, value: object.value as FsExecResponse };
 }
 export function parseFileListResponse(value: unknown): ParseResult<FsListResponse> {
   const object = parseJsonObject(value); if (!object.ok) return object;

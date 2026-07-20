@@ -511,12 +511,12 @@ export function createUiAuth({
       ) => {
         res
           .status(400)
-          .json({ error: "UI password not configured" });
+          .json({ error: "UI password not configured", code: "ui_auth_invalid_request" } satisfies UiAuthErrorResponse);
       },
       handlePasskeyRegistrationVerify: async (_req, res) => {
         res
           .status(400)
-          .json({ error: "UI password not configured" });
+          .json({ error: "UI password not configured", code: "ui_auth_invalid_request" } satisfies UiAuthErrorResponse);
       },
       handlePasskeyAuthenticationOptions: async (
         _req,
@@ -524,7 +524,7 @@ export function createUiAuth({
       ) => {
         res
           .status(400)
-          .json({ error: "UI password not configured" });
+          .json({ error: "UI password not configured", code: "ui_auth_invalid_request" } satisfies UiAuthErrorResponse);
       },
       handlePasskeyAuthenticationVerify: async (
         _req,
@@ -532,7 +532,7 @@ export function createUiAuth({
       ) => {
         res
           .status(400)
-          .json({ error: "UI password not configured" });
+          .json({ error: "UI password not configured", code: "ui_auth_invalid_request" } satisfies UiAuthErrorResponse);
       },
       handlePasskeyList: (_req, res) => {
         res.json({ passkeys: [] });
@@ -540,12 +540,12 @@ export function createUiAuth({
       handlePasskeyRevoke: (_req, res) => {
         res
           .status(400)
-          .json({ error: "UI password not configured" });
+          .json({ error: "UI password not configured", code: "ui_auth_invalid_request" } satisfies UiAuthErrorResponse);
       },
       handleResetAuth: (_req, res) => {
         res
           .status(400)
-          .json({ error: "UI password not configured" });
+          .json({ error: "UI password not configured", code: "ui_auth_invalid_request" } satisfies UiAuthErrorResponse);
       },
       ensureSessionToken,
       dispose: () => {

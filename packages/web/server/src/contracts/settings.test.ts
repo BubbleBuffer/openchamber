@@ -24,4 +24,15 @@ describe("settings contract", () => {
     expect(parseAppSettingsResponse({ showTextJustificationActivity: "yes" }).ok).toBe(false);
     expect(parseAppSettingsResponse({ typographySizes: "large" }).ok).toBe(false);
   });
+
+  it("keeps valid persisted fields when another known field is malformed or inherited", () => {
+    const inherited = Object.create({ constructor: "not-a-descriptor" }) as Record<string, unknown>;
+    inherited.themeId = "dark";
+    inherited.fontSize = "large";
+    inherited.publicOrigin = "https://app.test";
+    expect(parsePersistedSettings(inherited)).toEqual({
+      ok: true,
+      value: { themeId: "dark", publicOrigin: "https://app.test" },
+    });
+  });
 });
