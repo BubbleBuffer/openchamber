@@ -1,5 +1,42 @@
 import type { WorktreeMetadata } from '@/types/worktree';
 import type { AppSettings } from '@contracts/settings';
+import type {
+  GitBranchResponse,
+  GitBranchDetails,
+  GitCommitFilesResponse,
+  GitCommitRequest,
+  GitCommitResponse,
+  GitConflictDetails,
+  GitCredentialEntry,
+  GitDeleteBranchRequest,
+  GitDeleteRemoteBranchRequest,
+  GitDiffRequest,
+  GitDiffResponse,
+  GitFileDiffRequest,
+  GitFileDiffResponse,
+  GitGeneratedCommitMessage,
+  GitGeneratedPullRequestDescription,
+  GitIdentityAuthType,
+  GitIdentityProfile,
+  GitIdentitySummary,
+  GitLogQuery,
+  GitLogEntry,
+  GitLogResponse,
+  GitOperationResponse,
+  GitPullResponse,
+  GitPushResponse,
+  GitRemote,
+  GitRemoveRemoteRequest,
+  GitStatusResponse,
+  GitStatusFile,
+  GitMergeInProgress,
+  GitRebaseInProgress,
+  GitWorktreeBootstrapStatus,
+  GitWorktreeCreateRequest,
+  GitWorktreeInfo,
+  GitWorktreeRemoveRequest,
+  GitWorktreeValidationResult,
+} from '@contracts/git';
 export type { ProjectEntry } from '@contracts/settings';
 
 export type RuntimePlatform = 'web';
@@ -95,295 +132,30 @@ export interface TerminalAPI {
   forceKill?(options: ForceKillOptions): Promise<void>;
 }
 
-export interface GitStatusFile {
-  path: string;
-  index: string;
-  working_dir: string;
-}
-
-export interface GitMergeInProgress {
-  /** Short SHA of MERGE_HEAD */
-  head: string;
-  /** First line of MERGE_MSG */
-  message: string;
-}
-
-export interface GitRebaseInProgress {
-  /** Branch name being rebased */
-  headName: string;
-  /** Short SHA of the onto commit */
-  onto: string;
-}
-
-export interface GitStatus {
-  current: string;
-  tracking: string | null;
-  ahead: number;
-  behind: number;
-  files: GitStatusFile[];
-  isClean: boolean;
-  diffStats?: Record<string, { insertions: number; deletions: number }>;
-  /** Present when a merge is in progress with conflicts */
-  mergeInProgress?: GitMergeInProgress | null;
-  /** Present when a rebase is in progress */
-  rebaseInProgress?: GitRebaseInProgress | null;
-  /** Phase 1: reason for attention-required state */
-  attentionReason?: 'merge' | 'rebase' | 'cherry-pick' | 'revert' | 'bisect' | null;
-}
-
-export interface GitDiffResponse {
-  diff: string;
-}
-
-export interface GetGitDiffOptions {
-  path: string;
-  staged?: boolean;
-  contextLines?: number;
-}
-
-export interface GitFileDiffResponse {
-  original: string;
-  modified: string;
-  path: string;
-  isBinary?: boolean;
-}
-
-export interface GetGitFileDiffOptions {
-  path: string;
-  staged?: boolean;
-}
-
-export interface GitBranchDetails {
-  current: boolean;
-  name: string;
-  commit: string;
-  label: string;
-  tracking?: string;
-  ahead?: number;
-  behind?: number;
-}
-
-export interface GitBranch {
-  all: string[];
-  current: string;
-  branches: Record<string, GitBranchDetails>;
-}
-
-export interface GitCommitSummary {
-  changes: number;
-  insertions: number;
-  deletions: number;
-}
-
-export interface GitCommitResult {
-  success: boolean;
-  commit: string;
-  branch: string;
-  summary: GitCommitSummary;
-}
-
-export interface GitPushResult {
-  success: boolean;
-  pushed: Array<{
-    local: string;
-    remote: string;
-  }>;
-  repo: string;
-  ref: unknown;
-}
-
-export interface GitPullResult {
-  success: boolean;
-  summary: GitCommitSummary;
-  files: string[];
-  insertions: number;
-  deletions: number;
-}
-
-export interface GitRemote {
-  name: string;
-  fetchUrl: string;
-  pushUrl: string;
-}
-
-export interface GitMergeResult {
-  success: boolean;
-  conflict?: boolean;
-  conflictFiles?: string[];
-}
-
-export interface GitRebaseResult {
-  success: boolean;
-  conflict?: boolean;
-  conflictFiles?: string[];
-}
-
-export interface MergeConflictDetails {
-  /** Git status --porcelain output showing current state */
-  statusPorcelain: string;
-  /** List of unmerged file paths */
-  unmergedFiles: string[];
-  /** Git diff output showing current conflict state */
-  diff: string;
-  /** Information about MERGE_HEAD or REBASE_HEAD */
-  headInfo: string;
-  /** The operation type: 'merge' or 'rebase' */
-  operation: 'merge' | 'rebase';
-}
-
-export type GitIdentityAuthType = 'ssh' | 'token';
-
-export interface GitIdentityProfile {
-  id: string;
-  name: string;
-  userName: string;
-  userEmail: string;
-  authType?: GitIdentityAuthType;
-  sshKey?: string | null;
-  host?: string | null;
-  color?: string | null;
-  icon?: string | null;
-}
-
-export interface DiscoveredGitCredential {
-  host: string;
-  username: string;
-}
-
-export interface GitIdentitySummary {
-  userName: string | null;
-  userEmail: string | null;
-  sshCommand: string | null;
-}
-
-export interface GitLogEntry {
-  hash: string;
-  date: string;
-  message: string;
-  refs: string;
-  body: string;
-  author_name: string;
-  author_email: string;
-  filesChanged: number;
-  insertions: number;
-  deletions: number;
-}
-
-export interface GitLogResponse {
-  all: GitLogEntry[];
-  latest: GitLogEntry | null;
-  total: number;
-}
-
-export interface CommitFileEntry {
-  path: string;
-  insertions: number;
-  deletions: number;
-  isBinary: boolean;
-  changeType: 'A' | 'M' | 'D' | 'R' | 'C' | string;
-}
-
-export interface GitCommitFilesResponse {
-  files: CommitFileEntry[];
-}
-
-export interface GitWorktreeInfo {
-  head: string;
-  name: string;
-  branch: string;
-  path: string;
-}
-
-export interface GitWorktreeValidationError {
-  code: string;
-  message: string;
-}
-
-export interface GitWorktreeValidationResult {
-  ok: boolean;
-  errors: GitWorktreeValidationError[];
-  resolved?: {
-    mode?: 'new' | 'existing';
-    localBranch?: string | null;
-  };
-}
-
-export interface GitWorktreeBootstrapStatus {
-  status: 'pending' | 'ready' | 'failed';
-  error: string | null;
-  updatedAt: number;
-}
-
-export interface CreateGitWorktreePayload {
-  mode?: 'new' | 'existing';
-  /** Worktree folder name (falls back to OpenCode name generation when omitted). */
-  worktreeName?: string;
-  /** Backward-compatible alias for worktreeName. */
-  name?: string;
-  /** New local branch name for mode=new. */
-  branchName?: string;
-  /** Existing local/remote branch for mode=existing. */
-  existingBranch?: string;
-  /** Start ref for mode=new (local/remote branch or commit SHA). */
-  startRef?: string;
-  /** Additional startup script to run after project startup script. */
-  startCommand?: string;
-  /** Configure upstream tracking for the created/attached local branch. */
-  setUpstream?: boolean;
-  upstreamRemote?: string;
-  upstreamBranch?: string;
-  /** Optional remote provisioning (used for fork PR workflows). */
-  ensureRemoteName?: string;
-  ensureRemoteUrl?: string;
-}
-
-export interface GitWorktreeCreateResult {
-  head: string;
-  name: string;
-  branch: string;
-  path: string;
-}
-
-export interface RemoveGitWorktreePayload {
-  directory: string;
-  deleteLocalBranch?: boolean;
-}
-
-export interface GitDeleteBranchPayload {
-  branch: string;
-  force?: boolean;
-}
-
-export interface GitDeleteRemoteBranchPayload {
-  branch: string;
-  remote?: string;
-}
-
-export interface GitRemoveRemotePayload {
-  remote: string;
-}
-
-export interface CreateGitCommitOptions {
-  addAll?: boolean;
-  files?: string[];
-}
-
-export interface GitLogOptions {
-  maxCount?: number;
-  from?: string;
-  to?: string;
-  file?: string;
-}
-
-export interface GeneratedCommitMessage {
-  subject: string;
-  highlights: string[];
-}
-
-export interface GeneratedPullRequestDescription {
-  title: string;
-  body: string;
-}
+export type GitStatus = GitStatusResponse;
+export type GetGitDiffOptions = GitDiffRequest;
+export type GetGitFileDiffOptions = GitFileDiffRequest;
+export type GitBranch = GitBranchResponse;
+export type GitCommitResult = GitCommitResponse;
+export type GitPushResult = GitPushResponse;
+export type GitPullResult = GitPullResponse;
+export type GitMergeResult = GitOperationResponse;
+export type GitRebaseResult = GitOperationResponse;
+export type MergeConflictDetails = GitConflictDetails;
+export type DiscoveredGitCredential = GitCredentialEntry;
+export type CreateGitWorktreePayload = GitWorktreeCreateRequest;
+export type GitWorktreeCreateResult = GitWorktreeInfo;
+export type RemoveGitWorktreePayload = GitWorktreeRemoveRequest;
+export type GitDeleteBranchPayload = GitDeleteBranchRequest;
+export type GitDeleteRemoteBranchPayload = GitDeleteRemoteBranchRequest;
+export type GitRemoveRemotePayload = GitRemoveRemoteRequest;
+export type CreateGitCommitOptions = Omit<GitCommitRequest, 'message'>;
+export type GitLogOptions = Omit<GitLogQuery, 'directory'>;
+export type GeneratedCommitMessage = GitGeneratedCommitMessage;
+export type GeneratedPullRequestDescription = GitGeneratedPullRequestDescription;
+export type CommitFileEntry = GitCommitFilesResponse['files'][number];
+export type GitWorktreeValidationError = GitWorktreeValidationResult['errors'][number];
+export type { GitBranchDetails, GitDiffResponse, GitFileDiffResponse, GitIdentityAuthType, GitIdentityProfile, GitIdentitySummary, GitLogEntry, GitLogResponse, GitMergeInProgress, GitRebaseInProgress, GitRemote, GitStatusFile, GitWorktreeBootstrapStatus, GitWorktreeInfo, GitWorktreeValidationResult, GitCommitFilesResponse };
 
 export interface GitWorktreeAPI {
   list(directory: string): Promise<GitWorktreeInfo[]>;
