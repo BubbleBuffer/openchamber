@@ -9,12 +9,12 @@ vi.mock("./index.js", () => ({
   merge: vi.fn(async () => ({ success: false, conflict: true, conflictFiles: ["merge.ts"] })),
   continueMerge: vi.fn(async () => ({ success: false, conflict: true, conflictFiles: ["continue-merge.ts"] })),
   previewWorktreeCreate: vi.fn(async () => ({ name: "topic", branch: "topic", path: "/worktrees/topic" })),
-  getGlobalIdentity: vi.fn(async () => ({ userName: "Ada", userEmail: "ada@example.test", sshCommand: "ssh -i /keys/id_ed25519" })),
+  getGlobalIdentity: vi.fn(async () => ({ userName: "Ada", userEmail: "ada@example.test", sshCommand: "ssh -o IdentitiesOnly=yes -i '/keys/team key' -F /dev/null" })),
   setLocalIdentity: vi.fn(async () => undefined),
 }));
 
 import { registerGitRoutes } from "./routes.js";
-import { isGitRepository, setLocalIdentity } from "./index.js";
+import { getGlobalIdentity, isGitRepository, setLocalIdentity } from "./index.js";
 
 describe("git route contracts", () => {
   it("returns stable coded errors for invalid status directories", async () => {
@@ -74,11 +74,19 @@ describe("git route contracts", () => {
     expect(response.json).toHaveBeenNthCalledWith(5, { name: "topic", branch: "topic", path: "/worktrees/topic" });
   });
 
-  it("maps a global sshCommand into the local identity sshKey field", async () => {
+  it("extracts a quoted global SSH identity path for the local identity key", async () => {
     const routes = new Map<string, (req: any, res: any) => Promise<unknown>>();
     registerGitRoutes({ get() {}, post(path: string, handler: any) { routes.set(`POST ${path}`, handler); }, put() {}, delete() {} } as never);
     const response = { json: vi.fn() };
     await routes.get("POST /api/git/set-identity")!({ query: { directory: "/repo" }, body: { profileId: "global" } }, response);
-    expect(setLocalIdentity).toHaveBeenCalledWith("/repo", expect.objectContaining({ sshKey: "ssh -i /keys/id_ed25519" }));
+    expect(setLocalIdentity).toHaveBeenCalledWith("/repo", expect.objectContaining({ sshKey: "/keys/team key" }));
+  });
+
+  it("does not treat a global SSH command without an identity option as a key path", async () => {
+    vi.mocked(getGlobalIdentity).mockResolvedValueOnce({ userName: "Ada", userEmail: "ada@example.test", sshCommand: "ssh -o BatchMode=yes" } as never);
+    const routes = new Map<string, (req: any, res: any) => Promise<unknown>>();
+    registerGitRoutes({ get() {}, post(path: string, handler: any) { routes.set(`POST ${path}`, handler); }, put() {}, delete() {} } as never);
+    await routes.get("POST /api/git/set-identity")!({ query: { directory: "/repo" }, body: { profileId: "global" } }, { json: vi.fn() });
+    expect(setLocalIdentity).toHaveBeenLastCalledWith("/repo", expect.objectContaining({ sshKey: null }));
   });
 });
