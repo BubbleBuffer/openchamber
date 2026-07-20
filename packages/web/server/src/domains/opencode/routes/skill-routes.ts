@@ -2,6 +2,8 @@ import type { Express, Request, Response, NextFunction } from "express";
 import {
   parseSkillsInstallRequest,
   parseSkillsInstallResponse,
+  parseSkillsCatalogResponse,
+  parseSkillsCatalogSourceResponse,
   parseSkillsListResponse,
   parseSkillsRepoScanRequest,
   parseSkillsScanResponse,
@@ -12,7 +14,10 @@ import {
   parseSkillSupportingFileRequest,
   parseSkillsSupportingFileResponse,
   skillsError,
+  type SkillsConflict,
   type SkillsErrorCode,
+  type SkillsError,
+  type SkillsIdentity,
 } from "../../../contracts/skills.js";
 
 interface SkillRoutesDeps {
@@ -131,7 +136,15 @@ export function registerSkillRoutes(
     if (kind === "invalidSource") return "skills_invalid_request";
     return "skills_provider_error";
   };
-  const safeCatalogError = (kind: unknown, fallback: string) => skillsError(catalogFailure(kind), fallback);
+  const safeCatalogError = (kind: unknown, fallback: string, details?: { conflicts?: unknown; identities?: SkillsIdentity[] }) => skillsError(catalogFailure(kind), fallback, {
+    kind: typeof kind === "string" && ["authRequired", "invalidSource", "gitUnavailable", "networkError", "unknown", "conflicts"].includes(kind)
+      ? kind as SkillsError["kind"]
+      : "unknown",
+    conflicts: Array.isArray(details?.conflicts) ? details.conflicts.filter((conflict): conflict is SkillsConflict => {
+      return !!conflict && typeof conflict === "object" && typeof (conflict as SkillsConflict).skillName === "string" && ((conflict as SkillsConflict).scope === "user" || (conflict as SkillsConflict).scope === "project") && ((conflict as SkillsConflict).source === undefined || (conflict as SkillsConflict).source === "opencode" || (conflict as SkillsConflict).source === "agents");
+    }) : [],
+    identities: details?.identities,
+  });
   const parsedSkillName = (name: unknown) => parseSkillNameRequest(name);
   const parsedSupportingFile = (name: unknown, filePath: unknown, content?: unknown) =>
     parseSkillSupportingFileRequest({ name, filePath, ...(content === undefined ? {} : { content }) });
@@ -304,7 +317,7 @@ export function registerSkillRoutes(
     try {
       const { directory, error } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid project directory"));
         return;
       }
       const skills =
@@ -353,13 +366,12 @@ export function registerSkillRoutes(
         ({ gitIdentityId, ...rest }: { gitIdentityId?: string; [key: string]: any }) => rest
       );
 
-      res.json({ ok: true, sources: sourcesForUi, itemsBySource: {}, pageInfoBySource: {} });
+      const response = { ok: true as const, sources: sourcesForUi, itemsBySource: {}, pageInfoBySource: {} };
+      if (!parseSkillsCatalogResponse(response).ok) throw new Error("Invalid skills catalog response");
+      res.json(response);
     } catch (error) {
       console.error("Failed to load skills catalog:", error);
-      res.status(500).json({
-        ok: false,
-        error: { kind: "unknown", message: (error as Error)?.message || "Failed to load catalog" },
-      });
+      res.status(500).json(safeCatalogError("unknown", "Failed to load catalog"));
     }
   });
 
@@ -367,14 +379,14 @@ export function registerSkillRoutes(
     try {
       const { directory, error } = await resolveOptionalProjectDirectory(req);
       if (error) {
-        res.status(400).json({ ok: false, error: { kind: "invalidSource", message: error } });
+        res.status(400).json(safeCatalogError("invalidSource", "Invalid project directory"));
         return;
       }
 
       const sourceId =
         typeof req.query.sourceId === "string" ? req.query.sourceId : null;
       if (!sourceId) {
-        res.status(400).json({ ok: false, error: { kind: "invalidSource", message: "Missing sourceId" } });
+        res.status(400).json(safeCatalogError("invalidSource", "Missing sourceId"));
         return;
       }
 
@@ -398,7 +410,7 @@ export function registerSkillRoutes(
       const src = sources.find((entry: any) => entry.id === sourceId);
 
       if (!src) {
-        res.status(404).json({ ok: false, error: { kind: "invalidSource", message: "Unknown source" } });
+        res.status(404).json(safeCatalogError("invalidSource", "Unknown source"));
         return;
       }
 
@@ -410,7 +422,7 @@ export function registerSkillRoutes(
       if (src.sourceType === "clawdhub" || isClawdHubSource(src.source)) {
         const scanned = await scanClawdHubPage({ cursor: cursor || null });
         if (!scanned.ok) {
-          res.status(500).json({ ok: false, error: scanned.error });
+          res.status(500).json(safeCatalogError(scanned.error?.kind, "Unable to scan skill provider"));
           return;
         }
 
@@ -425,13 +437,15 @@ export function registerSkillRoutes(
           };
         });
 
-        res.json({ ok: true, items, nextCursor: scanned.nextCursor || null });
+        const response = { ok: true as const, items, nextCursor: scanned.nextCursor || null };
+        if (!parseSkillsCatalogSourceResponse(response).ok) throw new Error("Invalid skills catalog source response");
+        res.json(response);
         return;
       }
 
       const parsed = parseSkillRepoSource(src.source);
       if (!parsed.ok) {
-        res.status(400).json({ ok: false, error: parsed.error });
+        res.status(400).json(safeCatalogError(parsed.error?.kind, "Invalid skill provider source"));
         return;
       }
 
@@ -452,7 +466,7 @@ export function registerSkillRoutes(
         });
 
         if (!scanned.ok) {
-          res.status(500).json({ ok: false, error: scanned.error });
+          res.status(500).json(safeCatalogError(scanned.error?.kind, "Unable to scan skill provider"));
           return;
         }
 
@@ -472,13 +486,12 @@ export function registerSkillRoutes(
         };
       });
 
-      res.json({ ok: true, items });
+      const response = { ok: true as const, items };
+      if (!parseSkillsCatalogSourceResponse(response).ok) throw new Error("Invalid skills catalog source response");
+      res.json(response);
     } catch (error) {
       console.error("Failed to load catalog source:", error);
-      res.status(500).json({
-        ok: false,
-        error: { kind: "unknown", message: (error as Error)?.message || "Failed to load catalog source" },
-      });
+      res.status(500).json(safeCatalogError("unknown", "Failed to load catalog source"));
     }
   });
 
@@ -502,11 +515,7 @@ export function registerSkillRoutes(
         if (result.error?.kind === "authRequired") {
           res.status(401).json({
             ok: false,
-            error: {
-              code: "skills_auth_required",
-              message: "Skill provider authentication is required",
-              identities: listGitIdentitiesForResponse(),
-            },
+            error: safeCatalogError("authRequired", "Skill provider authentication is required", { identities: listGitIdentitiesForResponse() }).error,
           });
           return;
         }
@@ -556,7 +565,7 @@ export function registerSkillRoutes(
 
         if (!result.ok) {
           if (result.error?.kind === "conflicts") {
-            res.status(409).json(safeCatalogError(result.error?.kind, "Skill installation conflicts with an existing skill"));
+            res.status(409).json(safeCatalogError(result.error?.kind, "Skill installation conflicts with an existing skill", { conflicts: result.error?.conflicts }));
             return;
           }
           res.status(400).json(safeCatalogError(result.error?.kind, "Unable to install skills"));
@@ -601,18 +610,14 @@ export function registerSkillRoutes(
 
       if (!result.ok) {
         if (result.error?.kind === "conflicts") {
-          res.status(409).json(safeCatalogError(result.error?.kind, "Skill installation conflicts with an existing skill"));
+          res.status(409).json(safeCatalogError(result.error?.kind, "Skill installation conflicts with an existing skill", { conflicts: result.error?.conflicts }));
           return;
         }
 
         if (result.error?.kind === "authRequired") {
           res.status(401).json({
             ok: false,
-            error: {
-              code: "skills_auth_required",
-              message: "Skill provider authentication is required",
-              identities: listGitIdentitiesForResponse(),
-            },
+            error: safeCatalogError("authRequired", "Skill provider authentication is required", { identities: listGitIdentitiesForResponse() }).error,
           });
           return;
         }

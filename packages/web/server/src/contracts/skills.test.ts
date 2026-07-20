@@ -14,6 +14,9 @@ describe("skills contracts", () => {
   it("accepts valid install requests and rejects malformed selections", () => {
     expect(parseSkillsInstallRequest({ source: "owner/repo", scope: "user", selections: [{ skillDir: "skill" }] }).ok).toBe(true);
     expect(parseSkillsInstallRequest({ source: "owner/repo", scope: "user", selections: [{ skillDir: 1 }] }).ok).toBe(false);
+    expect(parseSkillsInstallRequest({ source: "owner/repo", scope: "user", selections: [{ skillDir: "../escape" }] }).ok).toBe(false);
+    expect(parseSkillsInstallRequest({ source: "owner/repo", scope: "user", selections: [{ skillDir: "/etc" }] }).ok).toBe(false);
+    expect(parseSkillsInstallRequest({ source: "owner/repo", scope: "user", selections: [{ skillDir: "skills/nested" }] }).ok).toBe(true);
   });
 
   it("preserves partial install outcomes and rejects malformed success payloads", () => {
