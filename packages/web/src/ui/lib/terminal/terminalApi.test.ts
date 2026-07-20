@@ -1,8 +1,47 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createTerminalSession, resizeTerminal } from './terminalApi';
+import {
+  connectTerminalStream,
+  createTerminalSession,
+  disposeTerminalInputTransport,
+  resizeTerminal,
+} from './terminalApi';
+
+class MockWebSocket {
+  static readonly OPEN = 1;
+  static readonly CONNECTING = 0;
+  static instances: MockWebSocket[] = [];
+  readyState = MockWebSocket.CONNECTING;
+  binaryType = '';
+  onopen: (() => void) | null = null;
+  onmessage: ((event: { data: unknown }) => void) | null = null;
+  onerror: (() => void) | null = null;
+  onclose: (() => void) | null = null;
+  readonly send = vi.fn();
+
+  constructor(url: string) { void url; MockWebSocket.instances.push(this); }
+  open(): void { this.readyState = MockWebSocket.OPEN; this.onopen?.(); }
+  receiveControl(payload: unknown): void {
+    const bytes = new TextEncoder().encode(JSON.stringify(payload));
+    this.onmessage?.({ data: new Uint8Array([1, ...bytes]).buffer });
+  }
+  close(): void { this.readyState = 3; this.onclose?.(); }
+}
+
+const terminalSession = {
+  sessionId: 'terminal-1', cols: 80, rows: 24,
+  capabilities: {
+    input: { preferred: 'ws' as const, transports: ['ws' as const, 'http' as const], ws: { path: '/api/terminal/ws', v: 2, enc: 'text+json-bin-control' } },
+    stream: { preferred: 'ws' as const, transports: ['ws' as const, 'sse' as const], ws: { path: '/api/terminal/ws', v: 2, enc: 'text+json-bin-control' } },
+  },
+};
 
 describe('terminal API contracts', () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    disposeTerminalInputTransport();
+    MockWebSocket.instances = [];
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
 
   it('rejects malformed terminal session responses before configuring transport', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ sessionId: 'terminal-1' }), { status: 200 })));
@@ -15,5 +54,40 @@ describe('terminal API contracts', () => {
 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ success: false }), { status: 200 })));
     await expect(resizeTerminal('terminal-1', 80, 24)).rejects.toThrow('Failed to resize terminal');
+  });
+
+  it('rebinds after transport loss and discards malformed control without dispatching stream state', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    vi.stubGlobal('window', { location: { protocol: 'http:', host: 'localhost' } });
+    vi.stubGlobal('WebSocket', MockWebSocket);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(terminalSession), { status: 200 })));
+    await createTerminalSession({ cwd: '/work' });
+    const events: string[] = [];
+    connectTerminalStream('terminal-1', (event) => events.push(event.type));
+
+    const first = MockWebSocket.instances[0]!;
+    first.open();
+    first.receiveControl({ t: 'ok', v: 2 });
+    await Promise.resolve();
+    first.receiveControl({ t: 'bok', s: 'terminal-1', v: 2, runtime: 'node', ptyBackend: 'test-pty' });
+    await Promise.resolve();
+    expect(events).toEqual(['connected']);
+
+    first.receiveControl({ t: 'bok', s: 'terminal-1', v: 2 });
+    await Promise.resolve();
+    expect(events).toEqual(['connected']);
+
+    first.close();
+    await vi.advanceTimersByTimeAsync(1000);
+    const second = MockWebSocket.instances[1]!;
+    second.open();
+    second.receiveControl({ t: 'ok', v: 2 });
+    await Promise.resolve();
+    const rebind = second.send.mock.calls.map(([frame]) => {
+      const bytes = new Uint8Array(frame as ArrayBuffer);
+      return JSON.parse(new TextDecoder().decode(bytes.subarray(1)));
+    });
+    expect(rebind).toContainEqual({ t: 'b', s: 'terminal-1', v: 2 });
   });
 });

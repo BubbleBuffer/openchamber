@@ -29,6 +29,11 @@ describe("route inventory", () => {
     expect(ROUTE_INVENTORY.find((entry) => entry.registrar === "domains/opencode/routes/core-routes.ts")?.endpoints).toContain("get /connect");
   });
 
+  it("names the terminal websocket acceptance test owners", () => {
+    expect(ROUTE_INVENTORY.find((entry) => entry.registrar === "domains/terminal/ws-server.ts")?.tests)
+      .toBe("ws-server.test.ts, terminalApi.test.ts");
+  });
+
   it("covers every literal endpoint registered by active route modules", () => {
     const root = resolve(import.meta.dirname, "..");
     const registrars = [

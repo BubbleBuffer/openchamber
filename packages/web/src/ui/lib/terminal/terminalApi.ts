@@ -544,12 +544,10 @@ class TerminalTransportManager {
     try {
       rawPayload = JSON.parse(textDecoder.decode(bytes.subarray(1)));
     } catch {
-      this.handleSocketFailure(new Error('Terminal websocket control parse failed'));
       return;
     }
     const parsedPayload = parseTerminalWsControlFrame(rawPayload);
     if (!parsedPayload.ok) {
-      this.handleSocketFailure(new Error('Terminal websocket control parse failed'));
       return;
     }
     const payload = parsedPayload.value;
