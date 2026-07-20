@@ -1,4 +1,4 @@
-// packages/ui/src/stores/useAgentConfigStore.ts
+// packages/web/src/ui/stores/agents/useAgentConfigStore.ts
 // Agent configuration store: agents, OpenChamber settings defaults
 import { create } from "zustand";
 import { devtools, persist, createJSONStorage } from "zustand/middleware";

@@ -10,18 +10,17 @@ bun install
 
 ## Dev Scripts
 
-### Web
+### Web product
 
-| Script | Description | Ports |
-|--------|-------------|-------|
-| `bun run dev:web:full` | Build watcher + Express server. No HMR — manual refresh after changes. | `3001` (server + static) |
-| `bun run dev:web:hmr` | Vite dev server + Express API. **Open the Vite URL for HMR**, not the backend. | `5180` (Vite HMR), `3902` (API) |
+| Command | Description |
+|---------|-------------|
+| `bun run dev` | Start the web development watchers. |
+| `bun run build` | Build session state, the web bundle, and the web server. |
+| `bun run start:web` | Build and start the web product. |
+| `bun run pack:session-state` | Create the session-state package tarball. |
+| `bun run pack:web` | Create the web package tarball. |
 
-Both are configurable via env vars: `OPENCHAMBER_PORT`, `OPENCHAMBER_HMR_UI_PORT`, `OPENCHAMBER_HMR_API_PORT`.
-
-### Shared UI (`packages/ui`)
-
-No dev server — this is a source-level library consumed by other packages. During development, `bun run dev` runs type-checking in watch mode.
+The browser presentation and state live in `packages/web/src/ui`; the Express server and CLI live alongside them in `packages/web`.
 
 ## Before Submitting
 
@@ -35,10 +34,10 @@ bun run build        # Must succeed
 
 - Functional React components only
 - TypeScript strict mode — no `any` without justification
-- Use existing theme colors/typography from `packages/ui/src/lib/theme/` — don't add new ones
+- Use existing theme colors/typography from `packages/web/src/ui/lib/theme/` — don't add new ones
 - Components must support light and dark themes
 - Prefer early returns and `if/else`/`switch` over nested ternaries
-- Tailwind v4 for styling; typography via `packages/ui/src/lib/typography.ts`
+- Tailwind v4 for styling; typography via `packages/web/src/ui/lib/typography.ts`
 
 ## Pull Requests
 
@@ -51,8 +50,7 @@ bun run build        # Must succeed
 
 ```
 packages/
-  ui/        Shared React components, hooks, stores, and theme system
-  web/       Web server (Express) + frontend (Vite) + CLI
+  web/       Web server (Express), frontend (Vite), CLI, and browser UI/state (`src/ui/`)
 ```
 
 See [AGENTS.md](./AGENTS.md) for detailed architecture reference.

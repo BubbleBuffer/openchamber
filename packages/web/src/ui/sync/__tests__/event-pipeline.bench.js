@@ -6,7 +6,7 @@
  * multi-session workloads (parent + subagent token streaming).
  *
  * Run with:
- *   bun packages/ui/src/sync/__tests__/event-pipeline.bench.js
+ *   bun packages/web/src/ui/sync/__tests__/event-pipeline.bench.js
  *
  * This is NOT a bun:test file — it prints a report and exits. Nothing here
  * asserts; it exists purely to give you intuition about the optimization

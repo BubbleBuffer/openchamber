@@ -2,7 +2,7 @@
 
 ## Scope
 
-This document covers the current client-side session/data architecture in `packages/ui/src/sync` and the rules for updating stores safely.
+This document covers the current client-side session/data architecture in `packages/web/src/ui/sync` and the rules for updating stores safely.
 
 ## Phase 3 — UI/Store-Owned Boundaries
 
@@ -67,7 +67,7 @@ There are **two distinct session data scopes** in the UI:
    - Read via hooks like `useSessions()`, `useDirectorySync()`, `getSyncSessions()`, `getDirectoryState()`
 
 2. **Global sessions cache**
-   - Owned by `packages/ui/src/stores/useGlobalSessionsStore.ts`
+   - Owned by `packages/web/src/ui/stores/useGlobalSessionsStore.ts`
    - Shared source of truth for the Sessions sidebar global lists and Session Retention cleanup
    - Holds:
      - global active sessions

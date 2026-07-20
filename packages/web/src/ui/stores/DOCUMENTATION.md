@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`packages/ui/src/stores` contains app-level Zustand stores for persistent UI state, runtime state, and feature caches.
+`packages/web/src/ui/stores` contains app-level Zustand stores for persistent UI state, runtime state, and feature caches.
 
 ## Directory layout
 

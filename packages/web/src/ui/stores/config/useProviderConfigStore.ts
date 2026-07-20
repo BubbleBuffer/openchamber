@@ -1,4 +1,4 @@
-// packages/ui/src/stores/useProviderConfigStore.ts
+// packages/web/src/ui/stores/config/useProviderConfigStore.ts
 // Provider configuration store: providers, connection, model metadata
 import { create } from "zustand";
 import { devtools, persist, createJSONStorage } from "zustand/middleware";

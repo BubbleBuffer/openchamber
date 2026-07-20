@@ -1,4 +1,4 @@
-// packages/ui/src/components/layout/MobileDrawerPanel.tsx
+// packages/web/src/ui/components/layout/MobileDrawerPanel.tsx
 import React from 'react';
 import { cn } from '@/lib/utils';
 

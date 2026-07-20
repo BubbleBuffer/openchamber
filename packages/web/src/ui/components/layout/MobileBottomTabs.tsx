@@ -1,4 +1,4 @@
-// packages/ui/src/components/layout/MobileBottomTabs.tsx
+// packages/web/src/ui/components/layout/MobileBottomTabs.tsx
 import React from 'react';
 import { cn } from '@/lib/utils';
 import type { MainTab } from '@/stores/useUIStore';

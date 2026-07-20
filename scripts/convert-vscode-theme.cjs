@@ -470,7 +470,7 @@ function convertWriteAndRegisterTheme(inputPath) {
 
 // Main execution
 if (process.argv.length < 3) {
-  console.error('Usage: node convert-vscode-theme.js <path-to-vscode-theme.json>');
+  console.error('Usage: node scripts/convert-vscode-theme.cjs <path-to-vscode-theme.json>');
   process.exit(1);
 }
 

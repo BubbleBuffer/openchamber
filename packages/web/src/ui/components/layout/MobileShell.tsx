@@ -1,4 +1,4 @@
-// packages/ui/src/components/layout/MobileShell.tsx
+// packages/web/src/ui/components/layout/MobileShell.tsx
 import React from 'react';
 import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useUIStore } from '@/stores/useUIStore';

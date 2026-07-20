@@ -32,12 +32,12 @@ Current expectations:
 
 ## Standalone Sync Benchmark
 
-`packages/ui/src/sync/__tests__/event-pipeline.bench.js` is not part of `bun run test:perf`.
+`packages/web/src/ui/sync/__tests__/event-pipeline.bench.js` is not part of `bun run test:perf`.
 
 Run it directly when investigating sync pipeline throughput:
 
 ```bash
-bun packages/ui/src/sync/__tests__/event-pipeline.bench.js
+bun packages/web/src/ui/sync/__tests__/event-pipeline.bench.js
 ```
 
 It is intentionally standalone for now. It uses hand-rolled synthetic workloads and prints its own report instead of using `vitest bench`.

@@ -21,7 +21,7 @@ When you build or change a UI surface, decide explicitly what it does on mobile.
   ```ts
   const { isMobile } = useRuntimeStore.getState();
   ```
-  See `packages/ui/src/hooks/useKeyboardShortcuts.ts` for the canonical pattern.
+  See `packages/web/src/ui/hooks/useKeyboardShortcuts.ts` for the canonical pattern.
 
 Do **not** plumb `isMobile` through props — it creates extra re-render paths. Do **not** use `window.innerWidth` checks; `useRuntimeStore.isMobile` is the single source of truth.
 
@@ -29,17 +29,17 @@ Do **not** plumb `isMobile` through props — it creates extra re-render paths. 
 
 Mobile uses a different top-level shell from desktop:
 
-- `packages/ui/src/components/layout/MobileShell.tsx` — full-height column with header, content, and `MobileBottomTabs` pinned at bottom.
-- `packages/ui/src/components/layout/MobileBottomTabs.tsx` — primary navigation. The "more" slot opens settings as overflow.
-- `packages/ui/src/components/layout/MobileDrawerPanel.tsx` — slide-over drawer for secondary panels.
-- `packages/ui/src/components/layout/MobileOverlayPanel.tsx` — full-screen overlay for modal content.
+- `packages/web/src/ui/components/layout/MobileShell.tsx` — full-height column with header, content, and `MobileBottomTabs` pinned at bottom.
+- `packages/web/src/ui/components/layout/MobileBottomTabs.tsx` — primary navigation. The "more" slot opens settings as overflow.
+- `packages/web/src/ui/components/layout/MobileDrawerPanel.tsx` — slide-over drawer for secondary panels.
+- `packages/web/src/ui/components/layout/MobileOverlayPanel.tsx` — full-screen overlay for modal content.
 
 Desktop sidebars do **not** appear on mobile. Sidebar controls go into bottom tabs, the drawer, or the "more" overflow.
 
 ## Safe-area + keyboard
 
 - Bottom-pinned chrome uses `pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))]` (see `MobileShell`). Don't pin to `bottom: 0` raw.
-- Chat input must remain visible when the keyboard opens. Coordinate with `viewport-store` (`packages/ui/src/sync/viewport-store.ts`).
+- Chat input must remain visible when the keyboard opens. Coordinate with `viewport-store` (`packages/web/src/ui/sync/viewport-store.ts`).
 - Use `100dvh` / `min-h-dvh` over `100vh` where height fights with keyboard.
 
 ## Touch targets

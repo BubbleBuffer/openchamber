@@ -1,4 +1,4 @@
-// packages/ui/src/stores/useConfigStore.ts
+// packages/web/src/ui/stores/config/useConfigStore.ts
 // Re-exports for backward compatibility during migration.
 // New code should import directly from useProviderConfigStore / useAgentConfigStore.
 

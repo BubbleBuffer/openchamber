@@ -63,10 +63,10 @@
 
 ## Consumers of PR data
 
-- `packages/ui/src/components/session/SessionSidebar.tsx` reads all PR entries and maps them to `directory::branch`.
-- `packages/ui/src/components/session/sidebar/SessionGroupSection.tsx` renders the compact badge, PR number, title, checks summary, and GitHub link.
-- `packages/ui/src/components/views/git/PullRequestSection.tsx` uses the same shared entry for the full PR workflow.
-- `packages/ui/src/components/ui/MemoryDebugPanel.tsx` reads request counters for debugging.
+- `packages/web/src/ui/components/session/SessionSidebar.tsx` reads all PR entries and maps them to `directory::branch`.
+- `packages/web/src/ui/components/session/sidebar/SessionGroupSection.tsx` renders the compact badge, PR number, title, checks summary, and GitHub link.
+- `packages/web/src/ui/components/views/git/PullRequestSection.tsx` uses the same shared entry for the full PR workflow.
+- `packages/web/src/ui/components/ui/MemoryDebugPanel.tsx` reads request counters for debugging.
 
 ## How PR resolution works
 

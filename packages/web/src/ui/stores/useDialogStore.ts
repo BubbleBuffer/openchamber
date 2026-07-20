@@ -1,4 +1,4 @@
-// packages/ui/src/stores/useDialogStore.ts
+// packages/web/src/ui/stores/useDialogStore.ts
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 
