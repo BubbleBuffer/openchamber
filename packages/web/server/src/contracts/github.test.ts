@@ -9,6 +9,7 @@ import {
   parseGitHubPullRequestStatusResponse,
   parseGitHubPullRequestUpdateRequest,
   GITHUB_ROUTE_CONTRACTS,
+  githubError,
 } from "./github.js";
 
 describe("GitHub contracts", () => {
@@ -37,6 +38,11 @@ describe("GitHub contracts", () => {
   it("only accepts stable safe GitHub errors", () => {
     expect(parseGitHubErrorResponse({ error: "GitHub request failed", code: "github_unauthorized" }).ok).toBe(true);
     expect(parseGitHubErrorResponse({ error: "secret", code: "internal_error" }).ok).toBe(false);
+  });
+
+  it("uses safe stable errors for provider validation and mergeability failures", () => {
+    expect(githubError("github_invalid_request")).toEqual({ error: "GitHub request failed", code: "github_invalid_request" });
+    expect(githubError("github_conflict")).toEqual({ error: "GitHub request failed", code: "github_conflict" });
   });
 
   it("owns every active GitHub route with named request and response parsers", () => {

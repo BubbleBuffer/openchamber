@@ -697,13 +697,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
           return res.status(404).json({ error: "PR not found in this repository" });
         }
         if (error?.status === 422) {
-          const apiMessage = error?.response?.data?.message;
-          const errors = error?.response?.data?.errors;
-          const firstError = Array.isArray(errors) && errors.length > 0
-            ? (errors[0]?.message || errors[0]?.code)
-            : null;
-          const message = [apiMessage, firstError].filter(Boolean).join(" · ") || "Invalid PR update payload";
-          return res.status(422).json({ error: message });
+          return res.status(422).json(githubError("github_invalid_request"));
         }
         throw error;
       }
@@ -769,7 +763,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
           return res.status(403).json(githubError("github_forbidden"));
         }
         if (error?.status === 405 || error?.status === 409) {
-          return res.json({ merged: false, message: error?.message || "PR not mergeable" });
+          return res.json({ merged: false, message: "PR not mergeable" });
         }
         throw error;
       }
