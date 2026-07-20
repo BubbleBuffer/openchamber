@@ -1,4 +1,13 @@
 import type { Express, Request, Response } from "express";
+import {
+  githubError,
+  parseGitHubAuthActivateRequest,
+  parseGitHubDeviceFlowCompleteRequest,
+  parseGitHubPullRequestCreateRequest,
+  parseGitHubPullRequestMergeRequest,
+  parseGitHubPullRequestReadyRequest,
+  parseGitHubPullRequestUpdateRequest,
+} from "../../contracts/github.js";
 import { resolveGitHubPrStatus } from "./pr-status.js";
 
 export interface GitHubRoutesDeps {
@@ -78,7 +87,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       });
     } catch (error) {
       console.error("Failed to get GitHub auth status:", error);
-      return res.status(500).json({ error: (error as Error).message || "Failed to get GitHub auth status" });
+      return res.status(500).json(githubError("github_internal_error"));
     }
   });
 
@@ -110,7 +119,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       });
     } catch (error) {
       console.error("Failed to start GitHub device flow:", error);
-      return res.status(500).json({ error: (error as Error).message || "Failed to start GitHub device flow" });
+      return res.status(500).json(githubError("github_device_flow_failed"));
     }
   });
 
@@ -124,16 +133,9 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         });
       }
 
-      const deviceCode =
-        typeof req.body?.deviceCode === "string"
-          ? req.body.deviceCode
-          : typeof req.body?.device_code === "string"
-            ? req.body.device_code
-            : "";
-
-      if (!deviceCode) {
-        return res.status(400).json({ error: "deviceCode is required" });
-      }
+      const parsedRequest = parseGitHubDeviceFlowCompleteRequest(req.body);
+      if (!parsedRequest.ok) return res.status(400).json(githubError("github_invalid_request"));
+      const deviceCode = parsedRequest.value.deviceCode;
 
       const payload = await libs.exchangeDeviceCode({ clientId, deviceCode });
 
@@ -169,17 +171,16 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       });
     } catch (error) {
       console.error("Failed to complete GitHub device flow:", error);
-      return res.status(500).json({ error: (error as Error).message || "Failed to complete GitHub device flow" });
+      return res.status(500).json(githubError("github_device_flow_failed"));
     }
   });
 
   app.post("/api/github/auth/activate", async (req: Request, res: Response) => {
     try {
       const libs = await getGitHubLibraries();
-      const accountId = typeof req.body?.accountId === "string" ? req.body.accountId : "";
-      if (!accountId) {
-        return res.status(400).json({ error: "accountId is required" });
-      }
+      const parsedRequest = parseGitHubAuthActivateRequest(req.body);
+      if (!parsedRequest.ok) return res.status(400).json(githubError("github_invalid_request"));
+      const accountId = parsedRequest.value.accountId;
       const activated = libs.activateGitHubAuth(accountId);
       if (!activated) {
         return res.status(404).json({ error: "GitHub account not found" });
@@ -214,7 +215,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       });
     } catch (error) {
       console.error("Failed to activate GitHub account:", error);
-      return res.status(500).json({ error: (error as Error).message || "Failed to activate GitHub account" });
+      return res.status(500).json(githubError("github_internal_error"));
     }
   });
 
@@ -225,7 +226,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       return res.json({ success: true, removed });
     } catch (error) {
       console.error("Failed to disconnect GitHub:", error);
-      return res.status(500).json({ error: (error as Error).message || "Failed to disconnect GitHub" });
+      return res.status(500).json(githubError("github_internal_error"));
     }
   });
 
@@ -234,7 +235,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       const libs = await getGitHubLibraries();
       const octokit = libs.getOctokitOrNull();
       if (!octokit) {
-        return res.status(401).json({ error: "GitHub not connected" });
+        return res.status(401).json(githubError("github_not_connected"));
       }
       let user: any;
       try {
@@ -249,7 +250,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       return res.json(user);
     } catch (error) {
       console.error("Failed to fetch GitHub user:", error);
-      return res.status(500).json({ error: (error as Error).message || "Failed to fetch GitHub user" });
+      return res.status(500).json(githubError("github_internal_error"));
     }
   });
 
@@ -461,12 +462,13 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         });
       }
       console.error("Failed to load GitHub PR status:", error);
-      return res.status(500).json({ error: (error as Error).message || "Failed to load GitHub PR status" });
+      return res.status(500).json(githubError("github_internal_error"));
     }
   });
 
   app.post("/api/github/pr/create", async (req: Request, res: Response) => {
     try {
+      if (!parseGitHubPullRequestCreateRequest(req.body).ok) return res.status(400).json(githubError("github_invalid_request"));
       const directory =
         typeof req.body?.directory === "string" ? req.body.directory.trim() : "";
       const title = typeof req.body?.title === "string" ? req.body.title.trim() : "";
@@ -487,9 +489,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
 
       const libs = await getGitHubLibraries();
       const octokit = libs.getOctokitOrNull();
-      if (!octokit) {
-        return res.status(401).json({ error: "GitHub not connected" });
-      }
+      if (!octokit) return res.status(401).json(githubError("github_not_connected"));
 
       const ghLib: typeof import("./index.js") = await import("./index.js");
       const { repo } = await ghLib.resolveGitHubRepoFromDirectory(directory, remote);
@@ -651,12 +651,13 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         });
       }
 
-      return res.status(500).json({ error: error.message || "Failed to create GitHub PR" });
+      return res.status(500).json(githubError("github_upstream_error"));
     }
   });
 
   app.post("/api/github/pr/update", async (req: Request, res: Response) => {
     try {
+      if (!parseGitHubPullRequestUpdateRequest(req.body).ok) return res.status(400).json(githubError("github_invalid_request"));
       const directory =
         typeof req.body?.directory === "string" ? req.body.directory.trim() : "";
       const number = typeof req.body?.number === "number" ? req.body.number : null;
@@ -668,9 +669,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
 
       const libs = await getGitHubLibraries();
       const octokit = libs.getOctokitOrNull();
-      if (!octokit) {
-        return res.status(401).json({ error: "GitHub not connected" });
-      }
+      if (!octokit) return res.status(401).json(githubError("github_not_connected"));
 
       const ghLib: typeof import("./index.js") = await import("./index.js");
       const { repo } = await ghLib.resolveGitHubRepoFromDirectory(directory);
@@ -689,10 +688,10 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         });
       } catch (error: any) {
         if (error?.status === 401) {
-          return res.status(401).json({ error: "GitHub not connected" });
+          return res.status(401).json(githubError("github_unauthorized"));
         }
         if (error?.status === 403) {
-          return res.status(403).json({ error: "Not authorized to edit this PR" });
+          return res.status(403).json(githubError("github_forbidden"));
         }
         if (error?.status === 404) {
           return res.status(404).json({ error: "PR not found in this repository" });
@@ -729,12 +728,13 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       });
     } catch (error) {
       console.error("Failed to update GitHub PR:", error);
-      return res.status(500).json({ error: (error as Error).message || "Failed to update GitHub PR" });
+      return res.status(500).json(githubError("github_upstream_error"));
     }
   });
 
   app.post("/api/github/pr/merge", async (req: Request, res: Response) => {
     try {
+      if (!parseGitHubPullRequestMergeRequest(req.body).ok) return res.status(400).json(githubError("github_invalid_request"));
       const directory =
         typeof req.body?.directory === "string" ? req.body.directory.trim() : "";
       const number = typeof req.body?.number === "number" ? req.body.number : null;
@@ -747,7 +747,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       const libs = await getGitHubLibraries();
       const octokit = libs.getOctokitOrNull();
       if (!octokit) {
-        return res.status(401).json({ error: "GitHub not connected" });
+        return res.status(401).json(githubError("github_not_connected"));
       }
 
       const ghLib: typeof import("./index.js") = await import("./index.js");
@@ -766,7 +766,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         return res.json({ merged: Boolean(result?.data?.merged), message: result?.data?.message });
       } catch (error: any) {
         if (error?.status === 403) {
-          return res.status(403).json({ error: "Not authorized to merge this PR" });
+          return res.status(403).json(githubError("github_forbidden"));
         }
         if (error?.status === 405 || error?.status === 409) {
           return res.json({ merged: false, message: error?.message || "PR not mergeable" });
@@ -775,12 +775,13 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       }
     } catch (error) {
       console.error("Failed to merge GitHub PR:", error);
-      return res.status(500).json({ error: (error as Error).message || "Failed to merge GitHub PR" });
+      return res.status(500).json(githubError("github_upstream_error"));
     }
   });
 
   app.post("/api/github/pr/ready", async (req: Request, res: Response) => {
     try {
+      if (!parseGitHubPullRequestReadyRequest(req.body).ok) return res.status(400).json(githubError("github_invalid_request"));
       const directory =
         typeof req.body?.directory === "string" ? req.body.directory.trim() : "";
       const number = typeof req.body?.number === "number" ? req.body.number : null;
@@ -791,7 +792,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       const libs = await getGitHubLibraries();
       const octokit = libs.getOctokitOrNull();
       if (!octokit) {
-        return res.status(401).json({ error: "GitHub not connected" });
+        return res.status(401).json(githubError("github_not_connected"));
       }
 
       const ghLib: typeof import("./index.js") = await import("./index.js");
@@ -817,7 +818,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         );
       } catch (error: any) {
         if (error?.status === 403) {
-          return res.status(403).json({ error: "Not authorized to mark PR ready" });
+          return res.status(403).json(githubError("github_forbidden"));
         }
         throw error;
       }
@@ -825,7 +826,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       return res.json({ ready: true });
     } catch (error) {
       console.error("Failed to mark PR ready:", error);
-      return res.status(500).json({ error: (error as Error).message || "Failed to mark PR ready" });
+      return res.status(500).json(githubError("github_upstream_error"));
     }
   });
 
@@ -893,7 +894,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       });
     } catch (error) {
       console.error("Failed to list GitHub issues:", error);
-      return res.status(500).json({ error: (error as Error).message || "Failed to list GitHub issues" });
+      return res.status(500).json(githubError("github_internal_error"));
     }
   });
 
@@ -964,7 +965,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       });
     } catch (error) {
       console.error("Failed to fetch GitHub issue:", error);
-      return res.status(500).json({ error: (error as Error).message || "Failed to fetch GitHub issue" });
+      return res.status(500).json(githubError("github_internal_error"));
     }
   });
 
@@ -1010,7 +1011,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       return res.json({ connected: true, repo, comments });
     } catch (error) {
       console.error("Failed to fetch GitHub issue comments:", error);
-      return res.status(500).json({ error: (error as Error).message || "Failed to fetch GitHub issue comments" });
+      return res.status(500).json(githubError("github_internal_error"));
     }
   });
 
@@ -1094,7 +1095,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         return res.json({ connected: false });
       }
       console.error("Failed to list GitHub PRs:", error);
-      return res.status(500).json({ error: (error as Error).message || "Failed to list GitHub PRs" });
+      return res.status(500).json(githubError("github_internal_error"));
     }
   });
 
@@ -1479,7 +1480,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         return res.json({ connected: false });
       }
       console.error("Failed to load GitHub PR context:", error);
-      return res.status(500).json({ error: (error as Error).message || "Failed to load GitHub PR context" });
+      return res.status(500).json(githubError("github_internal_error"));
     }
   });
 }
