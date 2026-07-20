@@ -26,5 +26,6 @@ describe("project asset contracts", () => {
 
   it("preserves custom-icon discovery skips that have no settings mutation", () => {
     expect(parseProjectIconMutationResponse({ project: { id: "project", path: "/project" }, skipped: true, reason: "custom-icon-present" }).ok).toBe(true);
+    expect(parseProjectIconMutationResponse({ project: { id: "project", path: "/project" } }).ok).toBe(false);
   });
 });

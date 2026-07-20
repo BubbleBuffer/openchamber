@@ -1,5 +1,5 @@
 import { parseJsonObject, type ParseResult } from "./common.js";
-import type { AppSettings, ProjectEntry } from "./settings.js";
+import { parseAppSettingsResponse, type AppSettings, type ProjectEntry } from "./settings.js";
 
 /** Runtime-neutral transport contract for project icon upload, discovery, and mutation routes. */
 export const PROJECT_ASSETS_ERROR_CODES = [
@@ -11,6 +11,7 @@ export type ProjectAssetsErrorResponse = { error: string; code: ProjectAssetsErr
 export type ProjectIconUploadRequest = { dataUrl: string };
 export type ProjectIconDiscoverRequest = { force?: boolean };
 export type ProjectIconMutationResponse = { project: ProjectEntry | null; settings?: AppSettings; skipped?: boolean; reason?: string; discoveredPath?: string };
+export type ProjectIconContentResponse = { mime: "image/png" | "image/jpeg" | "image/svg+xml" | "image/webp" | "image/x-icon"; contentType: string };
 
 const invalid = <T = never>(error: string): ParseResult<T> => ({ ok: false, error });
 const object = (value: unknown) => { const parsed = parseJsonObject(value); return parsed.ok ? parsed.value : null; };
@@ -44,12 +45,22 @@ export function parseProjectIconErrorResponse(value: unknown): ParseResult<Proje
 
 export function parseProjectIconMutationResponse(value: unknown): ParseResult<ProjectIconMutationResponse> {
   const input = object(value);
-  return input && (input.project === null || project(input.project)) && (input.settings === undefined || !!object(input.settings))
+  const settings = input?.settings === undefined ? null : parseAppSettingsResponse(input.settings);
+  return input && (input.project === null || project(input.project)) && (settings?.ok === true || input.skipped === true)
     && (input.skipped === undefined || typeof input.skipped === "boolean")
     && (input.reason === undefined || typeof input.reason === "string")
     && (input.discoveredPath === undefined || typeof input.discoveredPath === "string")
     ? { ok: true, value: input as ProjectIconMutationResponse }
     : invalid("invalid project icon mutation response");
+}
+
+export function parseProjectIconContentResponse(value: unknown): ParseResult<ProjectIconContentResponse> {
+  const input = object(value);
+  const mime = input?.mime;
+  const expectedContentType = mime === "image/svg+xml" ? "image/svg+xml; charset=utf-8" : mime;
+  return input && (mime === "image/png" || mime === "image/jpeg" || mime === "image/svg+xml" || mime === "image/webp" || mime === "image/x-icon") && input.contentType === expectedContentType
+    ? { ok: true, value: input as ProjectIconContentResponse }
+    : invalid("invalid project icon content response");
 }
 
 export const projectAssetsError = (code: ProjectAssetsErrorCode, error = "Project icon request failed"): ProjectAssetsErrorResponse => ({ error, code });

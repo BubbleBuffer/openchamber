@@ -25,4 +25,25 @@ describe("settings utility route contract ownership", () => {
     expect(res.statusCode).toBe(500);
     expect(res.body).toEqual(themesError("themes_internal_error", "Failed to load custom themes"));
   });
+
+  it("validates constructed custom theme list responses before sending them", async () => {
+    let route: ((req: unknown, res: any) => Promise<void>) | undefined;
+    registerSettingsUtilityRoutes({ get: (_path: string, handler: typeof route) => { route = handler; }, post() {} } as never, {
+      readCustomThemesFromDisk: async () => [{}], refreshOpenCodeAfterConfigChange: async () => {}, clientReloadDelayMs: 0,
+    });
+    const res = { statusCode: 200, body: undefined as unknown, status(code: number) { this.statusCode = code; return this; }, json(body: unknown) { this.body = body; return this; } };
+    await route!({}, res);
+    expect(res.statusCode).toBe(500);
+    expect(res.body).toEqual(themesError("themes_internal_error", "Failed to load custom themes"));
+  });
+
+  it("sends valid custom theme list responses unchanged", async () => {
+    let route: ((req: unknown, res: any) => Promise<void>) | undefined;
+    registerSettingsUtilityRoutes({ get: (_path: string, handler: typeof route) => { route = handler; }, post() {} } as never, {
+      readCustomThemesFromDisk: async () => [], refreshOpenCodeAfterConfigChange: async () => {}, clientReloadDelayMs: 0,
+    });
+    const res = { statusCode: 200, body: undefined as unknown, status(code: number) { this.statusCode = code; return this; }, json(body: unknown) { this.body = body; return this; } };
+    await route!({}, res);
+    expect(res).toMatchObject({ statusCode: 200, body: { themes: [] } });
+  });
 });

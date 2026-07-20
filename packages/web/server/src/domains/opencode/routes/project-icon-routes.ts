@@ -1,7 +1,9 @@
 import type { Express, Request, Response } from "express";
 import {
   parseProjectIconDiscoverRequest,
+  parseProjectIconContentResponse,
   parseProjectIconId,
+  parseProjectIconMutationResponse,
   parseProjectIconUploadRequest,
   projectAssetsError,
   type ProjectAssetsErrorCode,
@@ -239,6 +241,16 @@ export function registerProjectIconRoutes(
     resolveGitBinaryForSpawn,
   });
 
+  const sendProjectIconMutation = (res: Response, value: unknown, message: string): void => {
+    const response = parseProjectIconMutationResponse(value);
+    if (!response.ok) {
+      console.warn("Failed to validate project icon response:", response.error);
+      res.status(500).json(projectAssetsError("project_assets_internal_error", message));
+      return;
+    }
+    res.json(response.value);
+  };
+
   app.get("/api/projects/:projectId/icon", async (req: Request, res: Response) => {
     const projectId = parseProjectIconId(req.params.projectId);
     if (!projectId.ok) {
@@ -278,6 +290,12 @@ export function registerProjectIconRoutes(
             metadataMime || projectIconExtensionToMime[ext] || "application/octet-stream";
           const contentType =
             resolvedMime === "image/svg+xml" ? "image/svg+xml; charset=utf-8" : resolvedMime;
+          const content = parseProjectIconContentResponse({ mime: resolvedMime, contentType });
+          if (!content.ok) {
+            console.warn("Failed to validate project icon content response:", content.error);
+            res.status(500).json(projectAssetsError("project_assets_internal_error", "Failed to read project icon"));
+            return;
+          }
 
           if (resolvedMime === "image/svg+xml" && requestedThemeVariant) {
             const svgMarkup = data.toString("utf8");
@@ -286,7 +304,7 @@ export function registerProjectIconRoutes(
               requestedThemeVariant,
               requestedIconColor
             );
-            res.setHeader("Content-Type", contentType);
+            res.setHeader("Content-Type", content.value.contentType);
             res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
             res.send(themedSvgMarkup);
             return;
@@ -299,13 +317,13 @@ export function registerProjectIconRoutes(
               requestedThemeVariant,
               requestedIconColor
             );
-            res.setHeader("Content-Type", contentType);
+            res.setHeader("Content-Type", content.value.contentType);
             res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
             res.send(themedSvgMarkup);
             return;
           }
 
-          res.setHeader("Content-Type", contentType);
+          res.setHeader("Content-Type", content.value.contentType);
           res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
           res.send(data);
           return;
@@ -371,9 +389,9 @@ export function registerProjectIconRoutes(
       );
       const updatedSettings = await persistSettings({ projects: nextProjects });
       const updatedProject =
-        (updatedSettings.projects || []).find((entry: any) => entry.id === projectId) || null;
+        (updatedSettings.projects || []).find((entry: any) => entry.id === projectIdValue) || null;
 
-      res.json({ project: updatedProject, settings: updatedSettings });
+      sendProjectIconMutation(res, { project: updatedProject, settings: updatedSettings }, "Failed to upload project icon");
     } catch (error) {
       console.warn("Failed to upload project icon:", error);
       res.status(500).json(projectAssetsError("project_assets_internal_error", "Failed to upload project icon"));
@@ -403,9 +421,9 @@ export function registerProjectIconRoutes(
       );
       const updatedSettings = await persistSettings({ projects: nextProjects });
       const updatedProject =
-        (updatedSettings.projects || []).find((entry: any) => entry.id === projectId) || null;
+        (updatedSettings.projects || []).find((entry: any) => entry.id === projectIdValue) || null;
 
-      res.json({ project: updatedProject, settings: updatedSettings });
+      sendProjectIconMutation(res, { project: updatedProject, settings: updatedSettings }, "Failed to remove project icon");
     } catch (error) {
       console.warn("Failed to remove project icon:", error);
       res.status(500).json(projectAssetsError("project_assets_internal_error", "Failed to remove project icon"));
@@ -428,18 +446,18 @@ export function registerProjectIconRoutes(
         return;
       }
 
-      const request = parseProjectIconDiscoverRequest(req.body);
+      const request = parseProjectIconDiscoverRequest(req.body === undefined ? {} : req.body);
       if (!request.ok) {
         res.status(400).json(projectAssetsError("project_assets_invalid_request", "Invalid icon discovery request"));
         return;
       }
       const force = request.value.force === true;
       if ((project as any).iconImage?.source === "custom" && !force) {
-        res.json({
+        sendProjectIconMutation(res, {
           project,
           skipped: true,
           reason: "custom-icon-present",
-        });
+        }, "Failed to discover project icon");
         return;
       }
 
@@ -495,13 +513,13 @@ export function registerProjectIconRoutes(
       );
       const updatedSettings = await persistSettings({ projects: nextProjects });
       const updatedProject =
-        (updatedSettings.projects || []).find((entry: any) => entry.id === projectId) || null;
+        (updatedSettings.projects || []).find((entry: any) => entry.id === projectIdValue) || null;
 
-      res.json({
+      sendProjectIconMutation(res, {
         project: updatedProject,
         settings: updatedSettings,
         discoveredPath: selected.path,
-      });
+      }, "Failed to discover project icon");
     } catch (error) {
       console.warn("Failed to discover project icon:", error);
       res.status(500).json(projectAssetsError("project_assets_internal_error", "Failed to discover project icon"));

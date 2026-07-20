@@ -1,5 +1,5 @@
 import type { Express, Request, Response, NextFunction } from "express";
-import { themesError } from "../../../contracts/themes.js";
+import { parseThemesListResponse, themesError } from "../../../contracts/themes.js";
 
 interface ServerStatusRoutesDeps {
   process: typeof import("process");
@@ -306,7 +306,13 @@ export function registerSettingsUtilityRoutes(
   app.get("/api/config/themes", async (_req: Request, res: Response) => {
     try {
       const customThemes = await readCustomThemesFromDisk();
-      res.json({ themes: customThemes });
+      const response = parseThemesListResponse({ themes: customThemes });
+      if (!response.ok) {
+        console.error("Failed to validate custom themes response:", response.error);
+        res.status(500).json(themesError("themes_internal_error", "Failed to load custom themes"));
+        return;
+      }
+      res.json(response.value);
     } catch (error) {
       console.error("Failed to load custom themes:", error);
       res.status(500).json(themesError("themes_internal_error", "Failed to load custom themes"));

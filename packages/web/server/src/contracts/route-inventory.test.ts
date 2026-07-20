@@ -9,10 +9,16 @@ describe("route inventory", () => {
     expect(ROUTE_INVENTORY.every((entry) => entry.owner.length > 0)).toBe(true);
   });
 
+  it("does not inventory legacy route registrars alongside their active replacement", () => {
+    expect(ROUTE_INVENTORY.some((entry) => entry.registrar === "domains/routes/core-routes.ts")).toBe(false);
+    const endpoints = ROUTE_INVENTORY.flatMap((entry) => entry.endpoints);
+    expect(new Set(endpoints).size).toBe(endpoints.length);
+  });
+
   it("covers every literal endpoint registered by active route modules", () => {
     const root = resolve(import.meta.dirname, "..");
     const registrars = [
-      "domains/routes/core-routes.ts", "domains/routes/openchamber-routes.ts",
+      "domains/routes/openchamber-routes.ts",
       "domains/notifications/routes.ts", "domains/server-utils/proxy.ts",
       "domains/quota/routes.ts", "domains/magic-prompts/routes.ts", "domains/session-folders/routes.ts",
       "domains/fs/routes.ts", "domains/git/routes.ts", "domains/github/routes.ts", "domains/terminal/routes.ts",
