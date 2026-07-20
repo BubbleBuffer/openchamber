@@ -28,7 +28,19 @@ import type {
   DiscoveredGitCredential,
   MergeConflictDetails,
 } from '../api/types';
-import { parseGitBatchCheckResponse, parseGitBranchResponse, parseGitDiffResponse, parseGitErrorResponse, parseGitFileDiffResponse, parseGitStatusResponse, parseGitWorktreesResponse } from '@contracts/git';
+import {
+  parseGitBatchCheckResponse, parseGitBranchMutationResponse, parseGitBranchResponse,
+  parseGitCanonicalizeWorktreeResponse, parseGitCommitFilesResponse, parseGitCommitResponse,
+  parseGitConflictDetails, parseGitCredentialsResponse, parseGitDiffResponse, parseGitErrorResponse,
+  parseGitFileDiffResponse, parseGitIdentityProfileResponse, parseGitIdentityProfilesResponse,
+  parseGitIdentitySetResponse, parseGitIdentitySummary, parseGitLinkedWorktreeResponse,
+  parseGitGeneratedCommitMessageResponse, parseGitGeneratedPullRequestDescriptionResponse,
+  parseGitLocalIdentityResponse, parseGitLogResponse, parseGitOperationResponse,
+  parseGitPullResponse, parseGitPushResponse, parseGitRemoteUrlResponse, parseGitRemotesResponse,
+  parseGitRepositoryCheckResponse, parseGitStatusResponse, parseGitSuccessResponse,
+  parseGitWorktreeBootstrapStatus, parseGitWorktreeCreateResponse, parseGitWorktreeDirectoryResult,
+  parseGitWorktreeValidationResult, parseGitWorktreesResponse,
+} from '@contracts/git';
 
 const resolveBaseOrigin = (): string => {
   if (typeof window === 'undefined') {
@@ -52,11 +64,6 @@ const worktreesInFlight = new Map<string, Promise<GitWorktreeInfo[]>>();
 const worktreeBootstrapCache = new Map<string, { value: import('../api/types').GitWorktreeBootstrapStatus; expiresAt: number }>();
 const worktreeBootstrapInFlight = new Map<string, Promise<import('../api/types').GitWorktreeBootstrapStatus>>();
 
-function errorDetail(status: number, statusText: string): string {
-  if (status === 0) return 'Network/CORS error (status 0)';
-  return statusText || `HTTP ${status}`;
-}
-
 async function gitHttpError(response: Response, fallback: string): Promise<Error> {
   const payload = await response.json().catch(() => null);
   const parsed = parseGitErrorResponse(payload);
@@ -66,6 +73,11 @@ async function gitHttpError(response: Response, fallback: string): Promise<Error
 function decoded<T>(result: { ok: true; value: T } | { ok: false; error: string }, fallback: string): T {
   if (!result.ok) throw new Error(fallback);
   return result.value;
+}
+
+async function gitSuccess<T>(response: Response, fallback: string, parser: (value: unknown) => { ok: true; value: T } | { ok: false; error: string }): Promise<T> {
+  if (!response.ok) throw await gitHttpError(response, fallback);
+  return decoded(parser(await response.json()), `Malformed ${fallback.slice('Failed to '.length)} response`);
 }
 
 const normalizeDirectoryKey = (directory: string): string => directory.trim();
@@ -111,10 +123,9 @@ export async function checkIsGitRepository(directory: string): Promise<boolean> 
       throw new Error(`Failed to check git repository: Network error — ${err instanceof Error ? err.message : String(err)}`);
     }
     if (!response.ok) {
-      throw new Error(`Failed to check git repository: ${errorDetail(response.status, response.statusText)}`);
+      throw await gitHttpError(response, 'Failed to check git repository');
     }
-    const data = await response.json();
-    const isGitRepository = typeof data?.isGitRepository === 'boolean' ? data.isGitRepository : (() => { throw new Error('Malformed git repository response'); })();
+    const isGitRepository = decoded(parseGitRepositoryCheckResponse(await response.json()), 'Malformed git repository response').isGitRepository;
     gitRepoCache.set(key, {
       value: isGitRepository,
       expiresAt: Date.now() + GIT_REPO_CHECK_CACHE_TTL_MS,
@@ -181,7 +192,7 @@ export async function getGitStatus(directory: string, options?: { mode?: 'light'
     if (!response.ok) {
       throw await gitHttpError(response, 'Failed to get git status');
     }
-    const payload = decoded(parseGitStatusResponse(await response.json()), 'Malformed git status response') as GitStatus;
+    const payload = decoded(parseGitStatusResponse(await response.json()), 'Malformed git status response');
     gitStatusCache.set(key, {
       value: payload,
       expiresAt: Date.now() + GIT_STATUS_CACHE_TTL_MS,
@@ -214,7 +225,7 @@ export async function getGitDiff(directory: string, options: GetGitDiffOptions):
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to get git diff: ${response.statusText}`);
+    throw await gitHttpError(response, 'Failed to get git diff');
   }
 
   return decoded(parseGitDiffResponse(await response.json()), 'Malformed git diff response');
@@ -234,10 +245,10 @@ export async function getGitFileDiff(directory: string, options: GetGitFileDiffO
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to get git file diff: ${response.statusText}`);
+    throw await gitHttpError(response, 'Failed to get git file diff');
   }
 
-  return decoded(parseGitFileDiffResponse(await response.json()), 'Malformed git file diff response') as GitFileDiffResponse;
+  return decoded(parseGitFileDiffResponse(await response.json()), 'Malformed git file diff response');
 }
 
 export async function revertGitFile(directory: string, filePath: string): Promise<void> {
@@ -252,10 +263,7 @@ export async function revertGitFile(directory: string, filePath: string): Promis
   });
 
   if (!response.ok) {
-    const message = await response
-      .json()
-      .catch(() => ({ error: response.statusText }));
-    throw new Error(message.error || 'Failed to revert git changes');
+    throw await gitHttpError(response, 'Failed to revert git changes');
   }
 }
 
@@ -265,18 +273,17 @@ export async function isLinkedWorktree(directory: string): Promise<boolean> {
   }
   const response = await fetch(buildUrl(`${API_BASE}/worktree-type`, directory));
   if (!response.ok) {
-    throw new Error(`Failed to detect worktree type: ${response.statusText}`);
+    throw await gitHttpError(response, 'Failed to detect worktree type');
   }
-  const data = await response.json();
-  return Boolean(data.linked);
+  return decoded(parseGitLinkedWorktreeResponse(await response.json()), 'Malformed git worktree type response').linked;
 }
 
 export async function getGitBranches(directory: string): Promise<GitBranch> {
   const response = await fetch(buildUrl(`${API_BASE}/branches`, directory));
   if (!response.ok) {
-    throw new Error(`Failed to get branches: ${response.statusText}`);
+    throw await gitHttpError(response, 'Failed to get branches');
   }
-  return decoded(parseGitBranchResponse(await response.json()), 'Malformed git branches response') as GitBranch;
+  return decoded(parseGitBranchResponse(await response.json()), 'Malformed git branches response');
 }
 
 export async function deleteGitBranch(directory: string, payload: GitDeleteBranchPayload): Promise<{ success: boolean }> {
@@ -290,12 +297,7 @@ export async function deleteGitBranch(directory: string, payload: GitDeleteBranc
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to delete branch');
-  }
-
-  return response.json();
+  return gitSuccess(response, 'Failed to delete branch', parseGitSuccessResponse);
 }
 
 export async function deleteRemoteBranch(directory: string, payload: GitDeleteRemoteBranchPayload): Promise<{ success: boolean }> {
@@ -309,12 +311,7 @@ export async function deleteRemoteBranch(directory: string, payload: GitDeleteRe
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to delete remote branch');
-  }
-
-  return response.json();
+  return gitSuccess(response, 'Failed to delete remote branch', parseGitSuccessResponse);
 }
 
 export async function removeRemote(directory: string, payload: GitRemoveRemotePayload): Promise<{ success: boolean }> {
@@ -329,12 +326,7 @@ export async function removeRemote(directory: string, payload: GitRemoveRemotePa
     body: JSON.stringify({ remote }),
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to remove remote');
-  }
-
-  return response.json();
+  return gitSuccess(response, 'Failed to remove remote', parseGitSuccessResponse);
 }
 
 export async function generateCommitMessage(
@@ -363,42 +355,7 @@ export async function generateCommitMessage(
     body: JSON.stringify(body),
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    console.error('[git-generation][browser] http error', {
-      status: response.status,
-      statusText: response.statusText,
-      error,
-    });
-    const traceSuffix = typeof error?.traceId === 'string' && error.traceId
-      ? ` (traceId: ${error.traceId})`
-      : '';
-    throw new Error(`${error.error || 'Failed to generate commit message'}${traceSuffix}`);
-  }
-
-  const data = await response.json();
-
-  if (!data?.message || typeof data.message !== 'object') {
-    throw new Error('Malformed commit generation response');
-  }
-
-  const subject =
-    typeof data.message.subject === 'string' && data.message.subject.trim().length > 0
-      ? data.message.subject.trim()
-      : '';
-
-  const highlights: string[] = Array.isArray(data.message.highlights)
-    ? (data.message.highlights as unknown[])
-        .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
-        .map((item) => (item as string).trim())
-    : [];
-
-  return {
-    message: {
-      subject,
-      highlights,
-    },
-  };
+  return gitSuccess(response, 'Failed to generate git commit message', parseGitGeneratedCommitMessageResponse);
 }
 
 export async function generatePullRequestDescription(
@@ -430,18 +387,7 @@ export async function generatePullRequestDescription(
     body: JSON.stringify(requestBody),
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to generate PR description');
-  }
-
-  const data = await response.json().catch(() => null);
-  const title = typeof data?.title === 'string' ? data.title : '';
-  const body = typeof data?.body === 'string' ? data.body : '';
-  if (!title && !body) {
-    throw new Error('Malformed PR description response');
-  }
-  return { title, body };
+  return gitSuccess(response, 'Failed to generate git pull request description', parseGitGeneratedPullRequestDescriptionResponse);
 }
 
 export async function listGitWorktrees(directory: string): Promise<GitWorktreeInfo[]> {
@@ -459,11 +405,7 @@ export async function listGitWorktrees(directory: string): Promise<GitWorktreeIn
 
   const task = (async () => {
     const response = await fetch(buildUrl(`${API_BASE}/worktrees`, directory));
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: response.statusText }));
-      throw new Error(error.error || 'Failed to list worktrees');
-    }
-    const data = decoded(parseGitWorktreesResponse(await response.json()), 'Malformed git worktrees response');
+    const data = await gitSuccess(response, 'Failed to list git worktrees', parseGitWorktreesResponse);
     worktreesCache.set(key, {
       value: data,
       expiresAt: Date.now() + WORKTREES_CACHE_TTL_MS,
@@ -488,12 +430,7 @@ export async function validateGitWorktree(directory: string, payload: CreateGitW
     body: JSON.stringify(payload ?? {}),
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to validate worktree');
-  }
-
-  return response.json();
+  return gitSuccess(response, 'Failed to validate git worktree', parseGitWorktreeValidationResult);
 }
 
 export async function getGitWorktreeBootstrapStatus(directory: string): Promise<import('../api/types').GitWorktreeBootstrapStatus> {
@@ -511,11 +448,7 @@ export async function getGitWorktreeBootstrapStatus(directory: string): Promise<
 
   const task = (async () => {
     const response = await fetch(buildUrl(`${API_BASE}/worktrees/bootstrap-status`, directory));
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: response.statusText }));
-      throw new Error(error.error || 'Failed to get worktree bootstrap status');
-    }
-    const data: import('../api/types').GitWorktreeBootstrapStatus = await response.json();
+    const data = await gitSuccess(response, 'Failed to get git worktree bootstrap status', parseGitWorktreeBootstrapStatus);
     worktreeBootstrapCache.set(key, {
       value: data,
       expiresAt: Date.now() + WORKTREE_BOOTSTRAP_CACHE_TTL_MS,
@@ -540,12 +473,7 @@ export async function previewGitWorktree(directory: string, payload: CreateGitWo
     body: JSON.stringify(payload ?? {}),
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to preview worktree');
-  }
-
-  return response.json();
+  return gitSuccess(response, 'Failed to preview git worktree', parseGitWorktreeCreateResponse);
 }
 
 export async function createGitWorktree(directory: string, payload: CreateGitWorktreePayload): Promise<GitWorktreeCreateResult> {
@@ -555,12 +483,7 @@ export async function createGitWorktree(directory: string, payload: CreateGitWor
     body: JSON.stringify(payload ?? {}),
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to create worktree');
-  }
-
-  return response.json();
+  return gitSuccess(response, 'Failed to create git worktree', parseGitWorktreeCreateResponse);
 }
 
 export async function deleteGitWorktree(directory: string, payload: RemoveGitWorktreePayload): Promise<{ success: boolean }> {
@@ -570,12 +493,7 @@ export async function deleteGitWorktree(directory: string, payload: RemoveGitWor
     body: JSON.stringify(payload ?? {}),
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to delete worktree');
-  }
-
-  return response.json();
+  return gitSuccess(response, 'Failed to delete git worktree', parseGitSuccessResponse);
 }
 
 export async function createGitCommit(
@@ -592,11 +510,7 @@ export async function createGitCommit(
       files: options.files,
     }),
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to create commit');
-  }
-  return response.json();
+  return gitSuccess(response, 'Failed to create git commit', parseGitCommitResponse);
 }
 
 export async function gitPush(
@@ -608,11 +522,7 @@ export async function gitPush(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(options),
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to push');
-  }
-  return response.json();
+  return gitSuccess(response, 'Failed to git push', parseGitPushResponse);
 }
 
 export async function gitPull(
@@ -624,11 +534,7 @@ export async function gitPull(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(options),
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to pull');
-  }
-  return response.json();
+  return gitSuccess(response, 'Failed to git pull', parseGitPullResponse);
 }
 
 export async function gitFetch(
@@ -640,11 +546,7 @@ export async function gitFetch(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(options),
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to fetch');
-  }
-  return response.json();
+  return gitSuccess(response, 'Failed to git fetch', parseGitSuccessResponse);
 }
 
 export async function checkoutBranch(directory: string, branch: string): Promise<{ success: boolean; branch: string }> {
@@ -653,11 +555,7 @@ export async function checkoutBranch(directory: string, branch: string): Promise
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ branch }),
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to checkout branch');
-  }
-  return response.json();
+  return gitSuccess(response, 'Failed to checkout branch', parseGitBranchMutationResponse);
 }
 
 export async function createBranch(
@@ -670,11 +568,7 @@ export async function createBranch(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, startPoint }),
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to create branch');
-  }
-  return response.json();
+  return gitSuccess(response, 'Failed to create branch', parseGitBranchMutationResponse);
 }
 
 export async function renameBranch(
@@ -687,11 +581,7 @@ export async function renameBranch(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ oldName, newName }),
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to rename branch');
-  }
-  return response.json();
+  return gitSuccess(response, 'Failed to rename branch', parseGitBranchMutationResponse);
 }
 
 export async function getGitLog(
@@ -707,11 +597,9 @@ export async function getGitLog(
     })
   );
   if (!response.ok) {
-    const body = await response.json().catch(() => null);
-    const message = body?.error || errorDetail(response.status, response.statusText);
-    throw new Error(`Failed to get git log: ${message}`);
+    throw await gitHttpError(response, 'Failed to get git log');
   }
-  return response.json();
+  return gitSuccess(response, 'Failed to get git log', parseGitLogResponse);
 }
 
 export async function getCommitFiles(
@@ -722,17 +610,17 @@ export async function getCommitFiles(
     buildUrl(`${API_BASE}/commit-files`, directory, { hash })
   );
   if (!response.ok) {
-    throw new Error(`Failed to get commit files: ${response.statusText}`);
+    throw await gitHttpError(response, 'Failed to get commit files');
   }
-  return response.json();
+  return gitSuccess(response, 'Failed to get commit files', parseGitCommitFilesResponse);
 }
 
 export async function getGitIdentities(): Promise<GitIdentityProfile[]> {
   const response = await fetch(buildUrl(`${API_BASE}/identities`, undefined));
   if (!response.ok) {
-    throw new Error(`Failed to get git identities: ${response.statusText}`);
+    throw await gitHttpError(response, 'Failed to get git identities');
   }
-  return response.json();
+  return gitSuccess(response, 'Failed to get git identities', parseGitIdentityProfilesResponse);
 }
 
 export async function createGitIdentity(profile: GitIdentityProfile): Promise<GitIdentityProfile> {
@@ -742,10 +630,9 @@ export async function createGitIdentity(profile: GitIdentityProfile): Promise<Gi
     body: JSON.stringify(profile),
   });
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to create git identity');
+    throw await gitHttpError(response, 'Failed to create git identity');
   }
-  return response.json();
+  return gitSuccess(response, 'Failed to create git identity', parseGitIdentityProfileResponse);
 }
 
 export async function updateGitIdentity(id: string, updates: GitIdentityProfile): Promise<GitIdentityProfile> {
@@ -755,10 +642,9 @@ export async function updateGitIdentity(id: string, updates: GitIdentityProfile)
     body: JSON.stringify(updates),
   });
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to update git identity');
+    throw await gitHttpError(response, 'Failed to update git identity');
   }
-  return response.json();
+  return gitSuccess(response, 'Failed to update git identity', parseGitIdentityProfileResponse);
 }
 
 export async function deleteGitIdentity(id: string): Promise<void> {
@@ -766,8 +652,7 @@ export async function deleteGitIdentity(id: string): Promise<void> {
     method: 'DELETE',
   });
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to delete git identity');
+    throw await gitHttpError(response, 'Failed to delete git identity');
   }
 }
 
@@ -777,12 +662,9 @@ export async function getCurrentGitIdentity(directory: string): Promise<GitIdent
   }
   const response = await fetch(buildUrl(`${API_BASE}/current-identity`, directory));
   if (!response.ok) {
-    throw new Error(`Failed to get current git identity: ${response.statusText}`);
+    throw await gitHttpError(response, 'Failed to get current git identity');
   }
-  const data = await response.json();
-  if (!data) {
-    return null;
-  }
+  const data = decoded(parseGitIdentitySummary(await response.json()), 'Malformed git identity response');
   return {
     userName: data.userName ?? null,
     userEmail: data.userEmail ?? null,
@@ -796,19 +678,18 @@ export async function hasLocalIdentity(directory: string): Promise<boolean> {
   }
   const response = await fetch(buildUrl(`${API_BASE}/has-local-identity`, directory));
   if (!response.ok) {
-    throw new Error(`Failed to check local identity: ${response.statusText}`);
+    throw await gitHttpError(response, 'Failed to check local identity');
   }
-  const data = await response.json().catch(() => null);
-  return data?.hasLocalIdentity === true;
+  return decoded(parseGitLocalIdentityResponse(await response.json()), 'Malformed git local identity response').hasLocalIdentity;
 }
 
 export async function getGlobalGitIdentity(): Promise<GitIdentitySummary | null> {
   const response = await fetch(buildUrl(`${API_BASE}/global-identity`, undefined));
   if (!response.ok) {
-    throw new Error(`Failed to get global git identity: ${response.statusText}`);
+    throw await gitHttpError(response, 'Failed to get global git identity');
   }
-  const data = await response.json();
-  if (!data || (!data.userName && !data.userEmail)) {
+  const data = decoded(parseGitIdentitySummary(await response.json()), 'Malformed git identity response');
+  if (!data.userName && !data.userEmail) {
     return null;
   }
   return {
@@ -828,18 +709,17 @@ export async function setGitIdentity(
     body: JSON.stringify({ profileId }),
   });
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to set git identity');
+    throw await gitHttpError(response, 'Failed to set git identity');
   }
-  return response.json();
+  return gitSuccess(response, 'Failed to set git identity', parseGitIdentitySetResponse);
 }
 
 export async function discoverGitCredentials(): Promise<DiscoveredGitCredential[]> {
   const response = await fetch(buildUrl(`${API_BASE}/discover-credentials`, undefined));
   if (!response.ok) {
-    throw new Error(`Failed to discover git credentials: ${response.statusText}`);
+    throw await gitHttpError(response, 'Failed to discover git credentials');
   }
-  return response.json();
+  return gitSuccess(response, 'Failed to discover git credentials', parseGitCredentialsResponse);
 }
 
 export async function getRemoteUrl(directory: string, remote?: string): Promise<string | null> {
@@ -850,16 +730,15 @@ export async function getRemoteUrl(directory: string, remote?: string): Promise<
   if (!response.ok) {
     return null;
   }
-  const data = await response.json();
-  return data.url ?? null;
+  return decoded(parseGitRemoteUrlResponse(await response.json()), 'Malformed git remote url response').url;
 }
 
 export async function getRemotes(directory: string): Promise<Array<{ name: string; fetchUrl: string; pushUrl: string }>> {
   const response = await fetch(buildUrl(`${API_BASE}/remotes`, directory));
   if (!response.ok) {
-    throw new Error(`Failed to get remotes: ${response.statusText}`);
+    throw await gitHttpError(response, 'Failed to get remotes');
   }
-  return response.json();
+  return gitSuccess(response, 'Failed to get git remotes', parseGitRemotesResponse);
 }
 
 export async function rebase(
@@ -871,22 +750,14 @@ export async function rebase(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(options),
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to rebase');
-  }
-  return response.json();
+  return gitSuccess(response, 'Failed to rebase', parseGitOperationResponse);
 }
 
 export async function abortRebase(directory: string): Promise<{ success: boolean }> {
   const response = await fetch(buildUrl(`${API_BASE}/rebase/abort`, directory), {
     method: 'POST',
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to abort rebase');
-  }
-  return response.json();
+  return gitSuccess(response, 'Failed to abort rebase', parseGitOperationResponse);
 }
 
 export async function merge(
@@ -898,44 +769,30 @@ export async function merge(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(options),
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to merge');
-  }
-  return response.json();
+  return gitSuccess(response, 'Failed to merge', parseGitOperationResponse);
 }
 
 export async function abortMerge(directory: string): Promise<{ success: boolean }> {
   const response = await fetch(buildUrl(`${API_BASE}/merge/abort`, directory), {
     method: 'POST',
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to abort merge');
-  }
-  return response.json();
+  return gitSuccess(response, 'Failed to abort merge', parseGitOperationResponse);
 }
 
 export async function continueRebase(directory: string): Promise<{ success: boolean; conflict: boolean; conflictFiles?: string[] }> {
   const response = await fetch(buildUrl(`${API_BASE}/rebase/continue`, directory), {
     method: 'POST',
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to continue rebase');
-  }
-  return response.json();
+  const result = await gitSuccess(response, 'Failed to continue rebase', parseGitOperationResponse);
+  return { ...result, conflict: result.conflict ?? false };
 }
 
 export async function continueMerge(directory: string): Promise<{ success: boolean; conflict: boolean; conflictFiles?: string[] }> {
   const response = await fetch(buildUrl(`${API_BASE}/merge/continue`, directory), {
     method: 'POST',
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to continue merge');
-  }
-  return response.json();
+  const result = await gitSuccess(response, 'Failed to continue merge', parseGitOperationResponse);
+  return { ...result, conflict: result.conflict ?? false };
 }
 
 export async function stash(
@@ -947,30 +804,22 @@ export async function stash(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(options || {}),
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to stash');
-  }
-  return response.json();
+  return gitSuccess(response, 'Failed to stash', parseGitSuccessResponse);
 }
 
 export async function stashPop(directory: string): Promise<{ success: boolean }> {
   const response = await fetch(buildUrl(`${API_BASE}/stash/pop`, directory), {
     method: 'POST',
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || 'Failed to pop stash');
-  }
-  return response.json();
+  return gitSuccess(response, 'Failed to pop stash', parseGitSuccessResponse);
 }
 
 export async function getConflictDetails(directory: string): Promise<MergeConflictDetails> {
   const response = await fetch(buildUrl(`${API_BASE}/conflict-details`, directory));
   if (!response.ok) {
-    throw new Error(`Failed to get conflict details: ${response.statusText}`);
+    throw await gitHttpError(response, 'Failed to get conflict details');
   }
-  return response.json();
+  return gitSuccess(response, 'Failed to get conflict details', parseGitConflictDetails);
 }
 
 export async function validateWorktreeDirectory(
@@ -988,9 +837,9 @@ export async function validateWorktreeDirectory(
     body: JSON.stringify({ directory, worktreeRoot }),
   });
   if (!response.ok) {
-    throw new Error(`Failed to validate worktree directory: ${response.statusText}`);
+    throw await gitHttpError(response, 'Failed to validate worktree directory');
   }
-  return response.json();
+  return gitSuccess(response, 'Failed to validate worktree directory', parseGitWorktreeDirectoryResult);
 }
 
 export async function canonicalizeWorktreeState(
@@ -1011,7 +860,7 @@ export async function canonicalizeWorktreeState(
     body: JSON.stringify({ directory }),
   });
   if (!response.ok) {
-    throw new Error(`Failed to canonicalize worktree state: ${response.statusText}`);
+    throw await gitHttpError(response, 'Failed to canonicalize worktree state');
   }
-  return response.json();
+  return gitSuccess(response, 'Failed to canonicalize worktree state', parseGitCanonicalizeWorktreeResponse);
 }
