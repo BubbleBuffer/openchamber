@@ -8,6 +8,8 @@ import {
   parseGitHubPullRequestContextResponse,
   parseGitHubPullRequestStatusResponse,
   parseGitHubPullRequestUpdateRequest,
+  parseGitHubIssueGetResponse,
+  parseGitHubIssuesListResponse,
   GITHUB_ROUTE_CONTRACTS,
   githubError,
 } from "./github.js";
@@ -43,6 +45,12 @@ describe("GitHub contracts", () => {
   it("uses safe stable errors for provider validation and mergeability failures", () => {
     expect(githubError("github_invalid_request")).toEqual({ error: "GitHub request failed", code: "github_invalid_request" });
     expect(githubError("github_conflict")).toEqual({ error: "GitHub request failed", code: "github_conflict" });
+  });
+
+  it("rejects malformed issue items while preserving optional issue state", () => {
+    expect(parseGitHubIssuesListResponse({ connected: true, repo: { owner: "o", repo: "r" }, issues: [{}] }).ok).toBe(false);
+    expect(parseGitHubIssueGetResponse({ connected: true, repo: { owner: "o", repo: "r" }, issue: {} }).ok).toBe(false);
+    expect(parseGitHubIssueGetResponse({ connected: true, repo: { owner: "o", repo: "r" }, issue: { number: 1, title: "Issue", url: "https://example.test/1", state: "open", author: null, labels: [], body: "", assignees: [], createdAt: "2025-01-01", updatedAt: "2025-01-02" } }).ok).toBe(true);
   });
 
   it("owns every active GitHub route with named request and response parsers", () => {
