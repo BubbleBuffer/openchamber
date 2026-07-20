@@ -32,7 +32,7 @@ Mobile uses a different top-level shell from desktop:
 - `packages/web/src/ui/components/layout/MobileShell.tsx` — full-height column with header, content, and `MobileBottomTabs` pinned at bottom.
 - `packages/web/src/ui/components/layout/MobileBottomTabs.tsx` — primary navigation. The "more" slot opens settings as overflow.
 - `packages/web/src/ui/components/layout/MobileDrawerPanel.tsx` — slide-over drawer for secondary panels.
-- `packages/web/src/ui/components/layout/MobileOverlayPanel.tsx` — full-screen overlay for modal content.
+- `packages/web/src/ui/components/ui/MobileOverlayPanel.tsx` — full-screen overlay for modal content.
 
 Desktop sidebars do **not** appear on mobile. Sidebar controls go into bottom tabs, the drawer, or the "more" overflow.
 
