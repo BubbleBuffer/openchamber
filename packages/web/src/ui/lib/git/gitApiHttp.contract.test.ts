@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   checkIsGitRepositoriesBatch, continueRebase, getCurrentGitIdentity, getGitBranches,
   getGitLog, getGitStatus, getGitWorktreeBootstrapStatus, gitFetch, merge, stash,
-  validateGitWorktree,
+  previewGitWorktree, revertGitFile, deleteGitIdentity, validateGitWorktree,
 } from "./gitApiHttp";
 
 describe("git HTTP contract adapter", () => {
@@ -66,5 +66,14 @@ describe("git HTTP contract adapter", () => {
     await expect(getGitWorktreeBootstrapStatus("/bootstrap")).resolves.toMatchObject({ status: "ready" });
     await expect(merge("/merge", { branch: "topic" })).resolves.toMatchObject({ conflict: true, conflictFiles: ["a.ts"] });
     await expect(stash("/stash")).resolves.toEqual({ success: true });
+  });
+
+  it("requires success envelopes for void adapters and accepts a headless preview", async () => {
+    vi.stubGlobal("window", { location: { origin: "http://localhost" } });
+    const responses = [{ success: "yes" }, { success: "yes" }, { name: "topic", branch: "topic", path: "/worktrees/topic" }];
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(responses.shift()), { status: 200 })));
+    await expect(revertGitFile("/repo", "a.ts")).rejects.toThrow("Malformed revert git changes response");
+    await expect(deleteGitIdentity("profile")).rejects.toThrow("Malformed delete git identity response");
+    await expect(previewGitWorktree("/repo", { mode: "new" })).resolves.toEqual({ name: "topic", branch: "topic", path: "/worktrees/topic" });
   });
 });

@@ -39,7 +39,7 @@ import {
   parseGitPullResponse, parseGitPushResponse, parseGitRemoteUrlResponse, parseGitRemotesResponse,
   parseGitRepositoryCheckResponse, parseGitStatusResponse, parseGitSuccessResponse,
   parseGitWorktreeBootstrapStatus, parseGitWorktreeCreateResponse, parseGitWorktreeDirectoryResult,
-  parseGitWorktreeValidationResult, parseGitWorktreesResponse,
+  parseGitWorktreePreviewResponse, parseGitWorktreeValidationResult, parseGitWorktreesResponse,
 } from '@contracts/git';
 
 const resolveBaseOrigin = (): string => {
@@ -262,9 +262,7 @@ export async function revertGitFile(directory: string, filePath: string): Promis
     body: JSON.stringify({ path: filePath }),
   });
 
-  if (!response.ok) {
-    throw await gitHttpError(response, 'Failed to revert git changes');
-  }
+  await gitSuccess(response, 'Failed to revert git changes', parseGitSuccessResponse);
 }
 
 export async function isLinkedWorktree(directory: string): Promise<boolean> {
@@ -466,14 +464,14 @@ export async function getGitWorktreeBootstrapStatus(directory: string): Promise<
   }
 }
 
-export async function previewGitWorktree(directory: string, payload: CreateGitWorktreePayload): Promise<GitWorktreeCreateResult> {
+export async function previewGitWorktree(directory: string, payload: CreateGitWorktreePayload): Promise<import('../api/types').GitWorktreePreviewResult> {
   const response = await fetch(buildUrl(`${API_BASE}/worktrees/preview`, directory), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload ?? {}),
   });
 
-  return gitSuccess(response, 'Failed to preview git worktree', parseGitWorktreeCreateResponse);
+  return gitSuccess(response, 'Failed to preview git worktree', parseGitWorktreePreviewResponse);
 }
 
 export async function createGitWorktree(directory: string, payload: CreateGitWorktreePayload): Promise<GitWorktreeCreateResult> {
@@ -651,9 +649,7 @@ export async function deleteGitIdentity(id: string): Promise<void> {
   const response = await fetch(buildUrl(`${API_BASE}/identities/${id}`, undefined), {
     method: 'DELETE',
   });
-  if (!response.ok) {
-    throw await gitHttpError(response, 'Failed to delete git identity');
-  }
+  await gitSuccess(response, 'Failed to delete git identity', parseGitSuccessResponse);
 }
 
 export async function getCurrentGitIdentity(directory: string): Promise<GitIdentitySummary | null> {

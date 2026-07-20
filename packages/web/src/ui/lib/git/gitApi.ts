@@ -473,7 +473,7 @@ export async function getGitWorktreeBootstrapStatus(
 export async function previewGitWorktree(
   directory: string,
   payload: import('../api/types').CreateGitWorktreePayload
-): Promise<import('../api/types').GitWorktreeCreateResult> {
+): Promise<import('../api/types').GitWorktreePreviewResult> {
   const runtime = getRuntimeGit();
   if (runtime?.worktree?.preview) {
     return runtime.worktree.preview(directory, payload);

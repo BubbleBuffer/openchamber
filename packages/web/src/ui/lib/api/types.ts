@@ -145,6 +145,7 @@ export type MergeConflictDetails = GitConflictDetails;
 export type DiscoveredGitCredential = GitCredentialEntry;
 export type CreateGitWorktreePayload = GitWorktreeCreateRequest;
 export type GitWorktreeCreateResult = GitWorktreeInfo;
+export type GitWorktreePreviewResult = import('@contracts/git').GitWorktreePreviewResult;
 export type RemoveGitWorktreePayload = GitWorktreeRemoveRequest;
 export type GitDeleteBranchPayload = GitDeleteBranchRequest;
 export type GitDeleteRemoteBranchPayload = GitDeleteRemoteBranchRequest;
@@ -161,7 +162,7 @@ export interface GitWorktreeAPI {
   list(directory: string): Promise<GitWorktreeInfo[]>;
   validate?(directory: string, payload: CreateGitWorktreePayload): Promise<GitWorktreeValidationResult>;
   bootstrapStatus?(directory: string): Promise<GitWorktreeBootstrapStatus>;
-  preview?(directory: string, payload: CreateGitWorktreePayload): Promise<GitWorktreeCreateResult>;
+  preview?(directory: string, payload: CreateGitWorktreePayload): Promise<GitWorktreePreviewResult>;
   create?(directory: string, payload: CreateGitWorktreePayload): Promise<GitWorktreeCreateResult>;
   remove?(directory: string, payload: RemoveGitWorktreePayload): Promise<{ success: boolean }>;
 }
@@ -185,7 +186,7 @@ export interface GitAPI {
   listGitWorktrees(directory: string): Promise<GitWorktreeInfo[]>;
   validateGitWorktree?(directory: string, payload: CreateGitWorktreePayload): Promise<GitWorktreeValidationResult>;
   getGitWorktreeBootstrapStatus?(directory: string): Promise<GitWorktreeBootstrapStatus>;
-  previewGitWorktree?(directory: string, payload: CreateGitWorktreePayload): Promise<GitWorktreeCreateResult>;
+  previewGitWorktree?(directory: string, payload: CreateGitWorktreePayload): Promise<GitWorktreePreviewResult>;
   createGitWorktree?(directory: string, payload: CreateGitWorktreePayload): Promise<GitWorktreeCreateResult>;
   deleteGitWorktree?(directory: string, payload: RemoveGitWorktreePayload): Promise<{ success: boolean }>;
   createGitCommit(directory: string, message: string, options?: CreateGitCommitOptions): Promise<GitCommitResult>;

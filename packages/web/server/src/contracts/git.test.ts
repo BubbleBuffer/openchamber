@@ -10,7 +10,9 @@ import {
   parseGitErrorResponse,
   parseGitLogResponse,
   parseGitOperationResponse,
+  parseGitPushRequest,
   parseGitStatusResponse,
+  parseGitWorktreePreviewResponse,
   parseGitWorktreeValidationResult,
 } from "./git.js";
 
@@ -39,6 +41,15 @@ describe("git contracts", () => {
   it("preserves valid partial batch outcomes", () => {
     expect(parseGitBatchCheckRequest({ directories: ["/one", "/two"] }).ok).toBe(true);
     expect(parseGitBatchCheckResponse({ results: { "/one": true, "/two": false } })).toEqual({ ok: true, value: { results: { "/one": true, "/two": false } } });
+  });
+
+  it("keeps preview, push options, and finite integer query values within their contracts", () => {
+    expect(parseGitWorktreePreviewResponse({ name: "topic", branch: "topic", path: "/worktrees/topic" }).ok).toBe(true);
+    expect(parseGitPushRequest({ options: ["--force-with-lease"] }).ok).toBe(true);
+    expect(GIT_ROUTE_CONTRACTS["GET /api/git/log"].request({ directory: "/repo", maxCount: Number.NaN }).ok).toBe(false);
+    expect(GIT_ROUTE_CONTRACTS["GET /api/git/log"].request({ directory: "/repo", maxCount: 1.5 }).ok).toBe(false);
+    expect(GIT_ROUTE_CONTRACTS["GET /api/git/diff"].request({ path: "a.ts", contextLines: Infinity }).ok).toBe(false);
+    expect(GIT_ROUTE_CONTRACTS["GET /api/git/diff"].request({ path: "a.ts", contextLines: 2.5 }).ok).toBe(false);
   });
 
   it("owns named request and response parsers for every active git route", () => {
