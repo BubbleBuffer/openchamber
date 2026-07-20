@@ -2970,7 +2970,7 @@ export async function canonicalizeWorktreeState(directory: string): Promise<GitC
   const git = await createGit(directoryPath);
 
   let worktreeRoot = null;
-  let worktreeStatus = 'ready';
+  let worktreeStatus: GitCanonicalizeStateResult["worktreeStatus"] = 'ready';
   let headState: 'branch' | 'detached' | 'unborn' = 'branch';
   let branch = null;
   let attentionReason: 'merge' | 'rebase' | 'cherry-pick' | 'revert' | 'bisect' | null = null;

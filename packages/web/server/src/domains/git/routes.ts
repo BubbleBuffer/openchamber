@@ -1,4 +1,5 @@
 import type { Express, Request, Response } from "express";
+import { gitError, parseGitBatchCheckRequest, parseGitDiffRequest, parseGitStatusQuery, parseGitWorktreeCreateRequest, parseGitWorktreeRemoveRequest } from "../../contracts/git.js";
 
 export function registerGitRoutes(app: Express): void {
   let gitLibraries: typeof import("./index.js") | null = null;
@@ -18,6 +19,11 @@ export function registerGitRoutes(app: Express): void {
       .map((value) => String(value || "").trim())
       .filter(Boolean)
       .join("\n");
+  };
+  const invalidRequest = (res: Response) => res.status(400).json(gitError("git_invalid_request"));
+  const failed = (res: Response, error: unknown, label: string) => {
+    console.error(label, error);
+    return res.status(500).json(gitError("git_internal_error"));
   };
 
   app.get("/api/git/identities", async (_req: Request, res: Response) => {
@@ -111,13 +117,9 @@ export function registerGitRoutes(app: Express): void {
   app.post("/api/git/check-batch", async (req: Request, res: Response) => {
     const { isGitRepository } = await getGitLibraries();
     try {
-      const { directories } = req.body || {};
-      if (!Array.isArray(directories) || directories.length === 0) {
-        return res.status(400).json({ error: "directories array is required" });
-      }
-      if (directories.length > 50) {
-        return res.status(400).json({ error: "maximum 50 directories per batch request" });
-      }
+      const parsed = parseGitBatchCheckRequest(req.body);
+      if (!parsed.ok) return invalidRequest(res);
+      const { directories } = parsed.value;
 
       const results: Record<string, boolean> = {};
       await Promise.all(
@@ -131,8 +133,7 @@ export function registerGitRoutes(app: Express): void {
       );
       res.json({ results });
     } catch (error) {
-      console.error("Failed to batch-check git repositories:", error);
-      res.status(500).json({ error: "Failed to batch-check git repositories" });
+      failed(res, error, "Failed to batch-check git repositories:");
     }
   });
 
@@ -140,9 +141,7 @@ export function registerGitRoutes(app: Express): void {
     const { getRemoteUrl } = await getGitLibraries();
     try {
       const directory = typeof req.query.directory === 'string' ? req.query.directory : '';
-      if (!directory) {
-        return res.status(400).json({ error: "directory parameter is required" });
-      }
+      if (!directory) return invalidRequest(res);
       const remote = (req.query.remote as string | undefined) || "origin";
 
       const url = await getRemoteUrl(directory, remote);
@@ -156,10 +155,9 @@ export function registerGitRoutes(app: Express): void {
   app.get("/api/git/current-identity", async (req: Request, res: Response) => {
     const { getCurrentIdentity } = await getGitLibraries();
     try {
-      const directory = typeof req.query.directory === 'string' ? req.query.directory : '';
-      if (!directory) {
-        return res.status(400).json({ error: "directory parameter is required" });
-      }
+      const parsed = parseGitStatusQuery(req.query);
+      if (!parsed.ok) return invalidRequest(res);
+      const { directory } = parsed.value;
 
       const identity = await getCurrentIdentity(directory);
       res.json(identity);
@@ -234,27 +232,24 @@ export function registerGitRoutes(app: Express): void {
     const { getStatus, isGitRepository } = await getGitLibraries();
 
     try {
-      const directory = typeof req.query.directory === 'string' ? req.query.directory : '';
-      if (!directory) {
-        return res.status(400).json({ error: "directory parameter is required" });
-      }
+      const parsed = parseGitStatusQuery(req.query);
+      if (!parsed.ok) return invalidRequest(res);
+      const { directory } = parsed.value;
 
       const isRepo = await isGitRepository(directory);
       if (!isRepo) {
-        return res.json({ isGitRepository: false, files: [], branch: null, ahead: 0, behind: 0 });
+        return res.json({ isGitRepository: false, branch: null, current: null, tracking: null, ahead: 0, behind: 0, files: [], isClean: true, mergeInProgress: null, rebaseInProgress: null, attentionReason: null });
       }
 
-      const mode = req.query.mode === "light" ? "light" : undefined;
+      const mode = parsed.value.mode;
       const status = await getStatus(directory, { mode });
       res.json(status);
     } catch (error) {
       const errorText = extractGitErrorText(error);
       if (/not a git repository/i.test(errorText)) {
-        return res.json({ isGitRepository: false, files: [], branch: null, ahead: 0, behind: 0 });
+          return res.json({ isGitRepository: false, branch: null, current: null, tracking: null, ahead: 0, behind: 0, files: [], isClean: true, mergeInProgress: null, rebaseInProgress: null, attentionReason: null });
       }
-      console.error("Failed to get git status:", error);
-      const err = error as { message?: string };
-      res.status(500).json({ error: err.message || "Failed to get git status" });
+      failed(res, error, "Failed to get git status:");
     }
   });
 
@@ -266,25 +261,18 @@ export function registerGitRoutes(app: Express): void {
         return res.status(400).json({ error: "directory parameter is required" });
       }
 
-      const path = req.query.path;
-      if (!path || typeof path !== "string") {
-        return res.status(400).json({ error: "path parameter is required" });
-      }
-
-      const staged = req.query.staged === "true";
-      const context = req.query.context ? parseInt(String(req.query.context), 10) : undefined;
+      const parsed = parseGitDiffRequest({ path: req.query.path, staged: req.query.staged === "true", contextLines: req.query.context ? Number(req.query.context) : undefined });
+      if (!parsed.ok) return invalidRequest(res);
 
       const diff = await getDiff(directory, {
-        path,
-        staged,
-        contextLines: Number.isFinite(context) ? context : 3,
+        path: parsed.value.path,
+        staged: parsed.value.staged,
+        contextLines: parsed.value.contextLines ?? 3,
       });
 
       res.json({ diff });
     } catch (error) {
-      console.error("Failed to get git diff:", error);
-      const err = error as { message?: string };
-      res.status(500).json({ error: err.message || "Failed to get git diff" });
+      failed(res, error, "Failed to get git diff:");
     }
   });
 
@@ -802,7 +790,9 @@ export function registerGitRoutes(app: Express): void {
         return res.status(400).json({ error: "directory parameter is required" });
       }
 
-      const created = await createWorktree(directory, req.body || {});
+      const parsed = parseGitWorktreeCreateRequest(req.body || {});
+      if (!parsed.ok) return invalidRequest(res);
+      const created = await createWorktree(directory, parsed.value);
       res.json(created);
     } catch (error) {
       console.error("Failed to create worktree:", error);
@@ -865,14 +855,12 @@ export function registerGitRoutes(app: Express): void {
         return res.status(400).json({ error: "directory parameter is required" });
       }
 
-      const worktreeDirectory = typeof req.body?.directory === "string" ? req.body.directory : "";
-      if (!worktreeDirectory) {
-        return res.status(400).json({ error: "worktree directory is required" });
-      }
+      const parsed = parseGitWorktreeRemoveRequest(req.body);
+      if (!parsed.ok) return invalidRequest(res);
 
       const result = await removeWorktree(directory, {
-        directory: worktreeDirectory,
-        deleteLocalBranch: req.body?.deleteLocalBranch === true,
+        directory: parsed.value.directory,
+        deleteLocalBranch: parsed.value.deleteLocalBranch === true,
       });
       res.json({ success: Boolean(result) });
     } catch (error) {

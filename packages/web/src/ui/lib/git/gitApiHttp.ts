@@ -28,6 +28,7 @@ import type {
   DiscoveredGitCredential,
   MergeConflictDetails,
 } from '../api/types';
+import { parseGitBatchCheckResponse, parseGitBranchResponse, parseGitDiffResponse, parseGitErrorResponse, parseGitFileDiffResponse, parseGitStatusResponse, parseGitWorktreesResponse } from '@contracts/git';
 
 const resolveBaseOrigin = (): string => {
   if (typeof window === 'undefined') {
@@ -54,6 +55,17 @@ const worktreeBootstrapInFlight = new Map<string, Promise<import('../api/types')
 function errorDetail(status: number, statusText: string): string {
   if (status === 0) return 'Network/CORS error (status 0)';
   return statusText || `HTTP ${status}`;
+}
+
+async function gitHttpError(response: Response, fallback: string): Promise<Error> {
+  const payload = await response.json().catch(() => null);
+  const parsed = parseGitErrorResponse(payload);
+  return new Error(parsed.ok ? `${fallback} (${parsed.value.code})` : fallback);
+}
+
+function decoded<T>(result: { ok: true; value: T } | { ok: false; error: string }, fallback: string): T {
+  if (!result.ok) throw new Error(fallback);
+  return result.value;
 }
 
 const normalizeDirectoryKey = (directory: string): string => directory.trim();
@@ -102,7 +114,7 @@ export async function checkIsGitRepository(directory: string): Promise<boolean> 
       throw new Error(`Failed to check git repository: ${errorDetail(response.status, response.statusText)}`);
     }
     const data = await response.json();
-    const isGitRepository = Boolean(data.isGitRepository);
+    const isGitRepository = typeof data?.isGitRepository === 'boolean' ? data.isGitRepository : (() => { throw new Error('Malformed git repository response'); })();
     gitRepoCache.set(key, {
       value: isGitRepository,
       expiresAt: Date.now() + GIT_REPO_CHECK_CACHE_TTL_MS,
@@ -129,11 +141,9 @@ export async function checkIsGitRepositoriesBatch(directories: string[]): Promis
     body: JSON.stringify({ directories }),
   });
   if (!response.ok) {
-    const body = await response.json().catch(() => null);
-    throw new Error(body?.error || `Failed to batch-check git repositories: ${errorDetail(response.status, response.statusText)}`);
+    throw await gitHttpError(response, 'Failed to batch-check git repositories');
   }
-  const data = await response.json();
-  const results: Record<string, boolean> = data.results || {};
+  const results = decoded(parseGitBatchCheckResponse(await response.json()), 'Malformed git batch response').results;
 
   const now = Date.now();
   for (const [dir, isRepo] of Object.entries(results)) {
@@ -169,9 +179,9 @@ export async function getGitStatus(directory: string, options?: { mode?: 'light'
       throw new Error(`Failed to get git status: Network error — ${err instanceof Error ? err.message : String(err)}`);
     }
     if (!response.ok) {
-      throw new Error(`Failed to get git status: ${errorDetail(response.status, response.statusText)}`);
+      throw await gitHttpError(response, 'Failed to get git status');
     }
-    const payload = await response.json() as GitStatus;
+    const payload = decoded(parseGitStatusResponse(await response.json()), 'Malformed git status response') as GitStatus;
     gitStatusCache.set(key, {
       value: payload,
       expiresAt: Date.now() + GIT_STATUS_CACHE_TTL_MS,
@@ -207,7 +217,7 @@ export async function getGitDiff(directory: string, options: GetGitDiffOptions):
     throw new Error(`Failed to get git diff: ${response.statusText}`);
   }
 
-  return response.json();
+  return decoded(parseGitDiffResponse(await response.json()), 'Malformed git diff response');
 }
 
 export async function getGitFileDiff(directory: string, options: GetGitFileDiffOptions): Promise<GitFileDiffResponse> {
@@ -227,7 +237,7 @@ export async function getGitFileDiff(directory: string, options: GetGitFileDiffO
     throw new Error(`Failed to get git file diff: ${response.statusText}`);
   }
 
-  return response.json();
+  return decoded(parseGitFileDiffResponse(await response.json()), 'Malformed git file diff response') as GitFileDiffResponse;
 }
 
 export async function revertGitFile(directory: string, filePath: string): Promise<void> {
@@ -266,7 +276,7 @@ export async function getGitBranches(directory: string): Promise<GitBranch> {
   if (!response.ok) {
     throw new Error(`Failed to get branches: ${response.statusText}`);
   }
-  return response.json();
+  return decoded(parseGitBranchResponse(await response.json()), 'Malformed git branches response') as GitBranch;
 }
 
 export async function deleteGitBranch(directory: string, payload: GitDeleteBranchPayload): Promise<{ success: boolean }> {
@@ -453,7 +463,7 @@ export async function listGitWorktrees(directory: string): Promise<GitWorktreeIn
       const error = await response.json().catch(() => ({ error: response.statusText }));
       throw new Error(error.error || 'Failed to list worktrees');
     }
-    const data = await response.json();
+    const data = decoded(parseGitWorktreesResponse(await response.json()), 'Malformed git worktrees response');
     worktreesCache.set(key, {
       value: data,
       expiresAt: Date.now() + WORKTREES_CACHE_TTL_MS,
