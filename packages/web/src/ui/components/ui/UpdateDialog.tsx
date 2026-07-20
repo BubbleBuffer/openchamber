@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import type { UpdateInfo } from '@/lib/config/updateTypes';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { openExternalUrl } from '@/lib/url';
+import { parseUpdateInstallResult } from '@contracts/system';
 
 type WebUpdateState = 'idle' | 'updating' | 'restarting' | 'reconnecting' | 'error';
 
@@ -123,7 +124,9 @@ async function installWebUpdate(): Promise<InstallWebUpdateResult> {
       return { success: false, error: data.error || `Server error: ${response.status}` };
     }
 
-    const data = await response.json().catch(() => ({}));
+    const parsed = parseUpdateInstallResult(await response.json().catch(() => ({})));
+    if (!parsed.ok) return { success: false, error: 'Invalid update response' };
+    const data = parsed.value;
     return {
       success: true,
       autoRestart: data.autoRestart !== false,

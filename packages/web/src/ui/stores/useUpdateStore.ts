@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { UpdateInfo } from '@/lib/config/updateTypes';
 import { getDeviceInfo } from '@/lib/device';
 import { useUIStore } from './useUIStore';
+import { parseUpdateCheckResult } from '@contracts/system';
 
 export type UpdateState = {
   checking: boolean;
@@ -67,7 +68,9 @@ async function checkForWebUpdates(currentVersion?: string): Promise<UpdateInfo |
       headers: { Accept: 'application/json' },
     });
     if (!response.ok) throw new Error(`Server responded with ${response.status}`);
-    const data = await response.json();
+    const parsed = parseUpdateCheckResult(await response.json());
+    if (!parsed.ok) throw new Error(parsed.error);
+    const data = parsed.value;
     return {
       available: data.available ?? false,
       version: data.version,

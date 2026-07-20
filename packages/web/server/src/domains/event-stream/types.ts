@@ -1,5 +1,6 @@
 import type { WebSocket } from "ws";
 import type { Server as HttpServer, IncomingMessage } from "node:http";
+import type { SseEventEnvelope as ContractSseEventEnvelope } from "../../contracts/event-stream.js";
 
 export const MESSAGE_STREAM_GLOBAL_WS_PATH = "/api/global/event/ws" as const;
 export const MESSAGE_STREAM_DIRECTORY_WS_PATH = "/api/event/ws" as const;
@@ -9,17 +10,11 @@ export const MESSAGE_STREAM_GLOBAL_REPLAY_LIMIT = 512;
 export const DEFAULT_UPSTREAM_STALL_TIMEOUT_MS = 20_000;
 export const DEFAULT_UPSTREAM_RECONNECT_DELAY_MS = 250;
 
-export interface SseEventEnvelope {
-  eventId: string | null;
-  directory: string | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  payload: any;
-}
+export type SseEventEnvelope = ContractSseEventEnvelope<unknown>;
 
 export interface NormalizedEvent {
   envelope: SseEventEnvelope;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  payload: any;
+  payload: unknown;
   directory: string;
   eventId?: string;
 }

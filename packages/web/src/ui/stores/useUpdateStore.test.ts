@@ -48,4 +48,16 @@ describe("useUpdateStore", () => {
     expect(s.lastChecked).toBe(null);
   });
 
+  it("treats malformed update responses as unavailable without retaining stale info", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => new Response(JSON.stringify({ available: "yes" }), { status: 200 })) as unknown as typeof fetch;
+    try {
+      await useUpdateStore.getState().checkForUpdates();
+      expect(useUpdateStore.getState().available).toBe(false);
+      expect(useUpdateStore.getState().info).toBe(null);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
 });

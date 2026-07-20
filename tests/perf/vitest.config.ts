@@ -13,6 +13,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": uiSrc,
+      "@contracts": path.resolve(repoRoot, "packages/web/server/src/contracts"),
     },
   },
   test: {

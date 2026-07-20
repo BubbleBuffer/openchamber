@@ -13,6 +13,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": uiSrc,
+      "@contracts": path.resolve(repoRoot, "packages/web/server/src/contracts"),
       "@tanstack/react-virtual": path.resolve(reactDir, "mocks/tanstack-react-virtual.ts"),
     },
   },

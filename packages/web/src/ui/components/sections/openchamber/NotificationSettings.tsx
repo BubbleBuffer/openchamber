@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { parseZenModelsResponse } from '@contracts/system';
 
 const DEFAULT_NOTIFICATION_TEMPLATES = {
   completion: { title: '{agent_name} is ready', message: '{model_name} completed the task' },
@@ -96,8 +97,8 @@ export const NotificationSettings: React.FC = () => {
         if (!response.ok) {
           return [] as Array<{ id: string; name: string }>;
         }
-        const payload = await response.json().catch(() => ({}));
-        const models = Array.isArray(payload?.models) ? payload.models : [];
+        const parsed = parseZenModelsResponse(await response.json().catch(() => ({})));
+        const models = parsed.ok ? parsed.value.models : [];
         return models
           .map((entry: unknown) => {
             const id = typeof (entry as { id?: unknown })?.id === 'string'

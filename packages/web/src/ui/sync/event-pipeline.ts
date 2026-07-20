@@ -10,6 +10,7 @@
 
 import type { Event, OpencodeClient } from "@/lib/opencode/client"
 import { opencodeClient } from "@/lib/opencode/client"
+import { parseMessageStreamWsFrame } from "@contracts/event-stream"
 import { createLivenessMonitor, type LivenessMonitor } from "./liveness"
 import { syncDebug } from "./debug"
 
@@ -44,17 +45,6 @@ export type EventPipelineInput = {
   dataSilenceMs?: number
   reconnectDelayMs?: number
   wsReadyTimeoutMs?: number
-}
-
-type MessageStreamWsFrame = {
-  type: "ready" | "event" | "error" | "data_stalled" | "data_resumed"
-  payload?: unknown
-  eventId?: string
-  directory?: string
-  message?: string
-  scope?: "global" | "directory"
-  duration?: number
-  lastEventId?: string
 }
 
 const normalizeEventType = (payload: Event): Event => {
@@ -270,7 +260,6 @@ export function createEventPipeline(input: EventPipelineInput) {
   let streamErrorLogged = false
   let attempt: AbortController | undefined
   let lastEventAt = Date.now()
-  let activeTransport: "ws" | "sse" = transport === "ws" ? "ws" : "sse"
   let attemptAbortReason: AttemptAbortReason = null
 
   const liveness: LivenessMonitor = createLivenessMonitor({
@@ -452,17 +441,19 @@ export function createEventPipeline(input: EventPipelineInput) {
         liveness.markSocketActivity()
         streamErrorLogged = false
 
-        let frame: MessageStreamWsFrame | null = null
+        let frameInput: unknown
         try {
-          frame = JSON.parse(String(messageEvent.data)) as MessageStreamWsFrame
+          frameInput = JSON.parse(String(messageEvent.data))
         } catch (error) {
           console.warn("[event-pipeline] Failed to parse WS frame", error)
           return
         }
 
-        if (!frame || typeof frame.type !== "string") {
+        const parsedFrame = parseMessageStreamWsFrame(frameInput)
+        if (!parsedFrame.ok) {
           return
         }
+        const frame = parsedFrame.value
 
         if (frame.type === "data_stalled") {
           liveness.handleStallSignal({ duration: frame.duration ?? 0 })
@@ -561,7 +552,6 @@ export function createEventPipeline(input: EventPipelineInput) {
       attemptAbortReason = null
       let isTransportSwitch = false
       const currentTransport = resolveTransport()
-      activeTransport = currentTransport
       const onAbort = () => {
         attemptAbortReason = "pipeline_stopped"
         attempt?.abort()

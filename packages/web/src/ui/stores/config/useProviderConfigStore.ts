@@ -10,6 +10,7 @@ import { getSafeStorage } from "../utils/safeStorage";
 import { useDirectoryStore } from "@/stores/files/useDirectoryStore";
 import { streamDebugEnabled } from "@/stores/utils/streamDebug";
 import { useAgentConfigStore } from "../agents/useAgentConfigStore";
+import { parseModelMetadataResponse } from "@contracts/system";
 
 const MODELS_DEV_API_URL = "https://models.dev/api.json";
 const MODELS_DEV_PROXY_URL = "/api/openchamber/models-metadata";
@@ -194,7 +195,7 @@ const deriveModelMetadata = (providerId: string, model: ProviderModel): ModelMet
     release_date: model.release_date,
 });
 
-const transformModelsDevResponse = (payload: unknown): Map<string, ModelMetadata> => {
+export const decodeModelsDevMetadata = (payload: unknown): Map<string, ModelMetadata> => {
     const metadataMap = new Map<string, ModelMetadata>();
 
     if (!isRecord(payload)) {
@@ -290,8 +291,11 @@ const fetchModelsDevMetadata = async (): Promise<Map<string, ModelMetadata>> => 
                 throw new Error(`Metadata request to ${source} returned status ${response.status}`);
             }
 
-            const data = await response.json();
-            return transformModelsDevResponse(data);
+            const parsed = parseModelMetadataResponse(await response.json());
+            if (!parsed.ok) {
+                throw new Error(parsed.error);
+            }
+            return decodeModelsDevMetadata(parsed.value);
         } catch (error: unknown) {
             if ((error as Error)?.name === 'AbortError') {
                 console.warn(`Model metadata request aborted (${source})`);

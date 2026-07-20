@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 import { createEventPipeline } from "./event-pipeline"
 import type { Event, OpencodeClient } from "@/lib/opencode/client"
 
