@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, no-empty */
 import type { Express } from "express";
-import { parsePushSubscribeRequest, parsePushUnsubscribeRequest, parseVisibilityRequest } from "../../contracts/notifications.js";
+import { apiError } from "../../contracts/common.js";
+import { parseNotificationSseEvent, parsePushSubscribeRequest, parsePushUnsubscribeRequest, parseVisibilityRequest } from "../../contracts/notifications.js";
 
 export const registerNotificationRoutes = (app: Express, dependencies: {
   uiAuthController?: any;
@@ -71,13 +72,14 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
       res.json({ publicKey: keys.publicKey });
     } catch (error) {
       console.warn("[Push] Failed to load VAPID key:", error);
-      res.status(500).json({ error: "Failed to load push key" });
+      res.status(500).json(apiError("internal_error"));
     }
   });
 
   app.post("/api/push/subscribe", async (req: any, res: any) => {
-    await ensurePushInitialized();
-    await ensureSessionWatcher();
+    try {
+      await ensurePushInitialized();
+      await ensureSessionWatcher();
 
     const uiToken = uiAuthController?.ensureSessionToken
       ? await uiAuthController.ensureSessionToken(req, res)
@@ -119,11 +121,16 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
       req.headers["user-agent"]
     );
 
-    return res.json({ ok: true });
+      return res.json({ ok: true });
+    } catch (error) {
+      console.error("[Push] Failed to subscribe:", error);
+      return res.status(500).json(apiError("internal_error"));
+    }
   });
 
   app.delete("/api/push/subscribe", async (req: any, res: any) => {
-    await ensurePushInitialized();
+    try {
+      await ensurePushInitialized();
 
     const uiToken = uiAuthController?.ensureSessionToken
       ? await uiAuthController.ensureSessionToken(req, res)
@@ -139,10 +146,15 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
     const parsed = parsedResult.value;
 
     await removePushSubscription(uiToken, parsed.endpoint);
-    return res.json({ ok: true });
+      return res.json({ ok: true });
+    } catch (error) {
+      console.error("[Push] Failed to unsubscribe:", error);
+      return res.status(500).json(apiError("internal_error"));
+    }
   });
 
   app.post("/api/push/visibility", async (req: any, res: any) => {
+    try {
     const uiToken = uiAuthController?.ensureSessionToken
       ? await uiAuthController.ensureSessionToken(req, res)
       : getUiSessionTokenFromRequest(req);
@@ -154,6 +166,10 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
     if (!parsed.ok) return res.status(400).json({ error: "Invalid body", code: "notification_invalid_request" });
     updateUiVisibility(uiToken, parsed.value.visible);
     return res.json({ ok: true });
+    } catch (error) {
+      console.error("[Push] Failed to update visibility:", error);
+      return res.status(500).json(apiError("internal_error"));
+    }
   });
 
   app.get("/api/push/visibility", (req: any, res: any) => {
@@ -186,10 +202,11 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
     clients.add(res);
 
     try {
-      writeSseEvent(res, {
+      const event = parseNotificationSseEvent({
         type: "openchamber:notification-stream-ready",
         properties: {},
       });
+      if (event.ok) writeSseEvent(res, event.value);
     } catch {
     }
 

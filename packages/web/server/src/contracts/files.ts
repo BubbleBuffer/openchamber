@@ -9,16 +9,34 @@ export type FsDirectoryEntry = { name: string; path: string; isDirectory: boolea
 export type FsListResponse = { directory: string; entries: FsDirectoryEntry[] };
 export type FsStatResponse = { path: string; isFile: boolean; size: number; mtimeMs?: number };
 export type FsMutationResponse = { success: boolean; path?: string };
+export type FsRawQuery = FsPathRequest & { download: boolean };
+export type FsListQuery = { path?: string; respectGitignore: boolean };
 
 const invalid = <T = never>(error: string): ParseResult<T> => ({ ok: false, error });
 const path = (value: unknown): ParseResult<string> => {
   const result = parseJsonString(value);
-  return result.ok && result.value.length > 0 ? result : invalid("path is required");
+  const trimmed = result.ok ? result.value.trim() : "";
+  return trimmed.length > 0 ? { ok: true, value: trimmed } : invalid("path is required");
 };
 
 export function parseFsPathRequest(value: unknown): ParseResult<FsPathRequest> {
   const object = parseJsonObject(value); if (!object.ok) return object;
   const target = path(object.value.path); return target.ok ? { ok: true, value: { path: target.value } } : target;
+}
+export function parseFsPathQuery(value: unknown): ParseResult<FsPathRequest> {
+  return parseFsPathRequest(value);
+}
+export function parseFsRawQuery(value: unknown): ParseResult<FsRawQuery> {
+  const request = parseFsPathRequest(value); if (!request.ok) return request;
+  const object = value as Record<string, unknown>;
+  if (object.download !== undefined && object.download !== "true" && object.download !== "false") return invalid("invalid download flag");
+  return { ok: true, value: { path: request.value.path, download: object.download === "true" } };
+}
+export function parseFsListQuery(value: unknown): ParseResult<FsListQuery> {
+  const object = parseJsonObject(value); if (!object.ok) return object;
+  if (object.value.path !== undefined && !path(object.value.path).ok) return invalid("invalid path");
+  if (object.value.respectGitignore !== undefined && object.value.respectGitignore !== "true" && object.value.respectGitignore !== "false") return invalid("invalid respectGitignore flag");
+  return { ok: true, value: { ...(typeof object.value.path === "string" ? { path: object.value.path } : {}), respectGitignore: object.value.respectGitignore === "true" } };
 }
 export function parseFsWriteRequest(value: unknown): ParseResult<FsWriteRequest> {
   const request = parseFsPathRequest(value); if (!request.ok) return request;

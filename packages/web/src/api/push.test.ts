@@ -21,4 +21,19 @@ describe('web push API', () => {
       ['/api/push/visibility', 'POST'],
     ]);
   });
+
+  test('fails safely for malformed successful, auth-error, and thrown push responses', async () => {
+    const api = createWebPushAPI();
+    const subscription = { endpoint: 'https://push.example/sub', keys: { auth: 'a', p256dh: 'p' } };
+    const fetchMock = vi.spyOn(globalThis, 'fetch');
+
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ ok: 'yes' }), { status: 200 }));
+    await expect(api.subscribe(subscription)).resolves.toBeNull();
+
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 }));
+    await expect(api.unsubscribe({ endpoint: subscription.endpoint })).resolves.toBeNull();
+
+    fetchMock.mockRejectedValueOnce(new Error('network unavailable'));
+    await expect(api.setVisibility({ visible: true })).resolves.toBeNull();
+  });
 });

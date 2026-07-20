@@ -3,6 +3,7 @@ import { parseJsonBoolean, parseJsonObject, parseJsonString, type ParseResult } 
 export const NOTIFICATION_ERROR_CODES = ["notification_invalid_request", "notification_unauthorized", "notification_unavailable"] as const;
 export type PushSubscribeRequest = { endpoint: string; keys: { p256dh: string; auth: string } };
 export type PushResponse = { ok: true };
+export type VapidPublicKeyResponse = { publicKey: string };
 export type NotificationSseEvent = { type: "openchamber:notification-stream-ready"; properties: Record<string, unknown> };
 const invalid = <T = never>(error: string): ParseResult<T> => ({ ok: false, error });
 export function parsePushSubscribeRequest(value: unknown): ParseResult<PushSubscribeRequest> {
@@ -10,7 +11,9 @@ export function parsePushSubscribeRequest(value: unknown): ParseResult<PushSubsc
   const endpoint = parseJsonString(object.value.endpoint); const keys = parseJsonObject(object.value.keys);
   if (!endpoint.ok || !keys.ok) return invalid("invalid push subscription");
   const p256dh = parseJsonString(keys.value.p256dh); const auth = parseJsonString(keys.value.auth);
-  return p256dh.ok && auth.ok ? { ok: true, value: { endpoint: endpoint.value, keys: { p256dh: p256dh.value, auth: auth.value } } } : invalid("invalid push keys");
+  return endpoint.value.length > 0 && p256dh.ok && p256dh.value.length > 0 && auth.ok && auth.value.length > 0
+    ? { ok: true, value: { endpoint: endpoint.value, keys: { p256dh: p256dh.value, auth: auth.value } } }
+    : invalid("invalid push keys");
 }
 export function parsePushUnsubscribeRequest(value: unknown): ParseResult<{ endpoint: string }> {
   const object = parseJsonObject(value); if (!object.ok) return object;
@@ -25,6 +28,11 @@ export function parseVisibilityRequest(value: unknown): ParseResult<{ visible: b
 export function parsePushResponse(value: unknown): ParseResult<PushResponse> {
   const object = parseJsonObject(value); if (!object.ok) return object;
   const ok = parseJsonBoolean(object.value.ok); return ok.ok && ok.value ? { ok: true, value: { ok: true } } : invalid("invalid push response");
+}
+export function parseVapidPublicKeyResponse(value: unknown): ParseResult<VapidPublicKeyResponse> {
+  const object = parseJsonObject(value); if (!object.ok) return object;
+  const publicKey = parseJsonString(object.value.publicKey);
+  return publicKey.ok && publicKey.value.length > 0 ? { ok: true, value: { publicKey: publicKey.value } } : invalid("invalid VAPID public key response");
 }
 export function parseNotificationSseEvent(value: unknown): ParseResult<NotificationSseEvent> {
   const object = parseJsonObject(value); if (!object.ok) return object;

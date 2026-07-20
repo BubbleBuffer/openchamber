@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import type { SpawnOptions } from "child_process";
-import { parseFsPathRequest, parseFsRenameRequest, parseFsWriteRequest } from "../../contracts/files.js";
+import { apiError } from "../../contracts/common.js";
+import { parseFsListQuery, parseFsPathQuery, parseFsPathRequest, parseFsRawQuery, parseFsRenameRequest, parseFsWriteRequest } from "../../contracts/files.js";
 
 const EXEC_JOB_TTL_MS = 30 * 60 * 1000;
 
@@ -375,7 +376,7 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
       console.error("Failed to resolve home directory:", error);
       return res
         .status(500)
-        .json({ error: (error as Error)?.message || "Failed to resolve home directory" });
+        .json(apiError("internal_error"));
     }
   });
 
@@ -413,15 +414,14 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
       console.error("Failed to create directory:", error);
       return res
         .status(500)
-        .json({ error: (error as Error)?.message || "Failed to create directory" });
+        .json(apiError("internal_error"));
     }
   });
 
   app.get("/api/fs/stat", async (req: Request, res: Response) => {
-    const filePath = typeof req.query.path === "string" ? req.query.path.trim() : "";
-    if (!filePath) {
-      return res.status(400).json({ error: "Path is required" });
-    }
+    const query = parseFsPathQuery(req.query);
+    if (!query.ok) return res.status(400).json({ error: "Path is required", code: "fs_invalid_path" });
+    const filePath = query.value.path;
 
     try {
       const resolved = await resolveWorkspacePathFromContext({
@@ -466,15 +466,14 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         return res.status(403).json({ error: "Access to file denied" });
       }
       console.error("Failed to stat file:", error);
-      return res.status(500).json({ error: (error as Error)?.message || "Failed to stat file" });
+      return res.status(500).json(apiError("internal_error"));
     }
   });
 
   app.get("/api/fs/read", async (req: Request, res: Response) => {
-    const filePath = typeof req.query.path === "string" ? req.query.path.trim() : "";
-    if (!filePath) {
-      return res.status(400).json({ error: "Path is required" });
-    }
+    const query = parseFsPathQuery(req.query);
+    if (!query.ok) return res.status(400).json({ error: "Path is required", code: "fs_invalid_path" });
+    const filePath = query.value.path;
 
     try {
       const resolved = await resolveWorkspacePathFromContext({
@@ -515,15 +514,14 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         return res.status(403).json({ error: "Access to file denied" });
       }
       console.error("Failed to read file:", error);
-      return res.status(500).json({ error: (error as Error)?.message || "Failed to read file" });
+      return res.status(500).json(apiError("internal_error"));
     }
   });
 
   app.get("/api/fs/raw", async (req: Request, res: Response) => {
-    const filePath = typeof req.query.path === "string" ? req.query.path.trim() : "";
-    if (!filePath) {
-      return res.status(400).json({ error: "Path is required" });
-    }
+    const query = parseFsRawQuery(req.query);
+    if (!query.ok) return res.status(400).json({ error: "Path is required", code: "fs_invalid_path" });
+    const filePath = query.value.path;
 
     try {
       const resolved = await resolveWorkspacePathFromContext({
@@ -567,7 +565,7 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
       };
       const mimeType = mimeMap[ext] || "application/octet-stream";
 
-      const download = req.query.download === "true";
+      const download = query.value.download;
       if (download) {
         const fileName = pathModule.basename(canonicalPath);
         res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
@@ -585,7 +583,7 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         return res.status(403).json({ error: "Access to file denied" });
       }
       console.error("Failed to read raw file:", error);
-      return res.status(500).json({ error: (error as Error)?.message || "Failed to read file" });
+      return res.status(500).json(apiError("internal_error"));
     }
   });
 
@@ -617,7 +615,7 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         return res.status(403).json({ error: "Access denied" });
       }
       console.error("Failed to write file:", error);
-      return res.status(500).json({ error: (error as Error)?.message || "Failed to write file" });
+      return res.status(500).json(apiError("internal_error"));
     }
   });
 
@@ -651,7 +649,7 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         return res.status(403).json({ error: "Access denied" });
       }
       console.error("Failed to delete path:", error);
-      return res.status(500).json({ error: (error as Error)?.message || "Failed to delete path" });
+      return res.status(500).json(apiError("internal_error"));
     }
   });
 
@@ -704,7 +702,7 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
         return res.status(403).json({ error: "Access denied" });
       }
       console.error("Failed to rename path:", error);
-      return res.status(500).json({ error: (error as Error)?.message || "Failed to rename path" });
+      return res.status(500).json(apiError("internal_error"));
     }
   });
 
@@ -781,7 +779,7 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
       console.error("Failed to execute commands:", error);
       return res
         .status(500)
-        .json({ error: (error as Error)?.message || "Failed to execute commands" });
+        .json(apiError("internal_error"));
     }
   });
 
@@ -808,11 +806,10 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
   });
 
   app.get("/api/fs/list", async (req: Request, res: Response) => {
-    const rawPath =
-      typeof req.query.path === "string" && req.query.path.trim().length > 0
-        ? req.query.path.trim()
-        : os.homedir();
-    const respectGitignore = req.query.respectGitignore === "true";
+    const query = parseFsListQuery(req.query);
+    if (!query.ok) return res.status(400).json({ error: "Invalid query", code: "fs_invalid_path" });
+    const rawPath = query.value.path ?? os.homedir();
+    const respectGitignore = query.value.respectGitignore;
     let resolvedPath = "";
 
     const isPlansDirectory = (value: string): boolean => {
@@ -920,7 +917,7 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
       }
       return res
         .status(500)
-        .json({ error: (error as Error)?.message || "Failed to list directory" });
+        .json(apiError("internal_error"));
     }
   });
 }

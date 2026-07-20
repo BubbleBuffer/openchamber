@@ -1,5 +1,5 @@
 import type { PushAPI, PushSubscribePayload, PushUnsubscribePayload } from '@/lib/api/types';
-import { parsePushResponse } from '@contracts/notifications';
+import { parsePushResponse, parseVapidPublicKeyResponse } from '@contracts/notifications';
 
 const fetchJson = async <T>(input: RequestInfo | URL, init?: RequestInit): Promise<T | null> => {
   try {
@@ -28,8 +28,8 @@ export const createWebPushAPI = (): PushAPI => ({
   async getVapidPublicKey() {
     try {
       const res = await fetch('/api/push/vapid-public-key', { credentials: 'include', headers: { Accept: 'application/json' } });
-      const value = await res.json().catch(() => undefined);
-      return res.ok && value && typeof value.publicKey === 'string' ? { publicKey: value.publicKey } : null;
+      const parsed = parseVapidPublicKeyResponse(await res.json().catch(() => undefined));
+      return res.ok && parsed.ok ? parsed.value : null;
     } catch {
       return null;
     }

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { createWebFilesAPI } from './files';
+import { createWebFilesAPI, parseFileSearchResults } from './files';
 
 describe('web files API', () => {
   afterEach(() => {
@@ -56,5 +56,17 @@ describe('web files API', () => {
     } as Response);
 
     await expect(createWebFilesAPI().listDirectory('/workspace')).rejects.toThrow('Invalid file list response');
+  });
+
+  test('keeps SDK file search pass-through local while rejecting a malformed feature shape', async () => {
+    expect(parseFileSearchResults(['src/a.ts'])).toEqual(['src/a.ts']);
+    expect(parseFileSearchResults(['src/a.ts', 1])).toBeNull();
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ['src/a.ts', 1],
+    } as Response);
+
+    await expect(createWebFilesAPI().search({ directory: '/workspace', query: 'a' })).rejects.toThrow('Invalid file search response');
   });
 });

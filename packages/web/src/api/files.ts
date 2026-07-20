@@ -14,6 +14,10 @@ import type { FsListResponse } from '@contracts/files';
 
 const normalizePath = (path: string): string => path.replace(/\\/g, '/');
 
+/** SDK pass-through endpoint: validate only the string paths this feature uses. */
+export const parseFileSearchResults = (value: unknown): string[] | null =>
+  Array.isArray(value) && value.every((item) => typeof item === 'string') ? value : null;
+
 const toDirectoryListResult = (fallbackDirectory: string, payload: FsListResponse): DirectoryListResult => {
   const directory = normalizePath(payload.directory || fallbackDirectory);
   return {
@@ -76,8 +80,8 @@ export const createWebFilesAPI = (): FilesAPI => ({
       throw new Error((error as { error?: string }).error || 'Failed to search files');
     }
 
-    const result = (await response.json()) as string[];
-    const files = Array.isArray(result) ? result : [];
+    const files = parseFileSearchResults(await response.json().catch(() => undefined));
+    if (!files) throw new Error('Invalid file search response');
 
     return files.map((relativePath) => ({
       path: normalizePath(`${directory}/${relativePath}`),

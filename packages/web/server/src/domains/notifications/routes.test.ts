@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { registerNotificationRoutes } from "./routes.js";
+import { parseNotificationSseEvent } from "../../contracts/notifications.js";
 
 type RouteHandler = (req: unknown, res: unknown) => unknown | Promise<unknown>;
 
@@ -119,10 +120,25 @@ describe("notifications SSE routes", () => {
     expect(res.getHeader("connection")).toBe("keep-alive");
     expect(res.getHeader("x-accel-buffering")).toBe("no");
     expect(res.flushed).toBe(true);
-    expect(res.body).toContain("openchamber:notification-stream-ready");
+    const payload = JSON.parse(res.body.replace(/^data:\s*/, "").trim());
+    expect(parseNotificationSseEvent(payload)).toEqual({ ok: true, value: { type: "openchamber:notification-stream-ready", properties: {} } });
     expect(clients.has(res)).toBe(true);
 
     req.emit("close");
     expect(clients.has(res)).toBe(false);
+  });
+
+  it("returns a safe stable error when push initialization throws", async () => {
+    const { app, getRoute } = createRouteRegistry();
+    registerNotificationRoutes(app, {
+      ensurePushInitialized: async () => { throw new Error("token=secret"); },
+    } as never);
+
+    const handler = getRoute("GET", "/api/push/vapid-public-key");
+    const res = createMockResponse();
+    await handler?.(createMockRequest(), res);
+
+    expect(res.statusCode).toBe(500);
+    expect(JSON.parse(res.body)).toEqual({ error: "Internal server error", code: "internal_error" });
   });
 });
