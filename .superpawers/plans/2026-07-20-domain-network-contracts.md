@@ -7,7 +7,7 @@ covers_chunks:
   - domain-network-contracts
 created: 2026-07-20
 updated: 2026-07-21
-next_action: "Execute Task 4"
+next_action: "Execute Task 5"
 ---
 
 # Domain Network Contracts Implementation Plan
@@ -160,7 +160,7 @@ Tasks 1-4 are Test-first because they establish or migrate executable network be
 
 ### Task 4: Contract Terminal And Remaining OpenChamber Routes
 
-- [ ] **Outcome:** Terminal HTTP/WS control frames, OpenChamber-owned OpenCode/config routes, session-folder and magic-prompt wrappers, and remaining runtime API methods use explicit contracts; SDK-owned payloads remain delegated rather than duplicated.
+- [x] **Outcome:** Terminal HTTP/WS control frames, OpenChamber-owned OpenCode/config routes, session-folder and magic-prompt wrappers, and remaining runtime API methods use explicit contracts; SDK-owned payloads remain delegated rather than duplicated.
 
 **Files and anchors:**
 - Create: `packages/web/server/src/contracts/terminal.ts` - session/capability/create/input/resize/restart/kill DTOs, terminal WS control/data frame unions and parser, and `terminal_*` errors.
