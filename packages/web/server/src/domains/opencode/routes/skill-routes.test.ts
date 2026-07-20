@@ -104,6 +104,21 @@ describe("active skill route contract ownership", () => {
     expect(unresolved.body).toEqual(skillsError("skills_invalid_request", "Invalid project directory"));
   });
 
+  it("uses Express-decoded supporting-file paths exactly once", async () => {
+    const readPaths: string[] = [];
+    const route = skillRoutes({ readSkillSupportingFile: (_dir: string, filePath: string) => { readPaths.push(filePath); return "contents"; } })("GET", "/api/config/skills/:name/files/*filePath");
+    for (const filePath of ["notes/100%done.md", "notes/literal%20name.md", "notes/valid space.md"]) {
+      const res = response();
+      await route({ params: { name: "safe-skill", filePath }, query: {} }, res);
+      expect(res.statusCode).toBe(200);
+    }
+    expect(readPaths).toEqual(["notes/100%done.md", "notes/literal%20name.md", "notes/valid space.md"]);
+
+    const invalid = response();
+    await route({ params: { name: "safe-skill", filePath: "../secret.md" }, query: {} }, invalid);
+    expect(invalid.statusCode).toBe(400);
+  });
+
   it("preserves install conflicts and authentication identities in coded failures", async () => {
     const conflict = response();
     await skillRoutes({ installSkillsFromRepository: async () => ({ ok: false, error: { kind: "conflicts", conflicts: [{ skillName: "safe-skill", scope: "user", source: "opencode" }] } }) })("POST", "/api/config/skills/install")({ body: installRequest, query: {} }, conflict);

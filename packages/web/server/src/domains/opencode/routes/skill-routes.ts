@@ -684,7 +684,7 @@ export function registerSkillRoutes(
   app.get("/api/config/skills/:name/files/*filePath", async (req: Request, res: Response) => {
     try {
       const skillName = req.params.name;
-      const filePath = decodeURIComponent(String(req.params.filePath));
+      const filePath = String(req.params.filePath);
       const parsedName = parsedSkillName(skillName);
       const parsedFile = parsedSupportingFile(skillName, filePath);
       if (!parsedFile.ok || isUnsafeSkillRelativePath(filePath)) {
@@ -802,7 +802,7 @@ export function registerSkillRoutes(
   app.put("/api/config/skills/:name/files/*filePath", async (req: Request, res: Response) => {
     try {
       const skillName = req.params.name;
-      const filePath = decodeURIComponent(String(req.params.filePath));
+      const filePath = String(req.params.filePath);
       const { content } = (req.body as { content?: unknown }) || {};
       const parsedName = parsedSkillName(skillName);
       const parsedFile = parsedSupportingFile(skillName, filePath, content);
@@ -849,7 +849,7 @@ export function registerSkillRoutes(
   app.delete("/api/config/skills/:name/files/*filePath", async (req: Request, res: Response) => {
     try {
       const skillName = req.params.name;
-      const filePath = decodeURIComponent(String(req.params.filePath));
+      const filePath = String(req.params.filePath);
       const parsedName = parsedSkillName(skillName);
       const parsedFile = parsedSupportingFile(skillName, filePath);
       if (!parsedFile.ok || isUnsafeSkillRelativePath(filePath)) {
