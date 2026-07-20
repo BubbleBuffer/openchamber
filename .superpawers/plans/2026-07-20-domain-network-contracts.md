@@ -6,8 +6,8 @@ parent_spec: .superpawers/specs/2026-07-14-web-pwa-maintainability-program-desig
 covers_chunks:
   - domain-network-contracts
 created: 2026-07-20
-updated: 2026-07-20
-next_action: "Execute Task 3"
+updated: 2026-07-21
+next_action: "Execute Task 4"
 ---
 
 # Domain Network Contracts Implementation Plan
@@ -131,7 +131,7 @@ Tasks 1-4 are Test-first because they establish or migrate executable network be
 
 ### Task 3: Contract Git, GitHub, Quota, And Catalog Domains
 
-- [ ] **Outcome:** Git, GitHub, quota, and skills-catalog requests/responses/errors have one domain authority shared by route adapters and browser clients; the bulk browser API registry no longer owns their wire DTOs.
+- [x] **Outcome:** Git, GitHub, quota, and skills-catalog requests/responses/errors have one domain authority shared by route adapters and browser clients; the bulk browser API registry no longer owns their wire DTOs.
 
 **Files and anchors:**
 - Create: `packages/web/server/src/contracts/git.ts` - authoritative Git status/diff/branch/log/identity/worktree/merge/rebase/stash/request DTOs, parsers, per-item result types, and stable `git_*` codes. Reconcile current/null/tracking/ahead/behind/attention/conflict drift explicitly.
