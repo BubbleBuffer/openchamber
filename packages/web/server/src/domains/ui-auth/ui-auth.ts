@@ -5,7 +5,11 @@ import path from "path";
 import os from "os";
 import type { Request, Response } from "express";
 import { createUiPasskeys } from "./ui-passkeys.js";
-import { parsePasswordSessionRequest } from "../../contracts/ui-auth.js";
+import {
+  parsePasswordSessionRequest,
+  type OwnerSessionResponse,
+  type UiAuthErrorResponse,
+} from "../../contracts/ui-auth.js";
 import type {
   UiAuthDeps,
   UiAuthController,
@@ -482,7 +486,8 @@ export function createUiAuth({
         _req: Request,
         res: Response,
       ) => {
-        res.json({ authenticated: true, disabled: true });
+        const response: OwnerSessionResponse = { authenticated: true, disabled: true };
+        res.json(response);
       },
       handleSessionCreate: async (
         _req: Request,
@@ -490,7 +495,7 @@ export function createUiAuth({
       ) => {
         res
           .status(400)
-          .json({ error: "UI password not configured" });
+          .json({ error: "UI password not configured", code: "ui_auth_invalid_request" } satisfies UiAuthErrorResponse);
       },
       handlePasskeyStatus: (_req, res) => {
         res.json({
@@ -695,7 +700,8 @@ export function createUiAuth({
       res.json({
         error: "UI authentication required",
         locked: true,
-      });
+        code: "ui_auth_unauthorized",
+      } satisfies UiAuthErrorResponse);
     } else {
       res.type("text/plain").send("Authentication required");
     }
@@ -721,69 +727,77 @@ export function createUiAuth({
     req: Request,
     res: Response,
   ) => {
-    const token = getTokenFromRequest(req);
-    if (await isSessionValid(token as string)) {
-      res.json({ authenticated: true });
-      return;
+    try {
+      const token = getTokenFromRequest(req);
+      if (await isSessionValid(token as string)) {
+        const response: OwnerSessionResponse = { authenticated: true };
+        res.json(response);
+        return;
+      }
+      clearSessionCookie(req, res);
+      const response: OwnerSessionResponse = { authenticated: false, locked: true, code: "ui_auth_unauthorized" };
+      res.status(401).json(response);
+    } catch (error) {
+      console.error("[UiAuth] Failed to read session status", error);
+      res.status(500).json({ error: "Internal server error", code: "internal_error" } satisfies UiAuthErrorResponse);
     }
-    clearSessionCookie(req, res);
-    res
-      .status(401)
-        .json({ authenticated: false, locked: true, code: "ui_auth_unauthorized" });
   };
 
   const handleSessionCreate = async (
     req: Request,
     res: Response,
   ) => {
-    const rateLimitResult = await checkRateLimit(req);
+    try {
+      const rateLimitResult = await checkRateLimit(req);
 
-    res.setHeader(
+      res.setHeader(
       "X-RateLimit-Limit",
       rateLimitResult.limit,
     );
-    res.setHeader(
+      res.setHeader(
       "X-RateLimit-Remaining",
       rateLimitResult.remaining,
     );
-    res.setHeader(
+      res.setHeader(
       "X-RateLimit-Reset",
       rateLimitResult.reset,
     );
 
-    if (!rateLimitResult.allowed) {
-      res.setHeader(
+      if (!rateLimitResult.allowed) {
+        res.setHeader(
         "Retry-After",
         rateLimitResult.retryAfter as number,
       );
-      res.status(429).json({
+        res.status(429).json({
         error:
           "Too many login attempts, please try again later",
         retryAfter: rateLimitResult.retryAfter,
         code: "ui_auth_rate_limited",
       });
-      return;
+        return;
+      }
+
+      const request = parsePasswordSessionRequest(req.body);
+      const candidate = request.ok ? request.value.password : "";
+      const trustDevice = request.ok && request.value.trustDevice === true;
+      if (!verifyPassword(candidate)) {
+        await recordFailedAttempt(req);
+        clearSessionCookie(req, res);
+        res
+          .status(401)
+          .json({ error: "Invalid credentials", code: "ui_auth_unauthorized" } satisfies UiAuthErrorResponse);
+        return;
+      }
+
+      await clearRateLimit(req);
+
+      await issueSession(req, res, { trustDevice });
+      const response: OwnerSessionResponse = { authenticated: true };
+      res.json(response);
+    } catch (error) {
+      console.error("[UiAuth] Failed to create session", error);
+      res.status(500).json({ error: "Internal server error", code: "internal_error" } satisfies UiAuthErrorResponse);
     }
-
-    const request = parsePasswordSessionRequest(req.body);
-    const candidate = request.ok ? request.value.password : "";
-    if (!verifyPassword(candidate)) {
-      await recordFailedAttempt(req);
-      clearSessionCookie(req, res);
-      res
-        .status(401)
-        .json({ error: "Invalid credentials", code: "ui_auth_unauthorized" });
-      return;
-    }
-
-    await clearRateLimit(req);
-
-    await issueSession(req, res, {
-      trustDevice: isTrustedDeviceRequest(
-        req.body?.trustDevice,
-      ),
-    });
-    res.json({ authenticated: true });
   };
 
   function respondPasskeyError(
@@ -793,10 +807,21 @@ export function createUiAuth({
     const statusCode =
       typeof error?.statusCode === "number"
         ? error.statusCode
-        : 400;
-    res.status(statusCode).json({
-      error: error?.message || "Passkey request failed",
-    });
+        : 500;
+    if (statusCode === 400) {
+      res.status(400).json({ error: "Invalid passkey request", code: "ui_auth_invalid_request" } satisfies UiAuthErrorResponse);
+      return;
+    }
+    if (statusCode === 401) {
+      res.status(401).json({ error: "Authentication failed", code: "ui_auth_unauthorized" } satisfies UiAuthErrorResponse);
+      return;
+    }
+    if (statusCode === 403) {
+      res.status(403).json({ error: "Request forbidden", code: "ui_auth_forbidden" } satisfies UiAuthErrorResponse);
+      return;
+    }
+    console.error("[UiAuth] Passkey request failed", error);
+    res.status(500).json({ error: "Internal server error", code: "internal_error" } satisfies UiAuthErrorResponse);
   }
 
   const handlePasskeyStatus = (req: Request, res: Response) => {

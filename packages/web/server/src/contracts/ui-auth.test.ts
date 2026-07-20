@@ -3,8 +3,9 @@ import { parseOwnerSessionResponse, parsePasswordSessionRequest } from "./ui-aut
 
 describe("ui auth contract", () => {
   it("validates owner session bodies and authorization responses", () => {
-    expect(parsePasswordSessionRequest({ password: "secret" }).ok).toBe(true);
+    expect(parsePasswordSessionRequest({ password: "secret", trustDevice: true })).toEqual({ ok: true, value: { password: "secret", trustDevice: true } });
     expect(parsePasswordSessionRequest({ password: ["secret"] }).ok).toBe(false);
+    expect(parsePasswordSessionRequest({ password: "secret", trustDevice: "true" }).ok).toBe(false);
     expect(parseOwnerSessionResponse({ authenticated: false, locked: true })).toEqual({ ok: true, value: { authenticated: false, locked: true } });
     expect(parseOwnerSessionResponse({ authenticated: "false" }).ok).toBe(false);
   });
