@@ -315,7 +315,7 @@ export function registerSkillRoutes(
 
   app.get("/api/config/skills", async (req: Request, res: Response) => {
     try {
-      const { directory, error } = await resolveProjectDirectory(req);
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
         res.status(400).json(skillsError("skills_invalid_request", "Invalid project directory"));
         return;
@@ -655,9 +655,9 @@ export function registerSkillRoutes(
       const parsedName = parsedSkillName(req.params.name);
       if (!parsedName.ok) { res.status(400).json(skillsError("skills_invalid_name", "Invalid skill name")); return; }
       const skillName = parsedName.value.name;
-      const { directory, error } = await resolveProjectDirectory(req);
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid project directory"));
         return;
       }
       const discoveredSkill =
@@ -685,15 +685,16 @@ export function registerSkillRoutes(
     try {
       const skillName = req.params.name;
       const filePath = decodeURIComponent(String(req.params.filePath));
+      const parsedName = parsedSkillName(skillName);
       const parsedFile = parsedSupportingFile(skillName, filePath);
       if (!parsedFile.ok || isUnsafeSkillRelativePath(filePath)) {
-        res.status(400).json(skillsError(!parsedFile.ok ? "skills_invalid_name" : "skills_invalid_path", "Invalid skill file path"));
+        res.status(400).json(skillsError(!parsedName.ok ? "skills_invalid_name" : "skills_invalid_path", "Invalid skill file path"));
         return;
       }
       const validatedName = parsedFile.value.name;
-      const { directory, error } = await resolveProjectDirectory(req);
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid project directory"));
         return;
       }
 
@@ -739,9 +740,9 @@ export function registerSkillRoutes(
         source?: string;
         [key: string]: any;
       };
-      const { directory, error } = await resolveProjectDirectory(req);
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid project directory"));
         return;
       }
 
@@ -772,9 +773,9 @@ export function registerSkillRoutes(
       if (!parsedName.ok || !parsedUpdates.ok) { res.status(400).json(skillsError(!parsedName.ok ? "skills_invalid_name" : "skills_invalid_request", "Invalid skill configuration")); return; }
       const skillName = parsedName.value.name;
       const updates = parsedUpdates.value;
-      const { directory, error } = await resolveProjectDirectory(req);
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid project directory"));
         return;
       }
 
@@ -803,15 +804,16 @@ export function registerSkillRoutes(
       const skillName = req.params.name;
       const filePath = decodeURIComponent(String(req.params.filePath));
       const { content } = (req.body as { content?: unknown }) || {};
+      const parsedName = parsedSkillName(skillName);
       const parsedFile = parsedSupportingFile(skillName, filePath, content);
       if (!parsedFile.ok || isUnsafeSkillRelativePath(filePath)) {
-        res.status(400).json(skillsError(!parsedFile.ok ? "skills_invalid_path" : "skills_invalid_path", "Invalid skill file path"));
+        res.status(400).json(skillsError(!parsedName.ok ? "skills_invalid_name" : "skills_invalid_path", "Invalid skill file path"));
         return;
       }
       const validatedName = parsedFile.value.name;
-      const { directory, error } = await resolveProjectDirectory(req);
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid project directory"));
         return;
       }
 
@@ -821,7 +823,7 @@ export function registerSkillRoutes(
         ) || null;
       const sources = getSkillSources(validatedName, directory, discoveredSkill);
       if (!sources.md.exists || !sources.md.dir) {
-        res.status(404).json({ error: "Skill not found" });
+        res.status(404).json(skillsError("skills_not_found", "Skill not found"));
         return;
       }
 
@@ -836,7 +838,7 @@ export function registerSkillRoutes(
     } catch (error) {
       const err = error as { code?: string };
       if (err && typeof err === "object" && (err.code === "EACCES" || err.code === "EPERM")) {
-        res.status(403).json({ error: "Access to file denied" });
+        res.status(403).json(skillsError("skills_not_found", "Access to file denied"));
         return;
       }
       console.error("Failed to write skill file:", error);
@@ -848,15 +850,16 @@ export function registerSkillRoutes(
     try {
       const skillName = req.params.name;
       const filePath = decodeURIComponent(String(req.params.filePath));
+      const parsedName = parsedSkillName(skillName);
       const parsedFile = parsedSupportingFile(skillName, filePath);
       if (!parsedFile.ok || isUnsafeSkillRelativePath(filePath)) {
-        res.status(400).json(skillsError(!parsedFile.ok ? "skills_invalid_path" : "skills_invalid_path", "Invalid skill file path"));
+        res.status(400).json(skillsError(!parsedName.ok ? "skills_invalid_name" : "skills_invalid_path", "Invalid skill file path"));
         return;
       }
       const validatedName = parsedFile.value.name;
-      const { directory, error } = await resolveProjectDirectory(req);
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid project directory"));
         return;
       }
 
@@ -866,7 +869,7 @@ export function registerSkillRoutes(
         ) || null;
       const sources = getSkillSources(validatedName, directory, discoveredSkill);
       if (!sources.md.exists || !sources.md.dir) {
-        res.status(404).json({ error: "Skill not found" });
+        res.status(404).json(skillsError("skills_not_found", "Skill not found"));
         return;
       }
 
@@ -881,7 +884,7 @@ export function registerSkillRoutes(
     } catch (error) {
       const err = error as { code?: string };
       if (err && typeof err === "object" && (err.code === "EACCES" || err.code === "EPERM")) {
-        res.status(403).json({ error: "Access to file denied" });
+        res.status(403).json(skillsError("skills_not_found", "Access to file denied"));
         return;
       }
       console.error("Failed to delete skill file:", error);
@@ -894,9 +897,9 @@ export function registerSkillRoutes(
       const parsedName = parsedSkillName(req.params.name);
       if (!parsedName.ok) { res.status(400).json(skillsError("skills_invalid_name", "Invalid skill name")); return; }
       const skillName = parsedName.value.name;
-      const { directory, error } = await resolveProjectDirectory(req);
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid project directory"));
         return;
       }
 
