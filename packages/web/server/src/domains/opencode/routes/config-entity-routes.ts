@@ -254,7 +254,7 @@ export function registerConfigEntityRoutes(
     try {
       const name = req.params.name;
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const parsed = parseMcpConfigRequest(req.body ?? {});
+      const parsed = parseMcpConfigRequest(req.body === undefined ? {} : req.body);
       if (!parsed.ok) return res.status(400).json({ error: "Invalid MCP configuration", code: "opencode_invalid_request" });
       const { scope, ...config } = parsed.value as { scope?: string; [key: string]: any };
       const { directory, error } = await resolveOptionalProjectDirectory(req);
@@ -276,7 +276,7 @@ export function registerConfigEntityRoutes(
   app.patch("/api/config/mcp/:name", async (req: Request, res: Response) => {
     try {
       const name = req.params.name;
-      const parsed = parseMcpConfigRequest(req.body ?? {});
+      const parsed = parseMcpConfigRequest(req.body === undefined ? {} : req.body);
       if (!parsed.ok) return res.status(400).json({ error: "Invalid MCP configuration", code: "opencode_invalid_request" });
       const updates = parsed.value;
       const { directory, error } = await resolveOptionalProjectDirectory(req);

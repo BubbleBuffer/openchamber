@@ -57,4 +57,17 @@ describe("config entity route contracts", () => {
     }
     expect(createAgent).not.toHaveBeenCalled(); expect(updateAgent).not.toHaveBeenCalled(); expect(createCommand).not.toHaveBeenCalled(); expect(updateCommand).not.toHaveBeenCalled();
   });
+
+  it("rejects explicit null MCP create and update bodies before mutation services", async () => {
+    const routes = registry(); const createMcpConfig = vi.fn(); const updateMcpConfig = vi.fn();
+    registerConfigEntityRoutes(routes.app, {
+      resolveProjectDirectory: async () => ({ directory: "/repo" }), resolveOptionalProjectDirectory: async () => ({ directory: "/repo" }), refreshOpenCodeAfterConfigChange: async () => {}, clientReloadDelayMs: 1,
+      getAgentSources: () => ({}), getAgentConfig: () => ({}), createAgent: () => {}, updateAgent: () => {}, deleteAgent: () => {}, getCommandSources: () => ({}), createCommand: () => {}, updateCommand: () => {}, deleteCommand: () => {}, listMcpConfigs: () => [], getMcpConfig: () => null, createMcpConfig, updateMcpConfig, deleteMcpConfig: () => {},
+    });
+    for (const [method, path] of [["POST", "/api/config/mcp/:name"], ["PATCH", "/api/config/mcp/:name"]]) {
+      const res = response(); await routes.get(method, path)({ params: { name: 'safe' }, body: null }, res);
+      expect(res.statusCode).toBe(400); expect(res.body).toEqual({ error: 'Invalid MCP configuration', code: 'opencode_invalid_request' });
+    }
+    expect(createMcpConfig).not.toHaveBeenCalled(); expect(updateMcpConfig).not.toHaveBeenCalled();
+  });
 });
