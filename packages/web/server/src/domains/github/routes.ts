@@ -18,9 +18,16 @@ export interface GitHubRoutesDeps {
 
 export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): void {
   type Handler = (req: Request, res: Response) => Promise<unknown>;
+  const queryForContract = (key: string, query: Request["query"]): unknown => {
+    if (!key.endsWith("/issues/get") && !key.endsWith("/issues/comments") && !key.endsWith("/pulls/context")) return query;
+    const raw = query.number;
+    if (typeof raw !== "string" || !/^[1-9]\d*$/.test(raw)) return query;
+    const number = Number(raw);
+    return Number.isSafeInteger(number) ? { ...query, number } : query;
+  };
   const wrap = (key: string, handler: Handler): Handler => async (req, res) => {
     const contract = GITHUB_ROUTE_CONTRACTS[key];
-    const request = key.startsWith("GET ") ? req.query : req.body;
+    const request = key.startsWith("GET ") ? queryForContract(key, req.query) : req.body;
     if (contract && !contract.request(request).ok) {
       return res.status(400).json(githubError("github_invalid_request"));
     }
