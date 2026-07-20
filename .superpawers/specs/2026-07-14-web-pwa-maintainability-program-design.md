@@ -37,7 +37,7 @@ Acceptance:
 - Session prompting and ordinary foreground tool execution continue to work.
 
 ### Chunk: web-product-consolidation
-Status: planned
+Status: complete
 Goal: Give the browser application, server, CLI, and network contracts one obvious product owner and remove shell-era package boundaries.
 Acceptance:
 - The maintained runtime topology is the web/PWA client plus one OpenChamber server and CLI.

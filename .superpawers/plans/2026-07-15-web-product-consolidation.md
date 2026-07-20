@@ -1,13 +1,13 @@
 ---
 kind: plan
-status: active
+status: complete
 parent_spec: .superpawers/specs/2026-07-14-web-pwa-maintainability-program-design.md
 covers_chunks:
   - web-product-consolidation
 coverage: completes
 created: 2026-07-15
-updated: 2026-07-15
-next_action: "Execute Task 1"
+updated: 2026-07-20
+next_action: "Plan the domain-network-contracts chunk"
 ---
 
 # Web Product Consolidation Implementation Plan
@@ -45,7 +45,7 @@ The generic `window.__OPENCHAMBER_RUNTIME_APIS__` bridge is moved intact with th
 
 ### Task 1: Atomically Fold The UI Workspace Into Web
 
-- [ ] **Outcome:** `packages/ui` no longer exists; its source lives under `packages/web/src/ui`; web development, type-check, build, store, React, and performance workflows resolve the moved source from one workspace.
+- [x] **Outcome:** `packages/ui` no longer exists; its source lives under `packages/web/src/ui`; web development, type-check, build, store, React, and performance workflows resolve the moved source from one workspace.
 
 **Files and anchors:**
 - Move: `packages/ui/src/` -> `packages/web/src/ui/` — preserve the full components, stores, sync, hooks, contexts, assets, styles, types, tests, and browser libraries tree.
@@ -84,7 +84,7 @@ The generic `window.__OPENCHAMBER_RUNTIME_APIS__` bridge is moved intact with th
 
 ### Task 2: Make The Published Product Independently Installable
 
-- [ ] **Outcome:** `@openchamber/session-state` remains a separate runtime-independent workspace but becomes a built/published dependency, and a clean external install of locally packed session-state plus web artifacts can import the server and resolve the CLI's real compiled entrypoints.
+- [x] **Outcome:** `@openchamber/session-state` remains a separate runtime-independent workspace but becomes a built/published dependency, and a clean external install of locally packed session-state plus web artifacts can import the server and resolve the CLI's real compiled entrypoints.
 
 **Files and anchors:**
 - Modify: `packages/session-state/package.json` — synchronize version with the root/web package, make it publishable, add build/type artifact metadata, `files`, exports, and public scoped publish config while preserving its dependency boundary.
@@ -118,7 +118,7 @@ The generic `window.__OPENCHAMBER_RUNTIME_APIS__` bridge is moved intact with th
 
 ### Task 3: Converge Active Tooling And Documentation
 
-- [ ] **Outcome:** All active developer tooling and guidance name the web product as the UI owner, generated assets/themes target the moved paths, and the published web package remains complete.
+- [x] **Outcome:** All active developer tooling and guidance name the web product as the UI owner, generated assets/themes target the moved paths, and the published web package remains complete.
 
 **Files and anchors:**
 - Modify: `AGENTS.md` — runtime map, new-code placement, stack, entrypoints, sync docs, typography, stores/components paths now point to `packages/web/src/ui`; preserve architecture, mobile, performance, and process-safety rules.
@@ -151,7 +151,7 @@ The generic `window.__OPENCHAMBER_RUNTIME_APIS__` bridge is moved intact with th
 
 ### Task 4: Verify And Close Web Product Consolidation
 
-- [ ] **Outcome:** The final workspace has one web product, independent session-state, docs, and tests; all protected local/remote browser workflows pass; the plan and parent chunk are closed with fresh evidence.
+- [x] **Outcome:** The final workspace has one web product, independent session-state, docs, and tests; all protected local/remote browser workflows pass; the plan and parent chunk are closed with fresh evidence.
 
 **Files and anchors:**
 - Modify: `.superpawers/plans/2026-07-15-web-product-consolidation.md` — completion state and exact verification record.
@@ -174,3 +174,14 @@ The generic `window.__OPENCHAMBER_RUNTIME_APIS__` bridge is moved intact with th
 - PWA/service-worker tests and build output remain present; local/remote auth, filesystem, terminal, Git/worktrees, GitHub, quota, models/tools/permissions/settings, session/chat, and liveness suites remain green.
 - Fresh lint is categorized against the combined prior web+UI baseline with no increased rule count attributable to the move.
 - Plan-management reports this plan complete and only `web-product-consolidation` newly complete; worktree/diff are clean before the tracking commit.
+
+## Verification Record
+
+Verified 2026-07-20:
+
+- UI is folded into web; `@openchamber/session-state` is separately built, publishable, and exactly version `1.9.11`.
+- Clean-dist type-check and canonical build artifacts passed. Tests: session-state 78; stores 238; React 63; web 18 + 2 skipped; integration 53 + 2 skipped; event-stream 17; performance 5; docs 7/7.
+- Both tarballs passed packaging plus clean install/import/CLI checks; Docker and release dry-runs passed.
+- `scripts/verify.sh` remained nonzero only for inherited lint. Current errors/warnings: session-state 0/5, web 406/937, tests 36/4; no increases or new rule categories.
+- Verification-discovered fixes: WebSocket/auth and directory-scope fixes `fd0b88fe`, `183dd19c`, `e602fc9b`; clean type-check fix `57f5e608`.
+- Final worktree was clean. Live npm publish was not performed; Ghostty dual-versioning and legacy HeroUI remain future dependency cleanup, not chunk failures.

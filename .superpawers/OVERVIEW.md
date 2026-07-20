@@ -4,7 +4,9 @@
 >
 > Living overview of the radical refactor program. Source of truth for "what's done / in flight / next".
 > Deep design lives in `.superpawers/specs/`. Per-task plans live in `.superpawers/plans/`.
-> Last updated: 2026-06-28 (testing-expansion cleanup + 68 store tests).
+> Active product status updated: 2026-07-20.
+
+> **Current topology and validation:** `packages/web` owns the browser/PWA, server, and CLI; `packages/session-state` remains separately built and publishable at `1.9.11`; `packages/ui` is folded into web. Clean-dist type-check and canonical build artifacts pass. Current tests: session-state 78; stores 238; React 63; web 18 + 2 skipped; integration 53 + 2 skipped; event-stream 17; performance 5; docs 7/7. `scripts/verify.sh` is nonzero only for inherited lint: session-state 0/5, web 406/937, tests 36/4 (errors/warnings), with no increases or new categories.
 
 ## Status snapshot
 
@@ -150,13 +152,13 @@ Specs:
 
 ---
 
-## Verification baseline
+## Current verification status
 
 ```bash
-bun run type-check           # ✅ passes for all maintained workspaces and server
-bun run lint                 # ⚠ inherited debt: session-state 0/5, web 373/225, tests 37/5, UI 41/712 (errors/warnings)
+bun run type-check           # ✅ clean-dist type-check passes
+bun run lint                 # ⚠ inherited debt: session-state 0/5, web 406/937, tests 36/4 (errors/warnings)
 bun run test:stores          # ✅ 238 pass
-bun run test:integration     # ✅ 54 pass / 1 skip
+bun run test:integration     # ✅ 53 pass / 2 skip
 ```
 
 ## Out of scope for the rework (tracked elsewhere)
