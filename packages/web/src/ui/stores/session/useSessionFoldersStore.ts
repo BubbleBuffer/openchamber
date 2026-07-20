@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { getSafeStorage } from '../utils/safeStorage';
+import { parseSessionFoldersResponse, parseSessionFoldersUpdateRequest } from '@contracts/opencode';
 
 // --- Types ---
 
@@ -73,10 +74,14 @@ const schedulePersistToDisk = (foldersMap: SessionFoldersMap, collapsedFolderIds
       collapsedFolderIds: collapsedSnapshot,
       updatedAt: Date.now(),
     };
+    const parsed = parseSessionFoldersUpdateRequest(payload);
+    if (!parsed.ok) {
+      return;
+    }
     void fetch(SESSION_FOLDERS_API_PATH, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(parsed.value),
     }).catch(() => { /* best-effort */ });
   }, DISK_WRITE_DEBOUNCE_MS);
 };
@@ -485,21 +490,13 @@ const hydrateSessionFoldersFromDisk = async (): Promise<void> => {
       return;
     }
 
-    const parsed = await response.json().catch(() => null) as {
-      foldersMap?: SessionFoldersMap;
-      collapsedFolderIds?: string[];
-    } | null;
-
-    if (!parsed) {
+    const parsed = parseSessionFoldersResponse(await response.json().catch(() => null));
+    if (!parsed.ok) {
       return;
     }
 
-    const diskFolders = parsed.foldersMap && typeof parsed.foldersMap === 'object'
-      ? parsed.foldersMap
-      : {};
-    const diskCollapsed = Array.isArray(parsed.collapsedFolderIds)
-      ? new Set(parsed.collapsedFolderIds.filter((value): value is string => typeof value === 'string'))
-      : new Set<string>();
+    const diskFolders = parsed.value.foldersMap as SessionFoldersMap;
+    const diskCollapsed = new Set(parsed.value.collapsedFolderIds);
 
     const hasDiskData = Object.keys(diskFolders).length > 0 || diskCollapsed.size > 0;
     if (!hasDiskData) {

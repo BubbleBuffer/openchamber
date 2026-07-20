@@ -1,3 +1,5 @@
+import { parseMagicPromptStateResponse, parseOpenCodeErrorResponse, type MagicPromptStateResponse } from '@contracts/opencode';
+
 export type MagicPromptId =
   | 'git.commit.generate.visible'
   | 'git.commit.generate.instructions'
@@ -37,10 +39,7 @@ export interface MagicPromptDefinition {
   placeholders?: Array<{ key: string; description: string }>;
 }
 
-export interface MagicPromptOverridesPayload {
-  version: number;
-  overrides: Record<string, string>;
-}
+export type MagicPromptOverridesPayload = Required<MagicPromptStateResponse>;
 
 const API_ENDPOINT = '/api/magic-prompts';
 
@@ -622,6 +621,17 @@ const normalizeOverridesPayload = (payload: unknown): Record<string, string> => 
   return result;
 };
 
+const responseError = (payload: unknown, fallback: string): Error => {
+  const parsed = parseOpenCodeErrorResponse(payload);
+  return new Error(parsed.ok ? parsed.value.error : fallback);
+};
+
+const parseMagicPromptState = (payload: unknown): MagicPromptOverridesPayload => {
+  const parsed = parseMagicPromptStateResponse(payload);
+  if (!parsed.ok) throw new Error('Malformed magic prompt response');
+  return { version: parsed.value.version ?? 1, overrides: normalizeOverridesPayload(parsed.value) };
+};
+
 export const fetchMagicPromptOverrides = async (): Promise<Record<string, string>> => {
   if (cachedOverrides) {
     return cachedOverrides;
@@ -636,10 +646,10 @@ export const fetchMagicPromptOverrides = async (): Promise<Record<string, string
         if (!response.ok) {
           throw new Error('Failed to load magic prompts');
         }
-        const payload = await response.json().catch(() => ({}));
-        const normalized = normalizeOverridesPayload(payload);
-        cachedOverrides = normalized;
-        return normalized;
+        const payload = await response.json().catch(() => null);
+        const parsed = parseMagicPromptState(payload);
+        cachedOverrides = parsed.overrides;
+        return parsed.overrides;
       })
       .finally(() => {
         inFlightOverridesRequest = null;
@@ -690,15 +700,11 @@ export const saveMagicPromptOverride = async (id: MagicPromptId, text: string): 
     body: JSON.stringify({ text }),
   });
   if (!response.ok) {
-    const errorPayload = await response.json().catch(() => ({}));
-    throw new Error((errorPayload as { error?: string })?.error || 'Failed to save magic prompt');
+    throw responseError(await response.json().catch(() => null), 'Failed to save magic prompt');
   }
-  const payload = await response.json();
-  cachedOverrides = normalizeOverridesPayload(payload);
-  return {
-    version: typeof payload?.version === 'number' ? payload.version : 1,
-    overrides: cachedOverrides,
-  };
+  const parsed = parseMagicPromptState(await response.json().catch(() => null));
+  cachedOverrides = parsed.overrides;
+  return parsed;
 };
 
 export const resetMagicPromptOverride = async (id: MagicPromptId): Promise<MagicPromptOverridesPayload> => {
@@ -707,15 +713,11 @@ export const resetMagicPromptOverride = async (id: MagicPromptId): Promise<Magic
     headers: { Accept: 'application/json' },
   });
   if (!response.ok) {
-    const errorPayload = await response.json().catch(() => ({}));
-    throw new Error((errorPayload as { error?: string })?.error || 'Failed to reset magic prompt');
+    throw responseError(await response.json().catch(() => null), 'Failed to reset magic prompt');
   }
-  const payload = await response.json();
-  cachedOverrides = normalizeOverridesPayload(payload);
-  return {
-    version: typeof payload?.version === 'number' ? payload.version : 1,
-    overrides: cachedOverrides,
-  };
+  const parsed = parseMagicPromptState(await response.json().catch(() => null));
+  cachedOverrides = parsed.overrides;
+  return parsed;
 };
 
 export const resetAllMagicPromptOverrides = async (): Promise<MagicPromptOverridesPayload> => {
@@ -724,13 +726,9 @@ export const resetAllMagicPromptOverrides = async (): Promise<MagicPromptOverrid
     headers: { Accept: 'application/json' },
   });
   if (!response.ok) {
-    const errorPayload = await response.json().catch(() => ({}));
-    throw new Error((errorPayload as { error?: string })?.error || 'Failed to reset all magic prompts');
+    throw responseError(await response.json().catch(() => null), 'Failed to reset all magic prompts');
   }
-  const payload = await response.json();
-  cachedOverrides = normalizeOverridesPayload(payload);
-  return {
-    version: typeof payload?.version === 'number' ? payload.version : 1,
-    overrides: cachedOverrides,
-  };
+  const parsed = parseMagicPromptState(await response.json().catch(() => null));
+  cachedOverrides = parsed.overrides;
+  return parsed;
 };

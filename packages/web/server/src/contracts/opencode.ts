@@ -10,6 +10,7 @@ import { parseJsonBoolean, parseJsonNumber, parseJsonObject, type ParseResult } 
 export const OPENCODE_ERROR_CODES = [
   "opencode_invalid_request",
   "opencode_invalid_response",
+  "opencode_unauthorized",
   "opencode_not_found",
   "opencode_unavailable",
   "opencode_upstream_error",
@@ -19,6 +20,15 @@ export const OPENCODE_ERROR_CODES = [
 
 export type OpenCodeErrorCode = (typeof OPENCODE_ERROR_CODES)[number];
 export interface OpenCodeErrorResponse { error: string; code: OpenCodeErrorCode; }
+export function opencodeError(code: OpenCodeErrorCode): OpenCodeErrorResponse {
+  return { error: code === "opencode_internal_error" ? "Internal server error" : "Request failed", code };
+}
+export function parseOpenCodeErrorResponse(value: unknown): ParseResult<OpenCodeErrorResponse> {
+  const object = parseJsonObject(value);
+  if (!object.ok || typeof object.value.error !== "string" || typeof object.value.code !== "string" || !(OPENCODE_ERROR_CODES as readonly string[]).includes(object.value.code)) return invalid("invalid OpenCode error response");
+  const expected = opencodeError(object.value.code as OpenCodeErrorCode);
+  return object.value.error === expected.error ? { ok: true, value: expected } : invalid("unsafe OpenCode error response");
+}
 
 export interface DirectorySwitchRequest { path: string; }
 export interface DirectorySwitchResponse { success: true; restarted: boolean; path: string; settings: Record<string, unknown>; }
@@ -28,6 +38,12 @@ export interface PendingMcpAuthRequest { state: string | null; name: string | nu
 export interface PendingMcpAuthContext { name: string; directory: string | null; }
 export interface PendingMcpAuthResponse { success?: true; context?: PendingMcpAuthContext | null; name?: string; directory?: string | null; }
 export type McpConfigResponse = Record<string, unknown> & { name: string };
+export interface SessionFolderDto { id: string; name: string; sessionIds: string[]; createdAt: number; parentId?: string | null; }
+export interface SessionFoldersResponse { version: number; foldersMap: Record<string, SessionFolderDto[]>; collapsedFolderIds: string[]; updatedAt?: number; }
+export type SessionFoldersUpdateRequest = Required<SessionFoldersResponse>;
+export interface SessionFoldersMutationResponse { success: true; }
+export interface MagicPromptUpdateRequest { text: string; }
+export interface MagicPromptStateResponse { version?: number; overrides: Record<string, string>; }
 
 const invalid = <T = never>(error: string): ParseResult<T> => ({ ok: false, error });
 const optionalTrimmedString = (value: unknown): string | null | undefined => {
@@ -41,6 +57,53 @@ const requiredTrimmedString = (value: unknown): string | null => {
   const parsed = optionalTrimmedString(value);
   return typeof parsed === "string" ? parsed : null;
 };
+const MAGIC_PROMPT_ID_PATTERN = /^[a-z0-9._-]{1,160}$/;
+
+export function parseMagicPromptId(value: unknown): ParseResult<string> {
+  const id = requiredTrimmedString(value);
+  return id && MAGIC_PROMPT_ID_PATTERN.test(id) ? { ok: true, value: id } : invalid("invalid magic prompt id");
+}
+
+export function parseMagicPromptUpdateRequest(value: unknown): ParseResult<MagicPromptUpdateRequest> {
+  const object = parseJsonObject(value);
+  return object.ok && typeof object.value.text === "string" ? { ok: true, value: { text: object.value.text } } : invalid("magic prompt text is required");
+}
+
+export function parseMagicPromptStateResponse(value: unknown): ParseResult<MagicPromptStateResponse> {
+  const object = parseJsonObject(value); if (!object.ok) return object;
+  if (object.value.version !== undefined && !parseJsonNumber(object.value.version).ok) return invalid("invalid magic prompt state");
+  const overrides = parseJsonObject(object.value.overrides); if (!overrides.ok) return invalid("invalid magic prompt state");
+  for (const [id, text] of Object.entries(overrides.value)) if (!MAGIC_PROMPT_ID_PATTERN.test(id) || typeof text !== "string") return invalid("invalid magic prompt state");
+  return { ok: true, value: { ...(object.value.version === undefined ? {} : { version: object.value.version as number }), overrides: overrides.value as Record<string, string> } };
+}
+
+const parseSessionFolders = (value: unknown, requireUpdatedAt: boolean): ParseResult<SessionFoldersResponse> => {
+  const object = parseJsonObject(value); if (!object.ok) return object;
+  if (!parseJsonNumber(object.value.version).ok) return invalid("invalid session folders state");
+  const foldersMap = parseJsonObject(object.value.foldersMap); if (!foldersMap.ok || !Array.isArray(object.value.collapsedFolderIds)) return invalid("invalid session folders state");
+  if (requireUpdatedAt ? !parseJsonNumber(object.value.updatedAt).ok : object.value.updatedAt !== undefined && !parseJsonNumber(object.value.updatedAt).ok) return invalid("invalid session folders state");
+  const parsedFoldersMap: Record<string, SessionFolderDto[]> = {};
+  for (const [scope, folders] of Object.entries(foldersMap.value)) {
+    if (!requiredTrimmedString(scope) || !Array.isArray(folders)) return invalid("invalid session folders state");
+    parsedFoldersMap[scope] = [];
+    for (const folder of folders) {
+      const entry = parseJsonObject(folder); const id = entry.ok ? requiredTrimmedString(entry.value.id) : null; const name = entry.ok ? requiredTrimmedString(entry.value.name) : null;
+      if (!entry.ok || !id || !name || !Array.isArray(entry.value.sessionIds) || entry.value.sessionIds.some((sessionId) => !requiredTrimmedString(sessionId)) || !parseJsonNumber(entry.value.createdAt).ok || (entry.value.parentId !== undefined && entry.value.parentId !== null && !requiredTrimmedString(entry.value.parentId))) return invalid("invalid session folders state");
+      parsedFoldersMap[scope].push({ id, name, sessionIds: entry.value.sessionIds as string[], createdAt: entry.value.createdAt as number, ...(entry.value.parentId === undefined ? {} : { parentId: entry.value.parentId as string | null }) });
+    }
+  }
+  if (object.value.collapsedFolderIds.some((id) => !requiredTrimmedString(id))) return invalid("invalid session folders state");
+  return { ok: true, value: { version: object.value.version as number, foldersMap: parsedFoldersMap, collapsedFolderIds: object.value.collapsedFolderIds as string[], ...(object.value.updatedAt === undefined ? {} : { updatedAt: object.value.updatedAt as number }) } };
+};
+export const parseSessionFoldersResponse = (value: unknown): ParseResult<SessionFoldersResponse> => parseSessionFolders(value, false);
+export const parseSessionFoldersUpdateRequest = (value: unknown): ParseResult<SessionFoldersUpdateRequest> => {
+  const parsed = parseSessionFolders(value, true);
+  return parsed.ok && parsed.value.updatedAt !== undefined ? { ok: true, value: parsed.value as SessionFoldersUpdateRequest } : invalid("invalid session folders update");
+};
+export function parseSessionFoldersMutationResponse(value: unknown): ParseResult<SessionFoldersMutationResponse> {
+  const object = parseJsonObject(value);
+  return object.ok && object.value.success === true ? { ok: true, value: { success: true } } : invalid("invalid session folders mutation response");
+}
 
 export function parseDirectorySwitchRequest(value: unknown): ParseResult<DirectorySwitchRequest> {
   const object = parseJsonObject(value); if (!object.ok) return object;

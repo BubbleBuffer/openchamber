@@ -14,6 +14,15 @@ describe("route inventory", () => {
     expect(new Set(endpoints).size).toBe(endpoints.length);
   });
 
+  it("records contract and test ownership for active session-folder and magic-prompt endpoints", () => {
+    for (const registrar of ["domains/magic-prompts/routes.ts", "domains/session-folders/routes.ts"]) {
+      const entry = ROUTE_INVENTORY.find((candidate) => candidate.registrar === registrar);
+      expect(entry?.classification).toBe("contracted");
+      expect(entry?.consumer).toBeTruthy();
+      expect(entry?.tests).toBeTruthy();
+    }
+  });
+
   it("includes the active connect endpoint from the core auth registrar", () => {
     const coreSource = readFileSync(resolve(import.meta.dirname, "../domains/opencode/routes/core-routes.ts"), "utf8");
     expect(coreSource).toContain('app.get("/connect"');
