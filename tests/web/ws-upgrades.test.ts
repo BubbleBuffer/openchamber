@@ -15,6 +15,7 @@ interface WsHandle {
   socket: WebSocket
   frames: WsFrame[]
   waitForFrame(type: string, waitMs?: number): Promise<WsFrame>
+  waitForMatchingFrame(predicate: (frame: WsFrame) => boolean, waitMs?: number): Promise<WsFrame>
   close(): Promise<void>
 }
 
@@ -38,6 +39,7 @@ async function openWsAndWaitForReady(url: string, timeoutMs = 10_000): Promise<W
   const socket = new WebSocket(url)
   const frames: WsFrame[] = []
   const waiters = new Map<string, Array<(f: WsFrame) => void>>()
+  const matchingWaiters = new Set<{ predicate: (frame: WsFrame) => boolean; resolve: (frame: WsFrame) => void }>()
 
   socket.on("message", (raw) => {
     const frame = JSON.parse(String(raw)) as WsFrame
@@ -45,6 +47,12 @@ async function openWsAndWaitForReady(url: string, timeoutMs = 10_000): Promise<W
     const cbs = waiters.get(String(frame.type)) ?? []
     waiters.delete(String(frame.type))
     for (const cb of cbs) cb(frame)
+    for (const waiter of Array.from(matchingWaiters)) {
+      if (waiter.predicate(frame)) {
+        matchingWaiters.delete(waiter)
+        waiter.resolve(frame)
+      }
+    }
   })
 
   await new Promise<void>((resolve, reject) => {
@@ -63,6 +71,24 @@ async function openWsAndWaitForReady(url: string, timeoutMs = 10_000): Promise<W
       waiters.set(type, cbs)
     })
 
+  const waitForMatchingFrame = (predicate: (frame: WsFrame) => boolean, waitMs = 10_000) =>
+    new Promise<WsFrame>((resolve, reject) => {
+      const existing = frames.find(predicate)
+      if (existing) return resolve(existing)
+      const waiter = {
+        predicate,
+        resolve: (frame: WsFrame) => {
+          clearTimeout(timer)
+          resolve(frame)
+        },
+      }
+      const timer = setTimeout(() => {
+        matchingWaiters.delete(waiter)
+        reject(new Error("Timed out waiting for matching WS frame"))
+      }, waitMs)
+      matchingWaiters.add(waiter)
+    })
+
   await waitForFrame("ready", timeoutMs)
 
   const close = () =>
@@ -75,7 +101,7 @@ async function openWsAndWaitForReady(url: string, timeoutMs = 10_000): Promise<W
       socket.close()
     })
 
-  return { socket, frames, waitForFrame, close }
+  return { socket, frames, waitForFrame, waitForMatchingFrame, close }
 }
 
 // ── Process fixtures ─────────────────────────────────────────────
@@ -143,7 +169,6 @@ describeWithOpenChamber(
 
     test(
       "/api/event/ws with ?directory= upgrades and receives directory-scoped events",
-      // eslint-disable-next-line complexity -- exercises the complete WS lifecycle.
       async () => {
         // The directory bridge consumes the authoritative global stream and filters
         // wrapped events by this requested directory.
@@ -154,52 +179,11 @@ describeWithOpenChamber(
         url.pathname = "/api/event/ws"
         url.searchParams.set("directory", ctx.opencode.cwd)
 
-        let socket: WebSocket | undefined
-        let readyReceived = false
-        const frames: WsFrame[] = []
+        let ws: WsHandle | undefined
 
         try {
-          socket = new WebSocket(url.toString())
-          socket.on("message", (raw) => {
-            frames.push(JSON.parse(String(raw)) as WsFrame)
-          })
-
-          // Wait for the WebSocket to open
-          await new Promise<void>((resolve, reject) => {
-            const t = setTimeout(() => reject(new Error("WS open timed out")), 10_000)
-            socket!.once("open", () => { clearTimeout(t); resolve() })
-            socket!.once("error", (e) => { clearTimeout(t); reject(e) })
-          })
-
-          // Wait up to 15s for a "ready" frame
-          const readyDeadline = Date.now() + 15_000
-          while (!readyReceived && Date.now() < readyDeadline) {
-            const frame = await new Promise<WsFrame | null>((resolve) => {
-              const t = setTimeout(() => resolve(null), 500)
-              socket!.once("message", (raw) => {
-                clearTimeout(t)
-                resolve(JSON.parse(String(raw)) as WsFrame)
-              })
-            })
-            if (frame) {
-              if (frame.type === "ready") {
-                readyReceived = true
-              }
-            }
-          }
-
-          if (!readyReceived) {
-            // Directory WS "ready" not received — upstream SSE connection likely
-            // blocked by the previously-active global hub reader. Log and skip
-            // rather than fail.
-            console.log(
-              "[dir-ws] directory WS did not receive 'ready';",
-              "upstream SSE connection to /global/event may be unavailable.",
-            )
-            return
-          }
-
-          expect(frames[0].type).toBe("ready")
+          ws = await openWsAndWaitForReady(url.toString(), 15_000)
+          expect(ws.frames[0].type).toBe("ready")
 
           const createRes = await fetch(`${ctx.openchamber.baseUrl}/api/session`, {
             method: "POST",
@@ -208,26 +192,10 @@ describeWithOpenChamber(
           })
           const created = await createRes.json() as { id: string }
 
-          const deadline = Date.now() + 5_000
-          while (Date.now() < deadline) {
-            const matching = frames.find((f) => JSON.stringify(f).includes(created.id))
-            if (matching) return
-            await new Promise((r) => setTimeout(r, 100))
-            // Also pick up new messages between polls
-            const frame = await new Promise<WsFrame | null>((resolve) => {
-              const t = setTimeout(() => resolve(null), 100)
-              socket!.once("message", (raw) => {
-                clearTimeout(t)
-                const f = JSON.parse(String(raw)) as WsFrame
-                resolve(f)
-              })
-            })
-            if (frame && JSON.stringify(frame).includes(created.id)) return
-          }
-
-          throw new Error("Directory-scoped WS did not receive event frame within 5s")
+          const matching = await ws.waitForMatchingFrame((frame) => JSON.stringify(frame).includes(created.id), 5_000)
+          expect(matching.type).toBe("event")
         } finally {
-          socket?.close()
+          await ws?.close()
         }
       },
       30_000,
@@ -235,10 +203,8 @@ describeWithOpenChamber(
 
     test(
       "/api/global/event/ws?lastEventId= replays events after that id",
-      async () => {
-        await wsCooldown()
-
-        // Step A: open WS, create a session, capture the lastEventId from any event frame
+      async ({ skip }) => {
+        // Step A: create two identifiable events and use the first as the replay boundary.
         const urlA = new URL(ctx.openchamber.baseUrl)
         urlA.protocol = "ws:"
         urlA.pathname = "/api/global/event/ws"
@@ -248,49 +214,54 @@ describeWithOpenChamber(
         try {
           wsA = await openWsAndWaitForReady(urlA.toString())
 
-          const createRes = await fetch(`${ctx.openchamber.baseUrl}/api/session`, {
+          const firstCreateRes = await fetch(`${ctx.openchamber.baseUrl}/api/session`, {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ title: "slice-3-ws-replay", directory: ctx.opencode.cwd }),
+            body: JSON.stringify({ title: "slice-3-ws-replay-first", directory: ctx.opencode.cwd }),
           })
-          const created = await createRes.json() as { id: string }
-
-          // Wait for an event frame carrying the created id and capture its eventId
-          let capturedEventId: string | undefined
-          const deadline = Date.now() + 5_000
-          while (!capturedEventId && Date.now() < deadline) {
-            const matching = wsA.frames.find((f) => JSON.stringify(f).includes(created.id))
-            if (matching && typeof (matching as { eventId?: unknown }).eventId === "string") {
-              capturedEventId = (matching as { eventId?: string }).eventId
-              break
-            }
-            await new Promise((r) => setTimeout(r, 100))
-          }
-
-          if (!capturedEventId) {
-            // Adapt: if the bridge does not assign eventIds, document and skip
-            // with a clear comment. The bridge passes eventId from the upstream
-            // SSE envelope (global-hub.ts:normalizeEvent), but OpenCode may not
-            // include `id:` in every SSE event. When eventId is absent, the
-            // replay path cannot be exercised because replayAfter(eventId)
-            // requires an eventId to look up by.
-            console.log(
-              "[ws-replay] bridge did not assign eventId on global WS event frames;",
-              "replay path requires upstream-supplied id. Skipping assertion.",
-            )
+          const firstCreated = await firstCreateRes.json() as { id: string }
+          const firstEvent = await wsA.waitForMatchingFrame(
+            (frame) => frame.type === "event" && JSON.stringify(frame).includes(firstCreated.id),
+            5_000,
+          )
+          if (typeof firstEvent.eventId !== "string") {
+            skip("OpenCode did not provide the SSE event IDs required by the replay protocol")
             return
           }
 
-          // Step B: open new WS with lastEventId, expect a replay frame
+          const secondCreateRes = await fetch(`${ctx.openchamber.baseUrl}/api/session`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ title: "slice-3-ws-replay-second", directory: ctx.opencode.cwd }),
+          })
+          const secondCreated = await secondCreateRes.json() as { id: string }
+          const secondEvent = await wsA.waitForMatchingFrame(
+            (frame) => frame.type === "event" && JSON.stringify(frame).includes(secondCreated.id),
+            5_000,
+          )
+          if (typeof secondEvent.eventId !== "string") {
+            skip("OpenCode did not provide the SSE event IDs required by the replay protocol")
+            return
+          }
+
+          const firstEventId = firstEvent.eventId as string
+          const secondEventId = secondEvent.eventId as string
+          await wsA.close()
+          wsA = undefined
+
+          // Step B: replayAfter() is exclusive, so the second event must follow the first boundary.
           const urlB = new URL(ctx.openchamber.baseUrl)
           urlB.protocol = "ws:"
           urlB.pathname = "/api/global/event/ws"
-          urlB.searchParams.set("lastEventId", capturedEventId)
+          urlB.searchParams.set("lastEventId", firstEventId)
 
           const wsB = await openWsAndWaitForReady(urlB.toString())
           try {
-            // Replay is best-effort — just assert ready arrived and connection is open
-            expect(wsB.frames[0].type).toBe("ready")
+            const replayedEvent = await wsB.waitForMatchingFrame(
+              (frame) => frame.type === "event" && frame.eventId === secondEventId,
+              5_000,
+            )
+            expect(JSON.stringify(replayedEvent)).toContain(secondCreated.id)
           } finally {
             await wsB.close()
           }

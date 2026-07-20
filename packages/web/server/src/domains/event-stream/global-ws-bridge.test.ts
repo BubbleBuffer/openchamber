@@ -1,10 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const capturedFrames: unknown[] = [];
+const capturedEvents: unknown[] = [];
 
 vi.mock("./protocol.js", () => ({
   sendMessageStreamWsFrame: (_socket: unknown, payload: unknown) => {
     capturedFrames.push(payload);
+    return true;
+  },
+  sendMessageStreamWsEvent: (_socket: unknown, payload: unknown, options: unknown) => {
+    capturedEvents.push({ payload, options });
     return true;
   },
   parseSseEventEnvelope: () => null,
@@ -54,6 +59,7 @@ function stubHub(): any {
 describe("createGlobalMessageStreamWsBridge — stall/resume dispatch", () => {
   beforeEach(() => {
     capturedFrames.length = 0;
+    capturedEvents.length = 0;
     vi.useFakeTimers();
   });
 
@@ -106,6 +112,29 @@ describe("createGlobalMessageStreamWsBridge — stall/resume dispatch", () => {
       type: "data_resumed",
       lastEventId: "evt-1",
     });
+  });
+
+  it("replays events strictly after the requested event ID", () => {
+    const hub = stubHub();
+    hub.replayAfter = vi.fn(() => [
+      {
+        payload: { type: "session.updated", properties: { id: "session-after" } },
+        directory: "/projects/a",
+        eventId: "evt-after",
+      },
+    ]);
+    const bridge = createBridge(hub);
+    const socket = stubSocket();
+
+    bridge.accept(socket, { requestedLastEventId: "evt-before" });
+
+    expect(hub.replayAfter).toHaveBeenCalledWith("evt-before");
+    expect(capturedEvents).toEqual([
+      {
+        payload: { type: "session.updated", properties: { id: "session-after" } },
+        options: { directory: "/projects/a", eventId: "evt-after" },
+      },
+    ]);
   });
 
 });
