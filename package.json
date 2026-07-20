@@ -43,6 +43,7 @@
     "pack:session-state": "npm run --prefix packages/session-state pack",
     "pack:web": "npm run --prefix packages/web pack",
     "docs:validate": "node scripts/docs/validate-docs.mjs",
+    "check:contracts": "node scripts/check-network-contracts.mjs",
     "icons:sprite": "node scripts/generate-file-type-sprite.mjs",
     "themes:port:opencode": "tsx scripts/port-opencode-theme.ts",
     "version:bump": "node scripts/bump-version.mjs",
