@@ -13,9 +13,15 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["../packages/web/src/ui/*"],
+      "@openchamber/session-state": ["../packages/session-state/src/index.ts"],
+      "@openchamber/web": ["../packages/web/server/src/index.ts"],
       "@tanstack/react-virtual": ["./react/mocks/tanstack-react-virtual.ts"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx"],
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "../packages/web/server/src/types/**/*.d.ts"
+  ],
   "exclude": ["node_modules"]
 }
