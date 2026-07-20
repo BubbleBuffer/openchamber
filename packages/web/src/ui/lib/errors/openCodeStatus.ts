@@ -2,6 +2,7 @@ import { useSessionUIStore } from '@/sync/session-ui-store';
 import { getSyncSessions } from '@/sync/sync-refs';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { parseOpenCodeResolutionResponse, type OpenCodeResolutionResponse } from '@contracts/opencode';
 
 declare const __APP_VERSION__: string | undefined;
 
@@ -28,19 +29,7 @@ type OpenChamberHealthSnapshot = {
   bunBinaryResolved?: unknown;
 };
 
-type OpenChamberOpencodeResolution = {
-  configured?: unknown;
-  resolved?: unknown;
-  resolvedDir?: unknown;
-  source?: unknown;
-  detectedNow?: unknown;
-  detectedSourceNow?: unknown;
-  launchBinary?: unknown;
-  launchArgs?: unknown;
-  launchWrapperType?: unknown;
-  node?: unknown;
-  bun?: unknown;
-};
+type OpenChamberOpencodeResolution = OpenCodeResolutionResponse;
 
 const getCurrentDirectory = (): string => {
   const state = useSessionUIStore.getState();
@@ -175,17 +164,17 @@ export const buildOpenCodeStatusReport = async (): Promise<string> => {
       try {
         json = JSON.parse(raw);
       } catch {
-        const snippet = raw.replace(/\s+/g, ' ').slice(0, 120);
         return {
           data: null,
           status: resp.status,
-          error: `invalid json content-type=${contentType} body=${snippet || '(empty)'}`,
+          error: `invalid json content-type=${contentType}`,
         };
       }
-      if (!json || typeof json !== 'object' || Array.isArray(json)) {
+      const parsed = parseOpenCodeResolutionResponse(json);
+      if (!parsed.ok) {
         return { data: null, status: resp.status, error: `invalid json-shape content-type=${contentType}` };
       }
-      return { data: json as OpenChamberOpencodeResolution, status: resp.status, error: null };
+      return { data: parsed.value, status: resp.status, error: null };
     } catch (error) {
       return {
         data: null,

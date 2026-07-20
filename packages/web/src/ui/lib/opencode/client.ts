@@ -1563,11 +1563,7 @@ class OpencodeService {
         return parsed.value as DirectorySwitchResult;
       }
 
-      return {
-        success: true,
-        restarted: false,
-        path: directoryPath
-      };
+      throw new Error('Invalid directory switch response');
     } catch (error) {
       console.warn('Failed to update OpenCode working directory:', error);
       throw error;

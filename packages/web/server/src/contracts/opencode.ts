@@ -33,7 +33,10 @@ export function parseOpenCodeErrorResponse(value: unknown): ParseResult<OpenCode
 export interface DirectorySwitchRequest { path: string; }
 export interface DirectorySwitchResponse { success: true; restarted: boolean; path: string; settings: Record<string, unknown>; }
 export interface ProviderSourceResponse { providerId: string; sources: Record<string, unknown>; }
+export interface ProviderDisconnectResponse { success: true; removed: boolean; requiresReload: boolean; message: string; reloadDelayMs?: number; }
+export interface OpenCodeResolutionResponse { configured?: string; resolved?: string; resolvedDir?: string; source?: string; detectedNow?: string; detectedSourceNow?: string; launchBinary?: string; launchArgs?: string[]; launchWrapperType?: string; node?: string; bun?: string; }
 export interface ReloadResponse { success: boolean; requiresReload?: boolean; reloadFailed?: boolean; message?: string; warning?: string; reloadDelayMs?: number; }
+export type ConfigEntityBody = Record<string, unknown>;
 export interface PendingMcpAuthRequest { state: string | null; name: string | null; directory: string | null; }
 export interface PendingMcpAuthContext { name: string; directory: string | null; }
 export interface PendingMcpAuthResponse { success?: true; context?: PendingMcpAuthContext | null; name?: string; directory?: string | null; }
@@ -129,6 +132,29 @@ export function parseProviderSourceResponse(value: unknown): ParseResult<Provide
   }
   return { ok: true, value: { providerId, sources: sources.value } };
 }
+export function parseProviderId(value: unknown): ParseResult<string> {
+  const id = requiredTrimmedString(value);
+  return id && !/[\\/%]/.test(id) ? { ok: true, value: id } : invalid("invalid provider id");
+}
+export function parseProviderDisconnectResponse(value: unknown): ParseResult<ProviderDisconnectResponse> {
+  const object = parseJsonObject(value); if (!object.ok) return object;
+  if (object.value.success !== true || typeof object.value.removed !== "boolean" || typeof object.value.requiresReload !== "boolean" || typeof object.value.message !== "string") return invalid("invalid provider disconnect response");
+  if (object.value.reloadDelayMs !== undefined && !parseJsonNumber(object.value.reloadDelayMs).ok) return invalid("invalid provider disconnect response");
+  return { ok: true, value: object.value as unknown as ProviderDisconnectResponse };
+}
+export function parseOpenCodeResolutionResponse(value: unknown): ParseResult<OpenCodeResolutionResponse> {
+  const object = parseJsonObject(value); if (!object.ok) return object;
+  const result: OpenCodeResolutionResponse = {};
+  for (const key of ["configured", "resolved", "resolvedDir", "source", "detectedNow", "detectedSourceNow", "launchBinary", "launchWrapperType", "node", "bun"] as const) {
+    if (object.value[key] !== undefined && typeof object.value[key] !== "string") return invalid("invalid OpenCode resolution response");
+    if (typeof object.value[key] === "string") result[key] = object.value[key] as never;
+  }
+  if (object.value.launchArgs !== undefined) {
+    if (!Array.isArray(object.value.launchArgs) || object.value.launchArgs.some((arg) => typeof arg !== "string")) return invalid("invalid OpenCode resolution response");
+    result.launchArgs = object.value.launchArgs as string[];
+  }
+  return { ok: true, value: result };
+}
 
 export function parseReloadResponse(value: unknown): ParseResult<ReloadResponse> {
   const object = parseJsonObject(value); if (!object.ok) return object;
@@ -139,7 +165,12 @@ export function parseReloadResponse(value: unknown): ParseResult<ReloadResponse>
   return { ok: true, value: object.value as unknown as ReloadResponse };
 }
 
-export const parseMcpMutationResponse = parseReloadResponse;
+export function parseMcpMutationResponse(value: unknown): ParseResult<ReloadResponse & { success: true }> {
+  const parsed = parseReloadResponse(value);
+  return parsed.ok && parsed.value.success === true
+    ? { ok: true, value: parsed.value as ReloadResponse & { success: true } }
+    : invalid("MCP mutation response requires success");
+}
 
 export function parsePendingMcpAuthRequest(value: unknown): ParseResult<PendingMcpAuthRequest> {
   const object = parseJsonObject(value); if (!object.ok) return object;
@@ -187,4 +218,21 @@ export function parseMcpConfigRequest(value: unknown): ParseResult<Record<string
   if (object.value.command !== undefined && (!Array.isArray(object.value.command) || object.value.command.some((item) => typeof item !== "string"))) return invalid("invalid MCP command");
   if (object.value.url !== undefined && typeof object.value.url !== "string") return invalid("invalid MCP URL");
   return { ok: true, value: object.value };
+}
+
+const CONFIG_ENTITY_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+export function parseConfigEntityName(value: unknown): ParseResult<string> {
+  if (typeof value !== "string") return invalid("invalid config entity name");
+  let decoded: string;
+  try { decoded = decodeURIComponent(value); } catch { return invalid("invalid config entity name"); }
+  const name = requiredTrimmedString(decoded);
+  return name && CONFIG_ENTITY_NAME_PATTERN.test(name) ? { ok: true, value: name } : invalid("invalid config entity name");
+}
+export function parseConfigEntityBody(value: unknown): ParseResult<ConfigEntityBody> {
+  const object = parseJsonObject(value); if (!object.ok) return object;
+  if (object.value.scope !== undefined && object.value.scope !== "user" && object.value.scope !== "project") return invalid("invalid config entity scope");
+  return { ok: true, value: object.value };
+}
+export function parseConfigEntityResponse(value: unknown): ParseResult<Record<string, unknown>> {
+  return parseJsonObject(value);
 }

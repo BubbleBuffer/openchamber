@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Express, Request, Response } from "express";
-import { parseMcpConfigListResponse, parseMcpConfigRequest, parseMcpMutationResponse } from "../../../contracts/opencode.js";
+import { parseConfigEntityBody, parseConfigEntityName, parseConfigEntityResponse, parseMcpConfigListResponse, parseMcpConfigRequest, parseMcpMutationResponse } from "../../../contracts/opencode.js";
 
 interface ConfigEntityRoutesDeps {
   resolveProjectDirectory: (req: Request) => Promise<{ directory?: string; error?: string }>;
@@ -47,6 +47,8 @@ export function registerConfigEntityRoutes(
     updateMcpConfig,
     deleteMcpConfig,
   } = dependencies;
+  const invalidRequest = (res: Response): void => { res.status(400).json({ error: "Request failed", code: "opencode_invalid_request" }); };
+  const internalError = (res: Response): void => { res.status(500).json({ error: "Internal server error", code: "opencode_internal_error" }); };
 
   const completeMcpMutation = async (
     res: Response,
@@ -81,11 +83,10 @@ export function registerConfigEntityRoutes(
 
   app.get("/api/config/agents/:name", async (req: Request, res: Response) => {
     try {
-      const agentName = req.params.name;
-      const { directory, error } = await resolveProjectDirectory(req);
+      const parsedName = parseConfigEntityName(req.params.name); if (!parsedName.ok) return invalidRequest(res); const agentName = parsedName.value;
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
-        return;
+        return invalidRequest(res);
       }
       const sources = getAgentSources(agentName, directory);
 
@@ -95,44 +96,46 @@ export function registerConfigEntityRoutes(
           ? sources.json.scope
           : null;
 
-      res.json({
+      const response = {
         name: agentName,
         sources: sources,
         scope,
         isBuiltIn: !sources.md.exists && !sources.json.exists,
-      });
+      };
+      if (!parseConfigEntityResponse(response).ok) return internalError(res);
+      res.json(response);
     } catch (error) {
       console.error("Failed to get agent sources:", error);
-      res.status(500).json({ error: "Failed to get agent configuration metadata" });
+      internalError(res);
     }
   });
 
   app.get("/api/config/agents/:name/config", async (req: Request, res: Response) => {
     try {
-      const agentName = req.params.name;
-      const { directory, error } = await resolveProjectDirectory(req);
+      const parsedName = parseConfigEntityName(req.params.name); if (!parsedName.ok) return invalidRequest(res); const agentName = parsedName.value;
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
-        return;
+        return invalidRequest(res);
       }
 
       const configInfo = getAgentConfig(agentName, directory);
+      if (!parseConfigEntityResponse(configInfo).ok) return internalError(res);
       res.json(configInfo);
     } catch (error) {
       console.error("Failed to get agent config:", error);
-      res.status(500).json({ error: "Failed to get agent configuration" });
+      internalError(res);
     }
   });
 
   app.post("/api/config/agents/:name", async (req: Request, res: Response) => {
     try {
-      const agentName = req.params.name;
+      const parsedName = parseConfigEntityName(req.params.name); if (!parsedName.ok) return invalidRequest(res); const agentName = parsedName.value;
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { scope, ...config } = req.body as { scope?: string; [key: string]: any };
-      const { directory, error } = await resolveProjectDirectory(req);
+      const parsedBody = parseConfigEntityBody(req.body ?? {}); if (!parsedBody.ok) return invalidRequest(res);
+      const { scope, ...config } = parsedBody.value;
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
-        return;
+        return invalidRequest(res);
       }
 
       console.log("[Server] Creating agent:", agentName);
@@ -152,18 +155,17 @@ export function registerConfigEntityRoutes(
       });
     } catch (error) {
       console.error("Failed to create agent:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to create agent" });
+      internalError(res);
     }
   });
 
   app.patch("/api/config/agents/:name", async (req: Request, res: Response) => {
     try {
-      const agentName = req.params.name;
-      const updates = req.body;
-      const { directory, error } = await resolveProjectDirectory(req);
+      const parsedName = parseConfigEntityName(req.params.name); if (!parsedName.ok) return invalidRequest(res); const agentName = parsedName.value;
+      const parsedBody = parseConfigEntityBody(req.body ?? {}); if (!parsedBody.ok) return invalidRequest(res); const updates = parsedBody.value;
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
-        return;
+        return invalidRequest(res);
       }
 
       console.log(`[Server] Updating agent: ${agentName}`);
@@ -184,17 +186,16 @@ export function registerConfigEntityRoutes(
     } catch (error) {
       console.error("[Server] Failed to update agent:", error);
       console.error("[Server] Error stack:", (error as Error)?.stack);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to update agent" });
+      internalError(res);
     }
   });
 
   app.delete("/api/config/agents/:name", async (req: Request, res: Response) => {
     try {
-      const agentName = req.params.name;
-      const { directory, error } = await resolveProjectDirectory(req);
+      const parsedName = parseConfigEntityName(req.params.name); if (!parsedName.ok) return invalidRequest(res); const agentName = parsedName.value;
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
-        return;
+        return invalidRequest(res);
       }
 
       deleteAgent(agentName, directory);
@@ -208,7 +209,7 @@ export function registerConfigEntityRoutes(
       });
     } catch (error) {
       console.error("Failed to delete agent:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to delete agent" });
+      internalError(res);
     }
   });
 
@@ -315,11 +316,10 @@ export function registerConfigEntityRoutes(
 
   app.get("/api/config/commands/:name", async (req: Request, res: Response) => {
     try {
-      const commandName = req.params.name;
-      const { directory, error } = await resolveProjectDirectory(req);
+      const parsedName = parseConfigEntityName(req.params.name); if (!parsedName.ok) return invalidRequest(res); const commandName = parsedName.value;
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
-        return;
+        return invalidRequest(res);
       }
       const sources = getCommandSources(commandName, directory);
 
@@ -329,27 +329,29 @@ export function registerConfigEntityRoutes(
           ? sources.json.scope
           : null;
 
-      res.json({
+      const response = {
         name: commandName,
         sources: sources,
         scope,
         isBuiltIn: !sources.md.exists && !sources.json.exists,
-      });
+      };
+      if (!parseConfigEntityResponse(response).ok) return internalError(res);
+      res.json(response);
     } catch (error) {
       console.error("Failed to get command sources:", error);
-      res.status(500).json({ error: "Failed to get command configuration metadata" });
+      internalError(res);
     }
   });
 
   app.post("/api/config/commands/:name", async (req: Request, res: Response) => {
     try {
-      const commandName = req.params.name;
+      const parsedName = parseConfigEntityName(req.params.name); if (!parsedName.ok) return invalidRequest(res); const commandName = parsedName.value;
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { scope, ...config } = req.body as { scope?: string; [key: string]: any };
-      const { directory, error } = await resolveProjectDirectory(req);
+      const parsedBody = parseConfigEntityBody(req.body ?? {}); if (!parsedBody.ok) return invalidRequest(res);
+      const { scope, ...config } = parsedBody.value;
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
-        return;
+        return invalidRequest(res);
       }
 
       console.log("[Server] Creating command:", commandName);
@@ -369,18 +371,17 @@ export function registerConfigEntityRoutes(
       });
     } catch (error) {
       console.error("Failed to create command:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to create command" });
+      internalError(res);
     }
   });
 
   app.patch("/api/config/commands/:name", async (req: Request, res: Response) => {
     try {
-      const commandName = req.params.name;
-      const updates = req.body;
-      const { directory, error } = await resolveProjectDirectory(req);
+      const parsedName = parseConfigEntityName(req.params.name); if (!parsedName.ok) return invalidRequest(res); const commandName = parsedName.value;
+      const parsedBody = parseConfigEntityBody(req.body ?? {}); if (!parsedBody.ok) return invalidRequest(res); const updates = parsedBody.value;
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
-        return;
+        return invalidRequest(res);
       }
 
       console.log(`[Server] Updating command: ${commandName}`);
@@ -401,17 +402,16 @@ export function registerConfigEntityRoutes(
     } catch (error) {
       console.error("[Server] Failed to update command:", error);
       console.error("[Server] Error stack:", (error as Error)?.stack);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to update command" });
+      internalError(res);
     }
   });
 
   app.delete("/api/config/commands/:name", async (req: Request, res: Response) => {
     try {
-      const commandName = req.params.name;
-      const { directory, error } = await resolveProjectDirectory(req);
+      const parsedName = parseConfigEntityName(req.params.name); if (!parsedName.ok) return invalidRequest(res); const commandName = parsedName.value;
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
-        return;
+        return invalidRequest(res);
       }
 
       deleteCommand(commandName, directory);
@@ -425,7 +425,7 @@ export function registerConfigEntityRoutes(
       });
     } catch (error) {
       console.error("Failed to delete command:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to delete command" });
+      internalError(res);
     }
   });
 }

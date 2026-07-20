@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createProjectIdFromPath } from "../../projects/project-id.js";
 import { registerOpenCodeRoutes } from "./routes.js";
@@ -112,5 +112,22 @@ describe("OpenCode directory route", () => {
     expect(persisted.projects).toEqual([existing]);
     expect(persisted.activeProjectId).toBe(existing.id);
     expect(persisted.lastDirectory).toBe(existing.path);
+  });
+});
+
+describe("provider disconnect route", () => {
+  it("rejects invalid provider and scope values before a removal service consumes them", async () => {
+    const registry = createRouteRegistry();
+    const removeProviderConfig = vi.fn();
+    registerOpenCodeRoutes(registry.app, {
+      crypto: {} as never, clientReloadDelayMs: 1, getOpenCodeResolutionSnapshot: async () => ({}), formatSettingsResponse: (settings) => settings,
+      readSettingsFromDisk: async () => ({}), readSettingsFromDiskMigrated: async () => ({}), persistSettings: async () => ({}), sanitizeProjects: () => [], validateDirectoryPath: async () => ({ ok: true }), resolveProjectDirectory: async () => ({}), getProviderSources: () => ({ sources: {} }), removeProviderConfig, refreshOpenCodeAfterConfigChange: async () => {},
+    });
+    const route = registry.getRoute("DELETE", "/api/provider/:providerId/auth")!;
+    const res = createResponse();
+    await route({ params: { providerId: "provider" }, query: { scope: "../../unsafe" } }, res);
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toEqual({ error: "Request failed", code: "opencode_invalid_request" });
+    expect(removeProviderConfig).not.toHaveBeenCalled();
   });
 });

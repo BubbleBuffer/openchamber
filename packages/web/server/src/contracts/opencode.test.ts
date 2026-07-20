@@ -9,6 +9,7 @@ import {
   parsePendingMcpAuthRequest,
   parsePendingMcpAuthResponse,
   parseProviderSourceResponse,
+  parseOpenCodeResolutionResponse,
   parseOpenCodeErrorResponse,
   parseSessionFoldersResponse,
   parseSessionFoldersUpdateRequest,
@@ -35,6 +36,7 @@ describe("OpenChamber OpenCode wrapper contracts", () => {
     expect(parseProviderSourceResponse({ providerId: "p", sources: null }).ok).toBe(false);
     expect(parseMcpConfigListResponse({ name: "mcp" }).ok).toBe(false);
     expect(parseMcpMutationResponse({ success: "yes" }).ok).toBe(false);
+    expect(parseMcpMutationResponse({ success: false }).ok).toBe(false);
     expect(parsePendingMcpAuthResponse({ name: 1 }).ok).toBe(false);
   });
 
@@ -66,5 +68,10 @@ describe("OpenChamber OpenCode wrapper contracts", () => {
     expect(parseOpenCodeErrorResponse({ error: "Request failed", code: "opencode_upstream_error" }).ok).toBe(true);
     expect(parseOpenCodeErrorResponse({ error: "Internal server error", code: "opencode_internal_error" }).ok).toBe(true);
     expect(parseOpenCodeErrorResponse({ error: "/private/path token=secret", code: "opencode_internal_error" }).ok).toBe(false);
+  });
+
+  it("validates optional OpenCode resolution diagnostics without accepting malformed fields", () => {
+    expect(parseOpenCodeResolutionResponse({ resolved: "/bin/opencode", launchArgs: ["serve"] }).ok).toBe(true);
+    expect(parseOpenCodeResolutionResponse({ launchArgs: ["serve", 1] }).ok).toBe(false);
   });
 });

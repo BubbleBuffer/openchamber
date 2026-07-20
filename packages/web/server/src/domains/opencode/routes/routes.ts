@@ -4,6 +4,9 @@ import { parseSettingsUpdateRequest } from "../../../contracts/settings.js";
 import {
   parseDirectorySwitchRequest,
   parsePendingMcpAuthRequest,
+  parseOpenCodeResolutionResponse,
+  parseProviderDisconnectResponse,
+  parseProviderId,
   parseProviderSourceResponse,
   type OpenCodeErrorCode,
 } from "../../../contracts/opencode.js";
@@ -97,10 +100,12 @@ export function registerOpenCodeRoutes(
     try {
       const settings = await readSettingsFromDiskMigrated();
       const resolution = await getOpenCodeResolutionSnapshot(settings);
-      res.json(resolution);
+      const parsed = parseOpenCodeResolutionResponse(resolution);
+      if (!parsed.ok) return safeError(res, 500, "opencode_invalid_response");
+      res.json(parsed.value);
     } catch (error) {
       console.error("Failed to resolve OpenCode binary:", error);
-      res.status(500).json({ error: "Failed to resolve OpenCode binary" });
+      safeError(res, 500, "opencode_internal_error");
     }
   });
 
@@ -235,14 +240,12 @@ export function registerOpenCodeRoutes(
 
   app.delete("/api/provider/:providerId/auth", async (req: Request, res: Response) => {
     try {
-      const { providerId } = req.params;
-      if (!providerId) {
-        res.status(400).json({ error: "Provider ID is required" });
-        return;
-      }
+      const parsedProviderId = parseProviderId(req.params.providerId);
+      if (!parsedProviderId.ok) return safeError(res, 400, "opencode_invalid_request");
+      const providerId = parsedProviderId.value;
 
-      const scope =
-        typeof req.query?.scope === "string" ? req.query.scope : "auth";
+      const scope = typeof req.query?.scope === "string" ? req.query.scope : "auth";
+      if (!(["auth", "user", "project", "custom", "all"] as const).includes(scope as "auth" | "user" | "project" | "custom" | "all")) return safeError(res, 400, "opencode_invalid_request");
       const headerDirectory = typeof req.get === "function" ? req.get("x-opencode-directory") : null;
       const queryDirectory = Array.isArray(req.query?.directory)
         ? req.query.directory[0]
@@ -253,8 +256,7 @@ export function registerOpenCodeRoutes(
       if (scope === "project" || requestedDirectory) {
         const resolved = await resolveProjectDirectory(req);
         if (!resolved.directory) {
-          res.status(400).json({ error: resolved.error });
-          return;
+          return safeError(res, 400, "opencode_invalid_request");
         }
         directory = resolved.directory;
       } else {
@@ -279,25 +281,24 @@ export function registerOpenCodeRoutes(
         const projectRemoved = directory ? removeProviderConfig(providerId, directory, "project") : false;
         const customRemoved = removeProviderConfig(providerId, directory, "custom");
         removed = authRemoved || userRemoved || projectRemoved || customRemoved;
-      } else {
-        res.status(400).json({ error: "Invalid scope" });
-        return;
       }
 
       if (removed) {
         await refreshOpenCodeAfterConfigChange(`provider ${providerId} disconnected (${scope})`);
       }
 
-      res.json({
+      const response = {
         success: true,
         removed,
         requiresReload: removed,
         message: removed ? "Provider disconnected successfully" : "Provider was not connected",
         reloadDelayMs: removed ? clientReloadDelayMs : undefined,
-      });
+      };
+      if (!parseProviderDisconnectResponse(response).ok) return safeError(res, 500, "opencode_invalid_response");
+      res.json(response);
     } catch (error) {
       console.error("Failed to disconnect provider:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to disconnect provider" });
+      safeError(res, 500, "opencode_internal_error");
     }
   });
 
