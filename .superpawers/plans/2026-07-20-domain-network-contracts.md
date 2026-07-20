@@ -7,7 +7,7 @@ covers_chunks:
   - domain-network-contracts
 created: 2026-07-20
 updated: 2026-07-20
-next_action: "Execute Task 2"
+next_action: "Execute Task 3"
 ---
 
 # Domain Network Contracts Implementation Plan
@@ -100,7 +100,7 @@ Tasks 1-4 are Test-first because they establish or migrate executable network be
 
 ### Task 2: Contract Core Browser And Persisted-Settings Domains
 
-- [ ] **Outcome:** OpenChamber-owned files, settings, push, notifications, and UI-auth routes accept and return domain DTOs through runtime validators; malformed input and authorization failures use stable safe codes while existing successful browser behavior remains unchanged. SDK-owned file-search and tool-ID pass-throughs retain upstream semantics and use only browser-local narrow feature decoders.
+- [x] **Outcome:** OpenChamber-owned files, settings, push, notifications, and UI-auth routes accept and return domain DTOs through runtime validators; malformed input and authorization failures use stable safe codes while existing successful browser behavior remains unchanged. SDK-owned file-search and tool-ID pass-throughs retain upstream semantics and use only browser-local narrow feature decoders.
 
 **Files and anchors:**
 - Create: `packages/web/server/src/contracts/files.ts` - OpenChamber-owned list/stat/read/write/mkdir/delete/rename/raw request and response DTOs, strict response parsers, path/content/body validators, and `fs_*` error codes. `/api/find/file` remains SDK pass-through and is narrowed into a browser feature model without duplicating its upstream schema.
