@@ -7,7 +7,7 @@ covers_chunks:
   - domain-network-contracts
 created: 2026-07-20
 updated: 2026-07-20
-next_action: "Execute Task 1"
+next_action: "Execute Task 2"
 ---
 
 # Domain Network Contracts Implementation Plan
@@ -70,7 +70,7 @@ Tasks 1-4 are Test-first because they establish or migrate executable network be
 
 ### Task 1: Establish Contract And Transport Foundations
 
-- [ ] **Outcome:** A portable domain-contract layer owns common errors, protocol compatibility metadata, HTTP decoding primitives, and the complete message-stream SSE/WS wire protocol used by both browser and server.
+- [x] **Outcome:** A portable domain-contract layer owns common errors, protocol compatibility metadata, HTTP decoding primitives, and the complete message-stream SSE/WS wire protocol used by both browser and server.
 
 **Files and anchors:**
 - Create: `packages/web/server/src/contracts/common.ts` - portable `ApiErrorResponse`, stable common error codes, JSON object/string/number/boolean/array parsers, and a result type that distinguishes valid values from validation failures.
