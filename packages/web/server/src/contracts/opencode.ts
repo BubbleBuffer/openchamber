@@ -34,7 +34,7 @@ export interface DirectorySwitchRequest { path: string; }
 export interface DirectorySwitchResponse { success: true; restarted: boolean; path: string; settings: Record<string, unknown>; }
 export interface ProviderSourceResponse { providerId: string; sources: Record<string, unknown>; }
 export interface ProviderDisconnectResponse { success: true; removed: boolean; requiresReload: boolean; message: string; reloadDelayMs?: number; }
-export interface OpenCodeResolutionResponse { configured?: string; resolved?: string; resolvedDir?: string; source?: string; detectedNow?: string; detectedSourceNow?: string; launchBinary?: string; launchArgs?: string[]; launchWrapperType?: string; node?: string; bun?: string; }
+export interface OpenCodeResolutionResponse { configured?: string | null; resolved?: string | null; resolvedDir?: string | null; source?: string | null; detectedNow?: string | null; detectedSourceNow?: string | null; launchBinary?: string | null; launchArgs?: string[]; launchWrapperType?: string | null; viaWsl?: boolean; wslBinary?: string | null; wslPath?: string | null; wslDistro?: string | null; node?: string | null; bun?: string | null; }
 export interface ReloadResponse { success: boolean; requiresReload?: boolean; reloadFailed?: boolean; message?: string; warning?: string; reloadDelayMs?: number; }
 export type ConfigEntityBody = Record<string, unknown>;
 export interface PendingMcpAuthRequest { state: string | null; name: string | null; directory: string | null; }
@@ -145,10 +145,12 @@ export function parseProviderDisconnectResponse(value: unknown): ParseResult<Pro
 export function parseOpenCodeResolutionResponse(value: unknown): ParseResult<OpenCodeResolutionResponse> {
   const object = parseJsonObject(value); if (!object.ok) return object;
   const result: OpenCodeResolutionResponse = {};
-  for (const key of ["configured", "resolved", "resolvedDir", "source", "detectedNow", "detectedSourceNow", "launchBinary", "launchWrapperType", "node", "bun"] as const) {
-    if (object.value[key] !== undefined && typeof object.value[key] !== "string") return invalid("invalid OpenCode resolution response");
-    if (typeof object.value[key] === "string") result[key] = object.value[key] as never;
+  for (const key of ["configured", "resolved", "resolvedDir", "source", "detectedNow", "detectedSourceNow", "launchBinary", "launchWrapperType", "wslBinary", "wslPath", "wslDistro", "node", "bun"] as const) {
+    if (object.value[key] !== undefined && object.value[key] !== null && typeof object.value[key] !== "string") return invalid("invalid OpenCode resolution response");
+    if (object.value[key] !== undefined) result[key] = object.value[key] as never;
   }
+  if (object.value.viaWsl !== undefined && typeof object.value.viaWsl !== "boolean") return invalid("invalid OpenCode resolution response");
+  if (typeof object.value.viaWsl === "boolean") result.viaWsl = object.value.viaWsl;
   if (object.value.launchArgs !== undefined) {
     if (!Array.isArray(object.value.launchArgs) || object.value.launchArgs.some((arg) => typeof arg !== "string")) return invalid("invalid OpenCode resolution response");
     result.launchArgs = object.value.launchArgs as string[];
@@ -220,13 +222,23 @@ export function parseMcpConfigRequest(value: unknown): ParseResult<Record<string
   return { ok: true, value: object.value };
 }
 
-const CONFIG_ENTITY_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 export function parseConfigEntityName(value: unknown): ParseResult<string> {
   if (typeof value !== "string") return invalid("invalid config entity name");
-  let decoded: string;
-  try { decoded = decodeURIComponent(value); } catch { return invalid("invalid config entity name"); }
-  const name = requiredTrimmedString(decoded);
-  return name && CONFIG_ENTITY_NAME_PATTERN.test(name) ? { ok: true, value: name } : invalid("invalid config entity name");
+  let name = value;
+  try {
+    for (let index = 0; index < 3; index += 1) {
+      const decoded = decodeURIComponent(name);
+      if (decoded === name) break;
+      name = decoded;
+    }
+  } catch { return invalid("invalid config entity name"); }
+  const hasControl = Array.from(name).some((character) => {
+    const code = character.codePointAt(0) ?? 0;
+    return code < 32 || code === 127;
+  });
+  return name.length > 0 && name !== "." && name !== ".." && !/[\\/]/.test(name) && !hasControl
+    ? { ok: true, value: name }
+    : invalid("invalid config entity name");
 }
 export function parseConfigEntityBody(value: unknown): ParseResult<ConfigEntityBody> {
   const object = parseJsonObject(value); if (!object.ok) return object;

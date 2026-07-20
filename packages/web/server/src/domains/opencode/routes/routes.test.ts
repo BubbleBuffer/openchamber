@@ -131,3 +131,16 @@ describe("provider disconnect route", () => {
     expect(removeProviderConfig).not.toHaveBeenCalled();
   });
 });
+
+describe("OpenCode resolution route", () => {
+  it("preserves the normal nullable WSL snapshot instead of returning 500", async () => {
+    const registry = createRouteRegistry();
+    const snapshot = { configured: null, resolved: null, resolvedDir: null, source: null, detectedNow: null, detectedSourceNow: null, launchBinary: null, launchArgs: [], launchWrapperType: null, viaWsl: true, wslBinary: null, wslPath: "/mnt/c/opencode", wslDistro: null, node: null, bun: null };
+    registerOpenCodeRoutes(registry.app, {
+      crypto: {} as never, clientReloadDelayMs: 1, getOpenCodeResolutionSnapshot: async () => snapshot, formatSettingsResponse: (settings) => settings,
+      readSettingsFromDisk: async () => ({}), readSettingsFromDiskMigrated: async () => ({}), persistSettings: async () => ({}), sanitizeProjects: () => [], validateDirectoryPath: async () => ({ ok: true }), resolveProjectDirectory: async () => ({}), getProviderSources: () => ({ sources: {} }), removeProviderConfig: () => false, refreshOpenCodeAfterConfigChange: async () => {},
+    });
+    const res = createResponse(); await registry.getRoute("GET", "/api/config/opencode-resolution")!({}, res);
+    expect(res.statusCode).toBe(200); expect(res.body).toEqual(snapshot);
+  });
+});

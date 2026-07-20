@@ -1,5 +1,6 @@
 import React from 'react';
 import { parseProviderSourceResponse } from '@contracts/opencode';
+import { parseProviderDisconnectSuccess } from './providerDisconnect';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { ProviderLogo } from '@/components/ui/ProviderLogo';
 import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
@@ -496,6 +497,10 @@ export const ProvidersPage: React.FC = () => {
       if (!response.ok) {
         const message = payload?.error || 'Failed to disconnect provider';
         throw new Error(message);
+      }
+      const parsed = parseProviderDisconnectSuccess(payload);
+      if (!parsed.ok) {
+        throw new Error('Invalid provider disconnect response');
       }
 
       toast.success('Provider disconnected');

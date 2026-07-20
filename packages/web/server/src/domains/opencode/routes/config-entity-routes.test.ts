@@ -31,4 +31,30 @@ describe("config entity route contracts", () => {
     }
     expect(createAgent).not.toHaveBeenCalled();
   });
+
+  it("preserves path-safe legacy names including leading punctuation, spaces, and Unicode", async () => {
+    const routes = registry();
+    const createAgent = vi.fn(); const createCommand = vi.fn();
+    registerConfigEntityRoutes(routes.app, {
+      resolveProjectDirectory: async () => ({ directory: "/repo" }), resolveOptionalProjectDirectory: async () => ({ directory: "/repo" }), refreshOpenCodeAfterConfigChange: async () => {}, clientReloadDelayMs: 1,
+      getAgentSources: () => ({}), getAgentConfig: () => ({}), createAgent, updateAgent: () => {}, deleteAgent: () => {}, getCommandSources: () => ({}), createCommand, updateCommand: () => {}, deleteCommand: () => {}, listMcpConfigs: () => [], getMcpConfig: () => null, createMcpConfig: () => {}, updateMcpConfig: () => {}, deleteMcpConfig: () => {},
+    });
+    for (const [path, name] of [["/api/config/agents/:name", ".review agent"], ["/api/config/commands/:name", "日本語 command"]]) {
+      const res = response(); await routes.get("POST", path)({ params: { name }, body: {} }, res); expect(res.statusCode).toBe(200);
+    }
+    expect(createAgent).toHaveBeenCalledWith('.review agent', {}, '/repo', undefined);
+    expect(createCommand).toHaveBeenCalledWith('日本語 command', {}, '/repo', undefined);
+  });
+
+  it("rejects explicit null bodies before all agent and command mutation services", async () => {
+    const routes = registry(); const createAgent = vi.fn(); const updateAgent = vi.fn(); const createCommand = vi.fn(); const updateCommand = vi.fn();
+    registerConfigEntityRoutes(routes.app, {
+      resolveProjectDirectory: async () => ({ directory: "/repo" }), resolveOptionalProjectDirectory: async () => ({ directory: "/repo" }), refreshOpenCodeAfterConfigChange: async () => {}, clientReloadDelayMs: 1,
+      getAgentSources: () => ({}), getAgentConfig: () => ({}), createAgent, updateAgent, deleteAgent: () => {}, getCommandSources: () => ({}), createCommand, updateCommand, deleteCommand: () => {}, listMcpConfigs: () => [], getMcpConfig: () => null, createMcpConfig: () => {}, updateMcpConfig: () => {}, deleteMcpConfig: () => {},
+    });
+    for (const [method, path] of [["POST", "/api/config/agents/:name"], ["PATCH", "/api/config/agents/:name"], ["POST", "/api/config/commands/:name"], ["PATCH", "/api/config/commands/:name"]]) {
+      const res = response(); await routes.get(method, path)({ params: { name: 'safe' }, body: null }, res); expect(res.statusCode).toBe(400);
+    }
+    expect(createAgent).not.toHaveBeenCalled(); expect(updateAgent).not.toHaveBeenCalled(); expect(createCommand).not.toHaveBeenCalled(); expect(updateCommand).not.toHaveBeenCalled();
+  });
 });

@@ -74,4 +74,9 @@ describe("OpenChamber OpenCode wrapper contracts", () => {
     expect(parseOpenCodeResolutionResponse({ resolved: "/bin/opencode", launchArgs: ["serve"] }).ok).toBe(true);
     expect(parseOpenCodeResolutionResponse({ launchArgs: ["serve", 1] }).ok).toBe(false);
   });
+
+  it("preserves nullable WSL resolution diagnostics", () => {
+    const parsed = parseOpenCodeResolutionResponse({ configured: null, resolved: null, resolvedDir: null, source: null, detectedNow: null, detectedSourceNow: null, launchBinary: null, launchArgs: [], launchWrapperType: null, viaWsl: true, wslBinary: null, wslPath: "/mnt/c/opencode", wslDistro: null, node: null, bun: null });
+    expect(parsed.ok && parsed.value).toMatchObject({ viaWsl: true, wslPath: "/mnt/c/opencode", configured: null });
+  });
 });

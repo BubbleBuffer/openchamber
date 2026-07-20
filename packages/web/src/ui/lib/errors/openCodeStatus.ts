@@ -290,6 +290,10 @@ export const buildOpenCodeStatusReport = async (): Promise<string> => {
       openChamberOpencodeResolution && typeof openChamberOpencodeResolution.detectedSourceNow === 'string'
         ? openChamberOpencodeResolution.detectedSourceNow
         : '';
+    const viaWsl = openChamberOpencodeResolution?.viaWsl;
+    const wslBinary = openChamberOpencodeResolution?.wslBinary;
+    const wslPath = openChamberOpencodeResolution?.wslPath;
+    const wslDistro = openChamberOpencodeResolution?.wslDistro;
 
     if (configured !== null) {
       lines.push(`- configured: ${configured.trim().length === 0 ? '(cleared)' : configured}`);
@@ -310,6 +314,12 @@ export const buildOpenCodeStatusReport = async (): Promise<string> => {
     lines.push(`- launch-binary: ${launchBinary || '(n/a)'}`);
     lines.push(`- launch-wrapper: ${launchWrapperType || '(n/a)'}`);
     lines.push(`- launch-args: ${launchArgs.length ? launchArgs.join(' ') : '(none)'}`);
+    if (typeof viaWsl === 'boolean') lines.push(`- via-wsl: ${viaWsl ? 'true' : 'false'}`);
+    if (viaWsl) {
+      lines.push(`- wsl-binary: ${wslBinary || '(n/a)'}`);
+      lines.push(`- wsl-path: ${wslPath || '(n/a)'}`);
+      lines.push(`- wsl-distro: ${wslDistro || '(n/a)'}`);
+    }
     lines.push(`- node: ${node || '(n/a)'}`);
     lines.push(`- bun: ${bun || '(n/a)'}`);
     if (!openChamberOpencodeResolution && openChamberOpencodeResolutionResult.error) {

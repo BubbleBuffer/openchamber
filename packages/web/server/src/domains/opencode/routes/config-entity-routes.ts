@@ -131,7 +131,7 @@ export function registerConfigEntityRoutes(
     try {
       const parsedName = parseConfigEntityName(req.params.name); if (!parsedName.ok) return invalidRequest(res); const agentName = parsedName.value;
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const parsedBody = parseConfigEntityBody(req.body ?? {}); if (!parsedBody.ok) return invalidRequest(res);
+      const parsedBody = parseConfigEntityBody(req.body === undefined ? {} : req.body); if (!parsedBody.ok) return invalidRequest(res);
       const { scope, ...config } = parsedBody.value;
       const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
@@ -162,7 +162,7 @@ export function registerConfigEntityRoutes(
   app.patch("/api/config/agents/:name", async (req: Request, res: Response) => {
     try {
       const parsedName = parseConfigEntityName(req.params.name); if (!parsedName.ok) return invalidRequest(res); const agentName = parsedName.value;
-      const parsedBody = parseConfigEntityBody(req.body ?? {}); if (!parsedBody.ok) return invalidRequest(res); const updates = parsedBody.value;
+      const parsedBody = parseConfigEntityBody(req.body === undefined ? {} : req.body); if (!parsedBody.ok) return invalidRequest(res); const updates = parsedBody.value;
       const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
         return invalidRequest(res);
@@ -347,7 +347,7 @@ export function registerConfigEntityRoutes(
     try {
       const parsedName = parseConfigEntityName(req.params.name); if (!parsedName.ok) return invalidRequest(res); const commandName = parsedName.value;
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const parsedBody = parseConfigEntityBody(req.body ?? {}); if (!parsedBody.ok) return invalidRequest(res);
+      const parsedBody = parseConfigEntityBody(req.body === undefined ? {} : req.body); if (!parsedBody.ok) return invalidRequest(res);
       const { scope, ...config } = parsedBody.value;
       const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
@@ -378,7 +378,7 @@ export function registerConfigEntityRoutes(
   app.patch("/api/config/commands/:name", async (req: Request, res: Response) => {
     try {
       const parsedName = parseConfigEntityName(req.params.name); if (!parsedName.ok) return invalidRequest(res); const commandName = parsedName.value;
-      const parsedBody = parseConfigEntityBody(req.body ?? {}); if (!parsedBody.ok) return invalidRequest(res); const updates = parsedBody.value;
+      const parsedBody = parseConfigEntityBody(req.body === undefined ? {} : req.body); if (!parsedBody.ok) return invalidRequest(res); const updates = parsedBody.value;
       const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
         return invalidRequest(res);
