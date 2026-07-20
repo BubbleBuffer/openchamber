@@ -12,7 +12,8 @@ type RouteKey = keyof typeof GIT_ROUTE_CONTRACTS;
 const sshKeyFromCommand = (command: string | null | undefined): string | null => {
   if (!command) return null;
   const match = command.match(/(?:^|\s)-i(?:\s+|=)(?:"([^"]+)"|'([^']+)'|(\S+))/);
-  return match?.[1] ?? match?.[2] ?? match?.[3] ?? null;
+  const key = match?.[1] ?? match?.[2] ?? match?.[3];
+  return key && !key.startsWith("-") ? key : null;
 };
 
 export function registerGitRoutes(app: Express): void {

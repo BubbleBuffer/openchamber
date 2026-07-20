@@ -89,4 +89,12 @@ describe("git route contracts", () => {
     await routes.get("POST /api/git/set-identity")!({ query: { directory: "/repo" }, body: { profileId: "global" } }, { json: vi.fn() });
     expect(setLocalIdentity).toHaveBeenLastCalledWith("/repo", expect.objectContaining({ sshKey: null }));
   });
+
+  it("does not treat the next SSH option as an identity path", async () => {
+    vi.mocked(getGlobalIdentity).mockResolvedValueOnce({ userName: "Ada", userEmail: "ada@example.test", sshCommand: "ssh -i -o BatchMode=yes" } as never);
+    const routes = new Map<string, (req: any, res: any) => Promise<unknown>>();
+    registerGitRoutes({ get() {}, post(path: string, handler: any) { routes.set(`POST ${path}`, handler); }, put() {}, delete() {} } as never);
+    await routes.get("POST /api/git/set-identity")!({ query: { directory: "/repo" }, body: { profileId: "global" } }, { json: vi.fn() });
+    expect(setLocalIdentity).toHaveBeenLastCalledWith("/repo", expect.objectContaining({ sshKey: null }));
+  });
 });
