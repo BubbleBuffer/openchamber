@@ -7,7 +7,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { spawn, spawnSync } from 'child_process';
 import { fileURLToPath, pathToFileURL } from 'url';
-import { isModuleCliExecution } from './cli-entry.js';
+import { isModuleCliExecution, resolveCompiledServerEntries } from './cli-entry.js';
 import {
   intro as clackIntro, outro as clackOutro, log as clackLog,
   box as clackBox, confirm as clackConfirm,
@@ -2595,7 +2595,7 @@ const commands = {
     }
 
     const opencodeBinary = await checkOpenCodeCLI(emitNotice);
-    const serverPath = path.join(__dirname, '..', 'server', 'index.js');
+    const serverEntries = resolveCompiledServerEntries(path.join(__dirname, '..'));
     const preferredRuntime = getPreferredServerRuntime();
     const runtimeBin = preferredRuntime === 'bun' ? BUN_BIN : process.execPath;
 
@@ -2674,7 +2674,7 @@ const commands = {
       const effectiveHost = typeof options.host === 'string' && options.host.length > 0
         ? options.host : undefined;
 
-      const { startWebUiServer } = await import(pathToFileURL(serverPath).href);
+      const { startWebUiServer } = await import(pathToFileURL(serverEntries.foreground).href);
       const controller = await startWebUiServer({
         port: targetPort,
         host: effectiveHost,
@@ -2740,7 +2740,7 @@ const commands = {
       await new Promise(() => {});
     }
 
-    const serverArgs = [serverPath, '--port', String(targetPort)];
+    const serverArgs = [serverEntries.daemon, '--port', String(targetPort)];
     const effectiveHost = typeof options.host === 'string' && options.host.length > 0 ? options.host : undefined;
     if (effectiveHost) {
       serverArgs.push('--host', effectiveHost);

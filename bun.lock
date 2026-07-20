@@ -95,7 +95,7 @@
     },
     "packages/session-state": {
       "name": "@openchamber/session-state",
-      "version": "0.0.0",
+       "version": "1.9.11",
       "dependencies": {
         "xstate": "^5.19.2",
       },
@@ -113,7 +113,7 @@
       "dependencies": {
         "@clack/prompts": "^1.3.0",
         "@octokit/rest": "^22.0.1",
-        "@openchamber/session-state": "workspace:*",
+         "@openchamber/session-state": "1.9.11",
         "@opencode-ai/sdk": "^1.14.39",
         "@sentry/node": "^10.51.0",
         "@simplewebauthn/server": "13.3.0",

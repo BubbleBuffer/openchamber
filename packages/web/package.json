@@ -19,18 +19,19 @@
     "build:watch": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build --watch",
     "type-check": "tsc --noEmit",
     "type-check:server": "tsc --noEmit -p tsconfig.server.json",
-    "build:server": "tsc -p tsconfig.server.json",
+    "build:server": "tsc -p tsconfig.server.build.json",
     "dev:server:ts": "bun server/src/main.ts --port ${OPENCHAMBER_PORT:-3001}",
     "lint": "eslint \"./src/**/*.{ts,tsx}\" \"./server/src/**/*.ts\" --config ../../eslint.config.js",
     "test": "vitest run",
     "test:stores": "bun test --isolate src/ui/stores",
-    "start": "node bin/cli.js serve"
+    "start": "node bin/cli.js serve",
+    "pack": "npm pack --workspaces=false"
   },
   "dependencies": {
     "@clack/prompts": "^1.3.0",
     "@octokit/rest": "^22.0.1",
     "@opencode-ai/sdk": "^1.14.39",
-    "@openchamber/session-state": "workspace:*",
+    "@openchamber/session-state": "1.9.11",
     "@sentry/node": "^10.51.0",
     "@simplewebauthn/server": "13.3.0",
     "adm-zip": "^0.5.17",

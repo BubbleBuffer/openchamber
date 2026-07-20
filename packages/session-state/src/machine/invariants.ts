@@ -1,7 +1,7 @@
-import type { SessionMachineContext } from './context'
-import type { SessionDomainEvent } from './events'
-import { createSessionActorKey } from './actorKey'
-import type { SessionFatalError } from './context'
+import type { SessionMachineContext } from './context.js'
+import type { SessionDomainEvent } from './events.js'
+import { createSessionActorKey } from './actorKey.js'
+import type { SessionFatalError } from './context.js'
 
 /**
  * Asserts event.directory === context.directory and event.sessionId === context.sessionId.

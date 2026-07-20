@@ -99,19 +99,29 @@ jobs:
       - name: Build packages
         run: bun run build
 
-      - name: Create npm tarball
-        working-directory: packages/web
-        run: npm pack
+      - name: Create npm tarballs
+        run: |
+          npm run --prefix packages/session-state pack
+          npm run --prefix packages/web pack
 
       - name: Upload npm tarball to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.create-release.outputs.version }}
-          files: packages/web/*.tgz
+          files: |
+            packages/session-state/*.tgz
+            packages/web/*.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish to npm
+      - name: Publish session-state to npm
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        working-directory: packages/session-state
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish web to npm
         if: ${{ github.event.inputs.dry_run != 'true' }}
         working-directory: packages/web
         run: npm publish --access public

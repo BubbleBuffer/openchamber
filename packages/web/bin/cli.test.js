@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import fs from 'fs';
 import path from 'path';
 import { pathToFileURL } from 'url';
 
-import { isModuleCliExecution, normalizeCliEntryPath } from './cli-entry.js';
+import { isModuleCliExecution, normalizeCliEntryPath, resolveCompiledServerEntries } from './cli-entry.js';
 
 describe('cli entry detection', () => {
   const modulePath = '/tmp/openchamber/bin/cli.js';
@@ -52,5 +53,24 @@ describe('cli entry detection', () => {
     };
 
     expect(normalizeCliEntryPath(unresolvedPath, realpath)).toBe(path.resolve(unresolvedPath));
+  });
+});
+
+describe('compiled server entries', () => {
+  it('uses separate daemon and foreground compiled entrypoints', () => {
+    expect(resolveCompiledServerEntries('/tmp/openchamber/packages/web')).toEqual({
+      daemon: '/tmp/openchamber/packages/web/server/dist/main.js',
+      foreground: '/tmp/openchamber/packages/web/server/dist/index.js',
+    });
+  });
+
+  it('exports the foreground server entry without starting it after a build', async () => {
+    const entries = resolveCompiledServerEntries(path.resolve(import.meta.dirname, '..'));
+
+    expect(fs.existsSync(entries.daemon)).toBe(true);
+    expect(fs.existsSync(entries.foreground)).toBe(true);
+
+    const server = await import(pathToFileURL(entries.foreground).href);
+    expect(server.startWebUiServer).toEqual(expect.any(Function));
   });
 });

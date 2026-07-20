@@ -28,6 +28,9 @@ for (const pkgPath of PACKAGES) {
   const pkg = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
   const oldVersion = pkg.version;
   pkg.version = newVersion;
+  if (pkgPath === 'packages/web/package.json') {
+    pkg.dependencies['@openchamber/session-state'] = newVersion;
+  }
   fs.writeFileSync(fullPath, JSON.stringify(pkg, null, 2) + '\n');
   console.log(`  ${pkgPath}: ${oldVersion} -> ${newVersion}`);
 }

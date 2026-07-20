@@ -4,7 +4,7 @@ import type {
   SessionPermissionRecord,
   SessionQuestionRecord,
   SessionFatalError,
-} from './context'
+} from './context.js'
 
 // ---------------------------------------------------------------------------
 // Version constant
@@ -432,7 +432,7 @@ export function createContextFromSnapshot(snapshot: SessionSnapshotV1): import('
 // Hydration restoration helper
 // ---------------------------------------------------------------------------
 
-import type { SessionMachineContext } from './context'
+import type { SessionMachineContext } from './context.js'
 
 /**
  * Converts a `SessionSnapshotV1` into an XState resolved machine snapshot that

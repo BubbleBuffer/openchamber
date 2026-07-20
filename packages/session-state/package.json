@@ -1,13 +1,25 @@
 {
   "name": "@openchamber/session-state",
-  "version": "0.0.0",
-  "private": true,
+  "version": "1.9.11",
+  "private": false,
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
-  "types": "./src/index.ts",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "pack": "npm pack --workspaces=false",
     "type-check": "tsc --noEmit",
     "test": "bun test ./src/**/*.test.ts",
     "lint": "eslint \"./src/**/*.{ts,tsx}\" --config ../../eslint.config.js"

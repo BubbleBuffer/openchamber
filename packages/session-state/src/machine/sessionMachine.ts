@@ -1,12 +1,12 @@
 import { setup, assign, emit } from 'xstate'
-import type { SessionMachineContext, CreateInitialSessionContextInput } from './context'
-import { createInitialSessionContext } from './context'
-import type { SessionDomainEvent } from './events'
-import type { SessionMachineEffect } from './effects'
+import type { SessionMachineContext, CreateInitialSessionContextInput } from './context.js'
+import { createInitialSessionContext } from './context.js'
+import type { SessionDomainEvent } from './events.js'
+import type { SessionMachineEffect } from './effects.js'
 import {
   assertNormalizedReferences,
   createFatalInvariantFailure,
-} from './invariants'
+} from './invariants.js'
 
 // XState v5 type inference narrows per-event in Transitions but can't
 // reconcile the action union across all event types. The machine is
