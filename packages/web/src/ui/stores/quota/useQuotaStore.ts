@@ -6,6 +6,7 @@ import { QUOTA_PROVIDERS } from '@/lib/quota';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 import { getDefaultModels } from '@/lib/quota/model-families';
 import { updateSettings } from '@/lib/config/persistence';
+import { parseQuotaErrorResponse, parseQuotaProviderResponse } from '@contracts/quota';
 
 const DEFAULT_REFRESH_INTERVAL_MS = 60000;
 
@@ -174,10 +175,15 @@ export const useQuotaStore = create<QuotaStore>()(
           const response = await fetch(`/api/quota/${encodeURIComponent(providerId)}`);
           const payload = await response.json().catch(() => null);
           if (!response.ok) {
-            throw new Error(payload?.error || 'Failed to fetch quota');
+            const error = parseQuotaErrorResponse(payload);
+            throw new Error(error.ok ? error.value.code : 'Failed to fetch quota');
           }
 
-          const result = payload as ProviderResult;
+          const parsed = parseQuotaProviderResponse(payload);
+          if (!parsed.ok || parsed.value.providerId !== providerId || parsed.value.error === null) {
+            throw new Error('Failed to fetch quota');
+          }
+          const result: ProviderResult = parsed.value as ProviderResult;
           set((state) => {
             const next = state.results.filter((entry) => entry.providerId !== providerId);
             next.push(result);

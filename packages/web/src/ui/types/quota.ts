@@ -15,31 +15,13 @@ export type QuotaProviderId =
   | 'ollama-cloud'
   | 'zhipuai-coding-plan';
 
-export interface UsageWindow {
-  usedPercent: number | null;
-  remainingPercent: number | null;
-  windowSeconds: number | null;
-  resetAfterSeconds: number | null;
-  resetAt: number | null;
-  resetAtFormatted: string | null;
-  resetAfterFormatted: string | null;
-  valueLabel?: string | null;
-}
+import type { QuotaProviderResponse, QuotaProviderUsage, QuotaUsageWindow } from '@contracts/quota';
 
-export interface UsageWindows {
-  windows: Record<string, UsageWindow>;
-}
-
-export interface ProviderUsage extends UsageWindows {
-  models?: Record<string, UsageWindows>;
-}
-
-export interface ProviderResult {
+export type UsageWindow = QuotaUsageWindow;
+export type UsageWindows = Pick<QuotaProviderUsage, 'windows'>;
+export type ProviderUsage = QuotaProviderUsage;
+/** Feature view: supported provider IDs are narrower than the transport contract. */
+export type ProviderResult = Omit<QuotaProviderResponse, 'providerId' | 'error'> & {
   providerId: QuotaProviderId;
-  providerName: string;
-  ok: boolean;
-  configured: boolean;
   error?: string;
-  usage: ProviderUsage | null;
-  fetchedAt: number;
-}
+};
