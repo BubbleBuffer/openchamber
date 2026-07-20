@@ -7,6 +7,8 @@ import {
   parseGitHubPullRequestMergeRequest,
   parseGitHubPullRequestReadyRequest,
   parseGitHubPullRequestUpdateRequest,
+  GITHUB_ROUTE_CONTRACTS,
+  parseGitHubErrorResponse,
 } from "../../contracts/github.js";
 import { resolveGitHubPrStatus } from "./pr-status.js";
 
@@ -15,6 +17,26 @@ export interface GitHubRoutesDeps {
 }
 
 export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): void {
+  type Handler = (req: Request, res: Response) => Promise<unknown>;
+  const wrap = (key: string, handler: Handler): Handler => async (req, res) => {
+    const contract = GITHUB_ROUTE_CONTRACTS[key];
+    const send = res.json.bind(res);
+    res.json = ((payload: unknown) => {
+      if (res.statusCode >= 400 || parseGitHubErrorResponse(payload).ok || !contract) return send(payload);
+      const parsed = contract.response(payload);
+      if (parsed.ok) return send(parsed.value);
+      console.error("Invalid GitHub route response", { route: key, error: parsed.error });
+      res.status(500);
+      return send(githubError("github_internal_error"));
+    }) as Response["json"];
+    return handler(req, res);
+  };
+  const originalGet = app.get.bind(app);
+  const originalPost = app.post.bind(app);
+  const originalDelete = app.delete.bind(app);
+  (app as any).get = (path: string, handler: Handler) => originalGet(path, wrap(`GET ${path}`, handler));
+  (app as any).post = (path: string, handler: Handler) => originalPost(path, wrap(`POST ${path}`, handler));
+  (app as any).delete = (path: string, handler: Handler) => originalDelete(path, wrap(`DELETE ${path}`, handler));
   const getGitHubLibraries = async () => {
     return await import("./index.js");
   };
@@ -1477,4 +1499,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       return res.status(500).json(githubError("github_internal_error"));
     }
   });
+  (app as any).get = originalGet;
+  (app as any).post = originalPost;
+  (app as any).delete = originalDelete;
 }

@@ -12,9 +12,10 @@ describe("GitHub route contracts", () => {
   it("returns a stable safe error for malformed mutation payloads", async () => {
     const routes = new Map<string, any>();
     registerGitHubRoutes({ get() {}, post(path: string, handler: any) { routes.set(`POST ${path}`, handler); }, delete() {} } as never);
-    const response = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+    const send = vi.fn();
+    const response = { status: vi.fn().mockReturnThis(), json: send };
     await routes.get("POST /api/github/pr/update")({ body: { directory: "/repo", number: "1", title: "bad" } }, response);
     expect(response.status).toHaveBeenCalledWith(400);
-    expect(response.json).toHaveBeenCalledWith({ error: "GitHub request failed", code: "github_invalid_request" });
+    expect(send).toHaveBeenCalledWith({ error: "GitHub request failed", code: "github_invalid_request" });
   });
 });
