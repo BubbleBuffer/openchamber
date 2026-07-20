@@ -48,4 +48,13 @@ describe('web files API', () => {
     expect(result.directory).toBe('C:/workspace');
     expect(result.entries[0]?.path).toBe('C:/workspace/src');
   });
+
+  test('rejects a malformed successful directory response', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({ directory: '/workspace', entries: [{}] }),
+    } as Response);
+
+    await expect(createWebFilesAPI().listDirectory('/workspace')).rejects.toThrow('Invalid file list response');
+  });
 });

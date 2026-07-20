@@ -1,13 +1,13 @@
 import type { SettingsAPI, SettingsLoadResult, SettingsPayload } from '@/lib/api/types';
+import { parseAppSettingsResponse, parseSettingsUpdateRequest } from '@contracts/settings';
 
 const SETTINGS_ENDPOINT = '/api/config/settings';
 const RELOAD_ENDPOINT = '/api/config/reload';
 
 const sanitizePayload = (data: unknown): SettingsPayload => {
-  if (!data || typeof data !== 'object') {
-    return {};
-  }
-  return data as SettingsPayload;
+  const parsed = parseAppSettingsResponse(data);
+  if (!parsed.ok) throw new Error('Invalid settings response');
+  return parsed.value as SettingsPayload;
 };
 
 export const createWebSettingsAPI = (): SettingsAPI => ({
@@ -29,13 +29,15 @@ export const createWebSettingsAPI = (): SettingsAPI => ({
   },
 
   async save(changes: Partial<SettingsPayload>): Promise<SettingsPayload> {
+    const request = parseSettingsUpdateRequest(changes);
+    if (!request.ok) throw new Error('Invalid settings request');
     const response = await fetch(SETTINGS_ENDPOINT, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
-      body: JSON.stringify(changes),
+      body: JSON.stringify(request.value),
     });
 
     if (!response.ok) {

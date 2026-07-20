@@ -67,3 +67,39 @@ describe("settings project migration", () => {
     });
   });
 });
+
+describe("settings persistence queue", () => {
+  it("allows a later save after an atomic write failure", async () => {
+    const directory = await mkdtemp(path.join("/tmp", "openchamber-settings-runtime-"));
+    tempDirectories.push(directory);
+    const settingsPath = path.join(directory, "settings.json");
+    let failWrite = true;
+    const fsPromises = {
+      ...fs,
+      rename: async (from: string, to: string) => {
+        if (failWrite) {
+          failWrite = false;
+          throw new Error("disk unavailable");
+        }
+        return fs.rename(from, to);
+      },
+    };
+    const runtime = createSettingsRuntime({
+      fsPromises: fsPromises as typeof fs,
+      path,
+      crypto,
+      SETTINGS_FILE_PATH: settingsPath,
+      sanitizeProjects: (projects) => Array.isArray(projects) ? projects : [],
+      sanitizeSettingsUpdate: (changes) => changes,
+      mergePersistedSettings: (current, changes) => ({ ...current, ...changes }),
+      normalizeSettingsPaths: (settings) => ({ settings, changed: false }),
+      normalizeStringArray: () => [],
+      formatSettingsResponse: (settings) => settings,
+      resolveDirectoryCandidate: () => null,
+    });
+
+    await expect(runtime.persistSettings({ themeId: "first" })).rejects.toThrow("disk unavailable");
+    await expect(runtime.persistSettings({ themeId: "second" })).resolves.toMatchObject({ themeId: "second" });
+    expect(JSON.parse(await readFile(settingsPath, "utf8"))).toMatchObject({ themeId: "second" });
+  });
+});

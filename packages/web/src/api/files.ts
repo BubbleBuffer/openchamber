@@ -5,39 +5,30 @@ import type {
   FilesAPI,
   ListDirectoryOptions,
 } from '@/lib/api/types';
+import {
+  parseFileListResponse,
+  parseFsMutationResponse,
+  parseStatResponse,
+} from '@contracts/files';
+import type { FsListResponse } from '@contracts/files';
 
 const normalizePath = (path: string): string => path.replace(/\\/g, '/');
 
-type WebDirectoryEntry = {
-  name?: string;
-  path?: string;
-  isDirectory?: boolean;
-  isFile?: boolean;
-  isSymbolicLink?: boolean;
-};
-
-type WebDirectoryListResponse = {
-  directory?: string;
-  path?: string;
-  entries?: WebDirectoryEntry[];
-};
-
-const toDirectoryListResult = (fallbackDirectory: string, payload: WebDirectoryListResponse): DirectoryListResult => {
-  const directory = normalizePath(payload?.directory || payload?.path || fallbackDirectory);
-  const entries = Array.isArray(payload?.entries) ? payload.entries : [];
-
+const toDirectoryListResult = (fallbackDirectory: string, payload: FsListResponse): DirectoryListResult => {
+  const directory = normalizePath(payload.directory || fallbackDirectory);
   return {
     directory,
-    entries: entries
-      .filter((entry): entry is Required<Pick<WebDirectoryEntry, 'name' | 'path'>> & { isDirectory?: boolean } =>
-        Boolean(entry && typeof entry.name === 'string' && typeof entry.path === 'string')
-      )
-      .map((entry) => ({
+    entries: payload.entries.map((entry) => ({
         name: entry.name,
         path: normalizePath(entry.path),
-        isDirectory: Boolean(entry.isDirectory),
+        isDirectory: entry.isDirectory,
       })),
   };
+};
+
+const errorMessage = async (response: Response, fallback: string): Promise<string> => {
+  const error = await response.json().catch(() => ({ error: response.statusText }));
+  return typeof error?.error === 'string' ? error.error : fallback;
 };
 
 export const createWebFilesAPI = (): FilesAPI => ({
@@ -54,12 +45,12 @@ export const createWebFilesAPI = (): FilesAPI => ({
     const response = await fetch(`/api/fs/list${params.toString() ? `?${params.toString()}` : ''}`);
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: response.statusText }));
-      throw new Error((error as { error?: string }).error || 'Failed to list directory');
+      throw new Error(await errorMessage(response, 'Failed to list directory'));
     }
 
-    const result = (await response.json()) as WebDirectoryListResponse;
-    return toDirectoryListResult(target, result);
+    const result = parseFileListResponse(await response.json().catch(() => undefined));
+    if (!result.ok) throw new Error('Invalid file list response');
+    return toDirectoryListResult(target, result.value);
   },
 
   async search(payload: FileSearchQuery): Promise<FileSearchResult[]> {
@@ -103,14 +94,14 @@ export const createWebFilesAPI = (): FilesAPI => ({
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: response.statusText }));
-      throw new Error((error as { error?: string }).error || 'Failed to create directory');
+      throw new Error(await errorMessage(response, 'Failed to create directory'));
     }
 
-    const result = await response.json();
+    const result = parseFsMutationResponse(await response.json().catch(() => undefined));
+    if (!result.ok) throw new Error('Invalid file mutation response');
     return {
-      success: Boolean(result?.success),
-      path: typeof result?.path === 'string' ? normalizePath(result.path) : target,
+      success: result.value.success,
+      path: result.value.path ? normalizePath(result.value.path) : target,
     };
   },
 
@@ -119,16 +110,16 @@ export const createWebFilesAPI = (): FilesAPI => ({
     const response = await fetch(`/api/fs/stat?path=${encodeURIComponent(target)}`);
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: response.statusText }));
-      throw new Error((error as { error?: string }).error || 'Failed to stat file');
+      throw new Error(await errorMessage(response, 'Failed to stat file'));
     }
 
-    const result = await response.json().catch(() => ({}));
+    const result = parseStatResponse(await response.json().catch(() => undefined));
+    if (!result.ok) throw new Error('Invalid file stat response');
     return {
-      path: typeof (result as { path?: string }).path === 'string' ? normalizePath((result as { path: string }).path) : target,
-      isFile: Boolean((result as { isFile?: boolean }).isFile),
-      size: typeof (result as { size?: number }).size === 'number' ? (result as { size: number }).size : 0,
-      mtimeMs: typeof (result as { mtimeMs?: number }).mtimeMs === 'number' ? (result as { mtimeMs: number }).mtimeMs : undefined,
+      path: normalizePath(result.value.path || target),
+      isFile: result.value.isFile,
+      size: result.value.size,
+      mtimeMs: result.value.mtimeMs,
     };
   },
 
@@ -154,14 +145,14 @@ export const createWebFilesAPI = (): FilesAPI => ({
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: response.statusText }));
-      throw new Error((error as { error?: string }).error || 'Failed to write file');
+      throw new Error(await errorMessage(response, 'Failed to write file'));
     }
 
-    const result = await response.json().catch(() => ({}));
+    const result = parseFsMutationResponse(await response.json().catch(() => undefined));
+    if (!result.ok) throw new Error('Invalid file mutation response');
     return {
-      success: Boolean((result as { success?: boolean }).success),
-      path: typeof (result as { path?: string }).path === 'string' ? normalizePath((result as { path: string }).path) : target,
+      success: result.value.success,
+      path: result.value.path ? normalizePath(result.value.path) : target,
     };
   },
 
@@ -174,12 +165,12 @@ export const createWebFilesAPI = (): FilesAPI => ({
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: response.statusText }));
-      throw new Error((error as { error?: string }).error || 'Failed to delete file');
+      throw new Error(await errorMessage(response, 'Failed to delete file'));
     }
 
-    const result = await response.json().catch(() => ({}));
-    return { success: Boolean((result as { success?: boolean }).success) };
+    const result = parseFsMutationResponse(await response.json().catch(() => undefined));
+    if (!result.ok) throw new Error('Invalid file mutation response');
+    return { success: result.value.success };
   },
 
   async rename(oldPath: string, newPath: string): Promise<{ success: boolean; path: string }> {
@@ -190,14 +181,14 @@ export const createWebFilesAPI = (): FilesAPI => ({
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: response.statusText }));
-      throw new Error((error as { error?: string }).error || 'Failed to rename file');
+      throw new Error(await errorMessage(response, 'Failed to rename file'));
     }
 
-    const result = await response.json().catch(() => ({}));
+    const result = parseFsMutationResponse(await response.json().catch(() => undefined));
+    if (!result.ok) throw new Error('Invalid file mutation response');
     return {
-      success: Boolean((result as { success?: boolean }).success),
-      path: typeof (result as { path?: string }).path === 'string' ? normalizePath((result as { path: string }).path) : newPath,
+      success: result.value.success,
+      path: result.value.path ? normalizePath(result.value.path) : newPath,
     };
   },
 

@@ -1,14 +1,9 @@
+import type { AppSettings as ContractAppSettings, SkillCatalogConfig } from '@contracts/settings';
 import type { ProjectEntry } from '@/lib/api/types';
 
-export type SkillCatalogConfig = {
-  id: string;
-  label: string;
-  source: string;
-  subpath?: string;
-  gitIdentityId?: string;
-};
+export type { SkillCatalogConfig };
 
-export type AppSettings = {
+export interface AppSettings extends ContractAppSettings {
   themeId?: string;
   useSystemTheme?: boolean;
   themeVariant?: 'light' | 'dark';
@@ -111,4 +106,4 @@ export type AppSettings = {
   skillCatalogs?: SkillCatalogConfig[];
   // Opt-in to send anonymous usage reports for update checks (default: true)
   reportUsage?: boolean;
-};
+}

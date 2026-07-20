@@ -749,7 +749,7 @@ export function createSettingsRuntime(deps: SettingsRuntimeDeps): SettingsRuntim
   };
 
   const persistSettings = async (changes: any): Promise<any> => {
-    persistSettingsLock = persistSettingsLock.then(async () => {
+    const write = persistSettingsLock.then(async () => {
       const current = await readSettingsFromDisk();
       console.log("[persistSettings] Current projects count:", Array.isArray(current.projects) ? current.projects.length : "N/A");
       const sanitized = sanitizeSettingsUpdate(changes);
@@ -790,7 +790,10 @@ export function createSettingsRuntime(deps: SettingsRuntimeDeps): SettingsRuntim
       return formatSettingsResponse(next);
     });
 
-    return persistSettingsLock;
+    // Keep this caller's failure observable while recovering the serial queue
+    // for a later independent save.
+    persistSettingsLock = write.catch(() => undefined);
+    return write;
   };
 
   return {

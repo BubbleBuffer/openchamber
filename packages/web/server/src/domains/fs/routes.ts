@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from "express";
 import type { SpawnOptions } from "child_process";
+import { parseFsPathRequest, parseFsRenameRequest, parseFsWriteRequest } from "../../contracts/files.js";
 
 const EXEC_JOB_TTL_MS = 30 * 60 * 1000;
 
@@ -380,10 +381,12 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
 
   app.post("/api/fs/mkdir", async (req: Request, res: Response) => {
     try {
-      const { path: dirPath, allowOutsideWorkspace } = req.body ?? {};
-      if (typeof dirPath !== "string" || !dirPath.trim()) {
-        return res.status(400).json({ error: "Path is required" });
+      const body = parseFsPathRequest(req.body);
+      if (!body.ok) {
+        return res.status(400).json({ error: "Path is required", code: "fs_invalid_path" });
       }
+      const dirPath = body.value.path;
+      const allowOutsideWorkspace = (req.body as Record<string, unknown>).allowOutsideWorkspace === true;
 
       let resolvedPath = "";
       if (allowOutsideWorkspace) {
@@ -587,13 +590,9 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
   });
 
   app.post("/api/fs/write", async (req: Request, res: Response) => {
-    const { path: filePath, content } = req.body || {};
-    if (!filePath || typeof filePath !== "string") {
-      return res.status(400).json({ error: "Path is required" });
-    }
-    if (typeof content !== "string") {
-      return res.status(400).json({ error: "Content is required" });
-    }
+    const body = parseFsWriteRequest(req.body);
+    if (!body.ok) return res.status(400).json({ error: "Invalid file write", code: "fs_invalid_content" });
+    const { path: filePath, content } = body.value;
 
     try {
       const resolved = await resolveWorkspacePathFromContext({
@@ -623,10 +622,9 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
   });
 
   app.post("/api/fs/delete", async (req: Request, res: Response) => {
-    const { path: targetPath } = req.body || {};
-    if (!targetPath || typeof targetPath !== "string") {
-      return res.status(400).json({ error: "Path is required" });
-    }
+    const body = parseFsPathRequest(req.body);
+    if (!body.ok) return res.status(400).json({ error: "Path is required", code: "fs_invalid_path" });
+    const { path: targetPath } = body.value;
 
     try {
       const resolved = await resolveWorkspacePathFromContext({
@@ -658,13 +656,9 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
   });
 
   app.post("/api/fs/rename", async (req: Request, res: Response) => {
-    const { oldPath, newPath } = req.body || {};
-    if (!oldPath || typeof oldPath !== "string") {
-      return res.status(400).json({ error: "oldPath is required" });
-    }
-    if (!newPath || typeof newPath !== "string") {
-      return res.status(400).json({ error: "newPath is required" });
-    }
+    const body = parseFsRenameRequest(req.body);
+    if (!body.ok) return res.status(400).json({ error: "Invalid rename request", code: "fs_invalid_path" });
+    const { oldPath, newPath } = body.value;
 
     try {
       const resolvedOld = await resolveWorkspacePathFromContext({
@@ -836,7 +830,7 @@ export function registerFsRoutes(app: Express, dependencies: FsRoutesDeps): void
       }
 
       const dirents = await fsPromises.readdir(resolvedPath, { withFileTypes: true });
-      let ignoredPaths = new Set<string>();
+      const ignoredPaths = new Set<string>();
       if (respectGitignore) {
         try {
           const pathsToCheck = dirents.map((d) => d.name);

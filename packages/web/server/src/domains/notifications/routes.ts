@@ -1,43 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, no-empty */
 import type { Express } from "express";
-
-interface PushSubscribeBody {
-  endpoint?: string;
-  keys?: {
-    p256dh?: string;
-    auth?: string;
-  };
-}
-
-interface PushUnsubscribeBody {
-  endpoint?: string;
-}
-
-const parsePushSubscribeBody = (body: unknown): { endpoint: string; keys: { p256dh: string; auth: string } } | null => {
-  if (!body || typeof body !== "object") return null;
-  const b = body as PushSubscribeBody;
-  const endpoint = b.endpoint;
-  const keys = b.keys;
-  const p256dh = keys?.p256dh;
-  const auth = keys?.auth;
-
-  if (typeof endpoint !== "string" || endpoint.trim().length === 0) return null;
-  if (typeof p256dh !== "string" || p256dh.trim().length === 0) return null;
-  if (typeof auth !== "string" || auth.trim().length === 0) return null;
-
-  return {
-    endpoint: endpoint.trim(),
-    keys: { p256dh: p256dh.trim(), auth: auth.trim() },
-  };
-};
-
-const parsePushUnsubscribeBody = (body: unknown): { endpoint: string } | null => {
-  if (!body || typeof body !== "object") return null;
-  const b = body as PushUnsubscribeBody;
-  const endpoint = b.endpoint;
-  if (typeof endpoint !== "string" || endpoint.trim().length === 0) return null;
-  return { endpoint: endpoint.trim() };
-};
+import { parsePushSubscribeRequest, parsePushUnsubscribeRequest, parseVisibilityRequest } from "../../contracts/notifications.js";
 
 export const registerNotificationRoutes = (app: Express, dependencies: {
   uiAuthController?: any;
@@ -123,10 +86,11 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
       return res.status(401).json({ error: "UI session missing" });
     }
 
-    const parsed = parsePushSubscribeBody(req.body);
-    if (!parsed) {
-      return res.status(400).json({ error: "Invalid body" });
+    const parsedResult = parsePushSubscribeRequest(req.body);
+    if (!parsedResult.ok) {
+      return res.status(400).json({ error: "Invalid body", code: "notification_invalid_request" });
     }
+    const parsed = parsedResult.value;
 
     const { endpoint, keys } = parsed;
 
@@ -168,10 +132,11 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
       return res.status(401).json({ error: "UI session missing" });
     }
 
-    const parsed = parsePushUnsubscribeBody(req.body);
-    if (!parsed) {
-      return res.status(400).json({ error: "Invalid body" });
+    const parsedResult = parsePushUnsubscribeRequest(req.body);
+    if (!parsedResult.ok) {
+      return res.status(400).json({ error: "Invalid body", code: "notification_invalid_request" });
     }
+    const parsed = parsedResult.value;
 
     await removePushSubscription(uiToken, parsed.endpoint);
     return res.json({ ok: true });
@@ -185,8 +150,9 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
       return res.status(401).json({ error: "UI session missing" });
     }
 
-    const visible = req.body && typeof req.body === "object" ? req.body.visible : null;
-    updateUiVisibility(uiToken, visible === true);
+    const parsed = parseVisibilityRequest(req.body);
+    if (!parsed.ok) return res.status(400).json({ error: "Invalid body", code: "notification_invalid_request" });
+    updateUiVisibility(uiToken, parsed.value.visible);
     return res.json({ ok: true });
   });
 
