@@ -42,12 +42,6 @@ export function createServerStartupRuntime(deps: ServerStartupDeps): ServerStart
         const addressInfo = server.address();
         activePort = typeof addressInfo === 'object' && addressInfo ? addressInfo.port : port;
 
-        try {
-          process.send?.({ type: 'openchamber:ready', port: activePort });
-        } catch {
-          // ignore
-        }
-
         const displayHost = (bindHost === '0.0.0.0' || bindHost === '::' || bindHost === '[::]')
           ? 'localhost'
           : (bindHost.includes(':') ? `[${bindHost}]` : bindHost);

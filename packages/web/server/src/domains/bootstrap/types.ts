@@ -54,7 +54,6 @@ export interface ShutdownDeps {
   openCodeWatcherRuntime: any;
   sessionRuntime: any;
   notificationRuntime?: any;
-  scheduledTasksRuntime?: any;
   getHealthCheckInterval: () => number | null;
   clearHealthCheckInterval: (value: number) => void;
   getTerminalRuntime: () => any;

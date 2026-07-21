@@ -1,43 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, no-empty */
 import type { Express } from "express";
-
-interface PushSubscribeBody {
-  endpoint?: string;
-  keys?: {
-    p256dh?: string;
-    auth?: string;
-  };
-}
-
-interface PushUnsubscribeBody {
-  endpoint?: string;
-}
-
-const parsePushSubscribeBody = (body: unknown): { endpoint: string; keys: { p256dh: string; auth: string } } | null => {
-  if (!body || typeof body !== "object") return null;
-  const b = body as PushSubscribeBody;
-  const endpoint = b.endpoint;
-  const keys = b.keys;
-  const p256dh = keys?.p256dh;
-  const auth = keys?.auth;
-
-  if (typeof endpoint !== "string" || endpoint.trim().length === 0) return null;
-  if (typeof p256dh !== "string" || p256dh.trim().length === 0) return null;
-  if (typeof auth !== "string" || auth.trim().length === 0) return null;
-
-  return {
-    endpoint: endpoint.trim(),
-    keys: { p256dh: p256dh.trim(), auth: auth.trim() },
-  };
-};
-
-const parsePushUnsubscribeBody = (body: unknown): { endpoint: string } | null => {
-  if (!body || typeof body !== "object") return null;
-  const b = body as PushUnsubscribeBody;
-  const endpoint = b.endpoint;
-  if (typeof endpoint !== "string" || endpoint.trim().length === 0) return null;
-  return { endpoint: endpoint.trim() };
-};
+import { apiError } from "../../contracts/common.js";
+import { NOTIFICATION_SSE_CONTENT_TYPE, parseNotificationSseEvent, parsePushSubscribeRequest, parsePushUnsubscribeRequest, parseSessionActionRequest, parseSessionActionResponse, parseSessionActivityResponse, parseSessionAttentionSnapshotResponse, parseSessionAttentionStateResponse, parseSessionPathRequest, parseSessionSnapshotResponse, parseSessionStateResponse, parseSessionStatusSnapshotResponse, parseVisibilityRequest } from "../../contracts/notifications.js";
 
 export const registerNotificationRoutes = (app: Express, dependencies: {
   uiAuthController?: any;
@@ -57,7 +21,7 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
   getSessionStateSnapshot: () => any;
   getSessionAttentionSnapshot: () => any;
   getSessionState: (sessionId: string) => any;
-  getSessionAttentionState: (sessionId: string) => any;
+  getSessionAttentionState: (sessionId: string) => boolean | null;
   markSessionViewed: (sessionId: string, clientId: string) => void;
   markSessionUnviewed: (sessionId: string, clientId: string) => void;
   markUserMessageSent: (sessionId: string) => void;
@@ -100,6 +64,33 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
       console.warn("[OpenCodeWatcher] lazy start failed:", (error as any)?.message ?? error);
     }
   };
+  const unavailable = (res: any) => res.status(500).json({ error: "Internal server error", code: "notification_unavailable" });
+  const invalidSessionRequest = (res: any) => res.status(400).json({ error: "Invalid session request", code: "notification_invalid_request" });
+  const sendContract = (res: any, payload: unknown, parse: (value: unknown) => { ok: boolean }) => {
+    if (!parse(payload).ok) return unavailable(res);
+    return res.json(payload);
+  };
+  const sessionIdFromRequest = (req: any, res: any): string | null => {
+    const parsed = parseSessionPathRequest(req.params);
+    if (!parsed.ok) { invalidSessionRequest(res); return null; }
+    return parsed.value.sessionId;
+  };
+  const clientIdFromRequest = (req: any): string => {
+    const header = req.headers?.["x-client-id"];
+    if (typeof header === "string" && header.trim()) return header.trim();
+    return typeof req.ip === "string" && req.ip ? req.ip : "anonymous";
+  };
+
+  const requireUiSession = async (req: any, res: any): Promise<string | null> => {
+    const token = uiAuthController?.ensureSessionToken
+      ? await uiAuthController.ensureSessionToken(req, res)
+      : getUiSessionTokenFromRequest(req);
+    if (!token) {
+      res.status(401).json({ error: "UI authentication required", code: "ui_auth_unauthorized" });
+      return null;
+    }
+    return token;
+  };
 
   app.get("/api/push/vapid-public-key", async (_req: any, res: any) => {
     try {
@@ -108,25 +99,22 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
       res.json({ publicKey: keys.publicKey });
     } catch (error) {
       console.warn("[Push] Failed to load VAPID key:", error);
-      res.status(500).json({ error: "Failed to load push key" });
+      res.status(500).json(apiError("internal_error"));
     }
   });
 
   app.post("/api/push/subscribe", async (req: any, res: any) => {
-    await ensurePushInitialized();
-    await ensureSessionWatcher();
+    try {
+      await ensurePushInitialized();
+      await ensureSessionWatcher();
 
-    const uiToken = uiAuthController?.ensureSessionToken
-      ? await uiAuthController.ensureSessionToken(req, res)
-      : getUiSessionTokenFromRequest(req);
-    if (!uiToken) {
-      return res.status(401).json({ error: "UI session missing" });
-    }
+    const uiToken = await requireUiSession(req, res); if (!uiToken) return;
 
-    const parsed = parsePushSubscribeBody(req.body);
-    if (!parsed) {
-      return res.status(400).json({ error: "Invalid body" });
+    const parsedResult = parsePushSubscribeRequest(req.body);
+    if (!parsedResult.ok) {
+      return res.status(400).json({ error: "Invalid body", code: "notification_invalid_request" });
     }
+    const parsed = parsedResult.value;
 
     const { endpoint, keys } = parsed;
 
@@ -155,46 +143,49 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
       req.headers["user-agent"]
     );
 
-    return res.json({ ok: true });
+      return res.json({ ok: true });
+    } catch (error) {
+      console.error("[Push] Failed to subscribe:", error);
+      return res.status(500).json(apiError("internal_error"));
+    }
   });
 
   app.delete("/api/push/subscribe", async (req: any, res: any) => {
-    await ensurePushInitialized();
+    try {
+      await ensurePushInitialized();
 
-    const uiToken = uiAuthController?.ensureSessionToken
-      ? await uiAuthController.ensureSessionToken(req, res)
-      : getUiSessionTokenFromRequest(req);
-    if (!uiToken) {
-      return res.status(401).json({ error: "UI session missing" });
-    }
+    const uiToken = await requireUiSession(req, res); if (!uiToken) return;
 
-    const parsed = parsePushUnsubscribeBody(req.body);
-    if (!parsed) {
-      return res.status(400).json({ error: "Invalid body" });
+    const parsedResult = parsePushUnsubscribeRequest(req.body);
+    if (!parsedResult.ok) {
+      return res.status(400).json({ error: "Invalid body", code: "notification_invalid_request" });
     }
+    const parsed = parsedResult.value;
 
     await removePushSubscription(uiToken, parsed.endpoint);
-    return res.json({ ok: true });
+      return res.json({ ok: true });
+    } catch (error) {
+      console.error("[Push] Failed to unsubscribe:", error);
+      return res.status(500).json(apiError("internal_error"));
+    }
   });
 
   app.post("/api/push/visibility", async (req: any, res: any) => {
-    const uiToken = uiAuthController?.ensureSessionToken
-      ? await uiAuthController.ensureSessionToken(req, res)
-      : getUiSessionTokenFromRequest(req);
-    if (!uiToken) {
-      return res.status(401).json({ error: "UI session missing" });
-    }
+    try {
+    const uiToken = await requireUiSession(req, res); if (!uiToken) return;
 
-    const visible = req.body && typeof req.body === "object" ? req.body.visible : null;
-    updateUiVisibility(uiToken, visible === true);
+    const parsed = parseVisibilityRequest(req.body);
+    if (!parsed.ok) return res.status(400).json({ error: "Invalid body", code: "notification_invalid_request" });
+    updateUiVisibility(uiToken, parsed.value.visible);
     return res.json({ ok: true });
+    } catch (error) {
+      console.error("[Push] Failed to update visibility:", error);
+      return res.status(500).json(apiError("internal_error"));
+    }
   });
 
-  app.get("/api/push/visibility", (req: any, res: any) => {
-    const uiToken = getUiSessionTokenFromRequest(req);
-    if (!uiToken) {
-      return res.status(401).json({ error: "UI session missing" });
-    }
+  app.get("/api/push/visibility", async (req: any, res: any) => {
+    const uiToken = await requireUiSession(req, res); if (!uiToken) return;
 
     return res.json({
       ok: true,
@@ -203,14 +194,9 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
   });
 
   app.get("/api/notifications/stream", async (req: any, res: any) => {
-    const uiToken = uiAuthController?.ensureSessionToken
-      ? await uiAuthController.ensureSessionToken(req, res)
-      : getUiSessionTokenFromRequest(req);
-    if (!uiToken) {
-      return;
-    }
+    const uiToken = await requireUiSession(req, res); if (!uiToken) return;
 
-    res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    res.setHeader("Content-Type", NOTIFICATION_SSE_CONTENT_TYPE);
     res.setHeader("Cache-Control", "no-cache, no-transform");
     res.setHeader("Connection", "keep-alive");
     res.setHeader("X-Accel-Buffering", "no");
@@ -220,10 +206,11 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
     clients.add(res);
 
     try {
-      writeSseEvent(res, {
+      const event = parseNotificationSseEvent({
         type: "openchamber:notification-stream-ready",
-        properties: { uiToken },
+        properties: {},
       });
+      if (event.ok) writeSseEvent(res, event.value);
     } catch {
     }
 
@@ -234,123 +221,114 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
 
   app.get("/api/session-activity", (_req: any, res: any) => {
     void ensureSessionWatcher();
-    res.json(getSessionActivitySnapshot());
+    return sendContract(res, getSessionActivitySnapshot(), parseSessionActivityResponse);
   });
 
   app.get("/api/sessions/snapshot", async (_req: any, res: any) => {
     await ensureSessionWatcher();
-    res.json({
+    return sendContract(res, {
       statusSessions: getSessionStateSnapshot(),
       attentionSessions: getSessionAttentionSnapshot(),
       serverTime: Date.now(),
-    });
+    }, parseSessionSnapshotResponse);
   });
 
   app.get("/api/sessions/status", async (_req: any, res: any) => {
     await ensureSessionWatcher();
     const snapshot = getSessionStateSnapshot();
-    res.json({
+    return sendContract(res, {
       sessions: snapshot,
       serverTime: Date.now(),
-    });
+    }, parseSessionStatusSnapshotResponse);
   });
 
   app.get("/api/sessions/:id/status", async (req: any, res: any) => {
     await ensureSessionWatcher();
-    const sessionId = req.params.id;
+    const sessionId = sessionIdFromRequest(req, res); if (!sessionId) return;
     const state = getSessionState(sessionId);
 
     if (!state) {
-      return res.status(404).json({
-        error: "Session not found or no state available",
-        sessionId,
-      });
+      return res.status(404).json({ error: "Session not found", code: "session_not_found" });
     }
 
-    return res.json({
+    return sendContract(res, {
       sessionId,
       ...state,
-    });
+    }, parseSessionStateResponse);
   });
 
   app.get("/api/sessions/attention", async (_req: any, res: any) => {
     await ensureSessionWatcher();
     const snapshot = getSessionAttentionSnapshot();
-    res.json({
+    return sendContract(res, {
       sessions: snapshot,
       serverTime: Date.now(),
-    });
+    }, parseSessionAttentionSnapshotResponse);
   });
 
   app.get("/api/sessions/:id/attention", async (req: any, res: any) => {
     await ensureSessionWatcher();
-    const sessionId = req.params.id;
+    const sessionId = sessionIdFromRequest(req, res); if (!sessionId) return;
     const state = getSessionAttentionState(sessionId);
 
-    if (!state) {
-      return res.status(404).json({
-        error: "Session not found or no attention state available",
-        sessionId,
-      });
+    if (state === null) {
+      return res.status(404).json({ error: "Session not found", code: "session_not_found" });
     }
 
-    return res.json({
+    return sendContract(res, {
       sessionId,
-      ...state,
-    });
+      needsAttention: state,
+    }, parseSessionAttentionStateResponse);
   });
 
   app.post("/api/sessions/:id/view", (req: any, res: any) => {
-    const sessionId = req.params.id;
-    const clientId = req.headers["x-client-id"] || req.ip || "anonymous";
+    const sessionId = sessionIdFromRequest(req, res); if (!sessionId) return;
+    const clientId = clientIdFromRequest(req);
 
     markSessionViewed(sessionId, clientId);
 
-    return res.json({
+    return sendContract(res, {
       success: true,
       sessionId,
       viewed: true,
-    });
+    }, parseSessionActionResponse);
   });
 
   app.post("/api/sessions/:id/unview", (req: any, res: any) => {
-    const sessionId = req.params.id;
-    const clientId = req.headers["x-client-id"] || req.ip || "anonymous";
+    const sessionId = sessionIdFromRequest(req, res); if (!sessionId) return;
+    const clientId = clientIdFromRequest(req);
 
     markSessionUnviewed(sessionId, clientId);
 
-    return res.json({
+    return sendContract(res, {
       success: true,
       sessionId,
       viewed: false,
-    });
+    }, parseSessionActionResponse);
   });
 
   app.post("/api/sessions/:id/message-sent", (req: any, res: any) => {
-    const sessionId = req.params.id;
+    const sessionId = sessionIdFromRequest(req, res); if (!sessionId) return;
 
     markUserMessageSent(sessionId);
 
-    return res.json({
+    return sendContract(res, {
       success: true,
       sessionId,
       messageSent: true,
-    });
+    }, parseSessionActionResponse);
   });
 
   // Mirror client-side Permission Auto-Accept state to the server so it can
   // suppress permission notifications at the source (the 500ms debounce race
   // otherwise leaks notifications for auto-accepted permissions).
   app.post("/api/notifications/auto-accept", (req: any, res: any) => {
-    const body = req.body && typeof req.body === "object" ? req.body : {};
-    const sessionId = typeof body.sessionId === "string" ? body.sessionId.trim() : "";
-    const enabled = body.enabled === true;
-    if (!sessionId) {
-      return res.status(400).json({ error: "sessionId required" });
-    }
+    const parsed = parseSessionActionRequest(req.body);
+    if (!parsed.ok) return invalidSessionRequest(res);
+    const { sessionId, enabled } = parsed.value;
     if (typeof setAutoAcceptSession === "function") {
       setAutoAcceptSession(sessionId, enabled);
     }
-    return res.json({ success: true, sessionId, enabled });
+    return sendContract(res, { success: true, sessionId, enabled }, parseSessionActionResponse);
   });
 };

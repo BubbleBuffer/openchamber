@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.server.json",
+  "compilerOptions": {
+    "outDir": "server/dist",
+    "rootDir": "server/src",
+    "paths": {
+      "@openchamber/session-state": ["../session-state/dist/index.d.ts"]
+    }
+  }
+}

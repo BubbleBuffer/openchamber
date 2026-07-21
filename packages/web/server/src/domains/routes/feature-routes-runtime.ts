@@ -9,7 +9,6 @@ import { registerGitRoutes } from "../git/routes.js";
 import { registerConfigEntityRoutes } from "../opencode/routes/config-entity-routes.js";
 import { registerSettingsUtilityRoutes } from "../opencode/routes/core-routes.js";
 import { registerProjectIconRoutes } from "../opencode/routes/project-icon-routes.js";
-import { registerScheduledTaskRoutes } from "../scheduled-tasks/routes.js";
 import { registerSkillRoutes } from "../opencode/routes/skill-routes.js";
 import { registerOpenCodeRoutes } from "../opencode/routes/routes.js";
 
@@ -74,10 +73,6 @@ export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps): any {
       openCodeRuntime,
       getOpenCodePort,
       buildAugmentedPath,
-      projectConfigRuntime,
-      scheduledTasksRuntime,
-      getOpenChamberEventClients,
-      writeSseEvent,
     } = routeDependencies;
 
     registerSettingsUtilityRoutes(app, {
@@ -113,15 +108,6 @@ export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps): any {
       createFsSearchRuntime,
       spawn,
       resolveGitBinaryForSpawn,
-    });
-
-    registerScheduledTaskRoutes(app, {
-      readSettingsFromDiskMigrated,
-      sanitizeProjects,
-      projectConfigRuntime,
-      scheduledTasksRuntime,
-      getOpenChamberEventClients,
-      writeSseEvent,
     });
 
     registerConfigEntityRoutes(app, {

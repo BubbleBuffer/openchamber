@@ -1,4 +1,24 @@
 import type { Express, Request, Response, NextFunction } from "express";
+import {
+  parseSkillsInstallRequest,
+  parseSkillsInstallResponse,
+  parseSkillsCatalogResponse,
+  parseSkillsCatalogSourceResponse,
+  parseSkillsListResponse,
+  parseSkillsRepoScanRequest,
+  parseSkillsScanResponse,
+  parseSkillConfigRequest,
+  parseSkillDetailResponse,
+  parseSkillMutationResponse,
+  parseSkillNameRequest,
+  parseSkillSupportingFileRequest,
+  parseSkillsSupportingFileResponse,
+  skillsError,
+  type SkillsConflict,
+  type SkillsErrorCode,
+  type SkillsError,
+  type SkillsIdentity,
+} from "../../../contracts/skills.js";
 
 interface SkillRoutesDeps {
   fs: typeof import("fs");
@@ -44,7 +64,7 @@ interface SkillRoutesDeps {
     userSkillDir: string;
     selections?: any[];
     conflictPolicy?: string;
-    conflictDecisions?: any[];
+   conflictDecisions?: Record<string, "skip" | "overwrite">;
   }) => Promise<{ ok: true; installed: any[]; skipped: any[] } | { ok: false; error: any }>;
   scanClawdHubPage: (opts: { cursor?: string | null }) => Promise<{ ok: true; items: any[]; nextCursor?: string } | { ok: false; error: any }>;
   installSkillsFromClawdHub: (opts: {
@@ -54,7 +74,7 @@ interface SkillRoutesDeps {
     userSkillDir: string;
     selections?: any[];
     conflictPolicy?: string;
-    conflictDecisions?: any[];
+   conflictDecisions?: Record<string, "skip" | "overwrite">;
   }) => Promise<{ ok: true; installed: any[]; skipped: any[] } | { ok: false; error: any }>;
   isClawdHubSource: (source: string) => boolean;
   getProfiles: () => Array<{ id: string; name: string }>;
@@ -109,6 +129,25 @@ export function registerSkillRoutes(
     getProfiles,
     getProfile,
   } = dependencies;
+
+  const catalogFailure = (kind: unknown): SkillsErrorCode => {
+    if (kind === "conflicts") return "skills_conflict";
+    if (kind === "authRequired") return "skills_auth_required";
+    if (kind === "invalidSource") return "skills_invalid_request";
+    return "skills_provider_error";
+  };
+  const safeCatalogError = (kind: unknown, fallback: string, details?: { conflicts?: unknown; identities?: SkillsIdentity[] }) => skillsError(catalogFailure(kind), fallback, {
+    kind: typeof kind === "string" && ["authRequired", "invalidSource", "gitUnavailable", "networkError", "unknown", "conflicts"].includes(kind)
+      ? kind as SkillsError["kind"]
+      : "unknown",
+    conflicts: Array.isArray(details?.conflicts) ? details.conflicts.filter((conflict): conflict is SkillsConflict => {
+      return !!conflict && typeof conflict === "object" && typeof (conflict as SkillsConflict).skillName === "string" && ((conflict as SkillsConflict).scope === "user" || (conflict as SkillsConflict).scope === "project") && ((conflict as SkillsConflict).source === undefined || (conflict as SkillsConflict).source === "opencode" || (conflict as SkillsConflict).source === "agents");
+    }) : [],
+    identities: details?.identities,
+  });
+  const parsedSkillName = (name: unknown) => parseSkillNameRequest(name);
+  const parsedSupportingFile = (name: unknown, filePath: unknown, content?: unknown) =>
+    parseSkillSupportingFileRequest({ name, filePath, ...(content === undefined ? {} : { content }) });
 
   const findWorktreeRootForSkills = (workingDirectory: string | null): string | null => {
     if (!workingDirectory) return null;
@@ -276,9 +315,9 @@ export function registerSkillRoutes(
 
   app.get("/api/config/skills", async (req: Request, res: Response) => {
     try {
-      const { directory, error } = await resolveProjectDirectory(req);
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid project directory"));
         return;
       }
       const skills =
@@ -292,10 +331,12 @@ export function registerSkillRoutes(
         };
       });
 
-      res.json({ skills: enrichedSkills });
+      const response = { skills: enrichedSkills };
+      if (!parseSkillsListResponse(response).ok) throw new Error("Invalid skills list response");
+      res.json(response);
     } catch (error) {
       console.error("Failed to list skills:", error);
-      res.status(500).json({ error: "Failed to list skills" });
+      res.status(500).json(skillsError("skills_internal_error", "Failed to list skills"));
     }
   });
 
@@ -303,7 +344,7 @@ export function registerSkillRoutes(
     try {
       const { error } = await resolveOptionalProjectDirectory(req);
       if (error) {
-        res.status(400).json({ error });
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid project directory"));
         return;
       }
 
@@ -325,13 +366,12 @@ export function registerSkillRoutes(
         ({ gitIdentityId, ...rest }: { gitIdentityId?: string; [key: string]: any }) => rest
       );
 
-      res.json({ ok: true, sources: sourcesForUi, itemsBySource: {}, pageInfoBySource: {} });
+      const response = { ok: true as const, sources: sourcesForUi, itemsBySource: {}, pageInfoBySource: {} };
+      if (!parseSkillsCatalogResponse(response).ok) throw new Error("Invalid skills catalog response");
+      res.json(response);
     } catch (error) {
       console.error("Failed to load skills catalog:", error);
-      res.status(500).json({
-        ok: false,
-        error: { kind: "unknown", message: (error as Error)?.message || "Failed to load catalog" },
-      });
+      res.status(500).json(safeCatalogError("unknown", "Failed to load catalog"));
     }
   });
 
@@ -339,14 +379,14 @@ export function registerSkillRoutes(
     try {
       const { directory, error } = await resolveOptionalProjectDirectory(req);
       if (error) {
-        res.status(400).json({ ok: false, error: { kind: "invalidSource", message: error } });
+        res.status(400).json(safeCatalogError("invalidSource", "Invalid project directory"));
         return;
       }
 
       const sourceId =
         typeof req.query.sourceId === "string" ? req.query.sourceId : null;
       if (!sourceId) {
-        res.status(400).json({ ok: false, error: { kind: "invalidSource", message: "Missing sourceId" } });
+        res.status(400).json(safeCatalogError("invalidSource", "Missing sourceId"));
         return;
       }
 
@@ -370,7 +410,7 @@ export function registerSkillRoutes(
       const src = sources.find((entry: any) => entry.id === sourceId);
 
       if (!src) {
-        res.status(404).json({ ok: false, error: { kind: "invalidSource", message: "Unknown source" } });
+        res.status(404).json(safeCatalogError("invalidSource", "Unknown source"));
         return;
       }
 
@@ -382,7 +422,7 @@ export function registerSkillRoutes(
       if (src.sourceType === "clawdhub" || isClawdHubSource(src.source)) {
         const scanned = await scanClawdHubPage({ cursor: cursor || null });
         if (!scanned.ok) {
-          res.status(500).json({ ok: false, error: scanned.error });
+          res.status(500).json(safeCatalogError(scanned.error?.kind, "Unable to scan skill provider"));
           return;
         }
 
@@ -397,13 +437,15 @@ export function registerSkillRoutes(
           };
         });
 
-        res.json({ ok: true, items, nextCursor: scanned.nextCursor || null });
+        const response = { ok: true as const, items, nextCursor: scanned.nextCursor || null };
+        if (!parseSkillsCatalogSourceResponse(response).ok) throw new Error("Invalid skills catalog source response");
+        res.json(response);
         return;
       }
 
       const parsed = parseSkillRepoSource(src.source);
       if (!parsed.ok) {
-        res.status(400).json({ ok: false, error: parsed.error });
+        res.status(400).json(safeCatalogError(parsed.error?.kind, "Invalid skill provider source"));
         return;
       }
 
@@ -424,7 +466,7 @@ export function registerSkillRoutes(
         });
 
         if (!scanned.ok) {
-          res.status(500).json({ ok: false, error: scanned.error });
+          res.status(500).json(safeCatalogError(scanned.error?.kind, "Unable to scan skill provider"));
           return;
         }
 
@@ -444,23 +486,23 @@ export function registerSkillRoutes(
         };
       });
 
-      res.json({ ok: true, items });
+      const response = { ok: true as const, items };
+      if (!parseSkillsCatalogSourceResponse(response).ok) throw new Error("Invalid skills catalog source response");
+      res.json(response);
     } catch (error) {
       console.error("Failed to load catalog source:", error);
-      res.status(500).json({
-        ok: false,
-        error: { kind: "unknown", message: (error as Error)?.message || "Failed to load catalog source" },
-      });
+      res.status(500).json(safeCatalogError("unknown", "Failed to load catalog source"));
     }
   });
 
   app.post("/api/config/skills/scan", async (req: Request, res: Response) => {
     try {
-      const { source, subpath, gitIdentityId } = (req.body || {}) as {
-        source?: string;
-        subpath?: string;
-        gitIdentityId?: string;
-      };
+      const parsedRequest = parseSkillsRepoScanRequest(req.body);
+      if (!parsedRequest.ok) {
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid scan request"));
+        return;
+      }
+      const { source, subpath, gitIdentityId } = parsedRequest.value;
       const identity = resolveGitIdentity(gitIdentityId as any);
 
       const result = await scanSkillsRepository({
@@ -473,61 +515,38 @@ export function registerSkillRoutes(
         if (result.error?.kind === "authRequired") {
           res.status(401).json({
             ok: false,
-            error: {
-              ...result.error,
-              identities: listGitIdentitiesForResponse(),
-            },
+            error: safeCatalogError("authRequired", "Skill provider authentication is required", { identities: listGitIdentitiesForResponse() }).error,
           });
           return;
         }
 
-        res.status(400).json({ ok: false, error: result.error });
+        res.status(400).json(safeCatalogError(result.error?.kind, "Unable to scan skill provider"));
         return;
       }
 
-      res.json({ ok: true, items: result.items });
+      const response = { ok: true as const, items: result.items };
+      if (!parseSkillsScanResponse(response).ok) throw new Error("Invalid skill scan response");
+      res.json(response);
     } catch (error) {
       console.error("Failed to scan skills repository:", error);
-      res.status(500).json({
-        ok: false,
-        error: { kind: "unknown", message: (error as Error)?.message || "Failed to scan repository" },
-      });
+      res.status(500).json(skillsError("skills_internal_error", "Failed to scan repository"));
     }
   });
 
   app.post("/api/config/skills/install", async (req: Request, res: Response) => {
     try {
-      const {
-        source,
-        subpath,
-        gitIdentityId,
-        scope,
-        targetSource,
-        selections,
-        conflictPolicy,
-        conflictDecisions,
-      } = (req.body || {}) as {
-        source?: string;
-        subpath?: string;
-        gitIdentityId?: string;
-        scope?: string;
-        targetSource?: string;
-        selections?: any[];
-        conflictPolicy?: string;
-        conflictDecisions?: any[];
-      };
+      const parsedRequest = parseSkillsInstallRequest(req.body);
+      if (!parsedRequest.ok) {
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid install request"));
+        return;
+      }
+      const { source, subpath, gitIdentityId, scope, targetSource, selections, conflictPolicy, conflictDecisions } = parsedRequest.value;
 
       let workingDirectory: string | null = null;
       if (scope === "project") {
         const resolved = await resolveProjectDirectory(req);
         if (!resolved.directory) {
-          res.status(400).json({
-            ok: false,
-            error: {
-              kind: "invalidSource",
-              message: resolved.error || "Project installs require a directory parameter",
-            },
-          });
+          res.status(400).json(skillsError("skills_invalid_request", "Project installs require a directory parameter"));
           return;
         }
         workingDirectory = resolved.directory;
@@ -546,10 +565,10 @@ export function registerSkillRoutes(
 
         if (!result.ok) {
           if (result.error?.kind === "conflicts") {
-            res.status(409).json({ ok: false, error: result.error });
+            res.status(409).json(safeCatalogError(result.error?.kind, "Skill installation conflicts with an existing skill", { conflicts: result.error?.conflicts }));
             return;
           }
-          res.status(400).json({ ok: false, error: result.error });
+          res.status(400).json(safeCatalogError(result.error?.kind, "Unable to install skills"));
           return;
         }
 
@@ -561,14 +580,16 @@ export function registerSkillRoutes(
           await refreshOpenCodeAfterConfigChange("skills install");
         }
 
-        res.json({
+        const response = {
           ok: true,
           installed,
           skipped,
           requiresReload,
           message: requiresReload ? "Skills installed successfully. Reloading interface…" : "No skills were installed",
           reloadDelayMs: requiresReload ? clientReloadDelayMs : undefined,
-        });
+        };
+        if (!parseSkillsInstallResponse(response).ok) throw new Error("Invalid skill install response");
+        res.json(response);
         return;
       }
 
@@ -589,22 +610,19 @@ export function registerSkillRoutes(
 
       if (!result.ok) {
         if (result.error?.kind === "conflicts") {
-          res.status(409).json({ ok: false, error: result.error });
+          res.status(409).json(safeCatalogError(result.error?.kind, "Skill installation conflicts with an existing skill", { conflicts: result.error?.conflicts }));
           return;
         }
 
         if (result.error?.kind === "authRequired") {
           res.status(401).json({
             ok: false,
-            error: {
-              ...result.error,
-              identities: listGitIdentitiesForResponse(),
-            },
+            error: safeCatalogError("authRequired", "Skill provider authentication is required", { identities: listGitIdentitiesForResponse() }).error,
           });
           return;
         }
 
-        res.status(400).json({ ok: false, error: result.error });
+        res.status(400).json(safeCatalogError(result.error?.kind, "Unable to install skills"));
         return;
       }
 
@@ -616,29 +634,30 @@ export function registerSkillRoutes(
         await refreshOpenCodeAfterConfigChange("skills install");
       }
 
-      res.json({
+      const response = {
         ok: true,
         installed,
         skipped,
         requiresReload,
         message: requiresReload ? "Skills installed successfully. Reloading interface…" : "No skills were installed",
         reloadDelayMs: requiresReload ? clientReloadDelayMs : undefined,
-      });
+      };
+      if (!parseSkillsInstallResponse(response).ok) throw new Error("Invalid skill install response");
+      res.json(response);
     } catch (error) {
       console.error("Failed to install skills:", error);
-      res.status(500).json({
-        ok: false,
-        error: { kind: "unknown", message: (error as Error)?.message || "Failed to install skills" },
-      });
+      res.status(500).json(skillsError("skills_internal_error", "Failed to install skills"));
     }
   });
 
   app.get("/api/config/skills/:name", async (req: Request, res: Response) => {
     try {
-      const skillName = req.params.name;
-      const { directory, error } = await resolveProjectDirectory(req);
+      const parsedName = parsedSkillName(req.params.name);
+      if (!parsedName.ok) { res.status(400).json(skillsError("skills_invalid_name", "Invalid skill name")); return; }
+      const skillName = parsedName.value.name;
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid project directory"));
         return;
       }
       const discoveredSkill =
@@ -647,73 +666,83 @@ export function registerSkillRoutes(
         ) || null;
       const sources = getSkillSources(skillName, directory, discoveredSkill);
 
-      res.json({
+      const response = {
         name: skillName,
         sources: sources,
         scope: sources.md.scope,
         source: sources.md.source,
         exists: sources.md.exists,
-      });
+      };
+      if (!parseSkillDetailResponse(response).ok) throw new Error("Invalid skill detail response");
+      res.json(response);
     } catch (error) {
       console.error("Failed to get skill sources:", error);
-      res.status(500).json({ error: "Failed to get skill configuration metadata" });
+      res.status(500).json(skillsError("skills_internal_error", "Failed to get skill configuration metadata"));
     }
   });
 
   app.get("/api/config/skills/:name/files/*filePath", async (req: Request, res: Response) => {
     try {
       const skillName = req.params.name;
-      const filePath = decodeURIComponent(String(req.params.filePath));
-      if (isUnsafeSkillRelativePath(filePath)) {
-        res.status(400).json({ error: "Invalid file path" });
+      const filePath = String(req.params.filePath);
+      const parsedName = parsedSkillName(skillName);
+      const parsedFile = parsedSupportingFile(skillName, filePath);
+      if (!parsedFile.ok || isUnsafeSkillRelativePath(filePath)) {
+        res.status(400).json(skillsError(!parsedName.ok ? "skills_invalid_name" : "skills_invalid_path", "Invalid skill file path"));
         return;
       }
-      const { directory, error } = await resolveProjectDirectory(req);
+      const validatedName = parsedFile.value.name;
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid project directory"));
         return;
       }
 
       const discoveredSkill =
         ((await fetchOpenCodeDiscoveredSkills(directory)) || []).find(
-          (skill) => skill.name === skillName
+          (skill) => skill.name === validatedName
         ) || null;
-      const sources = getSkillSources(skillName, directory, discoveredSkill);
+      const sources = getSkillSources(validatedName, directory, discoveredSkill);
       if (!sources.md.exists || !sources.md.dir) {
-        res.status(404).json({ error: "Skill not found" });
+        res.status(404).json(skillsError("skills_not_found", "Skill not found"));
         return;
       }
 
       const content = readSkillSupportingFile(sources.md.dir, filePath);
       if (content === null) {
-        res.status(404).json({ error: "File not found" });
+        res.status(404).json(skillsError("skills_not_found", "File not found"));
         return;
       }
 
-      res.json({ path: filePath, content });
+      const response = { path: filePath, content };
+      if (!parseSkillsSupportingFileResponse(response).ok) throw new Error("Invalid skill file response");
+      res.json(response);
     } catch (error) {
       const err = error as { code?: string };
       if (err && typeof err === "object" && (err.code === "EACCES" || err.code === "EPERM")) {
-        res.status(403).json({ error: "Access to file denied" });
+        res.status(403).json(skillsError("skills_not_found", "Access to file denied"));
         return;
       }
       console.error("Failed to read skill file:", error);
-      res.status(500).json({ error: "Failed to read skill file" });
+      res.status(500).json(skillsError("skills_internal_error", "Failed to read skill file"));
     }
   });
 
   app.post("/api/config/skills/:name", async (req: Request, res: Response) => {
     try {
-      const skillName = req.params.name;
+      const parsedName = parsedSkillName(req.params.name);
+      const parsedConfig = parseSkillConfigRequest(req.body);
+      if (!parsedName.ok || !parsedConfig.ok) { res.status(400).json(skillsError(!parsedName.ok ? "skills_invalid_name" : "skills_invalid_request", "Invalid skill configuration")); return; }
+      const skillName = parsedName.value.name;
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { scope, source: skillSource, ...config } = req.body as {
+      const { scope, source: skillSource, ...config } = parsedConfig.value as {
         scope?: string;
         source?: string;
         [key: string]: any;
       };
-      const { directory, error } = await resolveProjectDirectory(req);
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid project directory"));
         return;
       }
 
@@ -723,25 +752,30 @@ export function registerSkillRoutes(
       createSkill(skillName, { ...config, source: skillSource }, directory, scope);
       await refreshOpenCodeAfterConfigChange("skill creation");
 
-      res.json({
+      const response = {
         success: true,
         requiresReload: true,
         message: `Skill ${skillName} created successfully. Reloading interface…`,
         reloadDelayMs: clientReloadDelayMs,
-      });
+      };
+      if (!parseSkillMutationResponse(response).ok) throw new Error("Invalid skill mutation response");
+      res.json(response);
     } catch (error) {
       console.error("Failed to create skill:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to create skill" });
+      res.status(500).json(skillsError("skills_internal_error", "Failed to create skill"));
     }
   });
 
   app.patch("/api/config/skills/:name", async (req: Request, res: Response) => {
     try {
-      const skillName = req.params.name;
-      const updates = req.body;
-      const { directory, error } = await resolveProjectDirectory(req);
+      const parsedName = parsedSkillName(req.params.name);
+      const parsedUpdates = parseSkillConfigRequest(req.body);
+      if (!parsedName.ok || !parsedUpdates.ok) { res.status(400).json(skillsError(!parsedName.ok ? "skills_invalid_name" : "skills_invalid_request", "Invalid skill configuration")); return; }
+      const skillName = parsedName.value.name;
+      const updates = parsedUpdates.value;
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid project directory"));
         return;
       }
 
@@ -751,122 +785,138 @@ export function registerSkillRoutes(
       updateSkill(skillName, updates, directory);
       await refreshOpenCodeAfterConfigChange("skill update");
 
-      res.json({
+      const response = {
         success: true,
         requiresReload: true,
         message: `Skill ${skillName} updated successfully. Reloading interface…`,
         reloadDelayMs: clientReloadDelayMs,
-      });
+      };
+      if (!parseSkillMutationResponse(response).ok) throw new Error("Invalid skill mutation response");
+      res.json(response);
     } catch (error) {
       console.error("[Server] Failed to update skill:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to update skill" });
+      res.status(500).json(skillsError("skills_internal_error", "Failed to update skill"));
     }
   });
 
   app.put("/api/config/skills/:name/files/*filePath", async (req: Request, res: Response) => {
     try {
       const skillName = req.params.name;
-      const filePath = decodeURIComponent(String(req.params.filePath));
-      if (isUnsafeSkillRelativePath(filePath)) {
-        res.status(400).json({ error: "Invalid file path" });
+      const filePath = String(req.params.filePath);
+      const { content } = (req.body as { content?: unknown }) || {};
+      const parsedName = parsedSkillName(skillName);
+      const parsedFile = parsedSupportingFile(skillName, filePath, content);
+      if (!parsedFile.ok || isUnsafeSkillRelativePath(filePath)) {
+        res.status(400).json(skillsError(!parsedName.ok ? "skills_invalid_name" : "skills_invalid_path", "Invalid skill file path"));
         return;
       }
-      const { content } = (req.body as { content?: string }) || {};
-      const { directory, error } = await resolveProjectDirectory(req);
+      const validatedName = parsedFile.value.name;
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid project directory"));
         return;
       }
 
       const discoveredSkill =
         ((await fetchOpenCodeDiscoveredSkills(directory)) || []).find(
-          (skill) => skill.name === skillName
+          (skill) => skill.name === validatedName
         ) || null;
-      const sources = getSkillSources(skillName, directory, discoveredSkill);
+      const sources = getSkillSources(validatedName, directory, discoveredSkill);
       if (!sources.md.exists || !sources.md.dir) {
-        res.status(404).json({ error: "Skill not found" });
+        res.status(404).json(skillsError("skills_not_found", "Skill not found"));
         return;
       }
 
-      writeSkillSupportingFile(sources.md.dir, filePath, content || "");
+      writeSkillSupportingFile(sources.md.dir, filePath, parsedFile.value.content || "");
 
-      res.json({
+      const response = {
         success: true,
         message: `File ${filePath} saved successfully`,
-      });
+      };
+      if (!parseSkillMutationResponse(response).ok) throw new Error("Invalid skill file mutation response");
+      res.json(response);
     } catch (error) {
       const err = error as { code?: string };
       if (err && typeof err === "object" && (err.code === "EACCES" || err.code === "EPERM")) {
-        res.status(403).json({ error: "Access to file denied" });
+        res.status(403).json(skillsError("skills_not_found", "Access to file denied"));
         return;
       }
       console.error("Failed to write skill file:", error);
-      res.status(500).json({ error: "Failed to write skill file" });
+      res.status(500).json(skillsError("skills_internal_error", "Failed to write skill file"));
     }
   });
 
   app.delete("/api/config/skills/:name/files/*filePath", async (req: Request, res: Response) => {
     try {
       const skillName = req.params.name;
-      const filePath = decodeURIComponent(String(req.params.filePath));
-      if (isUnsafeSkillRelativePath(filePath)) {
-        res.status(400).json({ error: "Invalid file path" });
+      const filePath = String(req.params.filePath);
+      const parsedName = parsedSkillName(skillName);
+      const parsedFile = parsedSupportingFile(skillName, filePath);
+      if (!parsedFile.ok || isUnsafeSkillRelativePath(filePath)) {
+        res.status(400).json(skillsError(!parsedName.ok ? "skills_invalid_name" : "skills_invalid_path", "Invalid skill file path"));
         return;
       }
-      const { directory, error } = await resolveProjectDirectory(req);
+      const validatedName = parsedFile.value.name;
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid project directory"));
         return;
       }
 
       const discoveredSkill =
         ((await fetchOpenCodeDiscoveredSkills(directory)) || []).find(
-          (skill) => skill.name === skillName
+          (skill) => skill.name === validatedName
         ) || null;
-      const sources = getSkillSources(skillName, directory, discoveredSkill);
+      const sources = getSkillSources(validatedName, directory, discoveredSkill);
       if (!sources.md.exists || !sources.md.dir) {
-        res.status(404).json({ error: "Skill not found" });
+        res.status(404).json(skillsError("skills_not_found", "Skill not found"));
         return;
       }
 
       deleteSkillSupportingFile(sources.md.dir, filePath);
 
-      res.json({
+      const response = {
         success: true,
         message: `File ${filePath} deleted successfully`,
-      });
+      };
+      if (!parseSkillMutationResponse(response).ok) throw new Error("Invalid skill file mutation response");
+      res.json(response);
     } catch (error) {
       const err = error as { code?: string };
       if (err && typeof err === "object" && (err.code === "EACCES" || err.code === "EPERM")) {
-        res.status(403).json({ error: "Access to file denied" });
+        res.status(403).json(skillsError("skills_not_found", "Access to file denied"));
         return;
       }
       console.error("Failed to delete skill file:", error);
-      res.status(500).json({ error: "Failed to delete skill file" });
+      res.status(500).json(skillsError("skills_internal_error", "Failed to delete skill file"));
     }
   });
 
   app.delete("/api/config/skills/:name", async (req: Request, res: Response) => {
     try {
-      const skillName = req.params.name;
-      const { directory, error } = await resolveProjectDirectory(req);
+      const parsedName = parsedSkillName(req.params.name);
+      if (!parsedName.ok) { res.status(400).json(skillsError("skills_invalid_name", "Invalid skill name")); return; }
+      const skillName = parsedName.value.name;
+      const { directory } = await resolveProjectDirectory(req);
       if (!directory) {
-        res.status(400).json({ error });
+        res.status(400).json(skillsError("skills_invalid_request", "Invalid project directory"));
         return;
       }
 
       deleteSkill(skillName, directory);
       await refreshOpenCodeAfterConfigChange("skill deletion");
 
-      res.json({
+      const response = {
         success: true,
         requiresReload: true,
         message: `Skill ${skillName} deleted successfully. Reloading interface…`,
         reloadDelayMs: clientReloadDelayMs,
-      });
+      };
+      if (!parseSkillMutationResponse(response).ok) throw new Error("Invalid skill mutation response");
+      res.json(response);
     } catch (error) {
       console.error("Failed to delete skill:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to delete skill" });
+      res.status(500).json(skillsError("skills_internal_error", "Failed to delete skill"));
     }
   });
 }

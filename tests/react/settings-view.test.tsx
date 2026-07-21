@@ -9,12 +9,6 @@ vi.mock("@/lib/device", () => ({
   getDeviceInfo: () => ({ isMobile: false, isTablet: false, deviceType: "desktop" }),
 }))
 
-vi.mock("@/lib/desktop/desktop", () => ({
-  isDesktopShell: () => false,
-  isVSCodeRuntime: () => false,
-  isWebRuntime: () => true,
-}))
-
 vi.mock("@/components/sections/projects/ProjectsPage", () => ({ ProjectsPage: () => <section aria-label="Projects page">Projects page</section> }))
 vi.mock("@/components/sections/projects/ProjectsSidebar", () => ({ ProjectsSidebar: ({ onItemSelect }: { onItemSelect?: () => void }) => <button type="button" onClick={onItemSelect}>Project item</button> }))
 vi.mock("@/components/sections/agents/AgentsPage", () => ({ AgentsPage: () => <section aria-label="Agents page">Agents page</section> }))
@@ -33,9 +27,6 @@ vi.mock("@/components/sections/magic-prompts/MagicPromptsPage", () => ({ MagicPr
 vi.mock("@/components/sections/magic-prompts/MagicPromptsSidebar", () => ({ MagicPromptsSidebar: ({ onItemSelect }: { onItemSelect?: () => void }) => <button type="button" onClick={onItemSelect}>Magic prompt item</button> }))
 vi.mock("@/components/sections/openchamber/OpenChamberPage", () => ({ OpenChamberPage: ({ section }: { section: string }) => <section aria-label="OpenChamber page">OpenChamber {section}</section> }))
 vi.mock("@/components/sections/git-identities/GitPage", () => ({ GitPage: () => <section aria-label="Git page">Git page</section> }))
-vi.mock("@/components/sections/remote-instances/RemoteInstancesPage", () => ({ RemoteInstancesPage: () => <section aria-label="Remote Instances page">Remote Instances page</section> }))
-vi.mock("@/components/sections/remote-instances/RemoteInstancesSidebar", () => ({ RemoteInstancesSidebar: ({ onItemSelect }: { onItemSelect?: () => void }) => <button type="button" onClick={onItemSelect}>Remote instance item</button> }))
-
 vi.mock("@/stores/agents/useAgentsStore", () => ({
   reloadOpenCodeConfiguration: vi.fn(),
   useAgentsStore: { getState: () => ({ loadAgents: vi.fn() }) },
@@ -49,6 +40,7 @@ vi.mock("@/stores/files/useDirectoryStore", () => ({ useDirectoryStore: { getSta
 
 import { SettingsView } from "@/components/views/SettingsView"
 import { SettingsWindow } from "@/components/views/SettingsWindow"
+import { getSettingsPageMeta } from "@/lib/settings/metadata"
 import { useUIStore } from "@/stores/useUIStore"
 
 describe("SettingsView", () => {
@@ -66,6 +58,10 @@ describe("SettingsView", () => {
     expect(screen.getAllByRole("button", { name: /Providers/i }).length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByRole("button", { name: /Agents/i }).length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByRole("button", { name: /Skills Catalog/i }).length).toBeGreaterThanOrEqual(1)
+  })
+
+  test("does not expose remote instance settings", () => {
+    expect(getSettingsPageMeta(["remote", "instances"].join("-"))).toBeNull()
   })
 
   test("clicking a navigation item updates settingsPage and renders that page", async () => {

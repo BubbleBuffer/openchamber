@@ -12,10 +12,11 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "outDir": "server/dist",
-    "rootDir": "server/src",
     "baseUrl": ".",
-    "types": ["node"]
+    "types": ["node"],
+    "paths": {
+      "@openchamber/session-state": ["../session-state/src/index.ts"]
+    }
   },
   "include": ["server/src"],
   "exclude": ["server/dist", "server/lib"]

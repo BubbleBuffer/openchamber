@@ -28,9 +28,6 @@ export function startListening(
     httpServer.listen(port, host, () => {
       const address = httpServer.address();
       const activePort = typeof address === "object" && address ? address.port : port;
-      if (config.isDesktopNotifyEnabled) {
-        process.send?.({ type: "openchamber:ready", port: activePort });
-      }
       console.log(`[server] listening on http://${host}:${activePort}`);
       console.log(`[server] health check: http://${host}:${activePort}/health`);
       resolve({ httpServer, activePort });

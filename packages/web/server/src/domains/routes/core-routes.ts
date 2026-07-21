@@ -1,5 +1,6 @@
 import type { Express, NextFunction, Request, Response } from "express";
 import type { CoreRoutesDeps, AuthRoutesDeps, SettingsUtilityRoutesDeps, CommonMiddlewareDeps } from "./types.js";
+import { MESSAGE_STREAM_PROTOCOL_VERSION } from "../../contracts/system.js";
 
 export function registerServerStatusRoutes(app: Express, deps: CoreRoutesDeps): void {
   const {
@@ -32,6 +33,7 @@ export function registerServerStatusRoutes(app: Express, deps: CoreRoutesDeps): 
       runtime: runtimeName,
       pid: process.pid,
       startedAt: serverStartedAt,
+      protocolVersion: MESSAGE_STREAM_PROTOCOL_VERSION,
     });
   });
 }
@@ -44,8 +46,9 @@ export function registerAuthAndAccessRoutes(app: Express, deps: AuthRoutesDeps):
   app.get('/auth/session', async (req: Request, res: Response) => {
     try {
       await uiAuthController.handleSessionStatus(req, res);
-    } catch {
-      res.status(500).json({ error: 'Internal server error' });
+    } catch (error) {
+      console.error('Failed to read owner session status:', error);
+      res.status(500).json({ error: 'Internal server error', code: 'internal_error' });
     }
   });
 

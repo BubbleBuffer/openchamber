@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { SettingsHelpersDeps, SettingsHelpers } from "./types.js";
+import { SETTINGS_FIELDS } from "../../contracts/settings.js";
 
 export function createSettingsHelpers(deps: SettingsHelpersDeps): SettingsHelpers {
   const {
@@ -92,9 +93,6 @@ export function createSettingsHelpers(deps: SettingsHelpersDeps): SettingsHelper
       const normalized = (normalizeDirectoryPath(candidate.opencodeBinary) as string).trim();
       result.opencodeBinary = normalized;
     }
-    if (typeof candidate.desktopLanAccessEnabled === "boolean") {
-      result.desktopLanAccessEnabled = candidate.desktopLanAccessEnabled;
-    }
     if (Array.isArray(candidate.projects)) {
       const projects = sanitizeProjects(candidate.projects);
       if (projects) {
@@ -105,16 +103,6 @@ export function createSettingsHelpers(deps: SettingsHelpersDeps): SettingsHelper
       result.activeProjectId = candidate.activeProjectId;
     }
 
-    if (Array.isArray(candidate.approvedDirectories)) {
-      result.approvedDirectories = normalizeStringArray(
-        (candidate.approvedDirectories as unknown[])
-          .map((entry) => (typeof entry === "string" ? normalizePathForPersistence(entry) : entry))
-          .filter((entry) => typeof entry === "string" && (entry as string).length > 0),
-      );
-    }
-    if (Array.isArray(candidate.securityScopedBookmarks)) {
-      result.securityScopedBookmarks = normalizeStringArray(candidate.securityScopedBookmarks as unknown[]);
-    }
     if (Array.isArray(candidate.pinnedDirectories)) {
       result.pinnedDirectories = normalizeStringArray(
         (candidate.pinnedDirectories as unknown[])
@@ -207,6 +195,9 @@ export function createSettingsHelpers(deps: SettingsHelpersDeps): SettingsHelper
     if (typeof candidate.autoDeleteAfterDays === "number" && Number.isFinite(candidate.autoDeleteAfterDays as number)) {
       const normalizedDays = Math.max(1, Math.min(365, Math.round(candidate.autoDeleteAfterDays as number)));
       result.autoDeleteAfterDays = normalizedDays;
+    }
+    if (candidate.sessionRetentionAction === "archive" || candidate.sessionRetentionAction === "delete") {
+      result.sessionRetentionAction = candidate.sessionRetentionAction;
     }
     const typography = sanitizeTypographySizesPartial(candidate.typographySizes);
     if (typography) {
@@ -371,13 +362,6 @@ export function createSettingsHelpers(deps: SettingsHelpersDeps): SettingsHelper
     if (typeof candidate.filesViewShowGitignored === "boolean") {
       result.filesViewShowGitignored = candidate.filesViewShowGitignored;
     }
-    if (typeof candidate.openInAppId === "string") {
-      const trimmed = (candidate.openInAppId as string).trim();
-      if (trimmed.length > 0) {
-        result.openInAppId = trimmed;
-      }
-    }
-
     // Message limit — single setting for fetch / trim / Load More chunk
     if (typeof candidate.messageLimit === "number" && Number.isFinite(candidate.messageLimit as number)) {
       result.messageLimit = Math.max(10, Math.min(500, Math.round(candidate.messageLimit as number)));
@@ -501,41 +485,12 @@ export function createSettingsHelpers(deps: SettingsHelpersDeps): SettingsHelper
       result.reportUsage = candidate.reportUsage;
     }
 
-    return result;
+    return Object.fromEntries(
+      Object.entries(result).filter(([key, value]) => key in SETTINGS_FIELDS && value !== undefined),
+    );
   };
 
   const mergePersistedSettings = (current: any, changes: any): any => {
-    const baseApproved = Array.isArray(changes.approvedDirectories)
-      ? changes.approvedDirectories
-      : Array.isArray(current.approvedDirectories)
-        ? current.approvedDirectories
-        : [];
-
-    const additionalApproved: string[] = [];
-    if (typeof changes.lastDirectory === "string" && changes.lastDirectory.length > 0) {
-      additionalApproved.push(changes.lastDirectory);
-    }
-    if (typeof changes.homeDirectory === "string" && changes.homeDirectory.length > 0) {
-      additionalApproved.push(changes.homeDirectory);
-    }
-    const projectEntries = Array.isArray(changes.projects)
-      ? changes.projects
-      : Array.isArray(current.projects)
-        ? current.projects
-        : [];
-    (projectEntries as any[]).forEach((project) => {
-      if (project && typeof project.path === "string" && project.path.length > 0) {
-        additionalApproved.push(project.path);
-      }
-    });
-    const approvedSource = [...baseApproved, ...additionalApproved];
-
-    const baseBookmarks = Array.isArray(changes.securityScopedBookmarks)
-      ? changes.securityScopedBookmarks
-      : Array.isArray(current.securityScopedBookmarks)
-        ? current.securityScopedBookmarks
-        : [];
-
     const nextTypographySizes = changes.typographySizes
       ? {
           ...(current.typographySizes || {}),
@@ -546,16 +501,6 @@ export function createSettingsHelpers(deps: SettingsHelpersDeps): SettingsHelper
     const next = {
       ...current,
       ...changes,
-      approvedDirectories: Array.from(
-        new Set(
-          (approvedSource as string[]).filter((entry) => typeof entry === "string" && entry.length > 0),
-        ),
-      ),
-      securityScopedBookmarks: Array.from(
-        new Set(
-          (baseBookmarks as string[]).filter((entry) => typeof entry === "string" && entry.length > 0),
-        ),
-      ),
       typographySizes: nextTypographySizes,
     };
 
@@ -564,8 +509,6 @@ export function createSettingsHelpers(deps: SettingsHelpersDeps): SettingsHelper
 
   const formatSettingsResponse = (settings: any): any => {
     const sanitized = sanitizeSettingsUpdate(settings);
-    const approved = normalizeStringArray(settings?.approvedDirectories);
-    const bookmarks = normalizeStringArray(settings?.securityScopedBookmarks);
     const pwaAppName = normalizePwaAppName(settings?.pwaAppName, "");
     const pwaOrientation = normalizePwaOrientation(settings?.pwaOrientation, "system");
 
@@ -573,8 +516,6 @@ export function createSettingsHelpers(deps: SettingsHelpersDeps): SettingsHelper
       ...sanitized,
       ...(pwaAppName ? { pwaAppName } : {}),
       pwaOrientation,
-      approvedDirectories: approved,
-      securityScopedBookmarks: bookmarks,
       pinnedDirectories: normalizeStringArray(settings?.pinnedDirectories),
       typographySizes: sanitizeTypographySizesPartial(settings?.typographySizes),
       showReasoningTraces:

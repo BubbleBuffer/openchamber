@@ -1,28 +1,8 @@
-export interface UsageWindow {
-  usedPercent: number | null;
-  remainingPercent: number | null;
-  windowSeconds: number | null;
-  resetAfterSeconds: number | null;
-  resetAt: number | null;
-  resetAtFormatted: string | null;
-  resetAfterFormatted: string | null;
-  valueLabel?: string | null;
-}
+import type { QuotaProviderResponse, QuotaProviderUsage, QuotaUsageWindow } from "../../contracts/quota.js";
 
-export interface ProviderUsage {
-  windows: Record<string, UsageWindow>;
-  models?: Record<string, { windows: Record<string, UsageWindow> }>;
-}
-
-export interface QuotaProviderResult {
-  providerId: string;
-  providerName: string;
-  ok: boolean;
-  configured: boolean;
-  usage: ProviderUsage | null;
-  error?: string | null;
-  fetchedAt: number;
-}
+export type UsageWindow = QuotaUsageWindow;
+export type ProviderUsage = QuotaProviderUsage;
+export type QuotaProviderResult = QuotaProviderResponse;
 
 export interface ConfiguredProviderEntry {
   providerId: string;

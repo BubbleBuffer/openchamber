@@ -1,6 +1,8 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { Server as HttpServer, IncomingMessage } from "node:http";
 import { Buffer } from "node:buffer";
+import type { TerminalWsControlFrame } from "../../contracts/terminal.js";
+import { parseTerminalWsDataFrame } from "../../contracts/terminal.js";
 import type {
   TerminalWsConnection,
   TerminalSession,
@@ -52,12 +54,12 @@ export const createTerminalWsServer = (
     maxPayload: TERMINAL_WS_MAX_PAYLOAD_BYTES,
   });
 
-  const sendControl = (socket: WebSocket, payload: Record<string, unknown>): void => {
+  const sendControl = (socket: WebSocket, payload: TerminalWsControlFrame): void => {
     if (!socket || socket.readyState !== WebSocket.OPEN) {
       return;
     }
     try {
-      socket.send(createTerminalWsControlFrame(payload as Parameters<typeof createTerminalWsControlFrame>[0]), { binary: true });
+      socket.send(createTerminalWsControlFrame(payload), { binary: true });
     } catch {
       // ignore
     }
@@ -105,7 +107,7 @@ export const createTerminalWsServer = (
           connectionState.invalidFrames += 1;
           sendControl(socket, {
             t: "e",
-            c: "BAD_FRAME",
+            c: "terminal_bad_frame",
             f: connectionState.invalidFrames >= 10,
           });
           if (connectionState.invalidFrames >= 10) {
@@ -123,7 +125,7 @@ export const createTerminalWsServer = (
           connectionState.invalidFrames += 1;
           sendControl(socket, {
             t: "e",
-            c: "BAD_FRAME",
+            c: "terminal_bad_frame",
             f: connectionState.invalidFrames >= 10,
           });
           if (connectionState.invalidFrames >= 10) {
@@ -145,7 +147,7 @@ export const createTerminalWsServer = (
             maxRebindsPerWindow,
           )
         ) {
-          sendControl(socket, { t: "e", c: "RATE_LIMIT", f: false });
+          sendControl(socket, { t: "e", c: "terminal_rate_limited", f: false });
           return;
         }
 
@@ -156,7 +158,7 @@ export const createTerminalWsServer = (
           connectionState.boundSessionId = null;
           sendControl(socket, {
             t: "e",
-            c: "SESSION_NOT_FOUND",
+            c: "terminal_session_not_found",
             f: false,
           });
           return;
@@ -200,12 +202,13 @@ export const createTerminalWsServer = (
       }
 
       const payload = normalizeTerminalWsMessageToText(message);
-      if (payload.length === 0) {
+      const dataFrame = parseTerminalWsDataFrame(payload);
+      if (!dataFrame.ok || dataFrame.value.length === 0) {
         return;
       }
 
       if (!connectionState.boundSessionId) {
-        sendControl(socket, { t: "e", c: "NOT_BOUND", f: false });
+        sendControl(socket, { t: "e", c: "terminal_not_bound", f: false });
         return;
       }
 
@@ -215,17 +218,17 @@ export const createTerminalWsServer = (
         connectionState.boundSessionId = null;
         sendControl(socket, {
           t: "e",
-          c: "SESSION_NOT_FOUND",
+          c: "terminal_session_not_found",
           f: false,
         });
         return;
       }
 
       try {
-        session.ptyProcess.write(payload);
+        session.ptyProcess.write(dataFrame.value);
         session.lastActivity = Date.now();
       } catch {
-        sendControl(socket, { t: "e", c: "WRITE_FAIL", f: false });
+        sendControl(socket, { t: "e", c: "terminal_process_failed", f: false });
       }
     });
 

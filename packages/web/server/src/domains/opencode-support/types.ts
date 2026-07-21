@@ -81,7 +81,7 @@ export interface OpenCodeEnvRuntime {
 
 export interface NetworkRuntimeDeps {
   state: { openCodePort: number; openCodeBaseUrl: string; openCodeApiPrefix: string; openCodeApiPrefixDetected: boolean; openCodeApiDetectionTimer: any };
-  getOpenCodeAuthHeaders: () => Record<string, string> | Promise<Record<string, string>>;
+  getOpenCodeAuthHeaders: () => Record<string, string>;
 }
 
 export interface OpenCodeNetworkRuntime {
@@ -105,9 +105,9 @@ export interface AuthStateRuntimeDeps {
 }
 
 export interface OpenCodeAuthStateRuntime {
-  getOpenCodeAuthHeaders(): { Authorization: string };
+  getOpenCodeAuthHeaders(): Record<string, string>;
   isOpenCodeConnectionSecure(): boolean;
-  ensureLocalOpenCodeServerPassword(opts?: { rotateManaged?: boolean }): Promise<string>;
+  ensureLocalOpenCodeServerPassword(opts?: { rotateManaged?: boolean }): Promise<string | null>;
 }
 
 export interface ProjectDirectoryRuntimeDeps {

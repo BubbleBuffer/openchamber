@@ -5,6 +5,24 @@ import path from "path";
 import os from "os";
 import type { Request, Response } from "express";
 import { createUiPasskeys } from "./ui-passkeys.js";
+import {
+  parsePasskeyAuthenticationVerifyRequest,
+  parsePasskeyAuthenticationVerifyResponse,
+  parsePasskeyListResponse,
+  parsePasskeyOptionsResponse,
+  parsePasskeyRegistrationOptionsRequest,
+  parsePasskeyRegistrationVerifyRequest,
+  parsePasskeyRegistrationVerifyResponse,
+  parsePasskeyRevokeRequest,
+  parsePasskeyRevokeResponse,
+  parsePasskeyStatusResponse,
+  parseResetAuthResponse,
+  parsePasswordSessionRequest,
+  parseUiAuthErrorResponse,
+  UI_AUTH_RETRY_AFTER_HEADER,
+  type OwnerSessionResponse,
+  type UiAuthErrorResponse,
+} from "../../contracts/ui-auth.js";
 import type {
   UiAuthDeps,
   UiAuthController,
@@ -29,6 +47,30 @@ const loginRateLimiter = new Map<string, RateLimitRecord>();
 let rateLimitCleanupTimer: ReturnType<typeof setInterval> | null = null;
 
 const rateLimitLocks = new Map<string, Promise<void>>();
+
+function sendValidatedResponse<T>(
+  res: Response,
+  parse: (value: unknown) => { ok: true; value: T } | { ok: false; error: string },
+  value: unknown,
+): void {
+  const parsed = parse(value);
+  if (parsed.ok) {
+    res.json(parsed.value);
+    return;
+  }
+  console.error("[UiAuth] Refused invalid passkey response envelope");
+  res.status(500).json({ error: "Internal server error", code: "internal_error" } satisfies UiAuthErrorResponse);
+}
+
+function sendUiAuthError(res: Response, status: number, value: UiAuthErrorResponse): void {
+  const parsed = parseUiAuthErrorResponse(value);
+  if (!parsed.ok) {
+    console.error("[UiAuth] Refused invalid UI auth error envelope");
+    res.status(500).json({ error: "Internal server error", code: "internal_error" } satisfies UiAuthErrorResponse);
+    return;
+  }
+  res.status(status).json(parsed.value);
+}
 
 function getClientIp(req: Request): string | null {
   const forwarded = req.headers["x-forwarded-for"];
@@ -481,7 +523,8 @@ export function createUiAuth({
         _req: Request,
         res: Response,
       ) => {
-        res.json({ authenticated: true, disabled: true });
+        const response: OwnerSessionResponse = { authenticated: true, disabled: true };
+        res.json(response);
       },
       handleSessionCreate: async (
         _req: Request,
@@ -489,10 +532,10 @@ export function createUiAuth({
       ) => {
         res
           .status(400)
-          .json({ error: "UI password not configured" });
+          .json({ error: "UI password not configured", code: "ui_auth_invalid_request" } satisfies UiAuthErrorResponse);
       },
       handlePasskeyStatus: (_req, res) => {
-        res.json({
+        sendValidatedResponse(res, parsePasskeyStatusResponse, {
           enabled: false,
           hasPasskeys: false,
           passkeyCount: 0,
@@ -503,43 +546,31 @@ export function createUiAuth({
         _req,
         res,
       ) => {
-        res
-          .status(400)
-          .json({ error: "UI password not configured" });
+        sendUiAuthError(res, 400, { error: "UI password not configured", code: "ui_auth_invalid_request" });
       },
       handlePasskeyRegistrationVerify: async (_req, res) => {
-        res
-          .status(400)
-          .json({ error: "UI password not configured" });
+        sendUiAuthError(res, 400, { error: "UI password not configured", code: "ui_auth_invalid_request" });
       },
       handlePasskeyAuthenticationOptions: async (
         _req,
         res,
       ) => {
-        res
-          .status(400)
-          .json({ error: "UI password not configured" });
+        sendUiAuthError(res, 400, { error: "UI password not configured", code: "ui_auth_invalid_request" });
       },
       handlePasskeyAuthenticationVerify: async (
         _req,
         res,
       ) => {
-        res
-          .status(400)
-          .json({ error: "UI password not configured" });
+        sendUiAuthError(res, 400, { error: "UI password not configured", code: "ui_auth_invalid_request" });
       },
       handlePasskeyList: (_req, res) => {
-        res.json({ passkeys: [] });
+        sendValidatedResponse(res, parsePasskeyListResponse, { passkeys: [] });
       },
       handlePasskeyRevoke: (_req, res) => {
-        res
-          .status(400)
-          .json({ error: "UI password not configured" });
+        sendUiAuthError(res, 400, { error: "UI password not configured", code: "ui_auth_invalid_request" });
       },
       handleResetAuth: (_req, res) => {
-        res
-          .status(400)
-          .json({ error: "UI password not configured" });
+        sendUiAuthError(res, 400, { error: "UI password not configured", code: "ui_auth_invalid_request" });
       },
       ensureSessionToken,
       dispose: () => {
@@ -694,7 +725,8 @@ export function createUiAuth({
       res.json({
         error: "UI authentication required",
         locked: true,
-      });
+        code: "ui_auth_unauthorized",
+      } satisfies UiAuthErrorResponse);
     } else {
       res.type("text/plain").send("Authentication required");
     }
@@ -720,70 +752,77 @@ export function createUiAuth({
     req: Request,
     res: Response,
   ) => {
-    const token = getTokenFromRequest(req);
-    if (await isSessionValid(token as string)) {
-      res.json({ authenticated: true });
-      return;
+    try {
+      const token = getTokenFromRequest(req);
+      if (await isSessionValid(token as string)) {
+        const response: OwnerSessionResponse = { authenticated: true };
+        res.json(response);
+        return;
+      }
+      clearSessionCookie(req, res);
+      const response: OwnerSessionResponse = { authenticated: false, locked: true, code: "ui_auth_unauthorized" };
+      res.status(401).json(response);
+    } catch (error) {
+      console.error("[UiAuth] Failed to read session status", error);
+      res.status(500).json({ error: "Internal server error", code: "internal_error" } satisfies UiAuthErrorResponse);
     }
-    clearSessionCookie(req, res);
-    res
-      .status(401)
-      .json({ authenticated: false, locked: true });
   };
 
   const handleSessionCreate = async (
     req: Request,
     res: Response,
   ) => {
-    const rateLimitResult = await checkRateLimit(req);
+    try {
+      const rateLimitResult = await checkRateLimit(req);
 
-    res.setHeader(
+      res.setHeader(
       "X-RateLimit-Limit",
       rateLimitResult.limit,
     );
-    res.setHeader(
+      res.setHeader(
       "X-RateLimit-Remaining",
       rateLimitResult.remaining,
     );
-    res.setHeader(
+      res.setHeader(
       "X-RateLimit-Reset",
       rateLimitResult.reset,
     );
 
-    if (!rateLimitResult.allowed) {
-      res.setHeader(
-        "Retry-After",
+      if (!rateLimitResult.allowed) {
+        res.setHeader(
+        UI_AUTH_RETRY_AFTER_HEADER,
         rateLimitResult.retryAfter as number,
       );
-      res.status(429).json({
+        res.status(429).json({
         error:
           "Too many login attempts, please try again later",
         retryAfter: rateLimitResult.retryAfter,
+        code: "ui_auth_rate_limited",
       });
-      return;
+        return;
+      }
+
+      const request = parsePasswordSessionRequest(req.body);
+      const candidate = request.ok ? request.value.password : "";
+      const trustDevice = request.ok && request.value.trustDevice === true;
+      if (!verifyPassword(candidate)) {
+        await recordFailedAttempt(req);
+        clearSessionCookie(req, res);
+        res
+          .status(401)
+          .json({ error: "Invalid credentials", code: "ui_auth_unauthorized" } satisfies UiAuthErrorResponse);
+        return;
+      }
+
+      await clearRateLimit(req);
+
+      await issueSession(req, res, { trustDevice });
+      const response: OwnerSessionResponse = { authenticated: true };
+      res.json(response);
+    } catch (error) {
+      console.error("[UiAuth] Failed to create session", error);
+      res.status(500).json({ error: "Internal server error", code: "internal_error" } satisfies UiAuthErrorResponse);
     }
-
-    const candidate =
-      typeof req.body?.password === "string"
-        ? req.body.password
-        : "";
-    if (!verifyPassword(candidate)) {
-      await recordFailedAttempt(req);
-      clearSessionCookie(req, res);
-      res
-        .status(401)
-        .json({ error: "Invalid credentials" });
-      return;
-    }
-
-    await clearRateLimit(req);
-
-    await issueSession(req, res, {
-      trustDevice: isTrustedDeviceRequest(
-        req.body?.trustDevice,
-      ),
-    });
-    res.json({ authenticated: true });
   };
 
   function respondPasskeyError(
@@ -793,15 +832,30 @@ export function createUiAuth({
     const statusCode =
       typeof error?.statusCode === "number"
         ? error.statusCode
-        : 400;
-    res.status(statusCode).json({
-      error: error?.message || "Passkey request failed",
-    });
+        : 500;
+    if (statusCode === 400) {
+      sendUiAuthError(res, 400, { error: "Invalid passkey request", code: "ui_auth_invalid_request" });
+      return;
+    }
+    if (statusCode === 401) {
+      sendUiAuthError(res, 401, { error: "Authentication failed", code: "ui_auth_unauthorized" });
+      return;
+    }
+    if (statusCode === 403) {
+      sendUiAuthError(res, 403, { error: "Request forbidden", code: "ui_auth_forbidden" });
+      return;
+    }
+    if (statusCode === 404) {
+      sendUiAuthError(res, 404, { error: "Passkey not found", code: "ui_auth_not_found" });
+      return;
+    }
+    console.error("[UiAuth] Passkey request failed", error);
+    sendUiAuthError(res, 500, { error: "Internal server error", code: "internal_error" });
   }
 
   const handlePasskeyStatus = (req: Request, res: Response) => {
     try {
-      res.json(passkeyController.getStatus(req));
+      sendValidatedResponse(res, parsePasskeyStatusResponse, passkeyController.getStatus(req));
     } catch (error) {
       respondPasskeyError(res, error);
     }
@@ -812,15 +866,16 @@ export function createUiAuth({
     res: Response,
   ) => {
     try {
-      const label =
-        typeof req.body?.label === "string"
-          ? req.body.label
-          : "";
+      const request = parsePasskeyRegistrationOptionsRequest(req.body);
+      if (!request.ok) {
+        respondPasskeyError(res, { statusCode: 400 });
+        return;
+      }
       const options = await passkeyController.beginRegistration(
         req,
-        { label },
+        request.value,
       );
-      res.json(options);
+      sendValidatedResponse(res, parsePasskeyOptionsResponse, options);
     } catch (error) {
       respondPasskeyError(res, error);
     }
@@ -831,11 +886,16 @@ export function createUiAuth({
     res: Response,
   ) => {
     try {
+      const request = parsePasskeyRegistrationVerifyRequest(req.body);
+      if (!request.ok) {
+        respondPasskeyError(res, { statusCode: 400 });
+        return;
+      }
       const result =
         await passkeyController.finishRegistration(
-          req.body,
+          request.value,
         );
-      res.json(result);
+      sendValidatedResponse(res, parsePasskeyRegistrationVerifyResponse, result);
     } catch (error) {
       respondPasskeyError(res, error);
     }
@@ -848,7 +908,7 @@ export function createUiAuth({
     try {
       const options =
         await passkeyController.beginAuthentication(req);
-      res.json(options);
+      sendValidatedResponse(res, parsePasskeyOptionsResponse, options);
     } catch (error) {
       respondPasskeyError(res, error);
     }
@@ -859,15 +919,16 @@ export function createUiAuth({
     res: Response,
   ) => {
     try {
-      await passkeyController.finishAuthentication(
-        req.body,
-      );
+      const request = parsePasskeyAuthenticationVerifyRequest(req.body);
+      if (!request.ok) {
+        respondPasskeyError(res, { statusCode: 400 });
+        return;
+      }
+      const verification = await passkeyController.finishAuthentication(request.value);
       await issueSession(req, res, {
-        trustDevice: isTrustedDeviceRequest(
-          req.body?.trustDevice,
-        ),
+        trustDevice: isTrustedDeviceRequest(request.value.trustDevice),
       });
-      res.json({ authenticated: true });
+      sendValidatedResponse(res, parsePasskeyAuthenticationVerifyResponse, { ...verification, authenticated: true });
     } catch (error) {
       respondPasskeyError(res, error);
     }
@@ -875,7 +936,7 @@ export function createUiAuth({
 
   const handlePasskeyList = (req: Request, res: Response) => {
     try {
-      res.json({
+      sendValidatedResponse(res, parsePasskeyListResponse, {
         passkeys: passkeyController.listPasskeys(req),
       });
     } catch (error) {
@@ -888,11 +949,16 @@ export function createUiAuth({
     res: Response,
   ) => {
     try {
+      const request = parsePasskeyRevokeRequest({ id: req.params?.id });
+      if (!request.ok) {
+        respondPasskeyError(res, { statusCode: 400 });
+        return;
+      }
       const result = passkeyController.revokePasskey(
         req,
-        req.params?.id as string,
+        request.value.id,
       );
-      res.json(result);
+      sendValidatedResponse(res, parsePasskeyRevokeResponse, result);
     } catch (error) {
       respondPasskeyError(res, error);
     }
@@ -904,7 +970,7 @@ export function createUiAuth({
         passkeyController.clearAllPasskeys();
       rotateJwtSecret();
       clearSessionCookie(req, res);
-      res.json({
+      sendValidatedResponse(res, parseResetAuthResponse, {
         cleared: true,
         clearedPasskeys: passkeyResult.clearedCount,
         signedOutEverywhere: true,

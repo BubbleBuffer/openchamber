@@ -15,11 +15,12 @@
     "baseUrl": ".",
     "types": ["vite/client", "@types/dom-speech-recognition", "node", "bun"],
     "paths": {
-      "@/*": ["../ui/src/*", "./src/*"],
+      "@/*": ["./src/ui/*"],
       "@web/*": ["./src/*"],
-      "@openchamber/ui/*": ["../ui/src/*"],
-      "@openchamber/web/*": ["./src/*"]
+      "@openchamber/web/*": ["./src/*"],
+      "@contracts/*": ["./server/src/contracts/*"],
+      "@openchamber/session-state": ["../session-state/src/index.ts"]
     }
   },
-  "include": ["src", "../ui/src", "../ui/src/types/**/*"]
+  "include": ["src"]
 }

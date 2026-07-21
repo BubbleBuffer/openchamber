@@ -32,12 +32,12 @@ Current expectations:
 
 ## Standalone Sync Benchmark
 
-`packages/ui/src/sync/__tests__/event-pipeline.bench.js` is not part of `bun run test:perf`.
+`packages/web/src/ui/sync/__tests__/event-pipeline.bench.js` is not part of `bun run test:perf`.
 
 Run it directly when investigating sync pipeline throughput:
 
 ```bash
-bun packages/ui/src/sync/__tests__/event-pipeline.bench.js
+bun packages/web/src/ui/sync/__tests__/event-pipeline.bench.js
 ```
 
 It is intentionally standalone for now. It uses hand-rolled synthetic workloads and prints its own report instead of using `vitest bench`.
@@ -46,4 +46,4 @@ It is intentionally standalone for now. It uses hand-rolled synthetic workloads 
 
 - Do not loosen benchmark thresholds or snapshot samples without documenting the reason in the commit message.
 - Prefer adding a new focused benchmark over broadening an existing one.
-- Keep mocks at process boundaries; do not import Electron, VS Code, or real OpenCode processes from perf tests.
+- Keep mocks at process boundaries; do not import real OpenCode processes from perf tests.

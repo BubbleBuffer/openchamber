@@ -261,7 +261,6 @@ export const createNotificationTriggerRuntime = (deps: {
             sessionId,
             requireHidden: settings.notificationMode !== "always",
           };
-          eventBus.emit(EVENTS.NOTIFICATION_SEND_DESKTOP, { payload: notificationPayload });
           eventBus.emit(EVENTS.NOTIFICATION_SEND_UI, { payload: notificationPayload });
         }
 
@@ -320,7 +319,6 @@ export const createNotificationTriggerRuntime = (deps: {
             sessionId,
             requireHidden: settings.notificationMode !== "always",
           };
-          eventBus.emit(EVENTS.NOTIFICATION_SEND_DESKTOP, { payload: notificationPayload });
           eventBus.emit(EVENTS.NOTIFICATION_SEND_UI, { payload: notificationPayload });
         }
 
@@ -391,7 +389,6 @@ export const createNotificationTriggerRuntime = (deps: {
             sessionId,
             requireHidden: settings.notificationMode !== "always",
           };
-          eventBus.emit(EVENTS.NOTIFICATION_SEND_DESKTOP, { payload: notificationPayload });
           eventBus.emit(EVENTS.NOTIFICATION_SEND_UI, { payload: notificationPayload });
         }
 
@@ -495,7 +492,6 @@ export const createNotificationTriggerRuntime = (deps: {
             sessionId,
             requireHidden: settings.notificationMode !== "always",
           };
-          eventBus.emit(EVENTS.NOTIFICATION_SEND_DESKTOP, { payload: notificationPayload });
           eventBus.emit(EVENTS.NOTIFICATION_SEND_UI, { payload: notificationPayload });
         }
 
@@ -530,6 +526,12 @@ export const createNotificationTriggerRuntime = (deps: {
       lastReadyNotificationAt.dispose();
       sessionParentIdCache.dispose();
       autoAcceptingSessions.dispose();
+      for (const timer of pushQuestionDebounceTimers.values()) {
+        clearTimeout(timer);
+      }
+      for (const { timer } of pushPermissionDebounceTimers.values()) {
+        clearTimeout(timer);
+      }
       pushQuestionDebounceTimers.clear();
       pushPermissionDebounceTimers.clear();
     },

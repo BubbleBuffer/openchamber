@@ -293,7 +293,7 @@ export function createUiPasskeys({
       passkeyCount: Boolean(rpID)
         ? getPasskeysForRpId(store, rpID).length
         : 0,
-      rpID,
+      rpID: rpID || null,
     };
   }
 

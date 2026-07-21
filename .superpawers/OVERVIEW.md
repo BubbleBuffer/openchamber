@@ -1,8 +1,12 @@
 # OpenChamber Refactor — Overview & Checklist
 
+> **Superseded on 2026-07-14:** The active source of truth is `.superpawers/specs/2026-07-14-web-pwa-maintainability-program-design.md`. This file is retained only as historical context for completed and deferred work.
+>
 > Living overview of the radical refactor program. Source of truth for "what's done / in flight / next".
 > Deep design lives in `.superpawers/specs/`. Per-task plans live in `.superpawers/plans/`.
-> Last updated: 2026-06-28 (testing-expansion cleanup + 68 store tests).
+> Active product status updated: 2026-07-21.
+
+> **Current topology and validation:** `packages/web` owns the browser/PWA, server, and CLI; `packages/session-state` remains separately built and publishable at `1.9.11`; `packages/ui` is folded into web. Domain-owned HTTP/SSE/WebSocket contracts and their ownership audit are complete. Clean-dist type-check and canonical build artifacts pass. Current tests: web Vitest 348 across 90 files; session-state 78; stores 239; React 65; web 18 + 2 skipped; integration 53 + 2 skipped; performance 5; docs 7/7. `scripts/verify.sh` is nonzero only for inherited lint: session-state 0/5, web 406/936, tests 36/4 (errors/warnings), with no increases or new categories.
 
 ## Status snapshot
 
@@ -148,14 +152,13 @@ Specs:
 
 ---
 
-## Verification baseline
+## Current verification status
 
 ```bash
-bun run type-check           # ⚠ fails only in @openchamber/tests due pre-existing UI ambient gaps (`__OPENCHAMBER_*__`, `import.meta.env`/`glob`, `?worker&url`, `?raw`); ui/web/electron/vscode/session-state clean
-bun run type-check:server    # ✅ clean
-bun run lint                 # ⚠ not clean: UI has 1 pre-existing `activeTransport` error + 787 warnings; VS Code has 0 errors + 113 warnings; web lint currently reports pre-existing server lint debt
-bun run test:stores          # ✅ 68 / 68 pass (15 store test files, ~1.1s)
-bun run test:integration     # ⚠ 50 / 54 pass (1 pre-existing liveness-fix test failure; 4 skipped)
+bun run type-check           # ✅ clean-dist type-check passes
+bun run lint                 # ⚠ inherited debt: session-state 0/5, web 406/936, tests 36/4 (errors/warnings)
+bun run test:stores          # ✅ 239 pass
+bun run test:integration     # ✅ 53 pass / 2 skip
 ```
 
 ## Out of scope for the rework (tracked elsewhere)
@@ -163,5 +166,4 @@ bun run test:integration     # ⚠ 50 / 54 pass (1 pre-existing liveness-fix tes
 - Sentry integration — done
 - TTS / Cloudflare tunnels / Tauri shell — removed
 - Store / lib / chat folder restructuring — done
-- VS Code / Electron parity — maintained per phase
 - PWA / mobile-first UI — ongoing per `.opencode/skills/mobile-first-ui`

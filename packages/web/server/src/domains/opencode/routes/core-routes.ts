@@ -1,4 +1,5 @@
 import type { Express, Request, Response, NextFunction } from "express";
+import { parseThemesListResponse, themesError } from "../../../contracts/themes.js";
 
 interface ServerStatusRoutesDeps {
   process: typeof import("process");
@@ -90,12 +91,13 @@ export function registerAuthAndAccessRoutes(
 
     try {
       await uiAuthController.handleSessionStatus(req, res);
-    } catch {
-      res.status(500).json({ error: "Internal server error" });
+    } catch (error) {
+      console.error("[UiAuth] Failed to read session status", error);
+      res.status(500).json({ error: "Internal server error", code: "internal_error" });
     }
   });
 
-  app.post("/auth/session", (req: Request, res: Response) => {
+  app.post("/auth/session", async (req: Request, res: Response) => {
     const requestScope = tunnelAuthController.classifyRequestScope(req);
     if (requestScope === "tunnel" || requestScope === "unknown-public") {
       res.status(403).json({
@@ -104,7 +106,12 @@ export function registerAuthAndAccessRoutes(
       });
       return;
     }
-    uiAuthController.handleSessionCreate(req, res);
+    try {
+      await uiAuthController.handleSessionCreate(req, res);
+    } catch (error) {
+      console.error("[UiAuth] Failed to create session", error);
+      res.status(500).json({ error: "Internal server error", code: "internal_error" });
+    }
   });
 
   app.get("/auth/passkey/status", (req: Request, res: Response) => {
@@ -299,12 +306,16 @@ export function registerSettingsUtilityRoutes(
   app.get("/api/config/themes", async (_req: Request, res: Response) => {
     try {
       const customThemes = await readCustomThemesFromDisk();
-      res.json({ themes: customThemes });
+      const response = parseThemesListResponse({ themes: customThemes });
+      if (!response.ok) {
+        console.error("Failed to validate custom themes response:", response.error);
+        res.status(500).json(themesError("themes_internal_error", "Failed to load custom themes"));
+        return;
+      }
+      res.json(response.value);
     } catch (error) {
       console.error("Failed to load custom themes:", error);
-      res.status(500).json({
-        error: error instanceof Error ? error.message : "Failed to load custom themes",
-      });
+      res.status(500).json(themesError("themes_internal_error", "Failed to load custom themes"));
     }
   });
 

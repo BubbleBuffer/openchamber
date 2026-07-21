@@ -58,7 +58,7 @@ export interface SessionRuntime {
   getSessionStateSnapshot(): Array<{ directory: string; sessionId: string; status: string }>;
   getSessionAttentionSnapshot(): Array<{ directory: string; sessionId: string; needsAttention: boolean }>;
   getSessionState(sessionId: string): SessionSnapshotV1 | null;
-  getSessionAttentionState(sessionId: string): boolean;
+  getSessionAttentionState(sessionId: string): boolean | null;
   markSessionViewed(directory: string, sessionId: string): void;
   markSessionUnviewed(directory: string, sessionId: string): void;
   markUserMessageSent(directory: string, sessionId: string): void;

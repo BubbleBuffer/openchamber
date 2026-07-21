@@ -25,7 +25,7 @@ These tests use a real `opencode` binary and/or a real OpenChamber web server. T
 | `opencode/sdk-connect.test.ts` | Real OpenCode HTTP `/health` and `/` endpoints respond successfully |
 | `opencode/session-crud.test.ts` | Create, list, get, and delete a session via the OpenCode SDK |
 | `web/connection-lifecycle.test.ts` | OpenChamber web server boots against a real external OpenCode, `/health` returns 200 and `{"status":"ok"}` |
-| `web/liveness-fix.test.ts` | Global WS connects and receives `ready` frame; no `openchamber:heartbeat` payload leaks to WS clients; OpenChamber `/health` remains healthy after OpenCode kill + restart; `data_stalled` assertion is skipped (requires a controllable upstream-silence fixture) |
+| `web/liveness-fix.test.ts` | Global WS connects and receives `ready` frame; OpenChamber `/health` remains healthy after OpenCode kill + restart; `data_stalled` assertion is skipped (requires a controllable upstream-silence fixture) |
 
 ### Slice 2
 

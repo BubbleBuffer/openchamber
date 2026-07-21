@@ -34,17 +34,7 @@ export interface GitStatusOptions {
   mode?: "light";
 }
 
-export interface GitStatusResult {
-  current: string | null;
-  tracking: string | null;
-  ahead: number;
-  behind: number;
-  files: Array<{ path: string; index: string; working_dir: string }>;
-  isClean: boolean;
-  diffStats?: Record<string, { insertions: number; deletions: number }>;
-  mergeInProgress: { head: string; message: string } | null;
-  rebaseInProgress: { headName: string; onto: string } | null;
-}
+export type GitStatusResult = GitStatusResponse;
 
 export interface GitDiffOptions {
   path?: string;
@@ -89,11 +79,7 @@ export interface GitCommitOptions {
   files?: string[];
 }
 
-export interface GitBranchResult {
-  all: string[];
-  current: string;
-  branches: Record<string, { current: boolean; name: string; commit: string; label: string }>;
-}
+export type GitBranchResult = GitBranchResponse;
 
 export interface GitCreateBranchOptions {
   startPoint?: string;
@@ -103,68 +89,21 @@ export interface GitDeleteBranchOptions {
   force?: boolean;
 }
 
-export interface GitSuccessResult {
-  success: boolean;
-}
+export type GitSuccessResult = GitSuccessResponse;
 
-export interface GitWorktreeEntry {
-  head: string;
-  name: string;
-  branch: string;
-  path: string;
-}
+export type GitWorktreeEntry = GitWorktreeInfo;
 
-export interface GitWorktreeBootstrapState {
-  status: "pending" | "ready" | "failed";
-  error: string | null;
-  updatedAt: number;
-}
+export type GitWorktreeBootstrapState = GitWorktreeBootstrapStatus;
 
-export interface GitWorktreeCreateInput {
-  mode?: "new" | "existing";
-  worktreeName?: string;
-  name?: string;
-  branchName?: string;
-  startRef?: string;
-  existingBranch?: string;
-  setUpstream?: boolean;
-  upstreamRemote?: string;
-  upstreamBranch?: string;
-  ensureRemoteName?: string;
-  ensureRemoteUrl?: string;
-  startCommand?: string;
-}
+export type GitWorktreeCreateInput = GitWorktreeCreateRequest;
 
-export interface GitWorktreeCreateResult {
-  head: string;
-  name: string;
-  branch: string;
-  path: string;
-}
+export type GitWorktreeCreateResult = GitWorktreeInfo;
 
-export interface GitWorktreeRemoveInput {
-  directory: string;
-  deleteLocalBranch?: boolean;
-}
+export type GitWorktreeRemoveInput = GitWorktreeRemoveRequest;
 
-export interface GitLogEntry {
-  hash: string;
-  date: string;
-  message: string;
-  refs: string;
-  body: string;
-  author_name: string;
-  author_email: string;
-  filesChanged: number;
-  insertions: number;
-  deletions: number;
-}
+export type GitLogEntry = GitLogEntryContract;
 
-export interface GitLogResult {
-  all: GitLogEntry[];
-  latest: GitLogEntry | null;
-  total: number;
-}
+export type GitLogResult = GitLogResponse;
 
 export interface GitLogOptions {
   maxCount?: number;
@@ -173,11 +112,7 @@ export interface GitLogOptions {
   file?: string;
 }
 
-export interface GitRemoteEntry {
-  name: string;
-  fetchUrl: string;
-  pushUrl: string;
-}
+export type GitRemoteEntry = GitRemote;
 
 export interface GitRemoveRemoteOptions {
   remote: string;
@@ -191,27 +126,14 @@ export interface GitMergeOptions {
   branch: string;
 }
 
-export interface GitConflictDetails {
-  statusPorcelain: string;
-  unmergedFiles: string[];
-  diff: string;
-  headInfo: string;
-  operation: string;
-}
+export type GitConflictDetails = GitConflictDetailsContract;
 
 export interface GitStashOptions {
   includeUntracked?: boolean;
   message?: string;
 }
 
-export interface GitWorktreeValidateResult {
-  ok: boolean;
-  errors: Array<{ code: string; message: string }>;
-  resolved: {
-    mode: string;
-    localBranch: string | null;
-  };
-}
+export type GitWorktreeValidateResult = GitWorktreeValidationResult;
 
 export interface GitWorktreePreviewResult {
   name: string;
@@ -226,16 +148,7 @@ export interface GitWorktreeValidateDirResult {
   resolvedCwd: string | null;
 }
 
-export interface GitCanonicalizeStateResult {
-  worktreeRoot: string | null;
-  cwd: string | null;
-  branch: string | null;
-  headState: "branch" | "detached" | "unborn";
-  worktreeStatus: string;
-  legacy: boolean;
-  degraded: boolean;
-  attentionReason: "merge" | "rebase" | "cherry-pick" | "revert" | "bisect" | null;
-}
+export type GitCanonicalizeStateResult = GitCanonicalizeWorktreeResponse;
 
 export interface GitCommitFilesResult {
   files: Array<{
@@ -246,3 +159,18 @@ export interface GitCommitFilesResult {
     changeType: string;
   }>;
 }
+import type {
+  GitBranchResponse,
+  GitCanonicalizeWorktreeResponse,
+  GitConflictDetails as GitConflictDetailsContract,
+  GitLogEntry as GitLogEntryContract,
+  GitLogResponse,
+  GitRemote,
+  GitStatusResponse,
+  GitSuccessResponse,
+  GitWorktreeBootstrapStatus,
+  GitWorktreeCreateRequest,
+  GitWorktreeInfo,
+  GitWorktreeRemoveRequest,
+  GitWorktreeValidationResult,
+} from "../../contracts/git.js";

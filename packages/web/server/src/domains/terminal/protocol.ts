@@ -2,11 +2,12 @@ import { Buffer } from "node:buffer";
 import {
   TERMINAL_WS_CONTROL_TAG_JSON,
   TERMINAL_WS_PATH,
-  type TerminalControlFrame,
-} from "./types.js";
+  parseTerminalWsControlFrame,
+  type TerminalWsControlFrame,
+} from "../../contracts/terminal.js";
 
 // Re-export constants for external consumers
-export { TERMINAL_WS_PATH, TERMINAL_WS_CONTROL_TAG_JSON } from "./types.js";
+export { TERMINAL_WS_PATH, TERMINAL_WS_CONTROL_TAG_JSON } from "../../contracts/terminal.js";
 
 export const parseRequestPathname = (requestUrl: unknown): string => {
   if (typeof requestUrl !== "string" || requestUrl.length === 0) {
@@ -49,7 +50,7 @@ export const normalizeTerminalWsMessageToText = (rawData: unknown): string => {
 
 export const readTerminalWsControlFrame = (
   rawData: unknown,
-): TerminalControlFrame | null => {
+): TerminalWsControlFrame | null => {
   if (!rawData) {
     return null;
   }
@@ -61,17 +62,15 @@ export const readTerminalWsControlFrame = (
 
   try {
     const parsed = JSON.parse(buffer.subarray(1).toString("utf8")) as unknown;
-    if (!parsed || typeof parsed !== "object") {
-      return null;
-    }
-    return parsed as TerminalControlFrame;
+    const controlFrame = parseTerminalWsControlFrame(parsed);
+    return controlFrame.ok ? controlFrame.value : null;
   } catch {
     return null;
   }
 };
 
 export const createTerminalWsControlFrame = (
-  payload: TerminalControlFrame,
+  payload: TerminalWsControlFrame,
 ): Buffer => {
   const jsonBytes = Buffer.from(JSON.stringify(payload), "utf8");
   return Buffer.concat([Buffer.from([TERMINAL_WS_CONTROL_TAG_JSON]), jsonBytes]);

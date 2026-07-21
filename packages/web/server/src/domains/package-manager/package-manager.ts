@@ -41,7 +41,7 @@ function getOpenChamberConfigDir(): string {
 }
 
 function sanitizeInstallScope(scope: string): string {
-  if (scope === "desktop-tauri" || scope === "vscode" || scope === "web") return scope;
+  if (scope === "web") return scope;
   return "web";
 }
 
@@ -77,7 +77,7 @@ function mapArch(value: string): string {
 }
 
 function normalizeAppType(value: string): string {
-  if (value === "web" || value === "desktop-tauri" || value === "vscode") return value;
+  if (value === "web") return value;
   return "web";
 }
 
@@ -90,17 +90,6 @@ function normalizeDeviceClass(value: string): string {
   )
     return value;
   return "unknown";
-}
-
-function normalizePlatform(value: string): string {
-  if (value === "macos" || value === "windows" || value === "linux" || value === "web")
-    return value;
-  return mapPlatform(process.platform);
-}
-
-function normalizeArch(value: string): string {
-  if (value === "arm64" || value === "x64" || value === "unknown") return value;
-  return mapArch(process.arch);
 }
 
 interface CheckForUpdatesFromApiResult {
@@ -119,15 +108,11 @@ async function checkForUpdatesFromApi(
     const appType = normalizeAppType(options.appType || "web");
     const hostPlatform = mapPlatform(process.platform);
     const hostArch = mapArch(process.arch);
-    const platform =
-      appType === "vscode" ? normalizePlatform(options.platform || "") : hostPlatform;
-    const arch =
-      appType === "vscode" ? normalizeArch(options.arch || "") : hostArch;
     const payload = {
       appType,
       deviceClass: normalizeDeviceClass(options.deviceClass || "unknown"),
-      platform,
-      arch,
+      platform: hostPlatform,
+      arch: hostArch,
       channel: "stable",
       currentVersion,
       installId: getOrCreateInstallId(appType),
@@ -391,22 +376,6 @@ function packageManagerOwnsCurrentInstall(pm: string): boolean {
 }
 
 export function detectPackageManagerDetails(): PackageManagerInfo {
-  // In desktop (Electron) runtime, package-manager detection is worthless —
-  // the app ships as a .app bundle, not installed via npm/pnpm/yarn/bun, and
-  // updates are handled by electron-updater. The detection path does up to a
-  // dozen spawnSync(pm, ['bin', '-g']) calls with 10s timeouts each; under
-  // the in-process server every one blocks the Electron main event loop and
-  // manifests as a multi-second UI freeze. Short-circuit here.
-  if (process.env.OPENCHAMBER_RUNTIME === "desktop") {
-    return {
-      packageManager: "electron",
-      reason: "desktop-runtime",
-      packagePath: null,
-      packageManagerCommand: null,
-      globalNodeModulesRoot: null,
-    };
-  }
-
   if (cachedDetectedPm) {
     return {
       packageManager: cachedDetectedPm,

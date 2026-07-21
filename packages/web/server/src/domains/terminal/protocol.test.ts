@@ -31,7 +31,7 @@ describe("terminal websocket protocol", () => {
   });
 
   it("roundtrips control frame payload", () => {
-    const payload = { t: "b", s: "abc123", v: 1 };
+    const payload = { t: "b", s: "abc123", v: 1 } as const;
     const frame = createTerminalWsControlFrame(payload);
     expect(readTerminalWsControlFrame(frame)).toEqual(payload);
   });
@@ -64,9 +64,9 @@ describe("terminal websocket protocol", () => {
   });
 
   it("parses control frame from chunk arrays", () => {
-    const frame = createTerminalWsControlFrame({ t: "bok", v: 1 });
+    const frame = createTerminalWsControlFrame({ t: "bok", s: "abc123", v: 2, runtime: "node", ptyBackend: "node-pty" });
     const chunks = [frame.subarray(0, 2), frame.subarray(2)];
-    expect(readTerminalWsControlFrame(chunks)).toEqual({ t: "bok", v: 1 });
+    expect(readTerminalWsControlFrame(chunks)).toEqual({ t: "bok", s: "abc123", v: 2, runtime: "node", ptyBackend: "node-pty" });
   });
 
   it("normalizes buffer passthrough", () => {

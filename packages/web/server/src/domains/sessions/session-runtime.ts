@@ -73,17 +73,19 @@ export function createSessionRuntime(deps: SessionRuntimeDeps): SessionRuntime {
       return state ? (state.lastSnapshot ?? null) : null;
     },
 
-    getSessionAttentionState(sessionId: string): boolean {
+    getSessionAttentionState(sessionId: string): boolean | null {
       if (actorRegistry) {
         const keys = actorRegistry.listKeys();
         for (const key of keys) {
           if (key.endsWith(`::${sessionId}`)) {
             const snapshot = actorRegistry.getSnapshot(key as SessionActorKey);
             if (snapshot) return selectNeedsAttention(snapshot as any);
+            return !viewedSessions.has(sessionId);
           }
         }
+        return null;
       }
-      return !viewedSessions.has(sessionId);
+      return legacySessionStates.has(sessionId) ? !viewedSessions.has(sessionId) : null;
     },
 
     markSessionViewed(_directory: string, sessionId: string) {

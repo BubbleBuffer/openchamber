@@ -1,5 +1,5 @@
-export { createSessionActorKey, parseSessionActorKey } from './machine/actorKey'
-export type { SessionActorKey, SessionActorIdentity } from './machine/actorKey'
+export { createSessionActorKey, parseSessionActorKey } from './machine/actorKey.js'
+export type { SessionActorKey, SessionActorIdentity } from './machine/actorKey.js'
 
 export type {
   SessionMachineContext,
@@ -12,20 +12,20 @@ export type {
   SessionRetryState,
   SessionErrorState,
   CreateInitialSessionContextInput,
-} from './machine/context'
+} from './machine/context.js'
 
-export { createInitialSessionContext } from './machine/context'
+export { createInitialSessionContext } from './machine/context.js'
 
-export type { SessionDomainEvent } from './machine/events'
+export type { SessionDomainEvent } from './machine/events.js'
 
-export type { SessionMachineEffect } from './machine/effects'
+export type { SessionMachineEffect } from './machine/effects.js'
 
 export type {
   SessionSnapshotV1,
   SessionRetrySnapshot,
   SessionErrorSnapshot,
   SessionHistorySnapshot,
-} from './machine/snapshots'
+} from './machine/snapshots.js'
 
 export {
   SESSION_SNAPSHOT_VERSION,
@@ -34,13 +34,13 @@ export {
   assertSerializableSnapshot,
   createContextFromSnapshot,
   restoreSessionMachineSnapshot,
-} from './machine/snapshots'
+} from './machine/snapshots.js'
 
 export {
   assertSessionEventIdentityMatchesContext,
   assertNormalizedReferences,
   createFatalInvariantFailure,
-} from './machine/invariants'
+} from './machine/invariants.js'
 
 export {
   selectIsStreaming,
@@ -55,7 +55,7 @@ export {
   selectPartById,
   selectStreamingMessageId,
   selectSessionSnapshot,
-} from './machine/selectors'
+} from './machine/selectors.js'
 
-export { createSessionMachine } from './machine/sessionMachine'
+export { createSessionMachine } from './machine/sessionMachine.js'
 export { createActor } from 'xstate'

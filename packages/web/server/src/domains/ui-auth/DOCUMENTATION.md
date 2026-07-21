@@ -1,38 +1,14 @@
-# UI Auth Module Documentation
+# UI authentication domain
 
-## Purpose
-This module owns OpenChamber UI authentication for browser access, including password session auth, WebAuthn passkeys, and trusted-device session handling.
+Authoritative wire contract: [`../../contracts/ui-auth.ts`](../../contracts/ui-auth.ts).
+`ui-auth.ts` owns password/session cookies, access guards, and rate limiting;
+`ui-passkeys.ts` owns WebAuthn registration and authentication.
 
-## Entrypoints and structure
-- `packages/web/server/src/domains/ui-auth/ui-auth.ts`: UI auth controller runtime, cookie/session issuance, rate limiting, and auth route handlers.
-- `packages/web/server/src/domains/ui-auth/ui-passkeys.ts`: passkey store and WebAuthn registration/authentication verification helpers.
+Session and passkey request data is parsed before use. Auth state, disabled
+auth, lockout, and rate limiting are explicit results; rate limiting uses the
+contracted `Retry-After` header with its coded error. Session cookies and
+credential/passkey internals never become response DTOs. Passkey origin
+validation uses the request origin plus configured public origin candidates.
 
-## Public exports (`ui-auth.ts`)
-- `createUiAuth({ password, cookieName, sessionTtlMs, readSettingsFromDiskMigrated })`: creates UI auth controller with methods:
-  - `enabled`
-  - `requireAuth(req, res, next)`
-  - `handleSessionStatus(req, res)`
-  - `handleSessionCreate(req, res)`
-  - `handlePasskeyStatus(req, res)`
-  - `handlePasskeyRegistrationOptions(req, res)`
-  - `handlePasskeyRegistrationVerify(req, res)`
-  - `handlePasskeyAuthenticationOptions(req, res)`
-  - `handlePasskeyAuthenticationVerify(req, res)`
-  - `handlePasskeyList(req, res)`
-  - `handlePasskeyRevoke(req, res)`
-  - `handleResetAuth(req, res)`
-  - `ensureSessionToken(req, res)`
-  - `dispose()`
-
-## Public exports (`ui-passkeys.ts`)
-- `createUiPasskeys({ passwordBinding, readSettingsFromDiskMigrated, storeFile, rpName, challengeTtlMs })`: creates passkey runtime with methods:
-  - `enabled`
-  - `getStatus(req)`
-  - `listPasskeys(req)`
-  - `revokePasskey(req, passkeyId)`
-  - `clearAllPasskeys()`
-  - `beginRegistration(req, { label })`
-  - `finishRegistration(payload)`
-  - `beginAuthentication(req)`
-  - `finishAuthentication(payload)`
-  - `dispose()`
+HTTP CSRF-token enforcement is not currently implemented: it is deferred to
+`pwa-auth-runtime`. Do not document it as a protection that exists today.

@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { assertGitAvailable, looksLikeAuthError, runGit } from "./git.js";
 import { parseSkillRepoSource } from "./source.js";
+import { isSafeSkillRepositoryPath } from "../../contracts/skills.js";
 
 import type { CloneRepoOptions, CloneSuccess, CloneFailure, InstallSkillsFromRepositoryResult } from "./types.js";
 
@@ -46,11 +47,19 @@ async function safeRm(dir: string): Promise<void> {
 }
 
 function toFsPath(repoDir: string, repoRelPosixPath: string): string {
+  if (!isSafeSkillRepositoryPath(repoRelPosixPath)) {
+    throw new Error("Invalid repository-relative skill path");
+  }
   const parts = String(repoRelPosixPath || "")
     .split("/")
     .map((p) => p.trim())
     .filter(Boolean);
-  return path.join(repoDir, ...parts);
+  const resolvedRoot = path.resolve(repoDir);
+  const resolvedPath = path.resolve(resolvedRoot, ...parts);
+  if (!resolvedPath.startsWith(`${resolvedRoot}${path.sep}`)) {
+    throw new Error("Skill path escapes repository root");
+  }
+  return resolvedPath;
 }
 
 async function ensureDir(dirPath: string): Promise<void> {
@@ -271,6 +280,9 @@ export async function installSkillsFromRepository({
         .map((s) => String(s?.skillDir || "").trim())
         .filter(Boolean)
     : [];
+  if (requestedDirs.some((skillDir) => !isSafeSkillRepositoryPath(skillDir))) {
+    return { ok: false, error: { kind: "invalidSource", message: "Invalid skill directory" } };
+  }
   if (requestedDirs.length === 0) {
     return {
       ok: false,

@@ -5,16 +5,15 @@ WORKDIR /app
 FROM base AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
-COPY packages/ui/package.json ./packages/ui/
+COPY packages/session-state/package.json ./packages/session-state/
 COPY packages/web/package.json ./packages/web/
-COPY packages/desktop/package.json ./packages/desktop/
-COPY packages/vscode/package.json ./packages/vscode/
+COPY tests/package.json ./tests/
 RUN bun install --frozen-lockfile --ignore-scripts
 
 FROM deps AS builder
 WORKDIR /app
 COPY . .
-RUN bun run build:web
+RUN bun run build
 
 FROM oven/bun:1 AS runtime
 WORKDIR /home/openchamber
@@ -55,11 +54,15 @@ ENV NODE_ENV=production
 COPY scripts/docker-entrypoint.sh /home/openchamber/openchamber-entrypoint.sh
 
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/session-state/node_modules ./packages/session-state/node_modules
 COPY --from=deps /app/packages/web/node_modules ./packages/web/node_modules
 COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/packages/session-state/package.json ./packages/session-state/package.json
+COPY --from=builder /app/packages/session-state/dist ./packages/session-state/dist
 COPY --from=builder /app/packages/web/package.json ./packages/web/package.json
 COPY --from=builder /app/packages/web/bin ./packages/web/bin
-COPY --from=builder /app/packages/web/server ./packages/web/server
+COPY --from=builder /app/packages/web/server/instrument.mjs ./packages/web/server/instrument.mjs
+COPY --from=builder /app/packages/web/server/dist ./packages/web/server/dist
 COPY --from=builder /app/packages/web/dist ./packages/web/dist
 
 EXPOSE 3000

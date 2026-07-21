@@ -1,4 +1,12 @@
-import type { ToolsAPI } from '@openchamber/ui/lib/api/types';
+export interface ToolsAPI {
+  getAvailableTools(): Promise<string[]>;
+}
+
+/** SDK pass-through endpoint: validate only the ID list this feature uses. */
+export const parseToolIdList = (value: unknown): string[] | null => {
+  if (!Array.isArray(value) || !value.every((tool) => typeof tool === 'string')) return null;
+  return value.filter((tool) => tool !== 'invalid');
+};
 
 export const createWebToolsAPI = (): ToolsAPI => ({
   async getAvailableTools(): Promise<string[]> {
@@ -9,14 +17,12 @@ export const createWebToolsAPI = (): ToolsAPI => ({
       throw new Error(`Tools API returned ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const data = parseToolIdList(await response.json());
 
-    if (!Array.isArray(data)) {
+    if (!data) {
       throw new Error('Tools API returned invalid data format');
     }
 
-    return data
-      .filter((tool: unknown): tool is string => typeof tool === 'string' && tool !== 'invalid')
-      .sort();
+    return data.sort();
   },
 });

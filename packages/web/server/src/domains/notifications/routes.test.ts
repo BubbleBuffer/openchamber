@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { registerNotificationRoutes } from "./routes.js";
+import { parseNotificationSseEvent } from "../../contracts/notifications.js";
 
 type RouteHandler = (req: unknown, res: unknown) => unknown | Promise<unknown>;
 
@@ -89,6 +90,17 @@ const createMockResponse = () => {
 };
 
 describe("notifications SSE routes", () => {
+  it("returns a coded unauthorized response for every protected push route", async () => {
+    const { app, getRoute } = createRouteRegistry();
+    registerNotificationRoutes(app, { ensurePushInitialized: async () => {}, uiAuthController: { ensureSessionToken: async () => null }, getUiSessionTokenFromRequest: () => "forged" } as never);
+    for (const [method, path] of [["POST", "/api/push/subscribe"], ["DELETE", "/api/push/subscribe"], ["POST", "/api/push/visibility"], ["GET", "/api/push/visibility"], ["GET", "/api/notifications/stream"]] as const) {
+      const res = createMockResponse();
+      await getRoute(method, path)?.({ ...createMockRequest(), body: {} }, res);
+      expect(res.statusCode).toBe(401);
+      expect(JSON.parse(res.body)).toEqual({ error: "UI authentication required", code: "ui_auth_unauthorized" });
+    }
+  });
+
   it("serves notification SSE with nginx-safe headers", async () => {
     const { app, getRoute } = createRouteRegistry();
     const clients = new Set<unknown>();
@@ -119,10 +131,68 @@ describe("notifications SSE routes", () => {
     expect(res.getHeader("connection")).toBe("keep-alive");
     expect(res.getHeader("x-accel-buffering")).toBe("no");
     expect(res.flushed).toBe(true);
-    expect(res.body).toContain("openchamber:notification-stream-ready");
+    const payload = JSON.parse(res.body.replace(/^data:\s*/, "").trim());
+    expect(parseNotificationSseEvent(payload)).toEqual({ ok: true, value: { type: "openchamber:notification-stream-ready", properties: {} } });
     expect(clients.has(res)).toBe(true);
 
     req.emit("close");
     expect(clients.has(res)).toBe(false);
+  });
+
+  it("returns a safe stable error when push initialization throws", async () => {
+    const { app, getRoute } = createRouteRegistry();
+    registerNotificationRoutes(app, {
+      ensurePushInitialized: async () => { throw new Error("token=secret"); },
+    } as never);
+
+    const handler = getRoute("GET", "/api/push/vapid-public-key");
+    const res = createMockResponse();
+    await handler?.(createMockRequest(), res);
+
+    expect(res.statusCode).toBe(500);
+    expect(JSON.parse(res.body)).toEqual({ error: "Internal server error", code: "internal_error" });
+  });
+
+  it("rejects malformed session mutation inputs before side effects and safe-guards malformed snapshots", async () => {
+    const { app, getRoute } = createRouteRegistry();
+    const markViewed = vi.fn();
+    registerNotificationRoutes(app, {
+      getSessionActivitySnapshot: () => [{ directory: "/project", sessionId: "session-1", activity: "runtime-detail" }],
+      markSessionViewed: markViewed,
+    } as never);
+
+    const activityResponse = createMockResponse();
+    await getRoute("GET", "/api/session-activity")?.(createMockRequest(), activityResponse);
+    expect(activityResponse.statusCode).toBe(500);
+    expect(JSON.parse(activityResponse.body)).toEqual({ error: "Internal server error", code: "notification_unavailable" });
+
+    const viewResponse = createMockResponse();
+    await getRoute("POST", "/api/sessions/:id/view")?.({ ...createMockRequest(), params: { id: "" }, ip: "127.0.0.1" }, viewResponse);
+    expect(viewResponse.statusCode).toBe(400);
+    expect(markViewed).not.toHaveBeenCalled();
+  });
+
+  it("returns known false and true attention states, but a coded 404 for an unknown session", async () => {
+    const { app, getRoute } = createRouteRegistry();
+    registerNotificationRoutes(app, {
+      ensureSessionWatcher: async () => {},
+      getSessionAttentionState: (sessionId: string) => sessionId === "normal" ? false : sessionId === "blocked" ? true : null,
+    } as never);
+    const handler = getRoute("GET", "/api/sessions/:id/attention");
+
+    const normal = createMockResponse();
+    await handler?.({ ...createMockRequest(), params: { id: "normal" } }, normal);
+    expect(normal.statusCode).toBe(200);
+    expect(JSON.parse(normal.body)).toEqual({ sessionId: "normal", needsAttention: false });
+
+    const blocked = createMockResponse();
+    await handler?.({ ...createMockRequest(), params: { id: "blocked" } }, blocked);
+    expect(blocked.statusCode).toBe(200);
+    expect(JSON.parse(blocked.body)).toEqual({ sessionId: "blocked", needsAttention: true });
+
+    const unknown = createMockResponse();
+    await handler?.({ ...createMockRequest(), params: { id: "missing" } }, unknown);
+    expect(unknown.statusCode).toBe(404);
+    expect(JSON.parse(unknown.body)).toEqual({ error: "Session not found", code: "session_not_found" });
   });
 });

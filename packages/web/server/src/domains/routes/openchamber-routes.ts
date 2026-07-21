@@ -1,6 +1,8 @@
 import type { Application, Request, Response } from "express";
 import type { OpenChamberRoutesDeps } from "./types.js";
 import { checkForUpdates, getUpdateCommand, detectPackageManagerDetails } from "../package-manager/index.js";
+import { apiError } from "../../contracts/common.js";
+import { parseModelMetadataResponse, parseZenModelsResponse } from "../../contracts/system.js";
 
 type RestartOptions = {
   port: number;
@@ -63,10 +65,7 @@ export function registerOpenChamberRoutes(app: Application, deps: OpenChamberRou
       res.json(updateInfo);
     } catch (error) {
       console.error('Failed to check for updates:', error);
-      res.status(500).json({
-        available: false,
-        error: error instanceof Error ? error.message : 'Failed to check for updates',
-      });
+      res.status(500).json({ available: false, ...apiError("internal_error") });
     }
   });
 
@@ -76,7 +75,7 @@ export function registerOpenChamberRoutes(app: Application, deps: OpenChamberRou
 
       const updateInfo = await checkForUpdates();
       if (!updateInfo.available) {
-        return res.status(400).json({ error: 'No update available' });
+        return res.status(400).json({ ...apiError("invalid_request"), error: 'No update available' });
       }
 
       const pmDetails = detectPackageManagerDetails();
@@ -249,9 +248,7 @@ export function registerOpenChamberRoutes(app: Application, deps: OpenChamberRou
       }, 500);
     } catch (error) {
       console.error('Failed to install update:', error);
-      res.status(500).json({
-        error: error instanceof Error ? error.message : 'Failed to install update',
-      });
+      res.status(500).json(apiError("internal_error"));
     }
   });
 
@@ -278,7 +275,11 @@ export function registerOpenChamberRoutes(app: Application, deps: OpenChamberRou
         throw new Error(`models.dev responded with status ${response.status}`);
       }
 
-      const metadata = await response.json();
+      const parsedMetadata = parseModelMetadataResponse(await response.json());
+      if (!parsedMetadata.ok) {
+        throw new Error(parsedMetadata.error);
+      }
+      const metadata = parsedMetadata.value;
       cachedModelsMetadata = metadata;
       cachedModelsMetadataTimestamp = Date.now();
 
@@ -292,7 +293,7 @@ export function registerOpenChamberRoutes(app: Application, deps: OpenChamberRou
         res.json(cachedModelsMetadata);
       } else {
         const statusCode = isAbortError(error) ? 504 : 502;
-        res.status(statusCode).json({ error: 'Failed to retrieve model metadata' });
+        res.status(statusCode).json({ ...apiError(statusCode === 504 ? "upstream_timeout" : "upstream_error"), error: 'Failed to retrieve model metadata' });
       }
     } finally {
       if (timeout) {
@@ -303,7 +304,11 @@ export function registerOpenChamberRoutes(app: Application, deps: OpenChamberRou
 
   app.get('/api/zen/models', async (_req: Request, res: Response) => {
     try {
-      const models = await fetchFreeZenModels();
+      const parsedModels = parseZenModelsResponse({ models: await fetchFreeZenModels() });
+      if (!parsedModels.ok) {
+        throw new Error(parsedModels.error);
+      }
+      const models = parsedModels.value.models;
       res.setHeader('Cache-Control', 'public, max-age=300');
       res.json({ models });
     } catch (error) {
@@ -314,7 +319,7 @@ export function registerOpenChamberRoutes(app: Application, deps: OpenChamberRou
         res.json(cachedZenModels);
       } else {
         const statusCode = isAbortError(error) ? 504 : 502;
-        res.status(statusCode).json({ error: 'Failed to retrieve zen models' });
+        res.status(statusCode).json({ ...apiError(statusCode === 504 ? "upstream_timeout" : "upstream_error"), error: 'Failed to retrieve zen models' });
       }
     }
   });

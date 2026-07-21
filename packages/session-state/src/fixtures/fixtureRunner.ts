@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createActor } from 'xstate'
-import { createSessionMachine } from '../machine/sessionMachine'
-import type { SessionMachineContext } from '../machine/context'
+import { createSessionMachine } from '../machine/sessionMachine.js'
+import type { SessionMachineContext } from '../machine/context.js'
 
 // ---------------------------------------------------------------------------
 // Constants

@@ -1,9 +1,75 @@
-import * as gitApiHttp from '@openchamber/ui/lib/git/gitApiHttp';
-import type {
-  GitAPI,
-  CreateGitCommitOptions,
-  GitLogOptions,
-} from '@openchamber/ui/lib/api/types';
+import * as gitApiHttp from '@/lib/git/gitApiHttp';
+import type * as Git from '@contracts/git';
+
+export type CreateGitCommitOptions = Omit<Git.GitCommitRequest, 'message'>;
+export type GitLogOptions = Omit<Git.GitLogQuery, 'directory'>;
+export interface GitWorktreeAPI {
+  list: typeof gitApiHttp.listGitWorktrees;
+  validate?: typeof gitApiHttp.validateGitWorktree;
+  bootstrapStatus?: typeof gitApiHttp.getGitWorktreeBootstrapStatus;
+  preview?: typeof gitApiHttp.previewGitWorktree;
+  create?: typeof gitApiHttp.createGitWorktree;
+  remove?: typeof gitApiHttp.deleteGitWorktree;
+}
+type GitAPIMethods = Pick<typeof gitApiHttp,
+  | 'checkIsGitRepository'
+  | 'getGitStatus'
+  | 'getGitDiff'
+  | 'getGitFileDiff'
+  | 'revertGitFile'
+  | 'isLinkedWorktree'
+  | 'getGitBranches'
+  | 'deleteGitBranch'
+  | 'deleteRemoteBranch'
+  | 'removeRemote'
+  | 'generateCommitMessage'
+  | 'generatePullRequestDescription'
+  | 'listGitWorktrees'
+  | 'validateGitWorktree'
+  | 'getGitWorktreeBootstrapStatus'
+  | 'previewGitWorktree'
+  | 'createGitWorktree'
+  | 'deleteGitWorktree'
+  | 'createGitCommit'
+  | 'gitPush'
+  | 'gitPull'
+  | 'gitFetch'
+  | 'checkoutBranch'
+  | 'createBranch'
+  | 'renameBranch'
+  | 'getGitLog'
+  | 'getCommitFiles'
+  | 'getCurrentGitIdentity'
+  | 'hasLocalIdentity'
+  | 'discoverGitCredentials'
+  | 'getGlobalGitIdentity'
+  | 'getRemoteUrl'
+  | 'setGitIdentity'
+  | 'getGitIdentities'
+  | 'createGitIdentity'
+  | 'updateGitIdentity'
+  | 'deleteGitIdentity'
+  | 'getRemotes'
+  | 'rebase'
+  | 'abortRebase'
+  | 'continueRebase'
+  | 'merge'
+  | 'abortMerge'
+  | 'continueMerge'
+  | 'stash'
+  | 'stashPop'
+  | 'getConflictDetails'
+  | 'validateWorktreeDirectory'
+  | 'canonicalizeWorktreeState'>;
+type OptionalGitAPIMethods = Pick<GitAPIMethods,
+  | 'getGitWorktreeBootstrapStatus'
+  | 'previewGitWorktree'
+  | 'discoverGitCredentials'
+  | 'getGlobalGitIdentity'
+  | 'getRemoteUrl'>;
+export type GitAPI = Omit<GitAPIMethods, keyof OptionalGitAPIMethods>
+  & Partial<OptionalGitAPIMethods>
+  & { worktree: GitWorktreeAPI };
 
 export const createWebGitAPI = (): GitAPI => ({
   checkIsGitRepository: gitApiHttp.checkIsGitRepository,

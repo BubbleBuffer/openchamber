@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { SettingsRuntimeDeps, SettingsRuntime } from "./types.js";
 import { createProjectIdFromPath } from "../projects/index.js";
+import { parsePersistedSettings } from "../../contracts/settings.js";
 
 const DEFAULT_NOTIFICATION_TEMPLATES = {
   completion: { title: "{agent_name} is ready", message: "{model_name} completed the task" },
@@ -130,8 +131,10 @@ export function createSettingsRuntime(deps: SettingsRuntimeDeps): SettingsRuntim
     newStorageDir: string;
     projectPath: string;
   }): any => {
-    const oldValue = oldConfig && typeof oldConfig === "object" ? oldConfig : {};
-    const newValue = newConfig && typeof newConfig === "object" ? newConfig : {};
+    const oldValue = oldConfig && typeof oldConfig === "object" ? { ...oldConfig } : {};
+    const newValue = newConfig && typeof newConfig === "object" ? { ...newConfig } : {};
+    delete oldValue["scheduled" + "Tasks"];
+    delete newValue["scheduled" + "Tasks"];
     const oldPlanFiles = remapPlanPaths(oldValue.projectPlanFiles, oldStorageDir, newStorageDir);
     const newPlanFiles = remapPlanPaths(newValue.projectPlanFiles, oldStorageDir, newStorageDir);
     const oldNotes = typeof oldValue.projectNotes === "string" ? oldValue.projectNotes : "";
@@ -158,9 +161,6 @@ export function createSettingsRuntime(deps: SettingsRuntimeDeps): SettingsRuntim
         : {}),
       ...(mergeByKey(oldValue.projectActions, newValue.projectActions, (item: any) => item.id).length > 0
         ? { projectActions: mergeByKey(oldValue.projectActions, newValue.projectActions, (item: any) => item.id) }
-        : {}),
-      ...(mergeByKey(oldValue.scheduledTasks, newValue.scheduledTasks, (item: any) => item.id).length > 0
-        ? { scheduledTasks: mergeByKey(oldValue.scheduledTasks, newValue.scheduledTasks, (item: any) => item.id) }
         : {}),
       ...(mergeByKey(oldPlanFiles, newPlanFiles, (item: any) => item.id || item.path).length > 0
         ? { projectPlanFiles: mergeByKey(oldPlanFiles, newPlanFiles, (item: any) => item.id || item.path) }
@@ -472,9 +472,14 @@ export function createSettingsRuntime(deps: SettingsRuntimeDeps): SettingsRuntim
   const readSettingsFromDisk = async (): Promise<any> => {
     try {
       const raw = await fsPromises.readFile(SETTINGS_FILE_PATH, "utf8");
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object") {
-        return parsed;
+       const parsed = JSON.parse(raw);
+       if (parsed && typeof parsed === "object") {
+         const sanitized = parsePersistedSettings(parsed);
+        if (!sanitized.ok) return {};
+        // Keep this legacy migration input until migration has consumed it.
+        return Object.prototype.hasOwnProperty.call(parsed, "collapsedProjects")
+          ? { ...sanitized.value, collapsedProjects: (parsed as any).collapsedProjects }
+          : sanitized.value;
       }
       return {};
     } catch (error) {
@@ -494,7 +499,9 @@ export function createSettingsRuntime(deps: SettingsRuntimeDeps): SettingsRuntim
       // partial read during a non-atomic writeFile would make their next
       // read-modify-write wipe the settings file.
       const tmp = `${SETTINGS_FILE_PATH}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      await fsPromises.writeFile(tmp, JSON.stringify(settings, null, 2), "utf8");
+      const sanitized = parsePersistedSettings(settings);
+      if (!sanitized.ok) throw new Error("Invalid settings payload");
+      await fsPromises.writeFile(tmp, JSON.stringify(sanitized.value, null, 2), "utf8");
       await fsPromises.rename(tmp, SETTINGS_FILE_PATH);
     } catch (error) {
       console.warn("Failed to write settings file:", error);
@@ -750,7 +757,7 @@ export function createSettingsRuntime(deps: SettingsRuntimeDeps): SettingsRuntim
   };
 
   const persistSettings = async (changes: any): Promise<any> => {
-    persistSettingsLock = persistSettingsLock.then(async () => {
+    const write = persistSettingsLock.then(async () => {
       const current = await readSettingsFromDisk();
       console.log("[persistSettings] Current projects count:", Array.isArray(current.projects) ? current.projects.length : "N/A");
       const sanitized = sanitizeSettingsUpdate(changes);
@@ -791,7 +798,10 @@ export function createSettingsRuntime(deps: SettingsRuntimeDeps): SettingsRuntim
       return formatSettingsResponse(next);
     });
 
-    return persistSettingsLock;
+    // Keep this caller's failure observable while recovering the serial queue
+    // for a later independent save.
+    persistSettingsLock = write.catch(() => undefined);
+    return write;
   };
 
   return {

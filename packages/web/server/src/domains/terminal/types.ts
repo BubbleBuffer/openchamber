@@ -1,9 +1,17 @@
 import type { Express } from "express";
 import type { Server as HttpServer, IncomingMessage } from "node:http";
 import type { WebSocket } from "ws";
+export {
+  TERMINAL_WS_CONTROL_TAG_JSON,
+  TERMINAL_WS_PATH,
+} from "../../contracts/terminal.js";
+export type {
+  TerminalCapabilities,
+  TerminalTransportCapability as TransportCapability,
+  TerminalWsTransport as WsTransportInfo,
+  TerminalWsControlFrame as TerminalControlFrame,
+} from "../../contracts/terminal.js";
 
-export const TERMINAL_WS_PATH = "/api/terminal/ws" as const;
-export const TERMINAL_WS_CONTROL_TAG_JSON = 0x01;
 export const TERMINAL_WS_MAX_PAYLOAD_BYTES = 64 * 1024;
 export const TERMINAL_OUTPUT_REPLAY_MAX_BYTES = 64 * 1024;
 
@@ -12,12 +20,6 @@ export const TERMINAL_REBIND_WINDOW_MS = 60_000;
 export const TERMINAL_MAX_REBINDS_PER_WINDOW = 128;
 export const MAX_TERMINAL_SESSIONS = 20;
 export const TERMINAL_IDLE_TIMEOUT = 30 * 60 * 1000;
-
-export interface TerminalControlFrame {
-  t: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
-}
 
 export interface ReplayBufferState {
   chunks: ReplayChunk[];
@@ -69,23 +71,6 @@ export interface TerminalWsConnection {
   rebindTimestamps: number[];
   replayCursorBySession: Map<string, number>;
   lastActivityAt: number;
-}
-
-export interface TerminalCapabilities {
-  input: TransportCapability;
-  stream: TransportCapability;
-}
-
-export interface TransportCapability {
-  preferred: string;
-  transports: string[];
-  ws?: WsTransportInfo;
-}
-
-export interface WsTransportInfo {
-  path: string;
-  v: number;
-  enc: string;
 }
 
 export interface TerminalDomainDependencies {
