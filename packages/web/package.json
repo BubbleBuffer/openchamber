@@ -24,7 +24,7 @@
     "dev:server:ts": "bun run build:session-state && bun server/src/main.ts --port ${OPENCHAMBER_PORT:-3001}",
     "lint": "eslint \"./src/**/*.{ts,tsx}\" \"./server/src/**/*.ts\" --config ../../eslint.config.js",
     "test": "vitest run --config vitest.config.ts",
-    "test:stores": "bun test --isolate src/ui/stores --path-ignore-patterns '**/*.contract.test.*'",
+    "test:stores": "bun test --isolate src/ui/stores --path-ignore-patterns '**/*.contract.test.*' --path-ignore-patterns 'src/ui/stores/config/useProviderConfigStore.test.ts'",
     "start": "node bin/cli.js serve",
     "pack": "npm pack --workspaces=false"
   },

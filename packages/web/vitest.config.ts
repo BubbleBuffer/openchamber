@@ -16,6 +16,8 @@ export default mergeConfig(
         "src/ui/components/ui/UpdateDialog.test.ts",
         "src/ui/stores/config/useProviderConfigStore.test.ts",
         "server/src/**/*.test.ts",
+        "package-manifest.test.js",
+        "bin/cli.test.js",
       ],
       environment: "node",
       setupFiles: ["./vitest.setup.ts"],
