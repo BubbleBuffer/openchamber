@@ -10,8 +10,13 @@ vi.mock("./index.js", () => ({
   resolveGitHubRepoFromDirectory: vi.fn(),
 }));
 
+vi.mock("../git/index.js", () => ({
+  getStatus: vi.fn(),
+  getRemotes: vi.fn(async () => [{ name: "origin" }, { name: "upstream" }]),
+}));
+
 import { registerGitHubRoutes } from "./routes.js";
-import { getOctokitOrNull, resolveGitHubRepoFromDirectory } from "./index.js";
+import { getGitHubClientId, getOctokitOrNull, resolveGitHubRepoFromDirectory } from "./index.js";
 import { GITHUB_ROUTE_CONTRACTS } from "../../contracts/github.js";
 
 const routeHandlers = () => {
@@ -38,7 +43,10 @@ const octokit = {
       listFiles: vi.fn(async () => ({ data: [] })),
     },
     checks: { listForRef: vi.fn(async () => ({ data: { check_runs: [] } })) },
-    repos: { getCombinedStatusForRef: vi.fn(async () => ({ data: { statuses: [] } })) },
+    repos: {
+      getBranch: vi.fn(),
+      getCombinedStatusForRef: vi.fn(async () => ({ data: { statuses: [] } })),
+    },
   },
 };
 
@@ -61,6 +69,33 @@ describe("GitHub route contracts", () => {
     await routes.get("POST /api/github/pr/update")({ body: { directory: "/repo", number: "1", title: "bad" } }, response);
     expect(response.status).toHaveBeenCalledWith(400);
     expect(send).toHaveBeenCalledWith({ error: "GitHub request failed", code: "github_invalid_request" });
+  });
+
+  it("preserves the OAuth configuration failure as a safe 400 response", async () => {
+    vi.mocked(getGitHubClientId).mockReturnValueOnce(undefined as never);
+    const sent = vi.fn();
+    const res = { statusCode: 200, status: vi.fn(function (this: any, statusCode: number) { this.statusCode = statusCode; return this; }), json: sent };
+
+    await routeHandlers().get("POST /api/github/auth/start")!({ body: {} }, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(sent).toHaveBeenCalledWith({ error: "GitHub request failed", code: "github_not_configured" });
+  });
+
+  it("preserves branch validation failure as a safe 400 response", async () => {
+    vi.mocked(getOctokitOrNull).mockReturnValue(octokit as never);
+    vi.mocked(resolveGitHubRepoFromDirectory)
+      .mockResolvedValueOnce({ repo: { owner: "upstream-owner", repo: "upstream-repo" } } as never)
+      .mockResolvedValueOnce({ repo: { owner: "fork-owner", repo: "fork-repo" } } as never)
+      .mockResolvedValueOnce({ repo: { owner: "fork-owner", repo: "fork-repo" } } as never);
+    vi.mocked(octokit.rest.repos.getBranch).mockRejectedValueOnce({ status: 404 });
+    const sent = vi.fn();
+    const res = { statusCode: 200, status: vi.fn(function (this: any, statusCode: number) { this.statusCode = statusCode; return this; }), json: sent };
+
+    await routeHandlers().get("POST /api/github/pr/create")!({ body: { directory: "/repo", title: "Title", head: "topic", base: "main", remote: "upstream", headRemote: "origin" } }, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(sent).toHaveBeenCalledWith({ error: "GitHub request failed", code: "github_invalid_request" });
   });
 
   it.each([

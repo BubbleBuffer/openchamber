@@ -37,6 +37,9 @@ export function activeRouteEndpoints(serverRoot, inventorySource, contractsRoot 
     for (const match of registrarSource.matchAll(/\bapp\.(get|post|put|patch|delete)\(\s*["'](\/[^"']*)["']/g)) {
       actual.add(`${registrar}:${match[1]} ${match[2]}`);
     }
+    for (const match of registrarSource.matchAll(/\bapp\.use\(\s*["'](\/[^"']*)["']/g)) {
+      actual.add(`${registrar}:use ${match[1].replace(/\/+$/, "") || "/"}/*`);
+    }
     for (const [name, path] of routeConstants) if (new RegExp(`\\b${name}\\b`).test(registrarSource)) actual.add(`${registrar}:get ${path}`);
     for (const match of registrarSource.matchAll(/export const \w*(?:WS|SSE)_PATH\s*=\s*["'](\/[^"']+)/g)) actual.add(`${registrar}:get ${match[1]}`);
   }
@@ -84,7 +87,11 @@ export function auditNetworkContracts(root = process.cwd()) {
   if (existsSync(inventory)) {
     const inventorySource = source(inventory);
     const declared = new Set([...inventoryEndpoints(inventorySource)].map((endpoint) => endpoint.slice(endpoint.indexOf(":") + 1)));
-    for (const endpoint of activeRouteEndpoints(resolve(root, "packages/web/server/src"), inventorySource, contracts)) if (!declared.has(endpoint.slice(endpoint.indexOf(":") + 1))) report(`uncovered active route: ${endpoint}`);
+    const active = activeRouteEndpoints(resolve(root, "packages/web/server/src"), inventorySource, contracts);
+    for (const endpoint of active) if (!declared.has(endpoint.slice(endpoint.indexOf(":") + 1))) report(`uncovered active route: ${endpoint}`);
+    for (const endpoint of inventoryEndpoints(inventorySource)) {
+      if (endpoint.slice(endpoint.indexOf(":") + 1).startsWith("use ") && !active.has(endpoint)) report(`missing active pass-through: ${endpoint}`);
+    }
   }
 
   const dist = resolve(root, "packages/web/dist");

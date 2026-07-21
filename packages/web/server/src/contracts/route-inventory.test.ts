@@ -34,6 +34,16 @@ describe("route inventory", () => {
       .toBe("ws-server.test.ts, terminalApi.test.ts");
   });
 
+  it("explicitly owns feature-used SDK pass-through endpoints and the final API proxy", () => {
+    const proxy = ROUTE_INVENTORY.find((entry) => entry.registrar === "domains/server-utils/proxy.ts");
+    expect(proxy?.classification).toBe("sdk-pass-through");
+    expect(proxy?.endpoints).toEqual(expect.arrayContaining([
+      "get /api/find/file",
+      "get /api/experimental/tool/ids",
+      "use /api/*",
+    ]));
+  });
+
   it("covers every literal endpoint registered by active route modules", () => {
     const root = resolve(import.meta.dirname, "..");
     const registrars = [

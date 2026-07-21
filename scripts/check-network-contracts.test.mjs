@@ -56,3 +56,15 @@ test("rejects an active registrar omitted from inventory and a second aggregate 
     "packages/web/src/api/domain-apis.ts": "import type { GitStatusResponse } from '@contracts/git'; import type { AppSettings } from '@contracts/settings'; export interface GitAPI { status(): Promise<GitStatusResponse> } export interface SettingsAPI { get(): Promise<AppSettings> }\n",
   }).join("\n"), /aggregate browser API registry/);
 });
+
+test("rejects an un-inventoried API proxy catch-all", () => {
+  assert.match(audit({
+    "packages/web/server/src/domains/example/routes.ts": "app.use('/api', apiProxy);\n",
+  }).join("\n"), /uncovered active route/);
+});
+
+test("rejects an inventoried API proxy catch-all removed from its registrar", () => {
+  assert.match(audit({
+    "packages/web/server/src/contracts/route-inventory.ts": "const routes = (...args) => args; export const ROUTE_INVENTORY = [routes('domains/example/routes.ts', 'example', ['get /api/example', 'use /api/*'])];\n",
+  }).join("\n"), /missing active pass-through/);
+});

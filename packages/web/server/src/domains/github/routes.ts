@@ -136,9 +136,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       const libs = await getGitHubLibraries();
       const clientId = libs.getGitHubClientId();
       if (!clientId) {
-        return res.status(400).json({
-          error: "GitHub OAuth client not configured. Set OPENCHAMBER_GITHUB_CLIENT_ID.",
-        });
+        return res.status(400).json(githubError("github_not_configured"));
       }
 
       const scope = libs.getGitHubScopes();
@@ -168,9 +166,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
       const libs = await getGitHubLibraries();
       const clientId = libs.getGitHubClientId();
       if (!clientId) {
-        return res.status(400).json({
-          error: "GitHub OAuth client not configured. Set OPENCHAMBER_GITHUB_CLIENT_ID.",
-        });
+        return res.status(400).json(githubError("github_not_configured"));
       }
 
       const parsedRequest = parseGitHubDeviceFlowCompleteRequest(req.body);
@@ -637,9 +633,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
             });
           } catch (branchError: any) {
             if (branchError?.status === 404) {
-              return res.status(400).json({
-                error: `Branch "${head}" not found on ${headOwner}/${headRepoName}. Please push your branch first: git push ${sourceRemote || "origin"} ${head}`,
-              });
+              return res.status(400).json(githubError("github_invalid_request"));
             }
             // For other errors, continue - let the PR create attempt handle it
           }
@@ -685,10 +679,7 @@ export function registerGitHubRoutes(app: Express, _deps?: GitHubRoutesDeps): vo
         errorMessage.includes('"code":"invalid"');
 
       if (isHeadValidationError) {
-        return res.status(400).json({
-          error:
-            "Unable to create PR: You must have write access to the source repository. Make sure you have pushed your branch to a repository you own (your fork), and that the branch exists on the remote.",
-        });
+        return res.status(400).json(githubError("github_invalid_request"));
       }
 
       return res.status(500).json(githubError("github_upstream_error"));

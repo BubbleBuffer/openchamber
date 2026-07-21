@@ -2,7 +2,7 @@ import { parseJsonObject, type ParseResult } from "./common.js";
 
 export const GITHUB_ERROR_CODES = [
   "github_invalid_request", "github_unauthorized", "github_forbidden", "github_not_found",
-  "github_not_connected", "github_repo_unavailable", "github_device_flow_failed", "github_upstream_error", "github_conflict", "github_internal_error",
+  "github_not_connected", "github_not_configured", "github_repo_unavailable", "github_device_flow_failed", "github_upstream_error", "github_conflict", "github_internal_error",
 ] as const;
 export type GitHubErrorCode = (typeof GITHUB_ERROR_CODES)[number];
 export type GitHubErrorResponse = { error: "GitHub request failed"; code: GitHubErrorCode };
