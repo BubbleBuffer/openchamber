@@ -47,6 +47,23 @@ describe("UI auth session controller", () => {
     }
   });
 
+  it("rejects malformed passkey registration metadata before starting a ceremony", async () => {
+    vi.stubEnv("OPENCODE_JWT_SECRET", "test-secret");
+    const auth = createUiAuth({ password: "correct password", readSettingsFromDiskMigrated: async () => ({}) });
+    const response = createResponse();
+    const request = {
+      body: { label: 1 },
+      headers: { accept: "application/json", host: "localhost:3000" },
+      ip: "127.0.0.8",
+    } as never;
+
+    await auth.handlePasskeyRegistrationOptions(request, response as never);
+
+    expect(response.statusCode).toBe(400);
+    expect(response.body).toEqual({ error: "Invalid passkey request", code: "ui_auth_invalid_request" });
+    auth.dispose();
+  });
+
   it("accepts a valid owner session and rejects its expired session", async () => {
     vi.stubEnv("OPENCODE_JWT_SECRET", "test-secret");
     const validAuth = createUiAuth({ password: "correct password", readSettingsFromDiskMigrated: async () => ({}) });
