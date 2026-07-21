@@ -21,7 +21,7 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
   getSessionStateSnapshot: () => any;
   getSessionAttentionSnapshot: () => any;
   getSessionState: (sessionId: string) => any;
-  getSessionAttentionState: (sessionId: string) => any;
+  getSessionAttentionState: (sessionId: string) => boolean | null;
   markSessionViewed: (sessionId: string, clientId: string) => void;
   markSessionUnviewed: (sessionId: string, clientId: string) => void;
   markUserMessageSent: (sessionId: string) => void;
@@ -271,7 +271,7 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
     const sessionId = sessionIdFromRequest(req, res); if (!sessionId) return;
     const state = getSessionAttentionState(sessionId);
 
-    if (!state) {
+    if (state === null) {
       return res.status(404).json({ error: "Session not found", code: "session_not_found" });
     }
 

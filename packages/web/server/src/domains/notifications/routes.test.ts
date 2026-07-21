@@ -171,4 +171,28 @@ describe("notifications SSE routes", () => {
     expect(viewResponse.statusCode).toBe(400);
     expect(markViewed).not.toHaveBeenCalled();
   });
+
+  it("returns known false and true attention states, but a coded 404 for an unknown session", async () => {
+    const { app, getRoute } = createRouteRegistry();
+    registerNotificationRoutes(app, {
+      ensureSessionWatcher: async () => {},
+      getSessionAttentionState: (sessionId: string) => sessionId === "normal" ? false : sessionId === "blocked" ? true : null,
+    } as never);
+    const handler = getRoute("GET", "/api/sessions/:id/attention");
+
+    const normal = createMockResponse();
+    await handler?.({ ...createMockRequest(), params: { id: "normal" } }, normal);
+    expect(normal.statusCode).toBe(200);
+    expect(JSON.parse(normal.body)).toEqual({ sessionId: "normal", needsAttention: false });
+
+    const blocked = createMockResponse();
+    await handler?.({ ...createMockRequest(), params: { id: "blocked" } }, blocked);
+    expect(blocked.statusCode).toBe(200);
+    expect(JSON.parse(blocked.body)).toEqual({ sessionId: "blocked", needsAttention: true });
+
+    const unknown = createMockResponse();
+    await handler?.({ ...createMockRequest(), params: { id: "missing" } }, unknown);
+    expect(unknown.statusCode).toBe(404);
+    expect(JSON.parse(unknown.body)).toEqual({ error: "Session not found", code: "session_not_found" });
+  });
 });

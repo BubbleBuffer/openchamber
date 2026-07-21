@@ -147,7 +147,7 @@ export interface NotificationRoutesDeps {
   getSessionStateSnapshot: () => any;
   getSessionAttentionSnapshot: () => any;
   getSessionState: (sessionId: string) => any;
-  getSessionAttentionState: (sessionId: string) => any;
+  getSessionAttentionState: (sessionId: string) => boolean | null;
   markSessionViewed: (sessionId: string, clientId: string) => void;
   markSessionUnviewed: (sessionId: string, clientId: string) => void;
   markUserMessageSent: (sessionId: string) => void;
