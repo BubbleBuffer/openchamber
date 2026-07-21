@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, no-empty */
 import type { Express } from "express";
 import { apiError } from "../../contracts/common.js";
-import { NOTIFICATION_SSE_CONTENT_TYPE, parseNotificationSseEvent, parsePushSubscribeRequest, parsePushUnsubscribeRequest, parseVisibilityRequest } from "../../contracts/notifications.js";
+import { NOTIFICATION_SSE_CONTENT_TYPE, parseNotificationSseEvent, parsePushSubscribeRequest, parsePushUnsubscribeRequest, parseSessionActionRequest, parseSessionActionResponse, parseSessionActivityResponse, parseSessionAttentionSnapshotResponse, parseSessionAttentionStateResponse, parseSessionPathRequest, parseSessionSnapshotResponse, parseSessionStateResponse, parseSessionStatusSnapshotResponse, parseVisibilityRequest } from "../../contracts/notifications.js";
 
 export const registerNotificationRoutes = (app: Express, dependencies: {
   uiAuthController?: any;
@@ -63,6 +63,22 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
     } catch (error) {
       console.warn("[OpenCodeWatcher] lazy start failed:", (error as any)?.message ?? error);
     }
+  };
+  const unavailable = (res: any) => res.status(500).json({ error: "Internal server error", code: "notification_unavailable" });
+  const invalidSessionRequest = (res: any) => res.status(400).json({ error: "Invalid session request", code: "notification_invalid_request" });
+  const sendContract = (res: any, payload: unknown, parse: (value: unknown) => { ok: boolean }) => {
+    if (!parse(payload).ok) return unavailable(res);
+    return res.json(payload);
+  };
+  const sessionIdFromRequest = (req: any, res: any): string | null => {
+    const parsed = parseSessionPathRequest(req.params);
+    if (!parsed.ok) { invalidSessionRequest(res); return null; }
+    return parsed.value.sessionId;
+  };
+  const clientIdFromRequest = (req: any): string => {
+    const header = req.headers?.["x-client-id"];
+    if (typeof header === "string" && header.trim()) return header.trim();
+    return typeof req.ip === "string" && req.ip ? req.ip : "anonymous";
   };
 
   const requireUiSession = async (req: any, res: any): Promise<string | null> => {
@@ -205,123 +221,114 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
 
   app.get("/api/session-activity", (_req: any, res: any) => {
     void ensureSessionWatcher();
-    res.json(getSessionActivitySnapshot());
+    return sendContract(res, getSessionActivitySnapshot(), parseSessionActivityResponse);
   });
 
   app.get("/api/sessions/snapshot", async (_req: any, res: any) => {
     await ensureSessionWatcher();
-    res.json({
+    return sendContract(res, {
       statusSessions: getSessionStateSnapshot(),
       attentionSessions: getSessionAttentionSnapshot(),
       serverTime: Date.now(),
-    });
+    }, parseSessionSnapshotResponse);
   });
 
   app.get("/api/sessions/status", async (_req: any, res: any) => {
     await ensureSessionWatcher();
     const snapshot = getSessionStateSnapshot();
-    res.json({
+    return sendContract(res, {
       sessions: snapshot,
       serverTime: Date.now(),
-    });
+    }, parseSessionStatusSnapshotResponse);
   });
 
   app.get("/api/sessions/:id/status", async (req: any, res: any) => {
     await ensureSessionWatcher();
-    const sessionId = req.params.id;
+    const sessionId = sessionIdFromRequest(req, res); if (!sessionId) return;
     const state = getSessionState(sessionId);
 
     if (!state) {
-      return res.status(404).json({
-        error: "Session not found or no state available",
-        sessionId,
-      });
+      return res.status(404).json({ error: "Session not found", code: "session_not_found" });
     }
 
-    return res.json({
+    return sendContract(res, {
       sessionId,
       ...state,
-    });
+    }, parseSessionStateResponse);
   });
 
   app.get("/api/sessions/attention", async (_req: any, res: any) => {
     await ensureSessionWatcher();
     const snapshot = getSessionAttentionSnapshot();
-    res.json({
+    return sendContract(res, {
       sessions: snapshot,
       serverTime: Date.now(),
-    });
+    }, parseSessionAttentionSnapshotResponse);
   });
 
   app.get("/api/sessions/:id/attention", async (req: any, res: any) => {
     await ensureSessionWatcher();
-    const sessionId = req.params.id;
+    const sessionId = sessionIdFromRequest(req, res); if (!sessionId) return;
     const state = getSessionAttentionState(sessionId);
 
     if (!state) {
-      return res.status(404).json({
-        error: "Session not found or no attention state available",
-        sessionId,
-      });
+      return res.status(404).json({ error: "Session not found", code: "session_not_found" });
     }
 
-    return res.json({
+    return sendContract(res, {
       sessionId,
-      ...state,
-    });
+      needsAttention: state,
+    }, parseSessionAttentionStateResponse);
   });
 
   app.post("/api/sessions/:id/view", (req: any, res: any) => {
-    const sessionId = req.params.id;
-    const clientId = req.headers["x-client-id"] || req.ip || "anonymous";
+    const sessionId = sessionIdFromRequest(req, res); if (!sessionId) return;
+    const clientId = clientIdFromRequest(req);
 
     markSessionViewed(sessionId, clientId);
 
-    return res.json({
+    return sendContract(res, {
       success: true,
       sessionId,
       viewed: true,
-    });
+    }, parseSessionActionResponse);
   });
 
   app.post("/api/sessions/:id/unview", (req: any, res: any) => {
-    const sessionId = req.params.id;
-    const clientId = req.headers["x-client-id"] || req.ip || "anonymous";
+    const sessionId = sessionIdFromRequest(req, res); if (!sessionId) return;
+    const clientId = clientIdFromRequest(req);
 
     markSessionUnviewed(sessionId, clientId);
 
-    return res.json({
+    return sendContract(res, {
       success: true,
       sessionId,
       viewed: false,
-    });
+    }, parseSessionActionResponse);
   });
 
   app.post("/api/sessions/:id/message-sent", (req: any, res: any) => {
-    const sessionId = req.params.id;
+    const sessionId = sessionIdFromRequest(req, res); if (!sessionId) return;
 
     markUserMessageSent(sessionId);
 
-    return res.json({
+    return sendContract(res, {
       success: true,
       sessionId,
       messageSent: true,
-    });
+    }, parseSessionActionResponse);
   });
 
   // Mirror client-side Permission Auto-Accept state to the server so it can
   // suppress permission notifications at the source (the 500ms debounce race
   // otherwise leaks notifications for auto-accepted permissions).
   app.post("/api/notifications/auto-accept", (req: any, res: any) => {
-    const body = req.body && typeof req.body === "object" ? req.body : {};
-    const sessionId = typeof body.sessionId === "string" ? body.sessionId.trim() : "";
-    const enabled = body.enabled === true;
-    if (!sessionId) {
-      return res.status(400).json({ error: "sessionId required" });
-    }
+    const parsed = parseSessionActionRequest(req.body);
+    if (!parsed.ok) return invalidSessionRequest(res);
+    const { sessionId, enabled } = parsed.value;
     if (typeof setAutoAcceptSession === "function") {
       setAutoAcceptSession(sessionId, enabled);
     }
-    return res.json({ success: true, sessionId, enabled });
+    return sendContract(res, { success: true, sessionId, enabled }, parseSessionActionResponse);
   });
 };

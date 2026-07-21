@@ -21,6 +21,7 @@ import { waitForPendingDraftWorktreeRequest } from "@/lib/worktrees/pendingDraft
 import { getDirectoryState } from "./sync-refs"
 import { optimisticSend } from "./session-actions"
 import { useSessionUIStore } from "./session-ui-store"
+import { parseSessionActionResponse } from "@contracts/notifications"
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -277,6 +278,10 @@ export async function sendMessage(
 
   if (currentSessionId) {
     fetch(`/api/sessions/${currentSessionId}/message-sent`, { method: "POST" })
+      .then(async (response) => {
+        const parsed = parseSessionActionResponse(await response.json().catch(() => null))
+        if (!response.ok || !parsed.ok || parsed.value.sessionId !== currentSessionId || parsed.value.messageSent !== true) throw new Error("Invalid message-sent response")
+      })
       .catch(() => { /* ignore */ })
   }
 

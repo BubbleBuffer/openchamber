@@ -10,6 +10,19 @@ import { getAllSyncSessions, getSyncChildStores } from "@/sync/sync-refs";
 import { opencodeClient } from "@/lib/opencode/client";
 import { respondToPermission } from "@/sync/session-actions";
 import { useSessionUIStore } from "@/sync/session-ui-store";
+import { parseSessionActionResponse } from "@contracts/notifications";
+
+const mirrorAutoAccept = (sessionId: string, enabled: boolean): Promise<void> =>
+    fetch('/api/notifications/auto-accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, enabled }),
+    }).then(async (response) => {
+        const parsed = parseSessionActionResponse(await response.json().catch(() => null));
+        if (!response.ok || !parsed.ok || parsed.value.sessionId !== sessionId || parsed.value.enabled !== enabled) {
+            throw new Error('Invalid auto-accept response');
+        }
+    });
 
 interface PermissionState {
     autoAccept: PermissionAutoAcceptMap;
@@ -172,11 +185,7 @@ export const usePermissionStore = create<PermissionStore>()(
                     // Mirror state to the server so it can suppress permission
                     // notifications at the source (otherwise the 500ms debounce
                     // races with the client's auto-response and can leak).
-                    void fetch('/api/notifications/auto-accept', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ sessionId, enabled }),
-                    }).catch(() => { /* best-effort */ });
+                    void mirrorAutoAccept(sessionId, enabled).catch(() => { /* best-effort */ });
 
                     if (!enabled) {
                         return;
@@ -282,11 +291,7 @@ export const usePermissionStore = create<PermissionStore>()(
                     // survives page reloads / server restarts.
                     for (const [sid, enabled] of Object.entries(state.autoAccept || {})) {
                         if (enabled === true) {
-                            void fetch('/api/notifications/auto-accept', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ sessionId: sid, enabled: true }),
-                            }).catch(() => { /* best-effort */ });
+                            void mirrorAutoAccept(sid, true).catch(() => { /* best-effort */ });
                         }
                     }
                 },

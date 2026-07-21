@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseNotificationSseEvent, parsePushSubscribeRequest, parsePushResponse, parseVapidPublicKeyResponse } from "./notifications.js";
+import { parseNotificationSseEvent, parsePushSubscribeRequest, parsePushResponse, parseSessionActivityResponse, parseSessionActionRequest, parseSessionSnapshotResponse, parseVapidPublicKeyResponse } from "./notifications.js";
 
 describe("notifications contract", () => {
   it("validates push requests and safe auth responses", () => {
@@ -19,5 +19,18 @@ describe("notifications contract", () => {
     expect(parseVapidPublicKeyResponse({ publicKey: "key" }).ok).toBe(true);
     expect(parseVapidPublicKeyResponse({ publicKey: 1 }).ok).toBe(false);
     expect(parsePushSubscribeRequest({ endpoint: "", keys: { p256dh: "a", auth: "b" } }).ok).toBe(false);
+  });
+
+  it("accepts only safe session activity, snapshot, and action transport values", () => {
+    expect(parseSessionActivityResponse([{ directory: "/project", sessionId: "session-1", activity: "busy" }]).ok).toBe(true);
+    expect(parseSessionActivityResponse([{ directory: "/project", sessionId: "session-1", activity: "runtime-detail" }]).ok).toBe(false);
+    expect(parseSessionSnapshotResponse({
+      statusSessions: [{ directory: "/project", sessionId: "session-1", status: "streaming" }],
+      attentionSessions: [{ directory: "/project", sessionId: "session-1", needsAttention: true }],
+      serverTime: 1,
+    }).ok).toBe(true);
+    expect(parseSessionSnapshotResponse({ statusSessions: [], attentionSessions: [], serverTime: "now" }).ok).toBe(false);
+    expect(parseSessionActionRequest({ sessionId: " session-1 ", enabled: true })).toEqual({ ok: true, value: { sessionId: "session-1", enabled: true } });
+    expect(parseSessionActionRequest({ sessionId: "session-1", enabled: "true" }).ok).toBe(false);
   });
 });

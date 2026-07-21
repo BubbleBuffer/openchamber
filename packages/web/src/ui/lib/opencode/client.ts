@@ -1,5 +1,6 @@
 import { createOpencodeClient, OpencodeClient } from "@opencode-ai/sdk/v2";
 import { parseDirectorySwitchResponse } from "@contracts/opencode";
+import { parseSessionActivityResponse, type SessionActivityEntry } from "@contracts/notifications";
 import type { FilesAPI, RuntimeAPIs } from "../api/types";
 import type {
   Session,
@@ -923,7 +924,7 @@ class OpencodeService {
    * because the web server tracks activity even when UI is not listening to SSE.
    */
   async getWebServerSessionActivity(): Promise<
-    Record<string, { type: string }> | null
+    SessionActivityEntry[] | null
   > {
     try {
       // Web server endpoint - use relative path that works with both dev and prod
@@ -939,11 +940,8 @@ class OpencodeService {
       }
 
       const data = await response.json().catch(() => null);
-      if (!data || typeof data !== 'object') {
-        return null;
-      }
-
-      return data as Record<string, { type: string }>;
+      const parsed = parseSessionActivityResponse(data);
+      return parsed.ok ? parsed.value : null;
     } catch {
       return null;
     }

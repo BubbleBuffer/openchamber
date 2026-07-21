@@ -8,4 +8,9 @@ describe('OpenCode directory switch contract', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })));
     await expect(opencodeClient.setOpenCodeWorkingDirectory('/workspace/project')).rejects.toThrow('Invalid directory switch response');
   });
+
+  it('rejects malformed web-server session activity instead of casting it into live UI data', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify([{ directory: '/project', sessionId: 's1', activity: 'runtime-detail' }]), { status: 200, headers: { 'Content-Type': 'application/json' } })));
+    await expect(opencodeClient.getWebServerSessionActivity()).resolves.toBeNull();
+  });
 });

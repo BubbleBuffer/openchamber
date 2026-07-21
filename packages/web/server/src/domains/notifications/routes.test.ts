@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { registerNotificationRoutes } from "./routes.js";
 import { parseNotificationSseEvent } from "../../contracts/notifications.js";
@@ -151,5 +151,24 @@ describe("notifications SSE routes", () => {
 
     expect(res.statusCode).toBe(500);
     expect(JSON.parse(res.body)).toEqual({ error: "Internal server error", code: "internal_error" });
+  });
+
+  it("rejects malformed session mutation inputs before side effects and safe-guards malformed snapshots", async () => {
+    const { app, getRoute } = createRouteRegistry();
+    const markViewed = vi.fn();
+    registerNotificationRoutes(app, {
+      getSessionActivitySnapshot: () => [{ directory: "/project", sessionId: "session-1", activity: "runtime-detail" }],
+      markSessionViewed: markViewed,
+    } as never);
+
+    const activityResponse = createMockResponse();
+    await getRoute("GET", "/api/session-activity")?.(createMockRequest(), activityResponse);
+    expect(activityResponse.statusCode).toBe(500);
+    expect(JSON.parse(activityResponse.body)).toEqual({ error: "Internal server error", code: "notification_unavailable" });
+
+    const viewResponse = createMockResponse();
+    await getRoute("POST", "/api/sessions/:id/view")?.({ ...createMockRequest(), params: { id: "" }, ip: "127.0.0.1" }, viewResponse);
+    expect(viewResponse.statusCode).toBe(400);
+    expect(markViewed).not.toHaveBeenCalled();
   });
 });
