@@ -46,6 +46,10 @@ export type TerminalSuccessResponse = { success: true };
 export type TerminalResizeResponse = TerminalSuccessResponse & TerminalResizeRequest;
 export type TerminalKillRequest = { sessionId?: string; cwd?: string };
 export type TerminalKillResponse = TerminalSuccessResponse & { killedCount: number };
+export type TerminalSseEvent =
+  | { type: "connected"; runtime: "node" | "bun"; ptyBackend: string }
+  | { type: "data"; data: string }
+  | { type: "exit"; exitCode: number; signal: number };
 
 export type TerminalWsControlFrame =
   | { t: "p"; v: number }
@@ -126,6 +130,20 @@ export function parseTerminalErrorResponse(value: unknown): ParseResult<Terminal
   return typeof object.value.error === "string" && isErrorCode(object.value.code)
     ? { ok: true, value: { error: object.value.error, code: object.value.code } }
     : invalid("invalid terminal error response");
+}
+// eslint-disable-next-line complexity -- terminal SSE events are a small discriminated wire union.
+export function parseTerminalSseEvent(value: unknown): ParseResult<TerminalSseEvent> {
+  const object = parseJsonObject(value); if (!object.ok) return object;
+  if (object.value.type === "connected" && (object.value.runtime === "node" || object.value.runtime === "bun") && typeof object.value.ptyBackend === "string") {
+    return { ok: true, value: { type: "connected", runtime: object.value.runtime, ptyBackend: object.value.ptyBackend } };
+  }
+  if (object.value.type === "data" && typeof object.value.data === "string") {
+    return { ok: true, value: { type: "data", data: object.value.data } };
+  }
+  if (object.value.type === "exit" && typeof object.value.exitCode === "number" && Number.isFinite(object.value.exitCode) && typeof object.value.signal === "number" && Number.isFinite(object.value.signal)) {
+    return { ok: true, value: { type: "exit", exitCode: object.value.exitCode, signal: object.value.signal } };
+  }
+  return invalid("invalid terminal SSE event");
 }
 
 // eslint-disable-next-line complexity -- tagged-frame validation intentionally branches once on the discriminator.

@@ -6,6 +6,7 @@ import {
   parseTerminalKillRequest,
   parseTerminalResizeRequest,
   parseTerminalRestartRequest,
+  parseTerminalSseEvent,
   TERMINAL_SSE_CONTENT_TYPE,
   terminalError,
   type TerminalErrorCode,
@@ -140,9 +141,8 @@ export const registerTerminalRoutes = (
       session.lastActivity = Date.now();
 
       const ptyBackend = session.ptyBackend || "unknown";
-      res.write(
-        `data: ${JSON.stringify({ type: "connected", runtime: terminalRuntimeName, ptyBackend })}\n\n`,
-      );
+      const connectedEvent = parseTerminalSseEvent({ type: "connected", runtime: terminalRuntimeName, ptyBackend });
+      if (connectedEvent.ok) res.write(`data: ${JSON.stringify(connectedEvent.value)}\n\n`);
 
       const heartbeatInterval = setInterval(() => {
         try {
@@ -155,9 +155,9 @@ export const registerTerminalRoutes = (
       const dataHandler = (data: string) => {
         try {
           session.lastActivity = Date.now();
-          const ok = res.write(
-            `data: ${JSON.stringify({ type: "data", data })}\n\n`,
-          );
+          const streamEvent = parseTerminalSseEvent({ type: "data", data });
+          if (!streamEvent.ok) return;
+          const ok = res.write(`data: ${JSON.stringify(streamEvent.value)}\n\n`);
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if (!ok && (session.ptyProcess as any).pause) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -183,9 +183,8 @@ export const registerTerminalRoutes = (
         signal: number;
       }) => {
         try {
-          res.write(
-            `data: ${JSON.stringify({ type: "exit", exitCode, signal })}\n\n`,
-          );
+          const streamEvent = parseTerminalSseEvent({ type: "exit", exitCode, signal });
+          if (streamEvent.ok) res.write(`data: ${JSON.stringify(streamEvent.value)}\n\n`);
           res.end();
         } catch {
           // ignore

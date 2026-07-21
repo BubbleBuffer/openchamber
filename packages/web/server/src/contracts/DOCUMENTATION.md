@@ -9,7 +9,7 @@ its domain; route registrars own HTTP wiring and domain services own behavior.
 ## Maintained module index
 
 - `common.ts` — shared JSON parsing and safe common errors
-- `event-stream.ts` — OpenCode message-stream SSE and WebSocket envelopes
+- `event-stream.ts` — normalized OpenChamber event-hub and WebSocket envelopes
 - `files.ts` — workspace filesystem routes and exec-job results
 - `git.ts` — Git routes, validation, and operation/error results
 - `github.ts` — GitHub auth, PR, issue, and safe provider results
@@ -73,10 +73,15 @@ an unknown value; there is no implemented version negotiation, downgrade, or
 cross-version fallback. Bump it only with coordinated server/browser protocol
 support and tests.
 
-Message-stream SSE normalizes an upstream event to an OpenChamber envelope with
-an optional event ID and directory plus the opaque payload. WebSocket endpoints
-are `/api/global/event/ws` (global scope) and `/api/event/ws` (directory
-scope). Their frames are:
+`/api/global/event` and `/api/event` are HTTP SSE proxy paths: they forward raw
+upstream OpenCode event data, add keepalive comments, and own no local DTO for
+that event data. They do not provide replay, resume, backpressure, or durable
+delivery guarantees.
+
+The event-stream hub and WebSocket transport normalize an upstream event to an
+OpenChamber envelope with an optional event ID and directory plus the opaque
+payload. WebSocket endpoints are `/api/global/event/ws` (global scope) and
+`/api/event/ws` (directory scope). Their frames are:
 
 - control: `ready` (scope and optional last event ID), `error` (safe message
   and optional code), `data_stalled` (duration), and `data_resumed` (optional
@@ -85,13 +90,13 @@ scope). Their frames are:
 
 The global hub keeps a bounded replay buffer. A reconnect that presents a
 known last event ID receives only later buffered events; an unknown or expired
-ID has no replay guarantee. Upstream reads send `Last-Event-ID` when one is
+ID has no replay guarantee. Hub readers send `Last-Event-ID` when one is
 known, detect stalls, emit stalled/resumed status, and keep reconnecting until
-the reader is stopped. The HTTP SSE proxy emits keepalive comments. WebSocket
-upgrades are limited to the documented global/directory scopes, authenticate
-and check Origin, and remove disconnected or unsendable clients. They do not
-provide a durable delivery or backpressure guarantee; clients reconnect and
-resume from their last observed ID where replay is available.
+the reader is stopped. WebSocket upgrades are limited to the documented
+global/directory scopes, authenticate and check Origin, and remove disconnected
+or unsendable clients. They do not provide a durable delivery or backpressure
+guarantee; clients reconnect and resume from their last observed ID where hub
+replay is available.
 
 ## Authentication, sessions, and Origin
 

@@ -4,6 +4,7 @@ import {
   parseTerminalCreateRequest,
   parseTerminalErrorResponse,
   parseTerminalSessionResponse,
+  parseTerminalSseEvent,
   parseTerminalWsControlFrame,
   parseTerminalWsDataFrame,
 } from "./terminal.js";
@@ -40,5 +41,18 @@ describe("terminal contract", () => {
     });
     expect(parseTerminalWsControlFrame({ t: "b", s: "terminal-1", r: -1, v: 2 }).ok).toBe(false);
     expect(parseTerminalWsControlFrame({ t: "x", s: "terminal-1", exitCode: "1", signal: 0, v: 2 }).ok).toBe(false);
+  });
+
+  it("parses terminal SSE output events while rejecting malformed frames", () => {
+    expect(parseTerminalSseEvent({ type: "data", data: "prompt> " })).toEqual({
+      ok: true,
+      value: { type: "data", data: "prompt> " },
+    });
+    expect(parseTerminalSseEvent({ type: "exit", exitCode: 0, signal: 0 })).toEqual({
+      ok: true,
+      value: { type: "exit", exitCode: 0, signal: 0 },
+    });
+    expect(parseTerminalSseEvent({ type: "data", data: 1 }).ok).toBe(false);
+    expect(parseTerminalSseEvent({ type: "exit", exitCode: "0", signal: 0 }).ok).toBe(false);
   });
 });

@@ -3,10 +3,12 @@ import {
   TERMINAL_WS_PATH,
   parseTerminalErrorResponse,
   parseTerminalSessionResponse,
+  parseTerminalSseEvent,
   parseTerminalSuccessResponse,
   parseTerminalWsControlFrame,
   type TerminalCreateRequest,
   type TerminalSessionResponse,
+  type TerminalSseEvent,
   type TerminalTransportCapability,
   type TerminalWsControlFrame,
 } from '@contracts/terminal';
@@ -14,16 +16,13 @@ import {
 export type TerminalWebSocketDescriptor = NonNullable<TerminalTransportCapability['ws']>;
 export type TerminalSession = TerminalSessionResponse;
 
-export interface TerminalStreamEvent {
-  type: 'connected' | 'data' | 'exit' | 'reconnecting';
-  data?: string;
-  exitCode?: number;
-  signal?: number | null;
+export type TerminalStreamEvent = TerminalSseEvent | {
+  type: 'connected';
+} | {
+  type: 'reconnecting';
   attempt?: number;
   maxAttempts?: number;
-  runtime?: 'node' | 'bun';
-  ptyBackend?: string;
-}
+};
 
 export type CreateTerminalOptions = TerminalCreateRequest;
 
@@ -857,7 +856,11 @@ const connectTerminalStreamViaSse = (
 
     eventSource.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data) as TerminalStreamEvent;
+        const parsedEvent = parseTerminalSseEvent(JSON.parse(event.data));
+        if (!parsedEvent.ok) {
+          throw new Error('Malformed terminal stream event');
+        }
+        const data = parsedEvent.value;
 
         if (data.type === 'exit') {
           getTerminalTransportGlobalState().manager?.unbindSession(sessionId);

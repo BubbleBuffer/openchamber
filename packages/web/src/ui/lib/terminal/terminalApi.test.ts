@@ -27,6 +27,20 @@ class MockWebSocket {
   close(): void { this.readyState = 3; this.onclose?.(); }
 }
 
+class MockEventSource {
+  static readonly CLOSED = 2;
+  static instances: MockEventSource[] = [];
+  readyState = 0;
+  onopen: (() => void) | null = null;
+  onmessage: ((event: { data: string }) => void) | null = null;
+  onerror: (() => void) | null = null;
+  readonly close = vi.fn(() => { this.readyState = MockEventSource.CLOSED; });
+
+  constructor(url: string) { void url; MockEventSource.instances.push(this); }
+  open(): void { this.readyState = 1; this.onopen?.(); }
+  receive(data: string): void { this.onmessage?.({ data }); }
+}
+
 const terminalSession = {
   sessionId: 'terminal-1', cols: 80, rows: 24,
   capabilities: {
@@ -39,6 +53,7 @@ describe('terminal API contracts', () => {
   afterEach(() => {
     disposeTerminalInputTransport();
     MockWebSocket.instances = [];
+    MockEventSource.instances = [];
     vi.useRealTimers();
     vi.unstubAllGlobals();
   });
@@ -89,5 +104,23 @@ describe('terminal API contracts', () => {
       return JSON.parse(new TextDecoder().decode(bytes.subarray(1)));
     });
     expect(rebind).toContainEqual({ t: 'b', s: 'terminal-1', v: 2 });
+  });
+
+  it('rejects malformed SSE events without corrupting fallback state and cleans up valid exits', () => {
+    vi.stubGlobal('EventSource', MockEventSource);
+    const events: string[] = [];
+    const errors: Error[] = [];
+    const cleanup = connectTerminalStream('terminal-1', (event) => events.push(event.type), (error) => errors.push(error));
+    const source = MockEventSource.instances[0]!;
+    source.open();
+    source.receive('{"type":"exit","exitCode":"0","signal":0}');
+    expect(events).toEqual(['connected']);
+    expect(errors).toHaveLength(1);
+    expect(source.close).not.toHaveBeenCalled();
+
+    source.receive('{"type":"exit","exitCode":0,"signal":0}');
+    expect(events).toEqual(['connected', 'exit']);
+    expect(source.close).toHaveBeenCalledTimes(1);
+    cleanup();
   });
 });
