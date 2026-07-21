@@ -74,6 +74,11 @@ Read the relevant `DOCUMENTATION.md` before modifying that module.
 | fs                                  | `packages/web/server/src/domains/fs/DOCUMENTATION.md`         |
 | ui-auth                             | `packages/web/server/src/domains/ui-auth/DOCUMENTATION.md`    |
 | skills-catalog                      | `packages/web/server/src/domains/skills-catalog/DOCUMENTATION.md` |
+| contracts (wire ownership)          | `packages/web/server/src/contracts/DOCUMENTATION.md`          |
+| event-stream                        | `packages/web/server/src/domains/event-stream/DOCUMENTATION.md` |
+| settings                            | `packages/web/server/src/domains/settings/DOCUMENTATION.md`   |
+| notifications                       | `packages/web/server/src/domains/notifications/DOCUMENTATION.md` |
+| terminal                            | `packages/web/server/src/domains/terminal/DOCUMENTATION.md`   |
 
 ## Styling rules
 
@@ -85,6 +90,10 @@ Read the relevant `DOCUMENTATION.md` before modifying that module.
 
 - **Thin entrypoints, focused modules.** Route/domain logic lives in focused modules with clear ownership.
 - **Partial-failure-safe flows.** Prefer per-item results, rollback paths, or resumable cleanup over all-or-nothing assumptions.
+- **Owned wire contracts.** Define new OpenChamber-owned network behavior in
+  `packages/web/server/src/contracts/<domain>.ts`, validate it at both the
+  route and browser seams, and keep it out of route-local DTOs and unchecked
+  casts. SDK payloads are opaque pass-through data, not local contracts.
 
 ## CLI parity (terminal CLI — `packages/web/bin/*`)
 
