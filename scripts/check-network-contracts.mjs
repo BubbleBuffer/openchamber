@@ -1,47 +1,91 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { resolve, relative, extname } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = process.cwd();
-const contracts = resolve(root, "packages/web/server/src/contracts");
-const browser = resolve(root, "packages/web/src");
-const bulkApi = resolve(root, "packages/web/src/ui/lib/api/types.ts");
-const contractDocs = resolve(contracts, "DOCUMENTATION.md");
-const failures = [];
-const files = (dir) => existsSync(dir) ? readdirSync(dir, { withFileTypes: true }).flatMap((entry) => entry.isDirectory() ? files(resolve(dir, entry.name)) : [resolve(dir, entry.name)]) : [];
-const text = (file) => readFileSync(file, "utf8");
-const report = (message) => failures.push(message);
+const files = (directory) => existsSync(directory)
+  ? readdirSync(directory, { withFileTypes: true }).flatMap((entry) => entry.isDirectory() ? files(resolve(directory, entry.name)) : [resolve(directory, entry.name)])
+  : [];
+const source = (file) => readFileSync(file, "utf8");
+const isMaintainedContract = (file) => extname(file) === ".ts" && !/\.(test|spec)\.ts$/.test(file);
+const quoted = (text) => [...text.matchAll(/["']([^"'\n]+)["']/g)].map((match) => match[1]);
 
-// Contract modules are intentionally portable declarations/parsers only.
-for (const file of files(contracts).filter((file) => extname(file) === ".ts" && !file.endsWith(".test.ts"))) {
-  const source = text(file);
-  const name = relative(contracts, file);
-  if (/from\s+["'](?:node:|express|@opencode-ai\/sdk)|\b(?:process|window|document)\b/.test(source)) report(`runtime dependency in contract: ${name}`);
-  if (!existsSync(contractDocs)) report(`undocumented contract module: ${name} (missing contracts/DOCUMENTATION.md)`);
+export function inventoryEndpoints(inventorySource) {
+  const entries = [];
+  for (const match of inventorySource.matchAll(/routes\(\s*["']([^"']+)["'][\s\S]*?\[([^\]]*)\]/g)) {
+    entries.push(...quoted(match[2]).map((endpoint) => `${match[1]}:${endpoint}`));
+  }
+  return new Set(entries);
 }
 
-const bulk = text(bulkApi);
-if (/export\s+(?:interface|type)\s+(?!Runtime(?:APIs|Descriptor|APISelector)\b|Subscription\b)\w+\s*(?:=|\{)|Promise\s*<\s*\{|(?:payload|options|handlers)\s*:\s*\{/.test(bulk)) report("domain wire DTO definition in aggregate runtime API bridge");
-if (/\b(?:as\s+any|@ts-ignore|@ts-expect-error)\b/.test(bulk)) report("blanket contract cast or suppression in aggregate runtime API bridge");
-
-const inventoryTest = resolve(contracts, "route-inventory.test.ts");
-if (!existsSync(inventoryTest) || !text(inventoryTest).includes("covers every literal endpoint registered by active route modules")) report("uncovered route inventory check");
-const codes = [];
-for (const file of files(contracts).filter((file) => extname(file) === ".ts" && !file.endsWith(".test.ts") && !file.endsWith("common.ts"))) {
-  const declaration = text(file).match(/export const \w+_ERROR_CODES\s*=\s*\[([\s\S]*?)\]/)?.[1] ?? "";
-  codes.push(...[...declaration.matchAll(/"([^"\n]+)"/g)].map((match) => match[1]));
-}
-if (new Set(codes).size !== codes.length) report("duplicate domain error code");
-
-for (const file of files(browser).filter((file) => /\.[cm]?[jt]sx?$/.test(file))) {
-  const source = text(file);
-  if (/from\s+["'](?:\.\.\/)+server\/|from\s+["'][^"']*server\/src\//.test(source)) report(`browser server import: ${relative(root, file)}`);
-  if (/\b(?:as\s+any|@ts-ignore|@ts-expect-error)\b/.test(source) && source.includes("@contracts/")) report(`blanket contract cast or suppression: ${relative(root, file)}`);
-}
-const dist = resolve(root, "packages/web/dist");
-for (const file of files(dist).filter((file) => /\.js$/.test(file))) {
-  if (/(?:from\s*|import\s*\()["'](?:node:|express|[^"']*server\/src\/|[^"']*server\/services\/)/.test(text(file))) report(`server dependency leaked into browser dist: ${relative(root, file)}`);
+export function activeRouteEndpoints(serverRoot, inventorySource, contractsRoot = resolve(serverRoot, "contracts")) {
+  const registrars = new Set([...inventorySource.matchAll(/routes\(\s*["']([^"']+)/g)].map((match) => match[1]));
+  const routeConstants = new Map();
+  for (const file of files(contractsRoot).filter(isMaintainedContract)) for (const match of source(file).matchAll(/export const (\w*(?:WS|SSE)_PATH)\s*=\s*["'](\/[^"']+)/g)) routeConstants.set(match[1], match[2]);
+  const actual = new Set();
+  for (const registrar of registrars) {
+    const file = resolve(serverRoot, registrar);
+    if (!existsSync(file)) continue;
+    const registrarSource = statSync(file).isDirectory() ? files(file).filter((entry) => /\.[cm]?[jt]s$/.test(entry) && !/\.(test|spec)\./.test(entry)).map(source).join("\n") : source(file);
+    for (const match of registrarSource.matchAll(/\bapp\.(get|post|put|patch|delete)\(\s*["'](\/[^"']*)["']/g)) {
+      actual.add(`${registrar}:${match[1]} ${match[2]}`);
+    }
+    for (const [name, path] of routeConstants) if (new RegExp(`\\b${name}\\b`).test(registrarSource)) actual.add(`${registrar}:get ${path}`);
+    for (const match of registrarSource.matchAll(/export const \w*(?:WS|SSE)_PATH\s*=\s*["'](\/[^"']+)/g)) actual.add(`${registrar}:get ${match[1]}`);
+  }
+  return actual;
 }
 
-if (failures.length) { console.error(failures.join("\n")); process.exit(1); }
-console.log("network contract ownership audit passed");
+export function auditNetworkContracts(root = process.cwd()) {
+  const failures = [];
+  const contracts = resolve(root, "packages/web/server/src/contracts");
+  const browser = resolve(root, "packages/web/src");
+  const bulkApi = resolve(root, "packages/web/src/ui/lib/api/types.ts");
+  const contractDocs = resolve(contracts, "DOCUMENTATION.md");
+  const contractFiles = files(contracts).filter(isMaintainedContract);
+  const report = (message) => failures.push(message);
+
+  for (const file of contractFiles) {
+    const moduleSource = source(file);
+    const name = relative(contracts, file);
+    if (/(?:from|import)\s*\(?\s*["'](?:node:|express(?:\/|["'])|@opencode-ai\/sdk)|\brequire\s*\(\s*["'](?:node:|express)|\b(?:process|window|document)\b/.test(moduleSource)) report(`runtime dependency in contract: ${name}`);
+    if (!existsSync(contractDocs) || !new RegExp(`(?:^|[^A-Za-z0-9_.-])${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:$|[^A-Za-z0-9_.-])`, "m").test(existsSync(contractDocs) ? source(contractDocs) : "")) report(`undocumented contract module: ${name}`);
+  }
+
+  if (existsSync(bulkApi)) {
+    const bulk = source(bulkApi);
+    if (/export\s+interface\s+\w*(?:Request|Response|Payload|Result|Event|Error)\b\s*\{|export\s+type\s+\w*(?:Request|Response|Payload|Result|Event|Error)\b\s*=\s*\{|(?:Promise\s*<\s*\{|\b(?:payload|options|handlers)\s*:\s*\{)/.test(bulk)) report("domain wire DTO definition in aggregate runtime API bridge");
+    if (/\b(?:as\s+any|@ts-ignore|@ts-expect-error)\b/.test(bulk)) report("blanket contract cast or suppression in aggregate runtime API bridge");
+  }
+
+  const codes = [];
+  for (const file of contractFiles.filter((file) => !file.endsWith("common.ts"))) {
+    for (const declaration of source(file).matchAll(/export const \w+_ERROR_CODES\s*=\s*\[([\s\S]*?)\]\s*as const/g)) codes.push(...quoted(declaration[1]));
+  }
+  if (new Set(codes).size !== codes.length) report("duplicate domain error code");
+
+  for (const file of files(browser).filter((file) => /\.[cm]?[jt]sx?$/.test(file) && !/\.(test|spec)\.[cm]?[jt]sx?$/.test(file))) {
+    const browserSource = source(file);
+    if (/(?:from|import)\s*(?:type\s*)?["'][^"']*(?:\/server\/src\/(?:domains|services|routes|internal)|(?:^|\/)server\/(?:domains|services|routes|internal))/.test(browserSource)) report(`browser server import: ${relative(root, file)}`);
+    if (/\b(?:as\s+any|@ts-ignore|@ts-expect-error)\b/.test(browserSource) && browserSource.includes("@contracts/")) report(`blanket contract cast or suppression: ${relative(root, file)}`);
+  }
+
+  const inventory = resolve(contracts, "route-inventory.ts");
+  if (existsSync(inventory)) {
+    const inventorySource = source(inventory);
+    const declared = new Set([...inventoryEndpoints(inventorySource)].map((endpoint) => endpoint.slice(endpoint.indexOf(":") + 1)));
+    for (const endpoint of activeRouteEndpoints(resolve(root, "packages/web/server/src"), inventorySource, contracts)) if (!declared.has(endpoint.slice(endpoint.indexOf(":") + 1))) report(`uncovered active route: ${endpoint}`);
+  }
+
+  const dist = resolve(root, "packages/web/dist");
+  for (const file of files(dist).filter((file) => /\.[cm]?js$/.test(file))) {
+    if (/(?:from\s*|import\s*(?:\(|))\s*["'](?:node:|express(?:\/|["'])|[^"']*server\/(?:src\/)?(?:domains|services|routes|internal)|[^"']*server\/src\/contracts)/.test(source(file))) report(`server dependency leaked into browser dist: ${relative(root, file)}`);
+  }
+  return failures;
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const failures = auditNetworkContracts();
+  if (failures.length) { console.error(failures.join("\n")); process.exitCode = 1; }
+  else console.log("network contract ownership audit passed");
+}
