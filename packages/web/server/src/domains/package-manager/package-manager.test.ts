@@ -15,9 +15,14 @@ describe("checkForUpdates", () => {
     const homeDirectory = await mkdtemp(path.join(tmpdir(), "openchamber-package-manager-"));
     const previousFetch = globalThis.fetch;
     let requestPayload: Record<string, unknown> | undefined;
+    const spawnSync = vi.fn(() => ({ status: 1, stdout: "", stderr: "" }));
 
     vi.doMock("node:os", () => ({
       homedir: () => homeDirectory,
+    }));
+    vi.doMock("node:child_process", async (importOriginal) => ({
+      ...(await importOriginal()),
+      spawnSync,
     }));
     globalThis.fetch = (async (_input, init) => {
       requestPayload = JSON.parse(String(init?.body)) as Record<string, unknown>;
@@ -47,6 +52,7 @@ describe("checkForUpdates", () => {
         platform: expectedPlatform,
         arch: expectedArch,
       });
+      expect(spawnSync).toHaveBeenCalled();
     } finally {
       globalThis.fetch = previousFetch;
       await rm(homeDirectory, { recursive: true, force: true });
@@ -73,7 +79,10 @@ describe("checkForUpdates", () => {
     vi.doMock("node:os", () => ({
       homedir: () => homeDirectory,
     }));
-    vi.doMock("node:child_process", () => ({ spawnSync }));
+    vi.doMock("node:child_process", async (importOriginal) => ({
+      ...(await importOriginal()),
+      spawnSync,
+    }));
     process.env.OPENCHAMBER_RUNTIME = "desktop";
     globalThis.fetch = fetch as typeof globalThis.fetch;
 
