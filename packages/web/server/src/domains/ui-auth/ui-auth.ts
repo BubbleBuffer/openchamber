@@ -7,6 +7,7 @@ import type { Request, Response } from "express";
 import { createUiPasskeys } from "./ui-passkeys.js";
 import {
   parsePasswordSessionRequest,
+  UI_AUTH_RETRY_AFTER_HEADER,
   type OwnerSessionResponse,
   type UiAuthErrorResponse,
 } from "../../contracts/ui-auth.js";
@@ -765,7 +766,7 @@ export function createUiAuth({
 
       if (!rateLimitResult.allowed) {
         res.setHeader(
-        "Retry-After",
+        UI_AUTH_RETRY_AFTER_HEADER,
         rateLimitResult.retryAfter as number,
       );
         res.status(429).json({

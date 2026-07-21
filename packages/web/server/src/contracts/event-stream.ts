@@ -1,6 +1,8 @@
 import { parseJsonNumber, parseJsonObject, parseJsonString, type ParseResult } from "./common.js";
 
 export interface SseEventEnvelope<T = unknown> { eventId: string | null; directory: string | null; payload: T; }
+export const MESSAGE_STREAM_GLOBAL_WS_PATH = "/api/global/event/ws" as const;
+export const MESSAGE_STREAM_DIRECTORY_WS_PATH = "/api/event/ws" as const;
 export type MessageStreamScope = "global" | "directory";
 export type MessageStreamWsFrame =
   | { type: "ready"; scope?: MessageStreamScope; lastEventId?: string }

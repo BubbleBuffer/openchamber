@@ -6,6 +6,7 @@ import {
   parseTerminalKillRequest,
   parseTerminalResizeRequest,
   parseTerminalRestartRequest,
+  TERMINAL_SSE_CONTENT_TYPE,
   terminalError,
   type TerminalErrorCode,
 } from "../../contracts/terminal.js";
@@ -129,7 +130,7 @@ export const registerTerminalRoutes = (
         return;
       }
 
-      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Content-Type", TERMINAL_SSE_CONTENT_TYPE);
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
       res.setHeader("X-Accel-Buffering", "no");

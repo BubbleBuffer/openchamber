@@ -1,6 +1,8 @@
 import { parseJsonObject, type ParseResult } from "./common.js";
 
 export const SETTINGS_ERROR_CODES = ["settings_invalid_request", "settings_invalid_response", "settings_write_failed"] as const;
+export type SettingsErrorCode = (typeof SETTINGS_ERROR_CODES)[number];
+export type SettingsErrorResponse = { error: string; code: SettingsErrorCode };
 
 export type SkillCatalogConfig = { id: string; label: string; source: string; subpath?: string; gitIdentityId?: string };
 export type ProjectEntry = {
@@ -108,3 +110,9 @@ export function parseAppSettingsResponse(value: unknown): ParseResult<AppSetting
 }
 
 export const parseSettingsUpdateRequest = parseAppSettingsResponse;
+export function parseSettingsErrorResponse(value: unknown): ParseResult<SettingsErrorResponse> {
+  const object = parseJsonObject(value);
+  return object.ok && typeof object.value.error === "string" && object.value.error.length > 0 && typeof object.value.code === "string" && (SETTINGS_ERROR_CODES as readonly string[]).includes(object.value.code)
+    ? { ok: true, value: object.value as SettingsErrorResponse }
+    : invalid("invalid settings error response");
+}

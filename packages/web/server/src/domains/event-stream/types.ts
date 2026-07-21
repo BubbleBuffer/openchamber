@@ -1,9 +1,12 @@
 import type { WebSocket } from "ws";
 import type { Server as HttpServer, IncomingMessage } from "node:http";
-import type { SseEventEnvelope as ContractSseEventEnvelope } from "../../contracts/event-stream.js";
+import {
+  MESSAGE_STREAM_DIRECTORY_WS_PATH,
+  MESSAGE_STREAM_GLOBAL_WS_PATH,
+  type SseEventEnvelope as ContractSseEventEnvelope,
+} from "../../contracts/event-stream.js";
 
-export const MESSAGE_STREAM_GLOBAL_WS_PATH = "/api/global/event/ws" as const;
-export const MESSAGE_STREAM_DIRECTORY_WS_PATH = "/api/event/ws" as const;
+export { MESSAGE_STREAM_DIRECTORY_WS_PATH, MESSAGE_STREAM_GLOBAL_WS_PATH };
 export const MESSAGE_STREAM_WS_HEARTBEAT_INTERVAL_MS = 15_000;
 export const MESSAGE_STREAM_WS_MAX_BUFFERED_BYTES = 4 * 1024 * 1024;
 export const MESSAGE_STREAM_GLOBAL_REPLAY_LIMIT = 512;

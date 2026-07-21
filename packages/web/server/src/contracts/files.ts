@@ -2,6 +2,7 @@ import { parseJsonArray, parseJsonBoolean, parseJsonNumber, parseJsonObject, par
 
 export const FS_ERROR_CODES = ["fs_invalid_path", "fs_invalid_content", "fs_not_found", "fs_forbidden", "fs_conflict", "fs_internal_error"] as const;
 export type FsErrorCode = (typeof FS_ERROR_CODES)[number];
+export type FsErrorResponse = { error: string; code: FsErrorCode };
 export type FsPathRequest = { path: string };
 export type FsWriteRequest = FsPathRequest & { content: string };
 export type FsRenameRequest = { oldPath: string; newPath: string };
@@ -87,4 +88,10 @@ export function parseFsMutationResponse(value: unknown): ParseResult<FsMutationR
   const object = parseJsonObject(value); if (!object.ok) return object;
   const success = parseJsonBoolean(object.value.success); if (!success.ok || (object.value.path !== undefined && !path(object.value.path).ok)) return invalid("invalid file mutation response");
   return { ok: true, value: { success: success.value, ...(typeof object.value.path === "string" ? { path: object.value.path } : {}) } };
+}
+export function parseFsErrorResponse(value: unknown): ParseResult<FsErrorResponse> {
+  const object = parseJsonObject(value);
+  return object.ok && typeof object.value.error === "string" && typeof object.value.code === "string" && (FS_ERROR_CODES as readonly string[]).includes(object.value.code)
+    ? { ok: true, value: object.value as FsErrorResponse }
+    : invalid("invalid filesystem error response");
 }

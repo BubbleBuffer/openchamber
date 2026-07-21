@@ -6,6 +6,7 @@ import {
 } from "./common.js";
 
 export const TERMINAL_WS_PATH = "/api/terminal/ws" as const;
+export const TERMINAL_SSE_CONTENT_TYPE = "text/event-stream" as const;
 export const TERMINAL_WS_CONTROL_TAG_JSON = 0x01;
 
 export const TERMINAL_ERROR_CODES = [

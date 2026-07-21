@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, no-empty */
 import type { Express } from "express";
 import { apiError } from "../../contracts/common.js";
-import { parseNotificationSseEvent, parsePushSubscribeRequest, parsePushUnsubscribeRequest, parseVisibilityRequest } from "../../contracts/notifications.js";
+import { NOTIFICATION_SSE_CONTENT_TYPE, parseNotificationSseEvent, parsePushSubscribeRequest, parsePushUnsubscribeRequest, parseVisibilityRequest } from "../../contracts/notifications.js";
 
 export const registerNotificationRoutes = (app: Express, dependencies: {
   uiAuthController?: any;
@@ -180,7 +180,7 @@ export const registerNotificationRoutes = (app: Express, dependencies: {
   app.get("/api/notifications/stream", async (req: any, res: any) => {
     const uiToken = await requireUiSession(req, res); if (!uiToken) return;
 
-    res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    res.setHeader("Content-Type", NOTIFICATION_SSE_CONTENT_TYPE);
     res.setHeader("Cache-Control", "no-cache, no-transform");
     res.setHeader("Connection", "keep-alive");
     res.setHeader("X-Accel-Buffering", "no");

@@ -5,6 +5,7 @@ import {
   parseProjectIconId,
   parseProjectIconMutationResponse,
   parseProjectIconUploadRequest,
+  PROJECT_ASSETS_UNSUPPORTED_MEDIA_STATUS,
   projectAssetsError,
   type ProjectAssetsErrorCode,
 } from "../../../contracts/project-assets.js";
@@ -373,7 +374,7 @@ export function registerProjectIconRoutes(
 
       const iconPath = projectIconPathForMime(projectIdValue, parsed.mime);
       if (!iconPath) {
-        res.status(415).json(projectAssetsError("project_assets_unsupported_media", "Unsupported icon format"));
+        res.status(PROJECT_ASSETS_UNSUPPORTED_MEDIA_STATUS).json(projectAssetsError("project_assets_unsupported_media", "Unsupported icon format"));
         return;
       }
 
@@ -481,7 +482,7 @@ export function registerProjectIconRoutes(
       const ext = pathModule.extname(selected.path).slice(1).toLowerCase();
       const mime = projectIconExtensionToMime[ext] || null;
       if (!mime) {
-        res.status(415).json(projectAssetsError("project_assets_unsupported_media", "Unsupported favicon format"));
+        res.status(PROJECT_ASSETS_UNSUPPORTED_MEDIA_STATUS).json(projectAssetsError("project_assets_unsupported_media", "Unsupported favicon format"));
         return;
       }
 
@@ -497,7 +498,7 @@ export function registerProjectIconRoutes(
 
       const iconPath = projectIconPathForMime(projectIdValue, mime);
       if (!iconPath) {
-        res.status(415).json(projectAssetsError("project_assets_unsupported_media", "Unsupported favicon format"));
+        res.status(PROJECT_ASSETS_UNSUPPORTED_MEDIA_STATUS).json(projectAssetsError("project_assets_unsupported_media", "Unsupported favicon format"));
         return;
       }
 

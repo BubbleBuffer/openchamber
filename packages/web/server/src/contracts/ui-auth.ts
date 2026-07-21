@@ -1,6 +1,7 @@
 import { parseJsonBoolean, parseJsonObject, parseJsonString, type ParseResult } from "./common.js";
 
 export const UI_AUTH_ERROR_CODES = ["ui_auth_invalid_request", "ui_auth_unauthorized", "ui_auth_forbidden", "ui_auth_rate_limited", "internal_error"] as const;
+export const UI_AUTH_RETRY_AFTER_HEADER = "Retry-After" as const;
 export type UiAuthErrorCode = (typeof UI_AUTH_ERROR_CODES)[number];
 export type PasswordSessionRequest = { password: string; trustDevice?: boolean };
 export type OwnerSessionResponse = { authenticated: boolean; disabled?: boolean; locked?: boolean; code?: UiAuthErrorCode };
@@ -29,4 +30,12 @@ export function parseOwnerSessionResponse(value: unknown): ParseResult<OwnerSess
   const code = parseOptionalErrorCode(object.value.code);
   if (!authenticated.ok || !disabled.ok || !locked.ok || !code.ok) return invalid("invalid owner session response");
   return { ok: true, value: { authenticated: authenticated.value, ...(disabled.value === undefined ? {} : { disabled: disabled.value }), ...(locked.value === undefined ? {} : { locked: locked.value }), ...(code.value === undefined ? {} : { code: code.value }) } };
+}
+export function parseUiAuthErrorResponse(value: unknown): ParseResult<UiAuthErrorResponse> {
+  const object = parseJsonObject(value); if (!object.ok) return object;
+  const code = parseOptionalErrorCode(object.value.code);
+  if (!code.ok || code.value === undefined || typeof object.value.error !== "string") return invalid("invalid UI auth error response");
+  if (object.value.locked !== undefined && typeof object.value.locked !== "boolean") return invalid("invalid UI auth error response");
+  if (object.value.retryAfter !== undefined && (typeof object.value.retryAfter !== "number" || !Number.isFinite(object.value.retryAfter))) return invalid("invalid UI auth error response");
+  return { ok: true, value: object.value as UiAuthErrorResponse };
 }

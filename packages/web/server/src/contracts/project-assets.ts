@@ -6,6 +6,7 @@ export const PROJECT_ASSETS_ERROR_CODES = [
   "project_assets_invalid_request", "project_assets_not_found", "project_assets_unsupported_media",
   "project_assets_payload_too_large", "project_assets_internal_error",
 ] as const;
+export const PROJECT_ASSETS_UNSUPPORTED_MEDIA_STATUS = 415 as const;
 export type ProjectAssetsErrorCode = (typeof PROJECT_ASSETS_ERROR_CODES)[number];
 export type ProjectAssetsErrorResponse = { error: string; code: ProjectAssetsErrorCode };
 export type ProjectIconUploadRequest = { dataUrl: string };

@@ -22,3 +22,10 @@ export function apiError(code: CommonErrorCode | string): ApiErrorResponse {
   const error = code === "internal_error" ? "Internal server error" : "Request failed";
   return { error, code };
 }
+
+export function parseApiErrorResponse(value: unknown): ParseResult<ApiErrorResponse> {
+  const object = parseJsonObject(value);
+  if (!object.ok || typeof object.value.code !== "string" || typeof object.value.error !== "string") return invalid("invalid API error response");
+  const expected = apiError(object.value.code);
+  return object.value.error === expected.error ? { ok: true, value: expected } : invalid("unsafe API error response");
+}
