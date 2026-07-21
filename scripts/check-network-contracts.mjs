@@ -20,6 +20,13 @@ export function inventoryEndpoints(inventorySource) {
 
 export function activeRouteEndpoints(serverRoot, inventorySource, contractsRoot = resolve(serverRoot, "contracts")) {
   const registrars = new Set([...inventorySource.matchAll(/routes\(\s*["']([^"']+)/g)].map((match) => match[1]));
+  // The server entrypoint is the active ownership boundary: a registrar imported
+  // and called there is active even before someone adds it to the inventory.
+  for (const entrypoint of [resolve(serverRoot, "index.ts"), resolve(serverRoot, "domains/bootstrap/startup-pipeline.ts")]) {
+    if (!existsSync(entrypoint)) continue;
+    for (const match of source(entrypoint).matchAll(/from\s+["'](?:\.\.\/)*\.\/([^"']*domains\/[^"']*(?:routes|ws-server)\.[cm]?[jt]s)["']/g)) registrars.add(`domains/${match[1].split("domains/").at(-1)}`);
+  }
+  for (const file of files(resolve(serverRoot, "domains")).filter((file) => /(?:routes|ws-server)\.[cm]?[jt]s$/.test(file) && !/\.(test|spec)\./.test(file))) registrars.add(relative(serverRoot, file));
   const routeConstants = new Map();
   for (const file of files(contractsRoot).filter(isMaintainedContract)) for (const match of source(file).matchAll(/export const (\w*(?:WS|SSE)_PATH)\s*=\s*["'](\/[^"']+)/g)) routeConstants.set(match[1], match[2]);
   const actual = new Set();
@@ -68,6 +75,9 @@ export function auditNetworkContracts(root = process.cwd()) {
     const browserSource = source(file);
     if (/(?:from|import)\s*(?:type\s*)?["'][^"']*(?:\/server\/src\/(?:domains|services|routes|internal)|(?:^|\/)server\/(?:domains|services|routes|internal))/.test(browserSource)) report(`browser server import: ${relative(root, file)}`);
     if (/\b(?:as\s+any|@ts-ignore|@ts-expect-error)\b/.test(browserSource) && browserSource.includes("@contracts/")) report(`blanket contract cast or suppression: ${relative(root, file)}`);
+    const browserPath = relative(root, file);
+    const domainAdapter = /^packages\/web\/src\/api\/[A-Za-z]+\.ts$/.test(browserPath);
+    if (file !== bulkApi && !domainAdapter && (browserSource.match(/@contracts\//g) ?? []).length >= 2 && (browserSource.match(/export\s+(?:interface|type)\s+\w*(?:API|Request|Response|Payload|Result)\b/g) ?? []).length >= 2) report(`aggregate browser API registry: ${browserPath}`);
   }
 
   const inventory = resolve(contracts, "route-inventory.ts");

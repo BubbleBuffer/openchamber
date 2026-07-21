@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { apiError, parseJsonObject } from "./common.js";
+import { COMMON_ERROR_CODES, apiError, parseJsonObject } from "./common.js";
 import { MESSAGE_STREAM_PROTOCOL_VERSION, parseHealthResponse, parseSystemInfoResponse } from "./system.js";
 import { parseSseEventEnvelope } from "./event-stream.js";
 import { parseFileListResponse } from "./files.js";
@@ -62,8 +62,12 @@ describe("network contract matrix", () => {
     expect(parseSystemInfoResponse({ ...payload, protocolVersion: MESSAGE_STREAM_PROTOCOL_VERSION + 1 })).toMatchObject({ ok: false });
   });
 
-  it("preserves unique stable domain error-code exports", () => {
-    const codeDeclarations = [SETTINGS_ERROR_CODES, THEMES_ERROR_CODES, UI_AUTH_ERROR_CODES, QUOTA_ERROR_CODES, TERMINAL_ERROR_CODES, FS_ERROR_CODES, GITHUB_ERROR_CODES, GIT_ERROR_CODES, PROJECT_ASSETS_ERROR_CODES, SKILLS_ERROR_CODES, NOTIFICATION_ERROR_CODES, OPENCODE_ERROR_CODES].flat();
-    expect(new Set(codeDeclarations).size).toBe(codeDeclarations.length);
+  it("preserves stable common sentinels and unique domain error-code exports", () => {
+    expect(COMMON_ERROR_CODES).toEqual(expect.arrayContaining(["unauthorized", "unsupported_media", "rate_limited", "internal_error"]));
+    const domainCodes = [SETTINGS_ERROR_CODES, THEMES_ERROR_CODES, UI_AUTH_ERROR_CODES, QUOTA_ERROR_CODES, TERMINAL_ERROR_CODES, FS_ERROR_CODES, GITHUB_ERROR_CODES, GIT_ERROR_CODES, PROJECT_ASSETS_ERROR_CODES, SKILLS_ERROR_CODES, NOTIFICATION_ERROR_CODES, OPENCODE_ERROR_CODES].flat();
+    expect(new Set(COMMON_ERROR_CODES).size).toBe(COMMON_ERROR_CODES.length);
+    // Explicit common compatibility aliases are retained by their owning boundaries.
+    expect(domainCodes.filter((code) => COMMON_ERROR_CODES.includes(code as never) && !["internal_error", "opencode_unavailable"].includes(code))).toEqual([]);
+    expect(new Set(domainCodes).size).toBe(domainCodes.length);
   });
 });

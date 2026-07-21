@@ -46,3 +46,13 @@ test("allows Node imports in packaged server artifacts and local browser feature
   });
   assert.deepEqual(failures, []);
 });
+
+test("rejects an active registrar omitted from inventory and a second aggregate browser API registry", () => {
+  assert.match(audit({
+    "packages/web/server/src/index.ts": "import { registerExtraRoutes } from './domains/extra/routes.js'; registerExtraRoutes(app);\n",
+    "packages/web/server/src/domains/extra/routes.ts": "export const registerExtraRoutes = (app) => app.get('/api/extra', () => {});\n",
+  }).join("\n"), /uncovered active route/);
+  assert.match(audit({
+    "packages/web/src/api/domain-apis.ts": "import type { GitStatusResponse } from '@contracts/git'; import type { AppSettings } from '@contracts/settings'; export interface GitAPI { status(): Promise<GitStatusResponse> } export interface SettingsAPI { get(): Promise<AppSettings> }\n",
+  }).join("\n"), /aggregate browser API registry/);
+});
