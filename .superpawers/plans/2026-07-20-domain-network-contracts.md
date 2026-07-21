@@ -1,13 +1,19 @@
 ---
 kind: plan
-status: active
+status: completed
 base_branch: feature/lint-integration-readiness
 parent_spec: .superpawers/specs/2026-07-14-web-pwa-maintainability-program-design.md
 covers_chunks:
   - domain-network-contracts
 created: 2026-07-20
 updated: 2026-07-21
-next_action: "Execute Task 5"
+closed: 2026-07-21
+verification:
+  - "Independent integrated review approved with no material findings."
+  - "Clean-dist type-check, canonical build, contract audit, and documentation validation passed."
+  - "Vitest passed 90 files and 348 tests; Bun store tests passed 239 tests; session-state, React, performance, web, and integration suites passed."
+  - "Frozen install, package install/import, startWebUiServer export, CLI help, and release-contract checks passed."
+  - "Lint had no increased errors, warnings, or rule categories; Docker was unavailable because the docker command is not installed."
 ---
 
 # Domain Network Contracts Implementation Plan
@@ -185,7 +191,7 @@ Tasks 1-4 are Test-first because they establish or migrate executable network be
 
 ### Task 5: Remove Bulk Contracts, Document Protocol, And Close The Chunk
 
-- [ ] **Outcome:** The old bulk API type registry and ad hoc wire casts are absent, active architecture documentation describes supported routes/transports/authentication/error/version expectations, exhaustive checks pass, and the parent chunk is machine-validly completed.
+- [x] **Outcome:** The old bulk API type registry and ad hoc wire casts are absent, active architecture documentation describes supported routes/transports/authentication/error/version expectations, exhaustive checks pass, and the parent chunk is machine-validly completed.
 
 **Files and anchors:**
 - Modify: `packages/web/src/ui/lib/api/types.ts` - retain it explicitly as the minimal aggregate-only `RuntimeAPIs` bridge required by this plan. It may compose domain API interfaces and browser-only callback/subscription types, but owns no network request, response, event, error, or persisted DTO. Removal of the generic runtime bridge is deferred.
@@ -217,7 +223,7 @@ Use the repository’s declared runners; do not run Vitest files through `bun te
 - remove only ignored `packages/session-state/dist`, `packages/web/dist`, and `packages/web/server/dist`, then `bun run type-check` to prove clean-checkout source resolution
 - `bun run build`
 - `bun run check:contracts`
-- `bun run --cwd packages/web test -- src server/src/contracts server/src/domains/event-stream server/src/domains/fs server/src/domains/settings server/src/domains/security server/src/domains/ui-auth server/src/domains/git server/src/domains/github server/src/domains/quota server/src/domains/terminal server/src/domains/opencode server/src/domains/notifications server/src/domains/session-folders server/src/domains/magic-prompts server/src/domains/routes` (the `src` target includes the named MCP, session-folder, magic-prompt, terminal, store, and API browser contract tests)
+- `bun run --cwd packages/web test -- src server/src/contracts server/src/domains/event-stream server/src/domains/fs server/src/domains/settings server/src/domains/security server/src/domains/ui-auth server/src/domains/git server/src/domains/github server/src/domains/quota server/src/domains/terminal server/src/domains/opencode server/src/domains/notifications server/src/domains/session-folders server/src/domains/magic-prompts server/src/domains/routes package-manifest.test.js bin/cli.test.js` (the `src` target includes the named MCP, session-folder, magic-prompt, terminal, store, and API browser contract tests; the final paths cover package and CLI ownership suites)
 - `bun run --cwd packages/session-state test`
 - `bun run test:stores`
 - `bun run test:react`
@@ -231,7 +237,7 @@ Use the repository’s declared runners; do not run Vitest files through `bun te
 - `docker build --target runtime .` when Docker is available; otherwise record the exact unavailable command error and make no pass claim
 - `scripts/verify.sh`, with a separate fresh `bun run lint` count comparison against the inherited baseline; type-check/build must pass and no workspace may increase errors/warnings or add a rule category
 
-Before tracking closure, a fresh integrated reviewer must report no accepted material findings and a fresh verifier must report PASS. Then update only the plan, parent spec, and active overview: set plan `status: completed`, add `closed: 2026-07-20`, remove `next_action`, add nonempty structured `verification` frontmatter, check all five outcomes, and set only parent chunk `domain-network-contracts` to `Status: completed`. Run:
+Before tracking closure, a fresh integrated reviewer must report no accepted material findings and a fresh verifier must report PASS. Then update only the plan, parent spec, and active overview: set plan `status: completed`, add the actual closure date, remove `next_action`, add nonempty structured `verification` frontmatter, check all five outcomes, and set only parent chunk `domain-network-contracts` to `Status: completed`. Run:
 
 - `node /home/breadcat/.config/opencode/skills/superpawers/plan-management/scripts/plans.js plan .superpawers/plans/2026-07-20-domain-network-contracts.md`
 - `node /home/breadcat/.config/opencode/skills/superpawers/plan-management/scripts/plans.js spec .superpawers/specs/2026-07-14-web-pwa-maintainability-program-design.md`

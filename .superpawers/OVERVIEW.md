@@ -4,9 +4,9 @@
 >
 > Living overview of the radical refactor program. Source of truth for "what's done / in flight / next".
 > Deep design lives in `.superpawers/specs/`. Per-task plans live in `.superpawers/plans/`.
-> Active product status updated: 2026-07-20.
+> Active product status updated: 2026-07-21.
 
-> **Current topology and validation:** `packages/web` owns the browser/PWA, server, and CLI; `packages/session-state` remains separately built and publishable at `1.9.11`; `packages/ui` is folded into web. Clean-dist type-check and canonical build artifacts pass. Current tests: session-state 78; stores 238; React 63; web 18 + 2 skipped; integration 53 + 2 skipped; event-stream 17; performance 5; docs 7/7. `scripts/verify.sh` is nonzero only for inherited lint: session-state 0/5, web 406/937, tests 36/4 (errors/warnings), with no increases or new categories.
+> **Current topology and validation:** `packages/web` owns the browser/PWA, server, and CLI; `packages/session-state` remains separately built and publishable at `1.9.11`; `packages/ui` is folded into web. Domain-owned HTTP/SSE/WebSocket contracts and their ownership audit are complete. Clean-dist type-check and canonical build artifacts pass. Current tests: web Vitest 348 across 90 files; session-state 78; stores 239; React 65; web 18 + 2 skipped; integration 53 + 2 skipped; performance 5; docs 7/7. `scripts/verify.sh` is nonzero only for inherited lint: session-state 0/5, web 406/936, tests 36/4 (errors/warnings), with no increases or new categories.
 
 ## Status snapshot
 
@@ -156,8 +156,8 @@ Specs:
 
 ```bash
 bun run type-check           # ✅ clean-dist type-check passes
-bun run lint                 # ⚠ inherited debt: session-state 0/5, web 406/937, tests 36/4 (errors/warnings)
-bun run test:stores          # ✅ 238 pass
+bun run lint                 # ⚠ inherited debt: session-state 0/5, web 406/936, tests 36/4 (errors/warnings)
+bun run test:stores          # ✅ 239 pass
 bun run test:integration     # ✅ 53 pass / 2 skip
 ```
 

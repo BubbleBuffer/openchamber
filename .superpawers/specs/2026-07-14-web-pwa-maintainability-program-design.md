@@ -47,7 +47,7 @@ Acceptance:
 - Development, build, package, and start commands are direct and documented from the repository root.
 
 ### Chunk: domain-network-contracts
-Status: active
+Status: completed
 Goal: Replace ad hoc cross-layer types and compatibility globals with explicit domain-oriented HTTP, SSE, and WebSocket contracts.
 Acceptance:
 - Requests, responses, events, and stable error codes are grouped by domain rather than accumulated in a bulk API types file.
