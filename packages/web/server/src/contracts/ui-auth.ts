@@ -54,6 +54,10 @@ export function parseUiAuthErrorResponse(value: unknown): ParseResult<UiAuthErro
 const isNonNegativeInteger = (value: unknown): value is number =>
   typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 const hasOwn = (value: object, key: string): boolean => Object.prototype.hasOwnProperty.call(value, key);
+const isFiniteTimestampOrNull = (value: unknown): value is number | null =>
+  value === null || (typeof value === "number" && Number.isFinite(value));
+const hasStringFields = (value: Record<string, unknown>, fields: string[]): boolean =>
+  fields.every((field) => typeof value[field] === "string");
 const parseRequestId = (value: unknown): ParseResult<string> => {
   const requestId = parseJsonString(value);
   return requestId.ok && requestId.value.trim() ? requestId : invalid("requestId is required");
@@ -115,7 +119,10 @@ export function parsePasskeyStatusResponse(value: unknown): ParseResult<PasskeyS
 
 const parseStoredPasskeyResponse = (value: unknown): ParseResult<StoredPasskeyResponse> => {
   const object = parseJsonObject(value); if (!object.ok) return object;
-  if (typeof object.value.id !== "string" || typeof object.value.label !== "string" || !isNonNegativeInteger(object.value.createdAt) || (typeof object.value.lastUsedAt !== "number" && object.value.lastUsedAt !== null) || (typeof object.value.lastUsedAt === "number" && !Number.isFinite(object.value.lastUsedAt)) || typeof object.value.deviceType !== "string" || typeof object.value.backedUp !== "boolean") return invalid("invalid stored passkey response");
+  if (!hasStringFields(object.value, ["id", "label", "deviceType"])) return invalid("invalid stored passkey response");
+  if (!isNonNegativeInteger(object.value.createdAt)) return invalid("invalid stored passkey response");
+  if (!isFiniteTimestampOrNull(object.value.lastUsedAt)) return invalid("invalid stored passkey response");
+  if (typeof object.value.backedUp !== "boolean") return invalid("invalid stored passkey response");
   return { ok: true, value: object.value as StoredPasskeyResponse };
 };
 
