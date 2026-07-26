@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { ServerStartupDeps, ServerStartupRuntime } from "./types.js";
+import type {
+  ProcessHandlersDisposer,
+  ServerStartupDeps,
+  ServerStartupRuntime,
+} from "./types.js";
 
 export function createServerStartupRuntime(deps: ServerStartupDeps): ServerStartupRuntime {
   const {
@@ -15,6 +19,8 @@ export function createServerStartupRuntime(deps: ServerStartupDeps): ServerStart
 
   void crypto;
   void readSettingsFromDiskMigrated;
+
+  let activeDisposer: ProcessHandlersDisposer | null = null;
 
   const resolveBindHost = (host?: string): string =>
     host
@@ -58,26 +64,69 @@ export function createServerStartupRuntime(deps: ServerStartupDeps): ServerStart
     return { activePort };
   };
 
-  const attachProcessHandlers = ({ attachSignals }: { attachSignals?: boolean }): void => {
-    if (attachSignals && !getSignalsAttached()) {
-      const handleSignal = async () => {
-        await gracefulShutdown();
-      };
-      process.on('SIGTERM', handleSignal);
-      process.on('SIGINT', handleSignal);
-      process.on('SIGQUIT', handleSignal);
-      setSignalsAttached(true);
-      syncToHmrState();
+  const attachProcessHandlers = ({ attachSignals }: { attachSignals?: boolean }): ProcessHandlersDisposer => {
+    if (activeDisposer) return activeDisposer;
+
+    const installed: Array<[string, (...args: any[]) => void]> = [];
+    let installedSignals = false;
+    const handleSignal = () => {
+      void gracefulShutdown().catch((error) => {
+        console.error('Signal shutdown failed:', error);
+      });
+    };
+    const handleUnhandledRejection = (reason: unknown, promise: unknown) => {
+      console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    };
+    const handleUncaughtException = (error: unknown) => {
+      console.error('Uncaught Exception:', error);
+      void gracefulShutdown().catch((shutdownError) => {
+        console.error('Uncaught exception shutdown failed:', shutdownError);
+      });
+    };
+
+    const install = (event: string, handler: (...args: any[]) => void): void => {
+      process.on(event as any, handler);
+      installed.push([event, handler]);
+    };
+
+    try {
+      if (attachSignals && !getSignalsAttached()) {
+        install('SIGTERM', handleSignal);
+        install('SIGINT', handleSignal);
+        install('SIGQUIT', handleSignal);
+        installedSignals = true;
+        setSignalsAttached(true);
+        syncToHmrState();
+      }
+
+      install('unhandledRejection', handleUnhandledRejection);
+      install('uncaughtException', handleUncaughtException);
+    } catch (error) {
+      for (const [event, handler] of installed) {
+        process.off(event as any, handler);
+      }
+      if (installedSignals) {
+        setSignalsAttached(false);
+        syncToHmrState();
+      }
+      throw error;
     }
 
-    process.on('unhandledRejection', (reason, promise) => {
-      console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    });
-
-    process.on('uncaughtException', (error) => {
-      console.error('Uncaught Exception:', error);
-      gracefulShutdown();
-    });
+    let disposed = false;
+    const disposer: ProcessHandlersDisposer = () => {
+      if (disposed) return;
+      disposed = true;
+      for (const [event, handler] of installed) {
+        process.off(event as any, handler);
+      }
+      if (installedSignals) {
+        setSignalsAttached(false);
+        syncToHmrState();
+      }
+      if (activeDisposer === disposer) activeDisposer = null;
+    };
+    activeDisposer = disposer;
+    return disposer;
   };
 
   return {

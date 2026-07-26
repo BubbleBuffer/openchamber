@@ -33,6 +33,7 @@ export const createOpenCodeWatcherRuntime = (
   let reader: ReturnType<typeof createUpstreamSseReader> | null = null;
   let unsubscribeEvent: (() => void) | null = null;
   let unsubscribeStatus: (() => void) | null = null;
+  let startGeneration = 0;
 
   const unwrapGlobalEventPayload = (eventData: unknown) => {
     if (!eventData || typeof eventData !== "object") {
@@ -53,7 +54,11 @@ export const createOpenCodeWatcherRuntime = (
       return;
     }
 
+    const generation = startGeneration;
     await waitForOpenCodePort();
+    if (generation !== startGeneration) {
+      return;
+    }
 
     abortController = new AbortController();
     const signal = abortController.signal;
@@ -117,6 +122,7 @@ export const createOpenCodeWatcherRuntime = (
   };
 
   const stop = () => {
+    startGeneration += 1;
     if (!abortController) {
       return;
     }

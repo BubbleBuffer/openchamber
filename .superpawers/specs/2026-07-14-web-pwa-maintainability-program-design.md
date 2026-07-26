@@ -3,7 +3,7 @@ kind: spec
 status: active
 id: web-pwa-maintainability-program
 created: 2026-07-14
-updated: 2026-07-21
+updated: 2026-07-26
 ---
 
 # Web/PWA Maintainability Program
@@ -57,7 +57,7 @@ Acceptance:
 - Contract tests cover success, invalid input, authorization failure, and representative partial-failure behavior.
 
 ### Chunk: server-cli-decomposition
-Status: planned
+Status: completed
 Goal: Make server startup and CLI dispatch thin, explicit composition layers over focused domain services.
 Acceptance:
 - `startWebUiServer()` visibly composes configuration, infrastructure, domains, transports, startup order, and cleanup without owning domain behavior.

@@ -5,4 +5,6 @@ export { createStartupPipelineRuntime } from "./startup-pipeline.js";
 export { createBootstrapRuntime } from "./bootstrap-runtime.js";
 export { createGracefulShutdownRuntime } from "./shutdown-runtime.js";
 export { createOpenCodeLifecycleRuntime } from "./lifecycle.js";
+export { createServerComposition } from "./server-composition.js";
+export type * from "./server-composition.js";
 export type * from "./types.js";
