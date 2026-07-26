@@ -10,6 +10,7 @@ export function createGracefulShutdownRuntime(deps: ShutdownDeps): ShutdownRunti
     setIsShuttingDown,
     syncToHmrState,
     openCodeWatcherRuntime,
+    resetGlobalWatcherStartPromise,
     sessionRuntime,
     notificationRuntime,
     getHealthCheckInterval,
@@ -25,6 +26,8 @@ export function createGracefulShutdownRuntime(deps: ShutdownDeps): ShutdownRunti
     getServer,
     getUiAuthController,
     setUiAuthController,
+    getProcessHandlersDisposer,
+    setProcessHandlersDisposer,
     serverSessionMachineBridge,
     sessionActorRegistry,
     sessionEffectExecutor,
@@ -33,6 +36,15 @@ export function createGracefulShutdownRuntime(deps: ShutdownDeps): ShutdownRunti
   let shutdownPromise: Promise<void> | null = null;
 
   const gracefulShutdown = (options: { exitProcess?: boolean } = {}): Promise<void> => {
+    const processHandlersDisposer = getProcessHandlersDisposer?.() ?? null;
+    setProcessHandlersDisposer?.(null);
+    if (processHandlersDisposer) {
+      try {
+        processHandlersDisposer();
+      } catch (error) {
+        console.warn('Error disposing process handlers:', error);
+      }
+    }
     if (shutdownPromise) return shutdownPromise;
     if (getIsShuttingDown()) return Promise.resolve();
 
@@ -43,6 +55,7 @@ export function createGracefulShutdownRuntime(deps: ShutdownDeps): ShutdownRunti
       const exitProcess = typeof options.exitProcess === 'boolean' ? options.exitProcess : getExitOnShutdown();
 
       openCodeWatcherRuntime.stop();
+      resetGlobalWatcherStartPromise?.();
       sessionRuntime.dispose();
 
       // Stop the server session machine bridge and dispose its resources
@@ -67,7 +80,8 @@ export function createGracefulShutdownRuntime(deps: ShutdownDeps): ShutdownRunti
       if (terminalRuntime) {
         try {
           await terminalRuntime.shutdown();
-        } catch {
+        } catch (error) {
+          console.warn('Error shutting down terminal runtime:', error);
         } finally {
           setTerminalRuntime(null);
         }
@@ -77,7 +91,8 @@ export function createGracefulShutdownRuntime(deps: ShutdownDeps): ShutdownRunti
       if (messageStreamRuntime) {
         try {
           await messageStreamRuntime.close();
-        } catch {
+        } catch (error) {
+          console.warn('Error closing message stream runtime:', error);
         } finally {
           setMessageStreamRuntime(null);
         }

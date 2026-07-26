@@ -6,6 +6,7 @@ export interface HmrState {
   openCodeBaseUrl?: string | null;
   openCodeWorkingDirectory?: string;
   isOpenCodeReady?: boolean;
+  isExternalOpenCode?: boolean;
   isShuttingDown?: boolean;
   openCodeApiPrefix?: string;
   resolvedOpencodeBinary?: string | null;

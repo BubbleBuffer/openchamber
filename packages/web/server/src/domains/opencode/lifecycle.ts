@@ -847,6 +847,8 @@ export const createOpenCodeLifecycleRuntime = (deps: any) => {
         state.openCodeNotReadySince = 0;
         syncToHmrState();
       } else {
+        state.isExternalOpenCode = false;
+        syncToHmrState();
         if (env.ENV_EFFECTIVE_PORT) {
           console.log(
             `Using OpenCode port from environment: ${env.ENV_EFFECTIVE_PORT}`

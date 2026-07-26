@@ -22,7 +22,6 @@ export function createBootstrapRuntime(deps: BootstrapDeps): BootstrapRuntime {
       getHealthSnapshot,
       uiPassword,
       readSettingsFromDiskMigrated,
-      resolveZenModel,
       ensurePushInitialized,
       ensureGlobalWatcherStarted,
       getOrCreateVapidKeys,
@@ -49,6 +48,8 @@ export function createBootstrapRuntime(deps: BootstrapDeps): BootstrapRuntime {
       setAutoAcceptSession,
     } = options;
 
+    let uiAuthController: any = null;
+    try {
     registerServerStatusRoutes(app, {
       process,
       openchamberVersion,
@@ -60,7 +61,7 @@ export function createBootstrapRuntime(deps: BootstrapDeps): BootstrapRuntime {
 
     registerCommonRequestMiddleware(app, { express });
 
-    const uiAuthController = createUiAuth({
+    uiAuthController = createUiAuth({
       password: uiPassword,
       readSettingsFromDiskMigrated,
     });
@@ -117,6 +118,18 @@ export function createBootstrapRuntime(deps: BootstrapDeps): BootstrapRuntime {
     return {
       uiAuthController,
     };
+    } catch (error) {
+      if (uiAuthController?.dispose) {
+        try {
+          uiAuthController.dispose();
+        } catch (cleanupError) {
+          console.warn(
+            `Base route cleanup failed for UI auth: ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`,
+          );
+        }
+      }
+      throw error;
+    }
   };
 
   return {

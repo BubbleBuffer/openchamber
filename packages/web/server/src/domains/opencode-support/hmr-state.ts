@@ -10,6 +10,7 @@ export function createHmrStateRuntime(deps: HmrStateRuntimeDeps): HmrStateRuntim
       openCodeProcess: null,
       openCodePort: null,
       openCodeWorkingDirectory: os.homedir(),
+      isExternalOpenCode: false,
       isShuttingDown: false,
       signalsAttached: false,
       userProvidedOpenCodePassword: undefined,
@@ -57,6 +58,7 @@ export function createHmrStateRuntime(deps: HmrStateRuntimeDeps): HmrStateRuntim
     hmrState.openCodeProcess = runtime.openCodeProcess;
     hmrState.openCodePort = runtime.openCodePort;
     hmrState.openCodeBaseUrl = runtime.openCodeBaseUrl;
+    hmrState.isExternalOpenCode = runtime.isExternalOpenCode;
     hmrState.isShuttingDown = runtime.isShuttingDown;
     hmrState.signalsAttached = runtime.signalsAttached;
     hmrState.openCodeWorkingDirectory = runtime.openCodeWorkingDirectory;
@@ -71,6 +73,7 @@ export function createHmrStateRuntime(deps: HmrStateRuntimeDeps): HmrStateRuntim
       openCodeProcess: hmrState.openCodeProcess,
       openCodePort: hmrState.openCodePort,
       openCodeBaseUrl: hmrState.openCodeBaseUrl ?? null,
+      isExternalOpenCode: hmrState.isExternalOpenCode,
       isShuttingDown: hmrState.isShuttingDown,
       signalsAttached: hmrState.signalsAttached,
       openCodeWorkingDirectory: hmrState.openCodeWorkingDirectory,

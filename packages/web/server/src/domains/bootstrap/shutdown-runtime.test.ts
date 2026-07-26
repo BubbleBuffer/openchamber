@@ -42,6 +42,81 @@ describe("graceful shutdown", () => {
     expect(notificationRuntime.dispose).toHaveBeenCalledOnce();
   });
 
+  it("preserves shutdown ordering across injected resources", async () => {
+    let shuttingDown = false;
+    const order: string[] = [];
+    const openCodeProcess = { close: vi.fn(async () => order.push("openCode.close")) };
+    const server = {
+      close: vi.fn((callback: () => void) => {
+        order.push("server.close");
+        callback();
+      }),
+    };
+    const runtime = createGracefulShutdownRuntime({
+      process,
+      shutdownTimeoutMs: 1,
+      getExitOnShutdown: () => false,
+      getIsShuttingDown: () => shuttingDown,
+      setIsShuttingDown: (value) => {
+        shuttingDown = value;
+      },
+      syncToHmrState: vi.fn(() => order.push("sync")),
+      openCodeWatcherRuntime: { stop: vi.fn(() => order.push("watcher.stop")) },
+      sessionRuntime: { dispose: vi.fn(() => order.push("session.dispose")) },
+      notificationRuntime: { dispose: vi.fn(() => order.push("notifications.dispose")) },
+      getHealthCheckInterval: () => 42,
+      clearHealthCheckInterval: vi.fn(() => order.push("health.clear")),
+      getTerminalRuntime: () => ({
+        shutdown: vi.fn(async () => order.push("terminal.shutdown")),
+      }),
+      setTerminalRuntime: vi.fn(() => order.push("terminal.clear")),
+      getMessageStreamRuntime: () => ({
+        close: vi.fn(async () => order.push("message.close")),
+      }),
+      setMessageStreamRuntime: vi.fn(() => order.push("message.clear")),
+      shouldSkipOpenCodeStop: () => false,
+      getOpenCodeRuntime: () => ({
+        getPort: () => 43123,
+        getProcess: () => openCodeProcess,
+        clearProcess: vi.fn(() => order.push("openCode.clear")),
+      }),
+      killProcessOnPort: vi.fn(() => order.push("port.kill")),
+      waitForPortRelease: vi.fn(async () => {
+        order.push("port.release");
+        return true;
+      }),
+      getServer: () => server,
+      getUiAuthController: () => ({ dispose: vi.fn(() => order.push("auth.dispose")) }),
+      setUiAuthController: vi.fn(),
+      serverSessionMachineBridge: { stop: vi.fn(() => order.push("bridge.stop")) },
+      sessionActorRegistry: { dispose: vi.fn(() => order.push("actors.dispose")) },
+      sessionEffectExecutor: { dispose: vi.fn(() => order.push("effects.dispose")) },
+    });
+
+    await runtime.gracefulShutdown({ exitProcess: false });
+
+    expect(order).toEqual([
+      "sync",
+      "watcher.stop",
+      "session.dispose",
+      "bridge.stop",
+      "actors.dispose",
+      "effects.dispose",
+      "notifications.dispose",
+      "health.clear",
+      "terminal.shutdown",
+      "terminal.clear",
+      "message.close",
+      "message.clear",
+      "openCode.close",
+      "openCode.clear",
+      "port.kill",
+      "port.release",
+      "server.close",
+      "auth.dispose",
+    ]);
+  });
+
   it("shares the in-flight shutdown promise with concurrent callers", async () => {
     let shuttingDown = false;
     let resolveTerminalShutdown!: () => void;

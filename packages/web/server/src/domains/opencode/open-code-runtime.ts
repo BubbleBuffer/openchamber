@@ -290,6 +290,8 @@ export function createOpenCodeRuntime({
         state.openCodePort = restored.openCodePort;
       if (restored.openCodeBaseUrl !== undefined)
         state.openCodeBaseUrl = restored.openCodeBaseUrl;
+      if (restored.isExternalOpenCode !== undefined)
+        state.isExternalOpenCode = restored.isExternalOpenCode;
       if (restored.isShuttingDown !== undefined)
         state.isShuttingDown = restored.isShuttingDown;
       if (restored.openCodeWorkingDirectory !== undefined)
