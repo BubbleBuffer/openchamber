@@ -3,7 +3,7 @@ kind: spec
 status: active
 id: web-pwa-maintainability-program
 created: 2026-07-14
-updated: 2026-07-26
+updated: 2026-07-27
 ---
 
 # Web/PWA Maintainability Program

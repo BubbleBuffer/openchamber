@@ -53,6 +53,7 @@
     "test:web": "bun run --cwd tests test:web",
     "test:react": "bun run --cwd tests test:react",
     "test:stores": "bun run --cwd packages/web test:stores",
+    "test:scripts": "node --test scripts/*.test.mjs",
     "test:perf": "bun run --cwd tests bench",
     "test:integration:slow": "RUN_SLOW_TESTS=1 bun run --cwd tests test:integration"
   },
