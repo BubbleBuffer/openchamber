@@ -57,8 +57,13 @@ function resolveCompiledServerEntries(packagePath) {
   };
 }
 
+function resolveCliDaemonEntry(packagePath) {
+  return path.join(path.resolve(packagePath), 'bin', 'cli', 'daemon-entry.js');
+}
+
 export {
   normalizeCliEntryPath,
   isModuleCliExecution,
   resolveCompiledServerEntries,
+  resolveCliDaemonEntry,
 };

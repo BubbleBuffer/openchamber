@@ -25,6 +25,20 @@ function isVitestOwnedPath(filePath: string): boolean {
     [
       "package-manifest.test.js",
       "bin/cli.test.js",
+      "bin/cli-args.test.js",
+      "bin/cli-output.test.js",
+      "bin/cli-dispatch.test.js",
+      "bin/cli/create-commands.test.js",
+      "bin/cli/instance-store.test.js",
+      "bin/cli/process-runtime.test.js",
+      "bin/cli/log-files.test.js",
+      "bin/cli/commands/serve.test.js",
+      "bin/cli/commands/stop.test.js",
+      "bin/cli/commands/restart.test.js",
+      "bin/cli/commands/status.test.js",
+      "bin/cli/commands/logs.test.js",
+      "bin/cli/commands/update.test.js",
+      "bin/cli/daemon-entry.test.js",
       "src/ui/sync/event-pipeline.test.ts",
       "src/ui/lib/terminal/terminalApi.test.ts",
       "src/ui/components/ui/UpdateDialog.test.ts",
@@ -57,6 +71,19 @@ describe("test runner ownership", () => {
     }
     expect(config).toContain('"package-manifest.test.js"');
     expect(config).toContain('"bin/cli.test.js"');
+    expect(config).toContain('"bin/cli-args.test.js"');
+    expect(config).toContain('"bin/cli-output.test.js"');
+    expect(config).toContain('"bin/cli-dispatch.test.js"');
+    for (const cliSuite of [
+      "bin/cli.test.js",
+      "bin/cli-args.test.js",
+      "bin/cli-output.test.js",
+      "bin/cli-dispatch.test.js",
+      "bin/cli/create-commands.test.js",
+    ]) {
+      const escaped = cliSuite.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      expect((config.match(new RegExp(`['"]${escaped}['"]`, "g")) ?? [])).toHaveLength(1);
+    }
     expect(config).toContain('"src/ui/stores/config/useProviderConfigStore.test.ts"');
     expect(packageJson).toContain("--path-ignore-patterns '**/*.contract.test.*'");
     expect(packageJson).toContain("--path-ignore-patterns 'src/ui/stores/config/useProviderConfigStore.test.ts'");

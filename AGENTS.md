@@ -80,6 +80,12 @@ Read the relevant `DOCUMENTATION.md` before modifying that module.
 | notifications                       | `packages/web/server/src/domains/notifications/DOCUMENTATION.md` |
 | terminal                            | `packages/web/server/src/domains/terminal/DOCUMENTATION.md`   |
 
+CLI work is bounded by `packages/web/bin/DOCUMENTATION.md`. Keep
+`packages/web/bin/cli.js` as the thin published entrypoint; command behavior,
+instance persistence, process policy, daemon readiness, and output formatting
+belong to the focused modules under `packages/web/bin/cli/` and
+`cli-output.js`.
+
 ## Styling rules
 
 - Theme tokens only — no hex, no Tailwind colour classes. Use `useThemeSystem()` hook or CSS variables (`var(--surface-elevated)`).
