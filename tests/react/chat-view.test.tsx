@@ -37,7 +37,6 @@ vi.mock("@/components/chat/ChatContainer", () => ({
 
 import { ChatView } from "@/components/views/ChatView"
 import { useLayoutStore } from "@/stores/useLayoutStore"
-import { useUIStore } from "@/stores/useUIStore"
 
 describe("ChatView", () => {
   beforeEach(() => {

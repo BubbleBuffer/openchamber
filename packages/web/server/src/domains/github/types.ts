@@ -39,7 +39,10 @@ export interface ResolveGitHubPrStatusOptions {
 
 export interface ResolvedPrStatus {
   repo: { owner: string; repo: string } | null;
-  pr: RestEndpointMethodTypes["pulls"]["get"]["response"]["data"] | null;
+  pr:
+    | RestEndpointMethodTypes["pulls"]["get"]["response"]["data"]
+    | RestEndpointMethodTypes["pulls"]["list"]["response"]["data"][number]
+    | null;
   defaultBranch?: string | null;
   resolvedRemoteName?: string | null;
 }

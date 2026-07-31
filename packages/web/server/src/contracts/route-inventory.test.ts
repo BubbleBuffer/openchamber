@@ -14,13 +14,16 @@ describe("route inventory", () => {
     expect(new Set(endpoints).size).toBe(endpoints.length);
   });
 
-  it("records contract and test ownership for active session-folder and magic-prompt endpoints", () => {
-    for (const registrar of ["domains/magic-prompts/routes.ts", "domains/session-folders/routes.ts"]) {
-      const entry = ROUTE_INVENTORY.find((candidate) => candidate.registrar === registrar);
-      expect(entry?.classification).toBe("contracted");
-      expect(entry?.consumer).toBeTruthy();
-      expect(entry?.tests).toBeTruthy();
-    }
+  it("records contract and test ownership for active session-folder endpoints", () => {
+    const entry = ROUTE_INVENTORY.find((candidate) => candidate.registrar === "domains/session-folders/routes.ts");
+    expect(entry?.classification).toBe("contracted");
+    expect(entry?.consumer).toBeTruthy();
+    expect(entry?.tests).toBeTruthy();
+  });
+
+  it("does not inventory the removed prompt override API", () => {
+    const endpoints = ROUTE_INVENTORY.flatMap((entry) => entry.endpoints);
+    expect(endpoints.some((endpoint) => endpoint.includes("/api/magic-prompts"))).toBe(false);
   });
 
   it("includes the active connect endpoint from the core auth registrar", () => {
@@ -50,7 +53,7 @@ describe("route inventory", () => {
       { path: "domains/routes/core-routes.ts", functions: ["registerServerStatusRoutes", "registerAuthAndAccessRoutes"] },
       { path: "domains/routes/openchamber-routes.ts" },
       { path: "domains/notifications/routes.ts" }, { path: "domains/server-utils/proxy.ts" },
-      { path: "domains/quota/routes.ts" }, { path: "domains/magic-prompts/routes.ts" }, { path: "domains/session-folders/routes.ts" },
+      { path: "domains/quota/routes.ts" }, { path: "domains/session-folders/routes.ts" },
       { path: "domains/fs/routes.ts" }, { path: "domains/git/routes.ts" }, { path: "domains/github/routes.ts" }, { path: "domains/terminal/routes.ts" },
       { path: "domains/opencode/routes/core-routes.ts", functions: ["registerSettingsUtilityRoutes"] }, { path: "domains/opencode/routes/routes.ts" },
       { path: "domains/opencode/routes/config-entity-routes.ts" }, { path: "domains/opencode/routes/project-icon-routes.ts" },

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest"
+import { describe, expect, test, vi } from "vitest"
 import { createEventPipeline } from "./event-pipeline"
 import type { Event, OpencodeClient } from "@/lib/opencode/client"
 
@@ -37,9 +37,14 @@ describe("createEventPipeline", () => {
         if (payload.type === "message.updated") shouldThrow = true
       },
     })
-    await new Promise((r) => setTimeout(r, 300))
-    cleanup()
-    expect(received.filter((t) => t === "session.status")).toHaveLength(2)
+    try {
+      await vi.waitFor(
+        () => expect(received.filter((type) => type === "session.status")).toHaveLength(2),
+        { timeout: 2000, interval: 20 },
+      )
+    } finally {
+      cleanup()
+    }
   })
 
   test("increases reconnect delay with consecutive failures", async () => {

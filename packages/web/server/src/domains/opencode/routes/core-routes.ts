@@ -1,5 +1,39 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { parseThemesListResponse, themesError } from "../../../contracts/themes.js";
+import type { HealthSnapshot } from "../../../shared/types.js";
+
+interface TunnelAuthExchangeResult {
+  ok: boolean;
+  reason?: string;
+  retryAfter?: number;
+}
+
+interface TunnelAuthController {
+  classifyRequestScope: (req: Request) => string;
+  getTunnelSessionFromRequest?: (req: Request) => unknown;
+  clearTunnelSessionCookie?: (req: Request, res: Response) => void;
+  exchangeBootstrapToken?: (options: {
+    req: Request;
+    res: Response;
+    token: string;
+    sessionTtlMs: number;
+  }) => TunnelAuthExchangeResult;
+  requireTunnelSession?: (req: Request, res: Response, next: NextFunction) => void;
+}
+
+interface UiAuthController {
+  handleSessionStatus?: (req: Request, res: Response) => Promise<void>;
+  handleSessionCreate?: (req: Request, res: Response) => Promise<void>;
+  handlePasskeyStatus?: (req: Request, res: Response) => void;
+  handlePasskeyAuthenticationOptions?: (req: Request, res: Response) => Promise<void>;
+  handlePasskeyAuthenticationVerify?: (req: Request, res: Response) => Promise<void>;
+  handlePasskeyRegistrationOptions?: (req: Request, res: Response) => Promise<void>;
+  handlePasskeyRegistrationVerify?: (req: Request, res: Response) => Promise<void>;
+  handlePasskeyList?: (req: Request, res: Response) => void;
+  handlePasskeyRevoke?: (req: Request, res: Response) => void;
+  handleResetAuth?: (req: Request, res: Response) => void;
+  requireAuth?: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+}
 
 interface ServerStatusRoutesDeps {
   process: typeof import("process");
@@ -7,19 +41,22 @@ interface ServerStatusRoutesDeps {
   runtimeName: string;
   serverStartedAt: string;
   gracefulShutdown: (opts?: { exitProcess: boolean }) => Promise<void>;
-  getHealthSnapshot: () => any;
+  getHealthSnapshot: () => HealthSnapshot;
 }
 
 interface AuthAndAccessRoutesDeps {
-  tunnelAuthController: any;
-  uiAuthController: any;
-  readSettingsFromDiskMigrated: () => Promise<any>;
+  tunnelAuthController: TunnelAuthController;
+  uiAuthController: UiAuthController;
+  readSettingsFromDiskMigrated: () => Promise<Record<string, unknown>>;
   normalizeTunnelSessionTtlMs: (value: unknown) => number;
 }
 
 interface SettingsUtilityRoutesDeps {
   readCustomThemesFromDisk: () => Promise<object[]>;
-  refreshOpenCodeAfterConfigChange: (reason: string, options?: any) => Promise<void>;
+  refreshOpenCodeAfterConfigChange: (
+    reason: string,
+    options?: Record<string, unknown>
+  ) => Promise<void>;
   clientReloadDelayMs: number;
 }
 
@@ -79,18 +116,18 @@ export function registerAuthAndAccessRoutes(
   app.get("/auth/session", async (req: Request, res: Response) => {
     const requestScope = tunnelAuthController.classifyRequestScope(req);
     if (requestScope === "tunnel" || requestScope === "unknown-public") {
-      const tunnelSession = tunnelAuthController.getTunnelSessionFromRequest(req);
+      const tunnelSession = tunnelAuthController.getTunnelSessionFromRequest!(req);
       if (tunnelSession) {
         res.json({ authenticated: true, scope: "tunnel" });
         return;
       }
-      tunnelAuthController.clearTunnelSessionCookie(req, res);
+      tunnelAuthController.clearTunnelSessionCookie!(req, res);
       res.status(401).json({ authenticated: false, locked: true, tunnelLocked: true });
       return;
     }
 
     try {
-      await uiAuthController.handleSessionStatus(req, res);
+      await uiAuthController.handleSessionStatus!(req, res);
     } catch (error) {
       console.error("[UiAuth] Failed to read session status", error);
       res.status(500).json({ error: "Internal server error", code: "internal_error" });
@@ -107,7 +144,7 @@ export function registerAuthAndAccessRoutes(
       return;
     }
     try {
-      await uiAuthController.handleSessionCreate(req, res);
+      await uiAuthController.handleSessionCreate!(req, res);
     } catch (error) {
       console.error("[UiAuth] Failed to create session", error);
       res.status(500).json({ error: "Internal server error", code: "internal_error" });
@@ -126,7 +163,7 @@ export function registerAuthAndAccessRoutes(
       });
       return;
     }
-    uiAuthController.handlePasskeyStatus(req, res);
+    uiAuthController.handlePasskeyStatus!(req, res);
   });
 
   app.post("/auth/passkey/authenticate/options", (req: Request, res: Response) => {
@@ -138,7 +175,7 @@ export function registerAuthAndAccessRoutes(
       });
       return;
     }
-    uiAuthController.handlePasskeyAuthenticationOptions(req, res);
+    uiAuthController.handlePasskeyAuthenticationOptions!(req, res);
   });
 
   app.post("/auth/passkey/authenticate/verify", (req: Request, res: Response) => {
@@ -150,7 +187,7 @@ export function registerAuthAndAccessRoutes(
       });
       return;
     }
-    uiAuthController.handlePasskeyAuthenticationVerify(req, res);
+    uiAuthController.handlePasskeyAuthenticationVerify!(req, res);
   });
 
   app.post(
@@ -165,8 +202,8 @@ export function registerAuthAndAccessRoutes(
         return;
       }
       try {
-        await uiAuthController.requireAuth(req, res, async () => {
-          await uiAuthController.handlePasskeyRegistrationOptions(req, res);
+        await uiAuthController.requireAuth!(req, res, async () => {
+          await uiAuthController.handlePasskeyRegistrationOptions!(req, res);
         });
       } catch (error) {
         next(error);
@@ -186,8 +223,8 @@ export function registerAuthAndAccessRoutes(
         return;
       }
       try {
-        await uiAuthController.requireAuth(req, res, async () => {
-          await uiAuthController.handlePasskeyRegistrationVerify(req, res);
+        await uiAuthController.requireAuth!(req, res, async () => {
+          await uiAuthController.handlePasskeyRegistrationVerify!(req, res);
         });
       } catch (error) {
         next(error);
@@ -205,8 +242,8 @@ export function registerAuthAndAccessRoutes(
       return;
     }
     try {
-      await uiAuthController.requireAuth(req, res, async () => {
-        await uiAuthController.handlePasskeyList(req, res);
+      await uiAuthController.requireAuth!(req, res, async () => {
+        await uiAuthController.handlePasskeyList!(req, res);
       });
     } catch (error) {
       next(error);
@@ -223,8 +260,8 @@ export function registerAuthAndAccessRoutes(
       return;
     }
     try {
-      await uiAuthController.requireAuth(req, res, async () => {
-        await uiAuthController.handlePasskeyRevoke(req, res);
+      await uiAuthController.requireAuth!(req, res, async () => {
+        await uiAuthController.handlePasskeyRevoke!(req, res);
       });
     } catch (error) {
       next(error);
@@ -241,8 +278,8 @@ export function registerAuthAndAccessRoutes(
       return;
     }
     try {
-      await uiAuthController.requireAuth(req, res, async () => {
-        await uiAuthController.handleResetAuth(req, res);
+      await uiAuthController.requireAuth!(req, res, async () => {
+        await uiAuthController.handleResetAuth!(req, res);
       });
     } catch (error) {
       next(error);
@@ -255,7 +292,7 @@ export function registerAuthAndAccessRoutes(
       const settings = await readSettingsFromDiskMigrated();
       const tunnelSessionTtlMs = normalizeTunnelSessionTtlMs(settings?.tunnelSessionTtlMs);
 
-      const exchange = tunnelAuthController.exchangeBootstrapToken({
+      const exchange = tunnelAuthController.exchangeBootstrapToken!({
         req,
         res,
         token,
@@ -286,10 +323,10 @@ export function registerAuthAndAccessRoutes(
     try {
       const requestScope = tunnelAuthController.classifyRequestScope(req);
       if (requestScope === "tunnel" || requestScope === "unknown-public") {
-        tunnelAuthController.requireTunnelSession(req, res, next);
+        tunnelAuthController.requireTunnelSession!(req, res, next);
         return;
       }
-      await uiAuthController.requireAuth(req, res, next);
+      await uiAuthController.requireAuth!(req, res, next);
     } catch (err) {
       next(err);
     }
@@ -357,16 +394,12 @@ export function registerCommonRequestMiddleware(
       req.path.startsWith("/api/projects") ||
       req.path.startsWith("/api/fs") ||
       req.path.startsWith("/api/git") ||
-      req.path.startsWith("/api/magic-prompts") ||
-      req.path.startsWith("/api/prompts") ||
       req.path.startsWith("/api/terminal") ||
       req.path.startsWith("/api/opencode") ||
       req.path.startsWith("/api/push") ||
       req.path.startsWith("/api/notifications") ||
       req.path.startsWith("/api/session-folders") ||
       req.path.startsWith("/api/text") ||
-      req.path.startsWith("/api/voice") ||
-      req.path.startsWith("/api/tts") ||
       req.path.startsWith("/api/openchamber/tunnel")
     ) {
       express.json({ limit: "50mb" })(req, res, next);

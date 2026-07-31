@@ -9,13 +9,11 @@ export type SettingsPageSlug =
   | 'commands'
   | 'mcp'
   | 'skills.installed'
-  | 'skills.catalog'
   | 'git'
   | 'appearance'
   | 'chat'
   | 'shortcuts'
   | 'sessions'
-  | 'magic-prompts'
   | 'notifications';
 
 export type SettingsPageGroup =
@@ -104,14 +102,7 @@ export const SETTINGS_PAGE_METADATA: readonly SettingsPageMeta[] = [
     title: 'Skills',
     group: 'skills',
     kind: 'split',
-    keywords: ['skill', 'skills', 'instructions', 'install', 'catalog'],
-  },
-  {
-    slug: 'skills.catalog',
-    title: 'Skills Catalog',
-    group: 'skills',
-    kind: 'single',
-    keywords: ['install', 'catalog', 'external', 'repository', 'skills catalog'],
+    keywords: ['skill', 'skills', 'instructions', 'installed'],
   },
   {
     slug: 'git',
@@ -148,14 +139,6 @@ export const SETTINGS_PAGE_METADATA: readonly SettingsPageMeta[] = [
     kind: 'single',
     keywords: ['defaults', 'default agent', 'default model', 'retention', 'memory', 'limits', 'zen'],
   },
-  {
-    slug: 'magic-prompts',
-    title: 'Magic Prompts',
-    group: 'general',
-    kind: 'split',
-    keywords: ['prompts', 'templates', 'git', 'github', 'review', 'commit', 'pull request'],
-  },
-
   { slug: 'notifications', title: 'Notifications', group: 'general', kind: 'single', keywords: ['alerts', 'native', 'summary', 'summarization'], },
 ] as const;
 
@@ -180,6 +163,12 @@ export function resolveSettingsSlug(value: string | null | undefined): SettingsP
   const normalized = (value ?? '').trim().toLowerCase();
   if (!normalized) {
     return 'home';
+  }
+
+  // Preserve old deep links and persisted navigation without retaining the
+  // removed catalog/marketplace surface.
+  if (normalized === 'skills.catalog') {
+    return 'skills.installed';
   }
 
   const legacy = (LEGACY_SIDEBAR_SECTION_TO_SETTINGS_SLUG as Record<string, SettingsPageSlug>)[normalized];

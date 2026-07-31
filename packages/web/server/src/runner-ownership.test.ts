@@ -41,8 +41,11 @@ function isVitestOwnedPath(filePath: string): boolean {
       "bin/cli/daemon-entry.test.js",
       "src/ui/sync/event-pipeline.test.ts",
       "src/ui/lib/terminal/terminalApi.test.ts",
+      "src/ui/lib/tools/promptTemplates.test.ts",
       "src/ui/components/ui/UpdateDialog.test.ts",
       "src/ui/stores/config/useProviderConfigStore.test.ts",
+      "src/sw.test.ts",
+      "vite.chunking.test.ts",
     ].includes(filePath)
   );
 }
@@ -67,7 +70,8 @@ describe("test runner ownership", () => {
     })))).filter(({ content }) => vitestImportPattern.test(content));
 
     for (const { filePath } of vitestFiles) {
-      expect(isVitestOwnedPath(path.relative(packageRoot, filePath))).toBe(true);
+      const relativePath = path.relative(packageRoot, filePath);
+      expect(isVitestOwnedPath(relativePath), relativePath).toBe(true);
     }
     expect(config).toContain('"package-manifest.test.js"');
     expect(config).toContain('"bin/cli.test.js"');

@@ -1,42 +1,48 @@
 import { describe, expect, it } from "vitest";
 import {
-  parseSkillsInstallRequest,
-  parseSkillsInstallResponse,
   parseSkillDetailResponse,
-  parseSkillMutationResponse,
   parseSkillNameRequest,
-  parseSkillSupportingFileRequest,
-  parseSkillsScanResponse,
-  parseSkillsSupportingFileResponse,
+  parseSkillsFailure,
+  parseSkillsListResponse,
+  skillsError,
 } from "./skills.js";
 
-describe("skills contracts", () => {
-  it("accepts valid install requests and rejects malformed selections", () => {
-    expect(parseSkillsInstallRequest({ source: "owner/repo", scope: "user", selections: [{ skillDir: "skill" }] }).ok).toBe(true);
-    expect(parseSkillsInstallRequest({ source: "owner/repo", scope: "user", selections: [{ skillDir: 1 }] }).ok).toBe(false);
-    expect(parseSkillsInstallRequest({ source: "owner/repo", scope: "user", selections: [{ skillDir: "../escape" }] }).ok).toBe(false);
-    expect(parseSkillsInstallRequest({ source: "owner/repo", scope: "user", selections: [{ skillDir: "/etc" }] }).ok).toBe(false);
-    expect(parseSkillsInstallRequest({ source: "owner/repo", scope: "user", selections: [{ skillDir: "skills/nested" }] }).ok).toBe(true);
-  });
+const installed = {
+  name: "review-skill",
+  description: "Reviews changes",
+  path: "/skills/review-skill/SKILL.md",
+  scope: "user",
+  source: "opencode",
+} as const;
 
-  it("preserves partial install outcomes and rejects malformed success payloads", () => {
-    expect(parseSkillsInstallResponse({ ok: true, installed: [{ skillName: "one", scope: "user", source: "opencode" }], skipped: [{ skillName: "two", reason: "conflict" }] }).ok).toBe(true);
-    expect(parseSkillsInstallResponse({ ok: true, installed: "nope", skipped: [] }).ok).toBe(false);
-  });
-
-  it("accepts coded provider scan failures and nullable catalog fields", () => {
-    expect(parseSkillsScanResponse({ ok: false, error: { code: "skills_provider_error", message: "Scan failed" } }).ok).toBe(true);
-    expect(parseSkillsSupportingFileResponse({ path: "notes/file.md", content: "" }).ok).toBe(true);
-    expect(parseSkillsSupportingFileResponse({ path: null, content: "" }).ok).toBe(false);
-  });
-
-  it("owns installed-skill names, supporting-file paths, and CRUD responses", () => {
-    expect(parseSkillNameRequest("review-skill").ok).toBe(true);
+describe("read-only installed skills contracts", () => {
+  it("owns installed-skill names without accepting path-like input", () => {
+    expect(parseSkillNameRequest("review-skill")).toEqual({
+      ok: true,
+      value: { name: "review-skill" },
+    });
     expect(parseSkillNameRequest("../escape").ok).toBe(false);
-    expect(parseSkillSupportingFileRequest({ name: "review-skill", filePath: "notes/setup.md", content: "hello" }).ok).toBe(true);
-    expect(parseSkillSupportingFileRequest({ name: "review-skill", filePath: "../setup.md" }).ok).toBe(false);
-    expect(parseSkillMutationResponse({ success: true, requiresReload: true, message: "Saved", reloadDelayMs: 10 }).ok).toBe(true);
-    expect(parseSkillMutationResponse({ success: true, reloadDelayMs: "soon" }).ok).toBe(false);
-    expect(parseSkillDetailResponse({ name: "review-skill", scope: "user", source: "opencode", sources: { md: { exists: true, path: null, dir: null, fields: [], supportingFiles: [] } } }).ok).toBe(true);
+    expect(parseSkillNameRequest("review/skill").ok).toBe(false);
+    expect(parseSkillNameRequest({ name: "UPPERCASE" }).ok).toBe(false);
+  });
+
+  it("accepts complete list entries and rejects malformed summaries", () => {
+    expect(parseSkillsListResponse({ skills: [installed] }).ok).toBe(true);
+    expect(parseSkillsListResponse({ skills: [{ ...installed, path: "" }] }).ok).toBe(false);
+    expect(parseSkillsListResponse({ skills: [{ ...installed, scope: "global" }] }).ok).toBe(false);
+  });
+
+  it("requires instructions on detail responses", () => {
+    expect(parseSkillDetailResponse({ ...installed, instructions: "Follow these steps." }).ok).toBe(true);
+    expect(parseSkillDetailResponse(installed).ok).toBe(false);
+    expect(parseSkillDetailResponse({ ...installed, instructions: null }).ok).toBe(false);
+  });
+
+  it("parses only stable read-only skill failures", () => {
+    expect(parseSkillsFailure(skillsError("skills_not_found", "Skill not found")).ok).toBe(true);
+    expect(parseSkillsFailure({
+      ok: false,
+      error: { code: "skills_provider_error", message: "Removed marketplace error" },
+    }).ok).toBe(false);
   });
 });

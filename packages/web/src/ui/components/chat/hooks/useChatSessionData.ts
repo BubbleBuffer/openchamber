@@ -10,6 +10,8 @@ import {
 } from '../lib/blockingRequests';
 import {
     useDirectoryStore,
+    useSessionMessageRecords,
+    useSessionMessagesResolved,
     useSessions,
     useSessionStatus,
     useSyncDirectory,
@@ -26,7 +28,7 @@ import {
     useRetryState as useMachineRetryState,
     useHistoryState as useMachineHistoryState,
 } from '../state/machine/selectors'
-import { useMachineMessages } from '../state/machine/useMachineMessages';
+import { getSessionHistoryMeta } from '@/sync/use-sync';
 
 const EMPTY_PERMISSIONS: PermissionRequest[] = [];
 const EMPTY_QUESTIONS: QuestionRequest[] = [];
@@ -92,8 +94,10 @@ export type ChatSessionData = {
 /**
  * useChatSessionData — Phase 3.3 Migration
  *
- * All fields now sourced from machine hooks.
- * useMachineMessages provides ChatMessageEntry[] derived from normalized machine state.
+ * Lifecycle fields are sourced from the machine. Message content remains on
+ * the directory resource until the machine contract can preserve the complete
+ * SDK part payload (especially rich tool state). This avoids rendering an
+ * empty actor after REST history loads and avoids lossy tool projections.
  */
 export const useChatSessionData = (sessionId: string): ChatSessionData => {
     const directory = useSyncDirectory();
@@ -107,8 +111,8 @@ export const useChatSessionData = (sessionId: string): ChatSessionData => {
     const machineRetryState = useMachineRetryState(directory, sessionId);
     const machineHistoryState = useMachineHistoryState(directory, sessionId);
 
-    // Machine-derived messages (Phase 3.3 - replaces useSessionMessageRecords)
-    const { messages } = useMachineMessages({ directory, sessionId });
+    const messages = useSessionMessageRecords(sessionId, directory);
+    const messagesResolved = useSessionMessagesResolved(sessionId, directory);
 
     const sessions = useSessions();
     const status = useSessionStatus(sessionId) ?? IDLE_SESSION_STATUS;
@@ -119,7 +123,7 @@ export const useChatSessionData = (sessionId: string): ChatSessionData => {
     const directoryStore = useDirectoryStore();
 
     // Machine-derived fields (Phase 3.2 migration)
-    const loaded = machineLoaded;
+    const loaded = machineLoaded || messagesResolved;
     const streamingMessageId = machineStreamingMessageId;
 
     // Derive streamingPhase from machine state
@@ -228,14 +232,22 @@ export const useChatSessionData = (sessionId: string): ChatSessionData => {
         };
     }, [activeRetryStatus, retryFallbackTimestamp]);
 
-    // historyMeta from machine useHistoryState hook
+    const resourceHistoryMeta = getSessionHistoryMeta(directory, sessionId);
+
+    // REST-loaded rich messages and their cursor share one resource owner.
+    // Machine history remains lifecycle state, but it is not hydrated from the
+    // initial REST page and cannot decide whether older history exists.
     const historyMeta = React.useMemo(() => ({
-        limit: messages.length,
-        // Machine's hasMoreAbove indicates if there are more messages to load
-        complete: !machineHistoryState.hasMoreAbove,
-        // Machine's isLoadingOlder indicates history is being loaded
-        loading: machineHistoryState.isLoadingOlder,
-    }), [machineHistoryState.hasMoreAbove, machineHistoryState.isLoadingOlder, messages.length]);
+        limit: Math.max(messages.length, resourceHistoryMeta.limit),
+        complete: resourceHistoryMeta.complete,
+        loading: resourceHistoryMeta.loading || machineHistoryState.isLoadingOlder,
+    }), [
+        machineHistoryState.isLoadingOlder,
+        messages.length,
+        resourceHistoryMeta.complete,
+        resourceHistoryMeta.limit,
+        resourceHistoryMeta.loading,
+    ]);
 
     return {
         messages,

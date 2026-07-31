@@ -8,18 +8,13 @@ import { RightSidebar, RIGHT_SIDEBAR_CONTENT_WIDTH } from './RightSidebar';
 import { RightSidebarTabs } from './RightSidebarTabs';
 import { ContextPanel } from './ContextPanel';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
-import { CommandPalette } from '../ui/CommandPalette';
-import { HelpDialog } from '../ui/HelpDialog';
-import { OpenCodeStatusDialog } from '../ui/OpenCodeStatusDialog';
 import { SessionSidebar } from '@/components/session/SessionSidebar';
 import { SessionDialogs } from '@/components/session/SessionDialogs';
 import { DiffWorkerProvider } from '@/contexts/DiffWorkerProvider';
-import { MultiRunLauncher } from '@/components/multirun';
 import { DrawerProvider } from '@/contexts/DrawerContext';
 
 import { useLayoutStore } from '@/stores/useLayoutStore';
 import { useNavigationStore } from '@/stores/useNavigationStore';
-import { useUIStore } from '@/stores/useUIStore';
 import { useContextPanelStore } from '@/stores/useContextPanelStore';
 import { useRuntimeStore } from '@/stores/useRuntimeStore';
 import { useDialogStore } from '@/stores/useDialogStore';
@@ -29,8 +24,13 @@ import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { cn } from '@/lib/utils';
 import { lazyWithChunkRecovery } from '@/lib/errors/chunkLoadRecovery';
 import { OfflineIndicator } from '@/components/ui/OfflineIndicator';
+import {
+    DesktopDeferredDialogs,
+    GlobalDeferredDialogs,
+    MobileDeferredMultiRunLauncher,
+} from './DeferredLayoutDialogs';
 
-import { ChatView } from '@/components/views';
+import { ChatView } from '@/components/views/ChatView';
 
 // Heavy views loaded on-demand to reduce initial bundle parse time.
 const PlanView = lazyWithChunkRecovery(() => import('@/components/views/PlanView').then(m => ({ default: m.PlanView })));
@@ -39,8 +39,6 @@ const DiffView = lazyWithChunkRecovery(() => import('@/components/views/DiffView
 const TerminalView = lazyWithChunkRecovery(() => import('@/components/views/TerminalView').then(m => ({ default: m.TerminalView })));
 const FilesView = lazyWithChunkRecovery(() => import('@/components/views/FilesView').then(m => ({ default: m.FilesView })));
 const SettingsView = lazyWithChunkRecovery(() => import('@/components/views/SettingsView').then(m => ({ default: m.SettingsView })));
-const SettingsWindow = lazyWithChunkRecovery(() => import('@/components/views/SettingsWindow').then(m => ({ default: m.SettingsWindow })));
-const MultiRunWindow = lazyWithChunkRecovery(() => import('@/components/views/MultiRunWindow').then(m => ({ default: m.MultiRunWindow })));
 
 // Mobile drawer width as screen percentage
 const MOBILE_DRAWER_WIDTH_PERCENT = 85;
@@ -83,9 +81,6 @@ export const MainLayout: React.FC = () => {
     const isSessionSwitcherOpen = useNavigationStore((state) => state.isSessionSwitcherOpen);
     const isSettingsDialogOpen = useDialogStore((state) => state.isSettingsDialogOpen);
     const setSettingsDialogOpen = useDialogStore((state) => state.setSettingsDialogOpen);
-    const isMultiRunLauncherOpen = useDialogStore((state) => state.isMultiRunLauncherOpen);
-    const setMultiRunLauncherOpen = useDialogStore((state) => state.setMultiRunLauncherOpen);
-    const multiRunLauncherPrefillPrompt = useDialogStore((state) => state.multiRunLauncherPrefillPrompt);
 
     const { isMobile } = useDeviceInfo();
     const sidebarWidth = useLayoutStore((state) => state.sidebarWidth);
@@ -615,9 +610,7 @@ export const MainLayout: React.FC = () => {
                     'bg-background'
                 )}
             >
-                <CommandPalette />
-                <HelpDialog />
-                <OpenCodeStatusDialog />
+                <GlobalDeferredDialogs />
                 <SessionDialogs />
 
                 {isMobile ? (
@@ -791,17 +784,7 @@ export const MainLayout: React.FC = () => {
                                     <ErrorBoundary>{secondaryView}</ErrorBoundary>
                                 </div>
                             )}
-                            {isMultiRunLauncherOpen && (
-                                <div className="absolute inset-0 z-10 bg-background">
-                                    <ErrorBoundary>
-                                        <MultiRunLauncher
-                                            initialPrompt={multiRunLauncherPrefillPrompt}
-                                            onCreated={() => setMultiRunLauncherOpen(false)}
-                                            onCancel={() => setMultiRunLauncherOpen(false)}
-                                        />
-                                    </ErrorBoundary>
-                                </div>
-                            )}
+                            <MobileDeferredMultiRunLauncher />
                         </main>
                     </div>
 
@@ -946,20 +929,7 @@ export const MainLayout: React.FC = () => {
 
                     </div>
 
-                    {/* Desktop settings: windowed dialog with blur */}
-                    <React.Suspense fallback={null}>
-                        <SettingsWindow
-                            open={isSettingsDialogOpen}
-                            onOpenChange={setSettingsDialogOpen}
-                        />
-                    </React.Suspense>
-                    <React.Suspense fallback={null}>
-                        <MultiRunWindow
-                            open={isMultiRunLauncherOpen}
-                            onOpenChange={setMultiRunLauncherOpen}
-                            initialPrompt={multiRunLauncherPrefillPrompt}
-                        />
-                    </React.Suspense>
+                    <DesktopDeferredDialogs />
                 </>
             )}
 

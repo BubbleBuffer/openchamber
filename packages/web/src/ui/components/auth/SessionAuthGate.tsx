@@ -5,8 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui';
-import { syncSettings, initializeAppearancePreferences } from '@/lib/config/persistence';
-import { applyPersistedDirectoryPreferences } from '@/lib/files/directoryPersistence';
 import { OpenChamberLogo } from '@/components/ui/OpenChamberLogo';
 import {
   authenticateWithPasskey,
@@ -136,7 +134,6 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
   const [trustDevice, setTrustDevice] = React.useState<boolean>(() => readStoredTrustDevice());
   const [activePasskeyAction, setActivePasskeyAction] = React.useState<'auth' | 'register' | null>(null);
   const passwordInputRef = React.useRef<HTMLInputElement | null>(null);
-  const hasResyncedRef = React.useRef(false);
 
   React.useEffect(() => {
     if (typeof window === 'undefined') {
@@ -244,26 +241,9 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
   }, [checkStatus]);
 
   React.useEffect(() => {
-    if (state === 'locked') {
-      hasResyncedRef.current = false;
-    }
-  }, [state]);
-
-  React.useEffect(() => {
     if (state === 'locked' && passwordInputRef.current) {
       passwordInputRef.current.focus();
       passwordInputRef.current.select();
-    }
-  }, [state]);
-
-  React.useEffect(() => {
-    if (state === 'authenticated' && !hasResyncedRef.current) {
-      hasResyncedRef.current = true;
-      void (async () => {
-        await syncSettings();
-        await initializeAppearancePreferences();
-        await applyPersistedDirectoryPreferences();
-      })();
     }
   }, [state]);
 

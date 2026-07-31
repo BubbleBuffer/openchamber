@@ -12,10 +12,9 @@ import { RiAlertLine, RiLoader4Line, RiChat1Line, RiAddLine } from '@remixicon/r
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useInputStore } from '@/sync/input-store';
 import { useNavigationStore } from '@/stores/useNavigationStore';
-import { useUIStore } from '@/stores/useUIStore';
 import { toast } from '@/components/ui';
 import { getConflictDetails, type MergeConflictDetails } from '@/lib/git/gitApi';
-import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
+import { renderPromptTemplate } from '@/lib/tools/promptTemplates';
 
 interface ConflictDialogProps {
   open: boolean;
@@ -78,12 +77,12 @@ export const ConflictDialog: React.FC<ConflictDialogProps> = ({
     const headRef = conflictDetails.headInfo || (operation === 'merge' ? 'MERGE_HEAD' : 'REBASE_HEAD');
     const continueCmd = operation === 'merge' ? 'git commit --no-edit' : 'git rebase --continue';
 
-    const visibleText = await renderMagicPrompt('git.conflict.resolve.visible', {
+    const visibleText = renderPromptTemplate('git.conflict.resolve.visible', {
       operation_label: operationLabel,
       head_ref: headRef,
     });
 
-    const instructionsText = await renderMagicPrompt('git.conflict.resolve.instructions', {
+    const instructionsText = renderPromptTemplate('git.conflict.resolve.instructions', {
       operation_label: operationLabel,
       directory,
       operation,

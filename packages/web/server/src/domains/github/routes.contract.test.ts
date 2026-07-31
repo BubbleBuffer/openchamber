@@ -18,6 +18,7 @@ vi.mock("../git/index.js", () => ({
 import { registerGitHubRoutes } from "./routes.js";
 import { getGitHubClientId, getOctokitOrNull, resolveGitHubRepoFromDirectory } from "./index.js";
 import { GITHUB_ROUTE_CONTRACTS } from "../../contracts/github.js";
+import { ROUTE_INVENTORY } from "../../contracts/route-inventory.js";
 
 const routeHandlers = () => {
   const routes = new Map<string, (req: any, res: any) => Promise<unknown>>();
@@ -58,7 +59,40 @@ describe("GitHub route contracts", () => {
   it("inventories every public GitHub route", () => {
     const routes = new Map<string, any>();
     registerGitHubRoutes({ get(path: string, handler: any) { routes.set(`GET ${path}`, handler); }, post(path: string, handler: any) { routes.set(`POST ${path}`, handler); }, delete(path: string, handler: any) { routes.set(`DELETE ${path}`, handler); } } as never);
-    expect([...routes.keys()]).toEqual(expect.arrayContaining(["GET /api/github/auth/status", "POST /api/github/auth/complete", "POST /api/github/pr/create", "POST /api/github/pr/update", "POST /api/github/pr/merge", "POST /api/github/pr/ready", "GET /api/github/issues/list", "GET /api/github/issues/get", "GET /api/github/issues/comments", "GET /api/github/pulls/list", "GET /api/github/pulls/context"]));
+    const registered = [...routes.keys()].sort();
+    const contracted = Object.keys(GITHUB_ROUTE_CONTRACTS).sort();
+    const inventoried = ROUTE_INVENTORY
+      .find((entry) => entry.registrar === "domains/github/routes.ts")
+      ?.endpoints.map((endpoint) => endpoint.replace(/^(\w+)/, (method) => method.toUpperCase()))
+      .sort();
+
+    expect(registered).toEqual(contracted);
+    expect(inventoried).toEqual(contracted);
+  });
+
+  it("does not apply GitHub response contracts to routes registered afterward", async () => {
+    const routes = new Map<string, (req: any, res: any) => unknown>();
+    const app = {
+      get(path: string, handler: any) { routes.set(`GET ${path}`, handler); },
+      post(path: string, handler: any) { routes.set(`POST ${path}`, handler); },
+      delete(path: string, handler: any) { routes.set(`DELETE ${path}`, handler); },
+    };
+    const originalGet = app.get;
+    const originalPost = app.post;
+    const originalDelete = app.delete;
+    registerGitHubRoutes(app as never);
+
+    expect(app.get).toBe(originalGet);
+    expect(app.post).toBe(originalPost);
+    expect(app.delete).toBe(originalDelete);
+
+    app.get("/api/non-github/failure", (_req: any, res: any) =>
+      res.status(418).json({ error: "Domain-specific failure", code: "domain_failure" }));
+    const res = response();
+    await routes.get("GET /api/non-github/failure")!({}, res);
+
+    expect(res.statusCode).toBe(418);
+    expect(res.json).toHaveBeenCalledWith({ error: "Domain-specific failure", code: "domain_failure" });
   });
 
   it("returns a stable safe error for malformed mutation payloads", async () => {

@@ -9,14 +9,136 @@ import { getAvailablePort } from "./ports"
 
 const TEMP_DIR_PREFIX = path.join(os.tmpdir(), "openchamber-opencode-")
 const WATCHDOG_SCRIPT = path.join(import.meta.dirname, "opencode-watchdog.cjs")
+const OWNERSHIP_FILE = "owner.json"
+const PROVIDER_ENV_PREFIXES = [
+  "AI_GATEWAY_",
+  "ANTHROPIC_",
+  "AWS_",
+  "AZURE_",
+  "CEREBRAS_",
+  "COHERE_",
+  "CLOUDFLARE_",
+  "DEEPSEEK_",
+  "FIREWORKS_",
+  "GEMINI_",
+  "GOOGLE_",
+  "GROQ_",
+  "MISTRAL_",
+  "MINIMAX_",
+  "MOONSHOT_",
+  "OPENAI_",
+  "OPENROUTER_",
+  "OPENCODE_",
+  "PERPLEXITY_",
+  "TOGETHERAI_",
+  "XAI_",
+  "ZAI_",
+]
+
+export function getOpenCodePidPath(stateRoot: string): string {
+  return path.join(stateRoot, "pid")
+}
+
+export function getOpenCodeOwnershipPath(stateRoot: string): string {
+  return path.join(stateRoot, OWNERSHIP_FILE)
+}
 
 export type StartedOpenCode = {
   baseUrl: string
   port: number
   pid: number
+  pidPath: string
   cwd: string
+  stateRoot: string
+  isolation: OpenCodeIsolation
   logs: { dump(): string }
   stop(): Promise<void>
+}
+
+export type OpenCodeIsolation = {
+  root: string
+  home: string
+  xdgConfigHome: string
+  xdgDataHome: string
+  xdgStateHome: string
+  xdgCacheHome: string
+  opencodeDataDir: string
+  opencodeDbPath: string
+  configDir: string
+  logDir: string
+  configPath: string
+  env: Record<string, string>
+}
+
+export type OpenCodeConfig = Record<string, unknown>
+
+export async function prepareOpenCodeIsolation(root: string, config?: OpenCodeConfig): Promise<OpenCodeIsolation> {
+  const home = path.join(root, "home")
+  const xdgConfigHome = path.join(root, "xdg-config")
+  const xdgDataHome = path.join(root, "xdg-data")
+  const xdgStateHome = path.join(root, "xdg-state")
+  const xdgCacheHome = path.join(root, "xdg-cache")
+  const opencodeDataDir = path.join(root, "opencode-data")
+  const configDir = path.join(xdgConfigHome, "opencode")
+  const logDir = path.join(xdgStateHome, "opencode", "logs")
+  const configPath = path.join(configDir, "opencode.json")
+  const opencodeDbPath = path.join(opencodeDataDir, "opencode.db")
+  await Promise.all([
+    home,
+    xdgConfigHome,
+    xdgDataHome,
+    xdgStateHome,
+    xdgCacheHome,
+    opencodeDataDir,
+    configDir,
+    logDir,
+  ].map((directory) => fs.mkdir(directory, { recursive: true })))
+  if (config) await fs.writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8")
+  return {
+    root,
+    home,
+    xdgConfigHome,
+    xdgDataHome,
+    xdgStateHome,
+    xdgCacheHome,
+    opencodeDataDir,
+    opencodeDbPath,
+    configDir,
+    logDir,
+    configPath,
+    env: {
+      HOME: home,
+      XDG_CONFIG_HOME: xdgConfigHome,
+      XDG_DATA_HOME: xdgDataHome,
+      XDG_STATE_HOME: xdgStateHome,
+      XDG_CACHE_HOME: xdgCacheHome,
+      OPENCODE_DATA_DIR: opencodeDataDir,
+      OPENCODE_DB: opencodeDbPath,
+      OPENCODE_CONFIG_DIR: configDir,
+      OPENCODE_LOG_DIR: logDir,
+      OPENCODE_DISABLE_MODELS_FETCH: "true",
+      NO_PROXY: "127.0.0.1,localhost",
+    },
+  }
+}
+
+export function sanitizeOpenCodeEnvironment(
+  source: NodeJS.ProcessEnv,
+  isolation: OpenCodeIsolation,
+): NodeJS.ProcessEnv {
+  const childEnv: NodeJS.ProcessEnv = { ...source }
+  for (const key of Object.keys(childEnv)) {
+    const upperKey = key.toUpperCase()
+    if (
+      PROVIDER_ENV_PREFIXES.some((prefix) => upperKey.startsWith(prefix)) ||
+      /(?:API_KEY|API_TOKEN|ACCESS_KEY|SECRET|TOKEN|PASSWORD|CREDENTIALS_FILE)$/i.test(key)
+    ) {
+      delete childEnv[key]
+    }
+    if (/^(?:ALL|HTTP|HTTPS|NO)_PROXY$/i.test(key)) delete childEnv[key]
+  }
+  Object.assign(childEnv, isolation.env)
+  return childEnv
 }
 
 export class OpenCodeUnavailableError extends Error {
@@ -29,19 +151,21 @@ export class OpenCodeUnavailableError extends Error {
 // Kill any opencode PIDs that this harness previously spawned but whose
 // parent (a vitest fork worker) died before stop() could run. Reaper is
 // PID-targeted only — it reads each PID from a pid file we wrote on spawn
-// and uses process.kill(pid, 0) to liveness-check, then process.kill(pid, ...)
-// to terminate. No name matching, no process-name-based kill commands. User-spawned opencode
-// sessions never have a pid file in this directory, so they are untouched.
-async function reapOrphanedInstances(): Promise<void> {
+// and validates both the owning worker and target process identity before
+// terminating. No name matching, no process-name-based kill commands. A live
+// owner means another harness run still owns the directory, so it is skipped.
+export async function reapOrphanedInstances(): Promise<void> {
   let entries: string[]
   try {
-    entries = await fs.readdir(TEMP_DIR_PREFIX)
+    entries = await fs.readdir(path.dirname(TEMP_DIR_PREFIX))
   } catch {
     return
   }
-  for (const entry of entries) {
-    const dir = path.join(TEMP_DIR_PREFIX, entry)
+  const prefix = path.basename(TEMP_DIR_PREFIX)
+  for (const entry of entries.filter((candidate) => candidate.startsWith(prefix))) {
+    const dir = path.join(path.dirname(TEMP_DIR_PREFIX), entry)
     const pidFile = path.join(dir, "pid")
+    const ownershipFile = path.join(dir, OWNERSHIP_FILE)
     let pidStr: string
     try {
       pidStr = (await fs.readFile(pidFile, "utf8")).trim()
@@ -50,19 +174,25 @@ async function reapOrphanedInstances(): Promise<void> {
     }
     const pid = Number(pidStr)
     if (!Number.isInteger(pid) || pid <= 0) continue
-    let alive = false
+    let ownership: OpenCodeOwnership
     try {
-      process.kill(pid, 0)
-      alive = true
+      ownership = JSON.parse(await fs.readFile(ownershipFile, "utf8")) as OpenCodeOwnership
     } catch {
-      alive = false
+      // Directories without our ownership record are not safe to reap. This
+      // also protects concurrent/legacy harness state from a broad prefix scan.
+      continue
     }
-    if (alive) {
-      try {
-        process.kill(pid, "SIGKILL")
-      } catch {
-        // already dead or no permission; ignore
-      }
+    if (ownership.targetPid !== pid || !Number.isInteger(ownership.ownerPid) || ownership.ownerPid <= 0) continue
+    if (await isProcessAlive(ownership.ownerPid, ownership.ownerStartTime)) continue
+    if (!await hasProcessIdentity(pid, ownership.targetStartTime)) {
+      // Never kill a PID whose start identity cannot be proved. It may have
+      // been reused by an unrelated process after the harness died.
+      continue
+    }
+    try {
+      process.kill(pid, "SIGKILL")
+    } catch {
+      // already dead or no permission; ignore
     }
     try {
       await fs.rm(dir, { recursive: true, force: true })
@@ -72,13 +202,57 @@ async function reapOrphanedInstances(): Promise<void> {
   }
 }
 
-export async function startOpenCodeInstance(options: { cwd?: string; port?: number; timeoutMs?: number } = {}): Promise<StartedOpenCode> {
+type OpenCodeOwnership = {
+  ownerPid: number
+  ownerStartTime: string | null
+  targetPid: number
+  targetStartTime: string | null
+}
+
+export async function getProcessStartTime(pid: number): Promise<string | null> {
+  try {
+    const stat = await fs.readFile(`/proc/${pid}/stat`, "utf8")
+    const closingParen = stat.lastIndexOf(")")
+    if (closingParen < 0) return null
+    return stat.slice(closingParen + 2).trim().split(/\s+/)[19] ?? null
+  } catch {
+    return null
+  }
+}
+
+async function hasProcessIdentity(pid: number, expectedStartTime: string | null): Promise<boolean> {
+  if (!expectedStartTime) return false
+  return (await getProcessStartTime(pid)) === expectedStartTime
+}
+
+async function isProcessAlive(pid: number, expectedStartTime: string | null): Promise<boolean> {
+  try {
+    process.kill(pid, 0)
+  } catch {
+    return false
+  }
+  // If /proc is unavailable, retaining the directory is safer than risking a
+  // kill after PID reuse. Linux CI exposes this identity for our harness.
+  if (!expectedStartTime) return true
+  return (await getProcessStartTime(pid)) === expectedStartTime
+}
+
+export async function startOpenCodeInstance(options: {
+  cwd?: string
+  port?: number
+  timeoutMs?: number
+  stateRoot?: string
+  config?: OpenCodeConfig
+} = {}): Promise<StartedOpenCode> {
   await reapOrphanedInstances()
   const availability = await checkOpenCodeAvailable()
   if (!availability.available) throw new OpenCodeUnavailableError(availability.reason)
   const port = options.port ?? await getAvailablePort()
-  const cwd = options.cwd ?? await fs.mkdtemp(`${TEMP_DIR_PREFIX}`)
-  const ownsCwd = !options.cwd
+  const stateRoot = options.stateRoot ?? await fs.mkdtemp(TEMP_DIR_PREFIX)
+  const ownsStateRoot = !options.stateRoot
+  const isolation = await prepareOpenCodeIsolation(stateRoot, options.config)
+  const cwd = options.cwd ?? (options.stateRoot ? path.join(stateRoot, "workspace") : stateRoot)
+  await fs.mkdir(cwd, { recursive: true })
   const baseUrl = `http://127.0.0.1:${port}`
   const logs = createProcessLogBuffer("opencode")
   // Strip inherited env that would change opencode's behaviour or lock the
@@ -86,20 +260,27 @@ export async function startOpenCodeInstance(options: { cwd?: string; port?: numb
   // the user's shell commonly has OPENCODE_SERVER_PASSWORD set (their
   // OpenChamber web server sets it for its own managed instance), and
   // inheriting it would force every test request to send basic-auth headers.
-  const childEnv = { ...process.env }
-  delete childEnv.OPENCODE_SERVER_PASSWORD
+  const childEnv = sanitizeOpenCodeEnvironment(process.env, isolation)
   const child = spawn(getOpencodeBinary(), ["serve", "--hostname", "127.0.0.1", "--port", String(port)], {
     cwd,
     env: childEnv,
     stdio: ["ignore", "pipe", "pipe"],
   })
 
-  // Record the spawned PID to <cwd>/pid so the reaper can find it if the
+  // Record the spawned PID to <stateRoot>/pid so the reaper can find it if the
   // parent dies unexpectedly. Only place we ever write a process identifier
   // for later targeted cleanup.
   if (child.pid !== undefined) {
     try {
-      await fs.writeFile(path.join(cwd, "pid"), String(child.pid))
+      const targetStartTime = await getProcessStartTime(child.pid)
+      await fs.writeFile(getOpenCodePidPath(stateRoot), String(child.pid))
+      if (cwd !== stateRoot) await fs.writeFile(getOpenCodePidPath(cwd), String(child.pid))
+      await fs.writeFile(getOpenCodeOwnershipPath(stateRoot), JSON.stringify({
+        ownerPid: process.pid,
+        ownerStartTime: await getProcessStartTime(process.pid),
+        targetPid: child.pid,
+        targetStartTime,
+      }))
     } catch {
       // best-effort
     }
@@ -147,7 +328,7 @@ export async function startOpenCodeInstance(options: { cwd?: string; port?: numb
   } catch (error) {
     process.off("exit", killOnExit)
     try { child.kill("SIGKILL") } catch { /* best-effort */ }
-    if (ownsCwd) await removeTempDir(cwd)
+    if (ownsStateRoot) await removeTempDir(stateRoot)
     throw new Error(`OpenCode failed to start at ${baseUrl}: ${String(error)}\n${logs.dump()}`)
   }
 
@@ -155,7 +336,10 @@ export async function startOpenCodeInstance(options: { cwd?: string; port?: numb
     baseUrl,
     port,
     pid: child.pid ?? -1,
+    pidPath: getOpenCodePidPath(cwd),
     cwd,
+    stateRoot,
+    isolation,
     logs,
     async stop() {
       process.off("exit", killOnExit)
@@ -166,7 +350,7 @@ export async function startOpenCodeInstance(options: { cwd?: string; port?: numb
       // Kill the sibling watchdog. It will detect the child is dead on its
       // next poll and exit; sending SIGKILL here is a fast path.
       try { watchdog?.kill("SIGKILL") } catch { /* best-effort */ }
-      if (ownsCwd) await removeTempDir(cwd)
+      if (ownsStateRoot) await removeTempDir(stateRoot)
     },
   }
 }

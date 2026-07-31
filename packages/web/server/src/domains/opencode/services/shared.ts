@@ -14,7 +14,6 @@ import type {
 export const OPENCODE_CONFIG_DIR = path.join(os.homedir(), ".config", "opencode");
 export const AGENT_DIR = path.join(OPENCODE_CONFIG_DIR, "agents");
 export const COMMAND_DIR = path.join(OPENCODE_CONFIG_DIR, "commands");
-export const SKILL_DIR = path.join(OPENCODE_CONFIG_DIR, "skills");
 export const CONFIG_FILE = path.join(OPENCODE_CONFIG_DIR, "config.json");
 export const CUSTOM_CONFIG_FILE = process.env.OPENCODE_CONFIG
   ? path.resolve(process.env.OPENCODE_CONFIG)
@@ -49,9 +48,6 @@ export function ensureDirs(): void {
   }
   if (!fs.existsSync(COMMAND_DIR)) {
     fs.mkdirSync(COMMAND_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(SKILL_DIR)) {
-    fs.mkdirSync(SKILL_DIR, { recursive: true });
   }
 }
 
@@ -389,6 +385,9 @@ export function writePromptFile(filePath: string, content: string | null): void 
 
 // ============== SKILL FILE OPERATIONS ==============
 
+const MAX_DISCOVERED_SKILL_BYTES = 1024 * 1024;
+const MAX_SKILL_FRONTMATTER_BYTES = 64 * 1024;
+
 export function walkSkillMdFiles(rootDir: string | null): string[] {
   if (!rootDir || !fs.existsSync(rootDir)) return [];
 
@@ -423,20 +422,38 @@ export function addSkillFromMdFile(
   scope: string,
   source: string
 ): void {
-  let parsed;
+  let frontmatter: Record<string, unknown>;
   try {
-    parsed = parseMdFile(skillMdPath);
+    const stat = fs.statSync(skillMdPath);
+    if (!stat.isFile() || stat.size > MAX_DISCOVERED_SKILL_BYTES) return;
+
+    const length = Math.min(stat.size, MAX_SKILL_FRONTMATTER_BYTES);
+    const buffer = Buffer.alloc(length);
+    const descriptor = fs.openSync(skillMdPath, "r");
+    try {
+      fs.readSync(descriptor, buffer, 0, length, 0);
+    } finally {
+      fs.closeSync(descriptor);
+    }
+
+    const prefix = buffer.toString("utf8");
+    const match = prefix.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+    if (!match) return;
+    const parsed = yaml.parse(match[1]);
+    frontmatter = parsed && typeof parsed === "object"
+      ? parsed as Record<string, unknown>
+      : {};
   } catch {
     return;
   }
 
   const name =
-    typeof parsed.frontmatter?.name === "string"
-      ? parsed.frontmatter.name.trim()
+    typeof frontmatter.name === "string"
+      ? frontmatter.name.trim()
       : "";
   const description =
-    typeof parsed.frontmatter?.description === "string"
-      ? parsed.frontmatter.description
+    typeof frontmatter.description === "string"
+      ? frontmatter.description
       : "";
 
   if (!name) {
@@ -480,99 +497,4 @@ export function resolveSkillSearchDirectories(workingDirectory: string | null): 
   pushDir(customConfigDir);
 
   return directories;
-}
-
-export interface SkillSupportingFileEntry {
-  name: string;
-  path: string;
-  fullPath: string;
-}
-
-export function listSkillSupportingFiles(skillDir: string): SkillSupportingFileEntry[] {
-  if (!fs.existsSync(skillDir)) {
-    return [];
-  }
-
-  const files: SkillSupportingFileEntry[] = [];
-
-  function walkDir(dir: string, relativePath = ""): void {
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-      const relPath = relativePath ? path.join(relativePath, entry.name) : entry.name;
-
-      if (entry.isDirectory()) {
-        walkDir(fullPath, relPath);
-      } else if (entry.name !== "SKILL.md") {
-        files.push({
-          name: entry.name,
-          path: relPath,
-          fullPath: fullPath,
-        });
-      }
-    }
-  }
-
-  walkDir(skillDir);
-  return files;
-}
-
-function assertPathWithinSkillDir(skillDir: string, relativePath: string): string {
-  const root = fs.realpathSync(skillDir);
-  const target = path.resolve(root, relativePath);
-  const relative = path.relative(root, target);
-  const isWithin =
-    relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
-
-  if (!isWithin) {
-    const error = new Error("Access to file denied");
-    (error as NodeJS.ErrnoException).code = "EACCES";
-    throw error;
-  }
-
-  return target;
-}
-
-export function readSkillSupportingFile(
-  skillDir: string,
-  relativePath: string
-): string | null {
-  const fullPath = assertPathWithinSkillDir(skillDir, relativePath);
-  if (!fs.existsSync(fullPath)) {
-    return null;
-  }
-  return fs.readFileSync(fullPath, "utf8");
-}
-
-export function writeSkillSupportingFile(
-  skillDir: string,
-  relativePath: string,
-  content: string
-): void {
-  const fullPath = assertPathWithinSkillDir(skillDir, relativePath);
-  const dir = path.dirname(fullPath);
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(fullPath, content, "utf8");
-}
-
-export function deleteSkillSupportingFile(skillDir: string, relativePath: string): void {
-  const root = fs.realpathSync(skillDir);
-  const fullPath = assertPathWithinSkillDir(skillDir, relativePath);
-  if (fs.existsSync(fullPath)) {
-    fs.unlinkSync(fullPath);
-    let parentDir = path.dirname(fullPath);
-    while (parentDir !== root) {
-      try {
-        const entries = fs.readdirSync(parentDir);
-        if (entries.length === 0) {
-          fs.rmdirSync(parentDir);
-          parentDir = path.dirname(parentDir);
-        } else {
-          break;
-        }
-      } catch {
-        break;
-      }
-    }
-  }
 }

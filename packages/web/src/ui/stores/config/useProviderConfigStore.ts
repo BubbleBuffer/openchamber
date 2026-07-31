@@ -11,6 +11,7 @@ import { useDirectoryStore } from "@/stores/files/useDirectoryStore";
 import { streamDebugEnabled } from "@/stores/utils/streamDebug";
 import { useAgentConfigStore } from "../agents/useAgentConfigStore";
 import { parseModelMetadataResponse } from "@contracts/system";
+import { providerLoadCache } from "./providerLoadCache";
 
 const MODELS_DEV_API_URL = "https://models.dev/api.json";
 const MODELS_DEV_PROXY_URL = "/api/openchamber/models-metadata";
@@ -398,7 +399,7 @@ export interface ProviderConfigStore {
     modelsMetadata: Map<string, ModelMetadata>;
 
     activateDirectory: (directory: string | null | undefined) => Promise<void>;
-    loadProviders: (options?: { directory?: string | null }) => Promise<void>;
+    loadProviders: (options?: { directory?: string | null; force?: boolean }) => Promise<void>;
     setProvider: (providerId: string) => void;
     setModel: (modelId: string) => void;
     setAutoModel: (isAuto: boolean) => void;
@@ -491,11 +492,10 @@ export const useProviderConfigStore = create<ProviderConfigStore>()(
                     const directoryKey = toDirectoryKey(options?.directory ?? fromDirectoryKey(get().activeDirectoryKey));
 
                     // Dedup: if a load is already in-flight for this directory, reuse it
-                    const existing = _inFlightProviders.get(directoryKey);
+                    const existingSnapshot = get().directoryScoped[directoryKey], existing = providerLoadCache.reuse(_inFlightProviders.get(directoryKey), directoryKey, Boolean(existingSnapshot?.providers.length), options?.force);
                     if (existing) return existing;
 
                     const promise = (async () => {
-                        const existingSnapshot = get().directoryScoped[directoryKey];
                         const previousProviders = existingSnapshot?.providers ?? (get().activeDirectoryKey === directoryKey ? get().providers : []);
                         const previousDefaults = existingSnapshot?.defaultProviders ?? (get().activeDirectoryKey === directoryKey ? get().defaultProviders : {});
                         let lastError: unknown = null;
@@ -580,7 +580,7 @@ export const useProviderConfigStore = create<ProviderConfigStore>()(
                                     return nextState;
                                 });
 
-                                return;
+                                return providerLoadCache.mark(directoryKey);
                             } catch (error) {
                                 lastError = error;
                                 const waitMs = 200 * (attempt + 1);
@@ -1051,7 +1051,7 @@ if (!unsubscribeProvidersConfigChanges) {
     unsubscribeProvidersConfigChanges = subscribeToConfigChanges(async (event) => {
         if (scopeMatches(event, "providers")) {
             const { loadProviders } = useProviderConfigStore.getState();
-            await loadProviders();
+            await loadProviders({ force: true });
         }
     });
 }

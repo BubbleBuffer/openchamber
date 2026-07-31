@@ -1,0 +1,450 @@
+{
+  "version": 1,
+  "description": "Existing over-policy source metrics. The checker rejects increases and requires this ledger to be tightened when a metric improves.",
+  "update": "Review `node scripts/check-architecture.mjs --print-baseline`; replace the baseline only when the source change and ledger delta are intentional.",
+  "policy": {
+    "effectiveLines": 600,
+    "imports": 30,
+    "exports": 20,
+    "branchPoints": 100,
+    "stateHooks": 10,
+    "effectHooks": 8,
+    "hookCalls": 40
+  },
+  "classifications": {
+    "packages/web/src/ui/lib/codemirror/flexokiTheme.ts": {
+      "kind": "data-only",
+      "reason": "Declarative CodeMirror theme tables; it has no application state or control-flow ownership."
+    },
+    "packages/web/src/ui/lib/files/fileTypeIconIds.ts": {
+      "kind": "generated",
+      "reason": "Generated set of file icon identifiers from the checked-in SVG asset directory.",
+      "source": "scripts/generate-file-type-sprite.mjs"
+    }
+  },
+  "baseline": {
+    "packages/session-state/src/machine/events.ts": {
+      "exports": 32
+    },
+    "packages/session-state/src/machine/sessionMachine.ts": {
+      "effectiveLines": 1002
+    },
+    "packages/session-state/src/machine/snapshots.ts": {
+      "branchPoints": 152
+    },
+    "packages/web/server/src/contracts/files.ts": {
+      "exports": 26
+    },
+    "packages/web/server/src/contracts/git.ts": {
+      "exports": 132,
+      "branchPoints": 213
+    },
+    "packages/web/server/src/contracts/github.ts": {
+      "exports": 56,
+      "branchPoints": 170
+    },
+    "packages/web/server/src/contracts/notifications.ts": {
+      "exports": 41
+    },
+    "packages/web/server/src/contracts/opencode.ts": {
+      "exports": 38,
+      "branchPoints": 129
+    },
+    "packages/web/server/src/contracts/terminal.ts": {
+      "exports": 33
+    },
+    "packages/web/server/src/contracts/ui-auth.ts": {
+      "exports": 31
+    },
+    "packages/web/server/src/domains/bootstrap/server-composition.ts": {
+      "effectiveLines": 818
+    },
+    "packages/web/server/src/domains/fs/routes.ts": {
+      "effectiveLines": 831,
+      "branchPoints": 147
+    },
+    "packages/web/server/src/domains/git/service.ts": {
+      "effectiveLines": 2333
+    },
+    "packages/web/server/src/domains/git/types.ts": {
+      "exports": 37
+    },
+    "packages/web/server/src/domains/github/routes.ts": {
+      "effectiveLines": 1157,
+      "branchPoints": 230
+    },
+    "packages/web/server/src/domains/notifications/template-runtime.ts": {
+      "branchPoints": 121
+    },
+    "packages/web/server/src/domains/notifications/trigger-runtime.ts": {
+      "branchPoints": 117
+    },
+    "packages/web/server/src/domains/opencode-support/env-runtime.ts": {
+      "effectiveLines": 971,
+      "branchPoints": 258
+    },
+    "packages/web/server/src/domains/opencode/lifecycle.ts": {
+      "effectiveLines": 823,
+      "branchPoints": 136
+    },
+    "packages/web/server/src/domains/opencode/services/agents.ts": {
+      "effectiveLines": 723,
+      "branchPoints": 150
+    },
+    "packages/web/server/src/domains/opencode/services/shared.ts": {
+      "exports": 32
+    },
+    "packages/web/server/src/domains/package-manager/package-manager.ts": {
+      "effectiveLines": 720,
+      "branchPoints": 163
+    },
+    "packages/web/server/src/domains/sessions/event-normalizer.ts": {
+      "effectiveLines": 882,
+      "branchPoints": 131
+    },
+    "packages/web/server/src/domains/settings/helpers.ts": {
+      "branchPoints": 204
+    },
+    "packages/web/server/src/domains/settings/runtime.ts": {
+      "effectiveLines": 697,
+      "branchPoints": 172
+    },
+    "packages/web/server/src/domains/ui-auth/ui-auth.ts": {
+      "effectiveLines": 930
+    },
+    "packages/web/src/ui/App.tsx": {
+      "imports": 43,
+      "effectHooks": 20,
+      "hookCalls": 58
+    },
+    "packages/web/src/ui/components/auth/SessionAuthGate.tsx": {
+      "stateHooks": 11
+    },
+    "packages/web/src/ui/components/chat/autocomplete/FileMentionAutocomplete.tsx": {
+      "effectiveLines": 629,
+      "branchPoints": 102
+    },
+    "packages/web/src/ui/components/chat/ChatInput.tsx": {
+      "effectiveLines": 1373,
+      "imports": 50,
+      "branchPoints": 186,
+      "hookCalls": 98
+    },
+    "packages/web/src/ui/components/chat/ChatMessage.tsx": {
+      "effectiveLines": 989,
+      "imports": 33,
+      "branchPoints": 226,
+      "effectHooks": 10,
+      "hookCalls": 79
+    },
+    "packages/web/src/ui/components/chat/controls/ModelControls.tsx": {
+      "effectiveLines": 1562,
+      "branchPoints": 233,
+      "effectHooks": 10,
+      "hookCalls": 91
+    },
+    "packages/web/src/ui/components/chat/hooks/useChatTimelineController.ts": {
+      "effectHooks": 13,
+      "hookCalls": 45
+    },
+    "packages/web/src/ui/components/chat/MarkdownRendererImpl.tsx": {
+      "effectiveLines": 1338,
+      "branchPoints": 209,
+      "hookCalls": 48
+    },
+    "packages/web/src/ui/components/chat/message/MessageBody.tsx": {
+      "effectiveLines": 1000,
+      "imports": 38,
+      "branchPoints": 161,
+      "hookCalls": 54
+    },
+    "packages/web/src/ui/components/chat/message/parts/ProgressiveGroup.tsx": {
+      "effectiveLines": 808,
+      "branchPoints": 192
+    },
+    "packages/web/src/ui/components/chat/message/parts/ToolPart.tsx": {
+      "effectiveLines": 1746,
+      "imports": 35,
+      "branchPoints": 411,
+      "effectHooks": 16,
+      "hookCalls": 62
+    },
+    "packages/web/src/ui/components/chat/message/parts/VirtualizedCodeBlock.tsx": {
+      "imports": 32
+    },
+    "packages/web/src/ui/components/chat/message/renderCompare.ts": {
+      "branchPoints": 106
+    },
+    "packages/web/src/ui/components/chat/message/ToolOutputDialog.tsx": {
+      "effectiveLines": 1085,
+      "branchPoints": 204,
+      "effectHooks": 10,
+      "hookCalls": 45
+    },
+    "packages/web/src/ui/components/chat/message/toolRenderers.tsx": {
+      "effectiveLines": 700,
+      "branchPoints": 134
+    },
+    "packages/web/src/ui/components/chat/mobile-session-status-bar/MobileSessionStatusBar.tsx": {
+      "effectiveLines": 1372,
+      "branchPoints": 146,
+      "hookCalls": 79
+    },
+    "packages/web/src/ui/components/chat/permissions/PermissionCard.tsx": {
+      "branchPoints": 104
+    },
+    "packages/web/src/ui/components/layout/Header.tsx": {
+      "effectiveLines": 1311,
+      "imports": 40,
+      "branchPoints": 225,
+      "effectHooks": 10,
+      "hookCalls": 101
+    },
+    "packages/web/src/ui/components/layout/MainLayout.tsx": {
+      "effectiveLines": 831,
+      "branchPoints": 131,
+      "effectHooks": 12,
+      "hookCalls": 43
+    },
+    "packages/web/src/ui/components/layout/ProjectActionsButton.tsx": {
+      "effectiveLines": 707,
+      "branchPoints": 128
+    },
+    "packages/web/src/ui/components/layout/ProjectEditDialog.tsx": {
+      "stateHooks": 11
+    },
+    "packages/web/src/ui/components/layout/SidebarFilesTree.tsx": {
+      "effectiveLines": 822,
+      "branchPoints": 150,
+      "hookCalls": 47
+    },
+    "packages/web/src/ui/components/multirun/MultiRunLauncher.tsx": {
+      "effectiveLines": 748,
+      "stateHooks": 15,
+      "hookCalls": 43
+    },
+    "packages/web/src/ui/components/sections/agents/AgentsPage.tsx": {
+      "effectiveLines": 969,
+      "branchPoints": 125,
+      "stateHooks": 16
+    },
+    "packages/web/src/ui/components/sections/agents/ModelSelector.tsx": {
+      "effectiveLines": 642
+    },
+    "packages/web/src/ui/components/sections/git-identities/GitIdentityEditorDialog.tsx": {
+      "stateHooks": 11
+    },
+    "packages/web/src/ui/components/sections/mcp/McpPage.tsx": {
+      "effectiveLines": 1540,
+      "branchPoints": 212,
+      "stateHooks": 30,
+      "hookCalls": 63
+    },
+    "packages/web/src/ui/components/sections/openchamber/NotificationSettings.tsx": {
+      "effectiveLines": 861
+    },
+    "packages/web/src/ui/components/sections/openchamber/OpenChamberVisualSettings.tsx": {
+      "effectiveLines": 1449,
+      "branchPoints": 153,
+      "hookCalls": 79
+    },
+    "packages/web/src/ui/components/sections/projects/ProjectsPage.tsx": {
+      "stateHooks": 11
+    },
+    "packages/web/src/ui/components/sections/providers/ProvidersPage.tsx": {
+      "effectiveLines": 1019,
+      "branchPoints": 158,
+      "stateHooks": 14
+    },
+    "packages/web/src/ui/components/session/BranchPickerDialog.tsx": {
+      "stateHooks": 13
+    },
+    "packages/web/src/ui/components/session/DirectoryTree.tsx": {
+      "effectiveLines": 956,
+      "branchPoints": 140
+    },
+    "packages/web/src/ui/components/session/GitHubIntegrationDialog.tsx": {
+      "stateHooks": 13
+    },
+    "packages/web/src/ui/components/session/GitHubIssuePickerDialog.tsx": {
+      "effectiveLines": 641,
+      "branchPoints": 106
+    },
+    "packages/web/src/ui/components/session/NewWorktreeDialog.tsx": {
+      "effectiveLines": 1291,
+      "imports": 31,
+      "branchPoints": 202
+    },
+    "packages/web/src/ui/components/session/ProjectNotesTodoPanel.tsx": {
+      "effectiveLines": 662,
+      "stateHooks": 12,
+      "hookCalls": 44
+    },
+    "packages/web/src/ui/components/session/SessionDialogs.tsx": {
+      "effectiveLines": 684
+    },
+    "packages/web/src/ui/components/session/SessionSidebar.tsx": {
+      "effectiveLines": 1446,
+      "imports": 59,
+      "branchPoints": 159,
+      "stateHooks": 24,
+      "hookCalls": 169
+    },
+    "packages/web/src/ui/components/session/sidebar/SessionGroupSection.tsx": {
+      "effectiveLines": 693,
+      "branchPoints": 104
+    },
+    "packages/web/src/ui/components/session/sidebar/SessionNodeItem.tsx": {
+      "effectiveLines": 733,
+      "branchPoints": 114
+    },
+    "packages/web/src/ui/components/terminal/TerminalViewport.tsx": {
+      "effectiveLines": 1380,
+      "branchPoints": 245,
+      "hookCalls": 55
+    },
+    "packages/web/src/ui/components/ui/CodeMirrorEditor.tsx": {
+      "effectHooks": 9
+    },
+    "packages/web/src/ui/components/views/DiffView.tsx": {
+      "effectiveLines": 1021,
+      "branchPoints": 159,
+      "effectHooks": 9,
+      "hookCalls": 63
+    },
+    "packages/web/src/ui/components/views/FilesView.tsx": {
+      "effectiveLines": 2004,
+      "imports": 38,
+      "branchPoints": 358,
+      "stateHooks": 30,
+      "effectHooks": 25,
+      "hookCalls": 140
+    },
+    "packages/web/src/ui/components/views/git/PullRequestSection.tsx": {
+      "effectiveLines": 1509,
+      "branchPoints": 209,
+      "stateHooks": 24,
+      "effectHooks": 15,
+      "hookCalls": 80
+    },
+    "packages/web/src/ui/components/views/GitView.tsx": {
+      "effectiveLines": 1805,
+      "imports": 40,
+      "branchPoints": 347,
+      "stateHooks": 34,
+      "effectHooks": 16,
+      "hookCalls": 134
+    },
+    "packages/web/src/ui/components/views/PierreDiffViewer.tsx": {
+      "effectiveLines": 602,
+      "effectHooks": 9
+    },
+    "packages/web/src/ui/components/views/PlanView.tsx": {
+      "effectiveLines": 733,
+      "imports": 35,
+      "branchPoints": 113,
+      "hookCalls": 59
+    },
+    "packages/web/src/ui/components/views/SettingsView.tsx": {
+      "imports": 34
+    },
+    "packages/web/src/ui/components/views/TerminalView.tsx": {
+      "effectiveLines": 984,
+      "branchPoints": 172,
+      "effectHooks": 16,
+      "hookCalls": 65
+    },
+    "packages/web/src/ui/lib/api/types.ts": {
+      "exports": 24
+    },
+    "packages/web/src/ui/lib/config/openchamberConfig.ts": {
+      "effectiveLines": 760
+    },
+    "packages/web/src/ui/lib/config/persistence.ts": {
+      "effectiveLines": 990,
+      "branchPoints": 404
+    },
+    "packages/web/src/ui/lib/errors/debug.ts": {
+      "effectiveLines": 616,
+      "branchPoints": 121
+    },
+    "packages/web/src/ui/lib/git/gitApi.ts": {
+      "effectiveLines": 698,
+      "exports": 52
+    },
+    "packages/web/src/ui/lib/git/gitApiHttp.ts": {
+      "effectiveLines": 761,
+      "exports": 50
+    },
+    "packages/web/src/ui/lib/opencode/client.ts": {
+      "effectiveLines": 1302,
+      "branchPoints": 225
+    },
+    "packages/web/src/ui/lib/terminal/SerializeAddon.ts": {
+      "branchPoints": 114
+    },
+    "packages/web/src/ui/lib/terminal/terminalApi.ts": {
+      "effectiveLines": 876,
+      "branchPoints": 188
+    },
+    "packages/web/src/ui/lib/theme/cssGenerator.ts": {
+      "effectiveLines": 627
+    },
+    "packages/web/src/ui/lib/theme/themes/presets.ts": {
+      "imports": 39
+    },
+    "packages/web/src/ui/lib/tools/toolHelpers.ts": {
+      "effectiveLines": 603
+    },
+    "packages/web/src/ui/stores/agents/useAgentsStore.ts": {
+      "branchPoints": 109
+    },
+    "packages/web/src/ui/stores/config/useProviderConfigStore.ts": {
+      "effectiveLines": 917,
+      "branchPoints": 131
+    },
+    "packages/web/src/ui/stores/contextPanelHelpers.ts": {
+      "exports": 27
+    },
+    "packages/web/src/ui/stores/git/useGitStore.ts": {
+      "effectiveLines": 723,
+      "branchPoints": 189
+    },
+    "packages/web/src/ui/stores/github/useGitHubPrStatusStore.ts": {
+      "effectiveLines": 657,
+      "branchPoints": 131
+    },
+    "packages/web/src/ui/stores/projects/useProjectsStore.ts": {
+      "branchPoints": 139
+    },
+    "packages/web/src/ui/stores/session/useSessionFoldersStore.ts": {
+      "branchPoints": 106
+    },
+    "packages/web/src/ui/stores/types/sessionTypes.ts": {
+      "exports": 22
+    },
+    "packages/web/src/ui/sync/event-pipeline.ts": {
+      "branchPoints": 104
+    },
+    "packages/web/src/ui/sync/event-reducer.ts": {
+      "branchPoints": 133
+    },
+    "packages/web/src/ui/sync/index.ts": {
+      "exports": 22
+    },
+    "packages/web/src/ui/sync/session-ui-store.ts": {
+      "effectiveLines": 659,
+      "branchPoints": 134
+    },
+    "packages/web/src/ui/sync/sync-context.tsx": {
+      "effectiveLines": 1438,
+      "imports": 34,
+      "exports": 37,
+      "branchPoints": 323,
+      "hookCalls": 78
+    },
+    "packages/web/src/ui/types/theme.ts": {
+      "exports": 23
+    }
+  }
+}

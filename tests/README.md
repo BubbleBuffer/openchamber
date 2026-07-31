@@ -9,6 +9,7 @@ These tests use a real `opencode` binary and/or a real OpenChamber web server. T
 | `bun run --cwd tests test` | All test surfaces (opencode + web) |
 | `bun run --cwd tests test:opencode` | `tests/opencode/` only |
 | `bun run --cwd tests test:web` | `tests/web/` only |
+| `bun run --cwd tests test:browser` | Playwright Chromium smoke against a built, isolated local app |
 | `RUN_SLOW_TESTS=1 bun run --cwd tests test` | Includes `slowTest` cases when they exist |
 | `bun run --cwd tests type-check` | TypeScript check for tests workspace only |
 | `bun run test:integration` | Root wrapper → same as `--cwd tests test` |
@@ -90,6 +91,23 @@ bun run --cwd packages/web build:server
 
 If the dist is stale, web tests fail with `Error: Cannot find module './instrument.mjs'`.
 
+The browser lane requires a complete production build (`bun run build`) and a
+Chromium installation (`bunx playwright install chromium`). It owns a separate
+Playwright runner under `tests/browser`; it does not participate in Vitest
+discovery. See `tests/browser/README.md` for the isolated process contract.
+
+## Browser model fixtures
+
+Browser transport tests may use OpenCode's built-in `noop` provider when they
+only need to exercise OpenChamber event/storage handling. Model-shaped browser
+workflows use the local fake OpenAI-compatible provider under
+`tests/browser/support/fake-openai-provider.ts`. It is bound to loopback,
+requires the fixture API key, and serves only the deterministic
+`browser-test/test-model` configuration. Its protocol tests cover text, tool,
+delay, 429, 500, malformed-SSE, and abrupt-disconnect scenarios; it never uses
+external credentials or network access. The browser chat workflow keeps OpenCode
+real while asserting streamed text and tool-call state at the UI boundary.
+
 ## Execution model
 
 The vitest config uses `fileParallelism: false` — test files run one at a time, not in parallel. This is intentional: every test file (both `opencode/` and `web/`) starts its own OpenCode child process and, for web tests, an OpenChamber Express server. Parallel execution causes resource contention and unreliable timeouts.
@@ -108,11 +126,11 @@ Each test file runs in its own vitest fork worker (`pool: "forks"`, `isolate: tr
 
 When a vitest fork worker dies before `afterAll` can run (e.g. SIGKILL on timeout/OOM), the spawned OpenCode child would normally be reparented to init and leak. Three mechanisms prevent this — all PID-targeted, no name matching:
 
-1. **PID recording** (`tests/helpers/opencode-process.ts`): each spawn writes its PID to `<tempdir>/pid`.
-2. **Orphan reaper** (called at the start of every `startOpenCodeInstance()`): scans `/tmp/openchamber-opencode-*/pid`, liveness-checks each PID with `process.kill(pid, 0)`, and `process.kill(pid, "SIGKILL")` any that are still alive. Targets only PIDs we recorded.
+1. **PID recording** (`tests/helpers/opencode-process.ts`): each spawn writes its PID to `<tempdir>/pid` and records the owning worker plus `/proc` start identities in `owner.json`.
+2. **Orphan reaper** (called at the start of every `startOpenCodeInstance()`): scans the PID files, skips live owners from concurrent harness runs, and kills only a target whose recorded PID and `/proc` start identity still match. Directories without ownership evidence are never reaped.
 3. **Sibling watchdog** (`tests/helpers/opencode-watchdog.cjs`): a tiny Node.js process spawned alongside each OpenCode instance. Polls `process.ppid` every 250ms; if the recorded parent dies (ppid changes — happens on SIGKILL too), it sends SIGKILL to the OpenCode PID and exits. Detection latency: ≤250ms.
 
-User-spawned `opencode` sessions (e.g. `opencode --continue` from a terminal) never have a pid file under `/tmp/openchamber-opencode-*/`, so the reaper cannot touch them. The watchdog only kills a PID it was explicitly told to.
+User-spawned `opencode` sessions (e.g. `opencode --continue` from a terminal) never have a matching PID plus ownership record under `/tmp/openchamber-opencode-*/`, so the reaper cannot touch them. The watchdog only kills a PID it was explicitly told to.
 
 ## Liveness test notes
 

@@ -1,7 +1,7 @@
+import type { Express } from "express";
 import type { FeatureRoutesDeps } from "./types.js";
 import type { QuotaProviderRegistry } from "../quota/types.js";
 import { registerQuotaRoutes } from "../quota/routes.js";
-import { registerMagicPromptRoutes } from "../magic-prompts/routes.js";
 import { registerSessionFoldersRoutes } from "../session-folders/routes.js";
 import { registerFsRoutes } from "../fs/routes.js";
 import { registerGitHubRoutes } from "../github/routes.js";
@@ -17,20 +17,28 @@ import {
   getAgentSources, getAgentConfig, createAgent, updateAgent, deleteAgent,
   getCommandSources, createCommand, updateCommand, deleteCommand,
   listMcpConfigs, getMcpConfig, createMcpConfig, updateMcpConfig, deleteMcpConfig,
-  getSkillSources, discoverSkills, createSkill, updateSkill, deleteSkill,
-  readSkillSupportingFile, writeSkillSupportingFile, deleteSkillSupportingFile,
-  SKILL_SCOPE, SKILL_DIR,
+  discoverSkills,
 } from "../opencode/services/index.js";
 
-import {
-  getCuratedSkillsSources, getCacheKey, getCachedScan, setCachedScan,
-  parseSkillRepoSource, scanSkillsRepository, installSkillsFromRepository,
-  scanClawdHubPage, installSkillsFromClawdHub, isClawdHubSource,
-} from "../skills-catalog/index.js";
+type FeatureRouteDependencies =
+  & Omit<
+    Parameters<typeof registerSettingsUtilityRoutes>[1],
+    "clientReloadDelayMs"
+  >
+  & Omit<
+    Parameters<typeof registerOpenCodeRoutes>[1],
+    "clientReloadDelayMs" | "getProviderSources" | "removeProviderConfig"
+  >
+  & Parameters<typeof registerProjectIconRoutes>[1]
+  & Pick<
+    Parameters<typeof registerConfigEntityRoutes>[1],
+    "resolveProjectDirectory" | "resolveOptionalProjectDirectory" | "refreshOpenCodeAfterConfigChange"
+  >
+  & Omit<Parameters<typeof registerSkillRoutes>[1], "discoverSkills">
+  & Parameters<typeof registerSessionFoldersRoutes>[1]
+  & Parameters<typeof registerFsRoutes>[1];
 
-import { getProfiles, getProfile } from "../git/index.js";
-
-export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps): any {
+export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps) {
   const {
     clientReloadDelayMs,
   } = deps;
@@ -44,7 +52,10 @@ export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps): any {
     return quotaProviders;
   };
 
-  const registerRoutes = async (app: any, routeDependencies: any): Promise<void> => {
+  const registerRoutes = async (
+    app: Express,
+    routeDependencies: FeatureRouteDependencies,
+  ): Promise<void> => {
     const {
       crypto,
       fs,
@@ -68,10 +79,6 @@ export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps): any {
       readSettingsFromDiskMigrated,
       persistSettings,
       sanitizeProjects,
-      sanitizeSkillCatalogs,
-      isUnsafeSkillRelativePath,
-      openCodeRuntime,
-      getOpenCodePort,
       buildAugmentedPath,
     } = routeDependencies;
 
@@ -134,48 +141,13 @@ export function createFeatureRoutesRuntime(deps: FeatureRoutesDeps): any {
     registerSkillRoutes(app, {
       fs,
       path,
-      os,
-      resolveProjectDirectory,
       resolveOptionalProjectDirectory,
-      readSettingsFromDisk,
-      sanitizeSkillCatalogs,
-      isUnsafeSkillRelativePath,
-      refreshOpenCodeAfterConfigChange,
-      clientReloadDelayMs,
-      openCodeRuntime,
-      getOpenCodePort,
-      getSkillSources,
       discoverSkills,
-      createSkill,
-      updateSkill,
-      deleteSkill,
-      readSkillSupportingFile,
-      writeSkillSupportingFile,
-      deleteSkillSupportingFile,
-      SKILL_SCOPE,
-      SKILL_DIR,
-      getCuratedSkillsSources,
-      getCacheKey,
-      getCachedScan,
-      setCachedScan,
-      parseSkillRepoSource: parseSkillRepoSource as any,
-      scanSkillsRepository: scanSkillsRepository as any,
-      installSkillsFromRepository: installSkillsFromRepository as any,
-      scanClawdHubPage: scanClawdHubPage as any,
-      installSkillsFromClawdHub: installSkillsFromClawdHub as any,
-      isClawdHubSource,
-      getProfiles: getProfiles as any,
-      getProfile: getProfile as any,
     });
 
     registerQuotaRoutes(app, { getQuotaProviders });
     registerGitHubRoutes(app);
     registerGitRoutes(app);
-    registerMagicPromptRoutes(app, {
-      fsPromises,
-      path,
-      openchamberDataDir,
-    });
     registerSessionFoldersRoutes(app, {
       fsPromises,
       path,

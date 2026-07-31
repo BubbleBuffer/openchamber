@@ -6,7 +6,6 @@ import { useProviderConfigStore } from '@/stores/config/useProviderConfigStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
 import { useContextStore } from '@/stores/contextStore';
-import { useUIStore } from '@/stores/useUIStore';
 import { useModelPreferencesStore } from '@/stores/useModelPreferencesStore';
 import { useModelLists } from '@/hooks/useModelLists';
 import {

@@ -7,7 +7,6 @@ import { chatInputTestFns, chatInputTestState, resetChatInputState } from "./hel
 import { setViewport } from "./helpers/browser"
 import { renderWithApp } from "./helpers/render"
 import { createCommitCollector, createProfiledElement, expectNoUpdateCommits, expectUpdateCommitsAtMost } from "./helpers/renderMetrics"
-import { seedUIStore } from "./helpers/stores"
 import { ChatInput } from "@/components/chat/ChatInput"
 import { useUIStore } from "@/stores/useUIStore"
 import { useRuntimeStore } from "@/stores/useRuntimeStore"

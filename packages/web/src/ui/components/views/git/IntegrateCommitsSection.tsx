@@ -18,9 +18,8 @@ import { toast } from '@/components/ui';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useInputStore } from '@/sync/input-store';
 import { useNavigationStore } from '@/stores/useNavigationStore';
-import { useUIStore } from '@/stores/useUIStore';
 import { execCommand } from '@/lib/tools/execCommands';
-import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
+import { renderPromptTemplate } from '@/lib/tools/promptTemplates';
 import {
   abortIntegrate,
   computeIntegratePlan,
@@ -187,11 +186,11 @@ export const IntegrateCommitsSection: React.FC<{
   const openNewSessionDraft = useSessionUIStore((s) => s.openNewSessionDraft);
 
   const buildConflictContext = React.useCallback(async (payload: { state: IntegrateInProgress; details: IntegrateConflictDetails }) => {
-    const visibleText = await renderMagicPrompt('git.integrate.cherrypick.resolve.visible', {
+    const visibleText = renderPromptTemplate('git.integrate.cherrypick.resolve.visible', {
       current_commit: payload.state.currentCommit,
       target_branch: payload.state.targetBranch,
     });
-    const instructionsText = await renderMagicPrompt('git.integrate.cherrypick.resolve.instructions', {
+    const instructionsText = renderPromptTemplate('git.integrate.cherrypick.resolve.instructions', {
       repo_root: payload.state.repoRoot,
       temp_worktree_path: payload.state.tempWorktreePath,
       source_branch: payload.state.sourceBranch,

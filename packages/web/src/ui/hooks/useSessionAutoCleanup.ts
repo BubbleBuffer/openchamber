@@ -5,7 +5,6 @@ import { ensureGlobalSessionsLoaded, useGlobalSessionsStore, resolveGlobalSessio
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { getAllSyncSessions } from '@/sync/sync-refs';
 import { useSessionRetentionStore } from '@/stores/useSessionRetentionStore';
-import { useUIStore } from '@/stores/useUIStore';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const AUTO_DELETE_KEEP_RECENT = 5;

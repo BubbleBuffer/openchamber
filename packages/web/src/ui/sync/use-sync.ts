@@ -1,4 +1,4 @@
-import { useCallback, useRef, useMemo } from "react"
+import { useCallback, useMemo } from "react"
 import type { Message, Part } from "@/lib/opencode/client"
 import { Binary } from "./binary"
 import { retry } from "./retry"
@@ -18,6 +18,7 @@ import {
   setSessionPrefetch,
   clearSessionPrefetch,
 } from "./session-prefetch-cache"
+import { runDedupedSessionLoad } from "./session-resource-manager"
 
 const SKIP_PARTS = new Set(["patch", "step-start", "step-finish"])
 const MESSAGE_PAGE_SIZE = 5
@@ -40,6 +41,31 @@ type ChildStoresForEvict = {
 }
 type MetaMap = Map<string, { limit: number; cursor: string | undefined; complete: boolean; loading: boolean }>
 type OptimisticMap = Map<string, Map<string, OptimisticItem>>
+
+// One resource registry serves every useSync consumer. Hook-local maps caused
+// each sidebar/control/chat instance to miss the others' request metadata and
+// reset the LRU whenever SessionMount remounted.
+const sharedOptimistic: OptimisticMap = new Map()
+const sharedSeen = new Map<string, Set<string>>()
+const sharedMeta: MetaMap = new Map()
+
+export function getSessionHistoryMeta(directory: string, sessionID: string) {
+  return sharedMeta.get(`${directory}\n${sessionID}`) ?? {
+    limit: MESSAGE_PAGE_SIZE,
+    cursor: undefined,
+    complete: false,
+    loading: false,
+  }
+}
+
+export function resolveMessageFetchLimit(
+  metaLimit: number,
+  residentMessageCount: number,
+  mode: "replace" | "prepend" = "replace",
+) {
+  if (mode === "prepend") return metaLimit
+  return Math.max(metaLimit, residentMessageCount)
+}
 
 /**
  * Evict cached session data for `sessionIDs` from directory `dir`'s store.
@@ -90,17 +116,6 @@ export function useSync() {
   const store = useDirectoryStore()
   const childStores = useChildStoreManager()
 
-  // Refs for mutable tracking (no re-renders)
-  const inflight = useRef(new Map<string, Promise<void>>())
-  const optimistic = useRef(new Map<string, Map<string, OptimisticItem>>())
-  const seen = useRef(new Map<string, Set<string>>())
-  const meta = useRef(new Map<string, {
-    limit: number
-    cursor: string | undefined
-    complete: boolean
-    loading: boolean
-  }>())
-
   const keyFor = useCallback(
     (sessionID: string) => `${directory}\n${sessionID}`,
     [directory],
@@ -108,17 +123,16 @@ export function useSync() {
 
   const getMetaFor = useCallback(
     (sessionID: string) => {
-      const key = keyFor(sessionID)
-      return meta.current.get(key) ?? { limit: MESSAGE_PAGE_SIZE, cursor: undefined, complete: false, loading: false }
+      return getSessionHistoryMeta(directory, sessionID)
     },
-    [keyFor],
+    [directory],
   )
 
   const setMetaFor = useCallback(
     (sessionID: string, patch: Partial<{ limit: number; cursor: string | undefined; complete: boolean; loading: boolean }>) => {
       const key = keyFor(sessionID)
-      const current = meta.current.get(key) ?? { limit: MESSAGE_PAGE_SIZE, cursor: undefined, complete: false, loading: false }
-      meta.current.set(key, { ...current, ...patch })
+      const current = sharedMeta.get(key) ?? { limit: MESSAGE_PAGE_SIZE, cursor: undefined, complete: false, loading: false }
+      sharedMeta.set(key, { ...current, ...patch })
     },
     [keyFor],
   )
@@ -133,8 +147,8 @@ export function useSync() {
         dir,
         sessionIDs,
         childStores,
-        meta.current,
-        optimistic.current,
+        sharedMeta,
+        sharedOptimistic,
         clearSessionPrefetch,
       )
     },
@@ -145,22 +159,22 @@ export function useSync() {
   // When seen directories exceed MAX_SEEN_DIRS, evict the oldest directory's caches.
   // LRU reorder on access. Evicts oldest directory when exceeding MAX_SEEN_DIRS.
   const seenFor = useCallback(() => {
-    const existing = seen.current.get(directory)
+    const existing = sharedSeen.get(directory)
     if (existing) {
       // LRU reorder: delete + re-insert moves to end (most recent)
-      seen.current.delete(directory)
-      seen.current.set(directory, existing)
+      sharedSeen.delete(directory)
+      sharedSeen.set(directory, existing)
       return existing
     }
     const created = new Set<string>()
-    seen.current.set(directory, created)
+    sharedSeen.set(directory, created)
 
     // Evict oldest directories if over limit
-    while (seen.current.size > MAX_SEEN_DIRS) {
-      const first = seen.current.keys().next().value
+    while (sharedSeen.size > MAX_SEEN_DIRS) {
+      const first = sharedSeen.keys().next().value
       if (!first) break
-      const staleSessionIds = [...(seen.current.get(first) ?? [])]
-      seen.current.delete(first)
+      const staleSessionIds = [...(sharedSeen.get(first) ?? [])]
+      sharedSeen.delete(first)
       evict(first, staleSessionIds)
     }
 
@@ -185,7 +199,7 @@ export function useSync() {
   const getOptimistic = useCallback(
     (sessionID: string): OptimisticItem[] => {
       const key = `${directory}\n${sessionID}`
-      return [...(optimistic.current.get(key)?.values() ?? [])]
+      return [...(sharedOptimistic.get(key)?.values() ?? [])]
     },
     [directory],
   )
@@ -193,12 +207,12 @@ export function useSync() {
   const setOptimistic = useCallback(
     (sessionID: string, item: OptimisticItem) => {
       const key = `${directory}\n${sessionID}`
-      const list = optimistic.current.get(key)
+      const list = sharedOptimistic.get(key)
       const sorted: OptimisticItem = { message: item.message, parts: sortParts(item.parts) }
       if (list) {
         list.set(item.message.id, sorted)
       } else {
-        optimistic.current.set(key, new Map([[item.message.id, sorted]]))
+        sharedOptimistic.set(key, new Map([[item.message.id, sorted]]))
       }
     },
     [directory],
@@ -208,13 +222,13 @@ export function useSync() {
     (sessionID: string, messageID?: string) => {
       const key = `${directory}\n${sessionID}`
       if (!messageID) {
-        optimistic.current.delete(key)
+        sharedOptimistic.delete(key)
         return
       }
-      const list = optimistic.current.get(key)
+      const list = sharedOptimistic.get(key)
       if (!list) return
       list.delete(messageID)
-      if (list.size === 0) optimistic.current.delete(key)
+      if (list.size === 0) sharedOptimistic.delete(key)
     },
     [directory],
   )
@@ -247,7 +261,12 @@ export function useSync() {
       setMetaFor(sessionID, { loading: true })
 
       try {
-        const limit = m.limit
+        // A forced replace happens after a turn finishes to reconcile SSE
+        // deltas with the canonical REST snapshot. The history meta can still
+        // reflect the smaller page fetched before new turn messages arrived,
+        // so never request fewer messages than are already resident.
+        const residentMessageCount = store.getState().message[sessionID]?.length ?? 0
+        const limit = resolveMessageFetchLimit(m.limit, residentMessageCount, options?.mode)
         const page = await fetchMessages(sessionID, limit, options?.before)
 
         // Merge optimistic items
@@ -309,10 +328,6 @@ export function useSync() {
       touch(sessionID)
       const key = keyFor(sessionID)
 
-      // Dedup inflight requests
-      const existing = inflight.current.get(key)
-      if (existing) return existing
-
       const current = store.getState()
       const m = getMetaFor(sessionID)
       const cached = current.message[sessionID] !== undefined && m.limit > 0
@@ -329,36 +344,36 @@ export function useSync() {
         })) return
       }
 
-      const promise = (async () => {
-        // Fetch session info if needed
-        if (!hasSession || force) {
-          try {
-            const result = await retry(() => sdk.session.get({ sessionID }))
-            if (result.data) {
-              const s = store.getState()
-              const sessions = [...s.session]
-              const idx = Binary.search(sessions, sessionID, (s) => s.id)
-              if (idx.found) {
-                sessions[idx.index] = result.data
-              } else {
-                sessions.splice(idx.index, 0, result.data)
+      return runDedupedSessionLoad(key, async () => {
+        const sessionTask = (!hasSession || force)
+          ? (async () => {
+              try {
+                const result = await retry(() => sdk.session.get({ sessionID }))
+                if (result.data) {
+                  const s = store.getState()
+                  const sessions = [...s.session]
+                  const idx = Binary.search(sessions, sessionID, (s) => s.id)
+                  if (idx.found) {
+                    sessions[idx.index] = result.data
+                  } else {
+                    sessions.splice(idx.index, 0, result.data)
+                  }
+                  store.setState({ session: sessions })
+                }
+              } catch (e) {
+                console.error("[sync] failed to fetch session", sessionID, e)
               }
-              store.setState({ session: sessions })
-            }
-          } catch (e) {
-            console.error("[sync] failed to fetch session", sessionID, e)
-          }
-        }
+            })()
+          : Promise.resolve()
 
-        // Load messages if needed
-        if (!cached || force) {
-          await loadMessages(sessionID)
-        }
-      })()
+        const messagesTask = (!cached || force)
+          ? loadMessages(sessionID)
+          : Promise.resolve()
 
-      inflight.current.set(key, promise)
-      promise.finally(() => inflight.current.delete(key))
-      return promise
+        // Metadata and the first message page are independent. Starting them
+        // together removes a full round-trip from cold session navigation.
+        await Promise.all([sessionTask, messagesTask])
+      })
     },
     [store, sdk, keyFor, touch, getMetaFor, loadMessages, directory],
   )

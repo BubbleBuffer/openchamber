@@ -14,9 +14,15 @@ interface UseChatSessionStateOptions {
   directory?: string; // Optional - will use sync context if not provided
   sessionId: string | null;
   isActive: boolean;
+  resourceLoaded?: boolean;
 }
 
-export function useChatSessionState({ directory: providedDirectory, sessionId, isActive }: UseChatSessionStateOptions): ChatSessionState {
+export function useChatSessionState({
+  directory: providedDirectory,
+  sessionId,
+  isActive,
+  resourceLoaded = false,
+}: UseChatSessionStateOptions): ChatSessionState {
   const syncDirectory = useSyncDirectory();
   const directory = providedDirectory ?? syncDirectory;
 
@@ -24,7 +30,8 @@ export function useChatSessionState({ directory: providedDirectory, sessionId, i
   const isDraftOpen = useSessionUIStore((state) => state.newSessionDraft.open);
 
   // Machine hooks for machine-owned fields
-  const loaded = useLoaded(directory, sessionId ?? '');
+  const machineLoaded = useLoaded(directory, sessionId ?? '');
+  const loaded = machineLoaded || resourceLoaded;
   const exists = useSessionExists(directory, sessionId ?? '');
   const parentSessionId = useParentSessionId(directory, sessionId ?? '');
 

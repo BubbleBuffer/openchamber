@@ -784,7 +784,7 @@ export const NotificationSettings: React.FC = () => {
                           <RiInformationLine className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent sideOffset={8} className="max-w-xs">
-                          Used for notification and voice summaries.
+                          Used for notification summaries.
                         </TooltipContent>
                       </Tooltip>
                     </div>

@@ -40,7 +40,7 @@ the next startup can retry.
    creates terminal and event-stream WebSocket runtimes, configures the proxy,
    starts the non-blocking OpenCode bootstrap, registers static routes, listens
    on the resolved host/port, and installs process handlers.
-4. Install Sentry's Express error handler and return the server controller.
+4. Install the local Express error boundary and return the server controller.
 
 Zen-model validation is intentionally started without blocking application
 startup. The pipeline's OpenCode bootstrap is observed even when a later stage

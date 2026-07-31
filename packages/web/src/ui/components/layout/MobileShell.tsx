@@ -1,7 +1,6 @@
 // packages/web/src/ui/components/layout/MobileShell.tsx
 import React from 'react';
 import { useNavigationStore } from '@/stores/useNavigationStore';
-import { useUIStore } from '@/stores/useUIStore';
 import { useDialogStore } from '@/stores/useDialogStore';
 import { cn } from '@/lib/utils';
 import type { MainTab } from '@/stores/useUIStore';

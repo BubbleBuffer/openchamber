@@ -42,8 +42,10 @@
     "start:web": "bun run build && bun run --cwd packages/web start",
     "pack:session-state": "npm run --prefix packages/session-state pack",
     "pack:web": "npm run --prefix packages/web pack",
+    "smoke:packages": "node scripts/smoke-package-tarballs.mjs",
     "docs:validate": "node scripts/docs/validate-docs.mjs",
     "check:contracts": "node scripts/check-network-contracts.mjs",
+    "architecture:check": "node scripts/check-architecture.mjs",
     "icons:sprite": "node scripts/generate-file-type-sprite.mjs",
     "themes:port:opencode": "tsx scripts/port-opencode-theme.ts",
     "version:bump": "node scripts/bump-version.mjs",
@@ -55,6 +57,7 @@
     "test:stores": "bun run --cwd packages/web test:stores",
     "test:scripts": "node --test scripts/*.test.mjs",
     "test:perf": "bun run --cwd tests bench",
+    "test:perf:chat": "bun run --cwd tests test:browser:perf",
     "test:integration:slow": "RUN_SLOW_TESTS=1 bun run --cwd tests test:integration"
   },
   "dependencies": {
@@ -133,7 +136,6 @@
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@tailwindcss/postcss": "^4.2.4",
-    "@types/dom-speech-recognition": "^0.0.11",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

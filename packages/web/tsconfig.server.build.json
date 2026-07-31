@@ -3,8 +3,16 @@
   "compilerOptions": {
     "outDir": "server/dist",
     "rootDir": "server/src",
+    "sourceMap": false,
+    "declarationMap": false,
     "paths": {
       "@openchamber/session-state": ["../session-state/dist/index.d.ts"]
     }
-  }
+  },
+  "exclude": [
+    "server/dist",
+    "server/lib",
+    "server/src/**/*.test.ts",
+    "server/src/**/__tests__/**"
+  ]
 }

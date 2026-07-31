@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "vitest"
+import { afterAll, beforeAll, expect, test } from "vitest"
 import fs from "node:fs/promises"
 import net from "node:net"
 import os from "node:os"
@@ -155,12 +155,17 @@ describeWhenOpenCode("OpenChamber startup handles bad OPENCODE_HOST gracefully",
     process.env.OPENCODE_SKIP_START = "true"
     process.env.OPENCHAMBER_SKIP_OPENCODE_START = "true"
     process.env.OPENCODE_HOST = "not-a-url"
-    let controller: { stop: (opts: { exitProcess: boolean }) => Promise<void>; getPort: () => number } | undefined
+    let controller: {
+      stop: (opts: { exitProcess: boolean }) => Promise<void>
+      getPort: () => number | null
+    } | undefined
     try {
       const { startWebUiServer } = await import("@openchamber/web")
       controller = await startWebUiServer({ port: 0, host: "127.0.0.1", attachSignals: false, exitOnShutdown: false })
       // Server booted despite bad env. Hit /health and confirm it returns 200.
-      const healthRes = await fetch(`http://127.0.0.1:${controller!.getPort()}/health`)
+      const boundPort = controller.getPort()
+      if (boundPort === null) throw new Error("OpenChamber did not bind a port")
+      const healthRes = await fetch(`http://127.0.0.1:${boundPort}/health`)
       expect(healthRes.status).toBe(200)
       const body = await healthRes.json() as { status: string }
       expect(body.status).toBe("ok")

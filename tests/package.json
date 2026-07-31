@@ -10,7 +10,9 @@
     "test:opencode": "vitest run opencode",
     "test:web": "vitest run web",
     "test:react": "vitest run react --config react/vitest.config.ts",
-    "bench": "vitest bench perf --config perf/vitest.config.ts"
+    "bench": "vitest bench perf --config perf/vitest.config.ts",
+    "test:browser": "playwright test browser --config browser/playwright.config.ts",
+    "test:browser:perf": "playwright test browser/session-load-performance.spec.ts --config browser/playwright.config.ts"
   },
   "dependencies": {
     "@opencode-ai/sdk": "^1.14.39",
@@ -18,6 +20,7 @@
     "ws": "^8.20.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^25.9.1",

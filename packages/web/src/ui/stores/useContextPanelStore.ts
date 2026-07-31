@@ -3,11 +3,6 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { getSafeStorage } from './utils/safeStorage';
 import { useNavigationStore } from './useNavigationStore';
 import {
-  CONTEXT_PANEL_DEFAULT_WIDTH,
-  CONTEXT_PANEL_MIN_WIDTH,
-  CONTEXT_PANEL_MAX_WIDTH,
-  CONTEXT_PANEL_MAX_TABS,
-  CONTEXT_PANEL_MAX_LABEL_LENGTH,
   type ContextPanelMode,
   type ContextPanelTab,
   type ContextPanelTabDescriptor,
@@ -16,19 +11,10 @@ import {
   normalizeDirectoryPath,
   clampContextPanelWidth,
   normalizeContextTargetPath,
-  normalizeContextTabLabel,
-  buildDefaultContextPanelTabDedupeKey,
-  normalizeContextPanelTabDedupeKey,
-  buildContextPanelTabID,
-  createContextPanelTab,
-  clampContextPanelTabs,
-  sanitizeContextPanelTabs,
-  resolveActiveContextPanelTabID,
   touchContextPanelState,
   upsertContextPanelTab,
   closeContextPanelTab as closeContextPanelTabHelper,
   reorderContextPanelTabs as reorderContextPanelTabsHelper,
-  sanitizeContextPanelByDirectory,
   clampContextPanelRoots,
 } from './contextPanelHelpers';
 

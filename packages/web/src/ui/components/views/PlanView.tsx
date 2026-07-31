@@ -29,7 +29,6 @@ import { useProjectsStore } from '@/stores/projects/useProjectsStore';
 import { useSelectionStore } from '@/sync/selection-store';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useNavigationStore } from '@/stores/useNavigationStore';
-import { useUIStore } from '@/stores/useUIStore';
 import { useGitStore } from '@/stores/git/useGitStore';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
@@ -39,7 +38,7 @@ import { generateBranchName } from '@/lib/git/branchNameGenerator';
 import { parseProjectPlanMarkdown } from '@/lib/config/openchamberConfig';
 import { createWorktreeSessionForNewBranch } from '@/lib/session/worktreeSessionCreator';
 import { TodoSendDialog, type TodoSendExecution } from '@/components/session/TodoSendDialog';
-import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
+import { renderPromptTemplate } from '@/lib/tools/promptTemplates';
 
 type PlanViewProps = {
   targetPath?: string | null;
@@ -503,13 +502,13 @@ export const PlanView: React.FC<PlanViewProps> = ({ targetPath = null }) => {
         return;
       }
 
-      const visiblePrompt = await renderMagicPrompt(
+      const visiblePrompt = renderPromptTemplate(
         pendingPlanSend.action === 'improve' ? 'plan.improve.visible' : 'plan.implement.visible',
         {
           plan_title: sendPromptTitle,
         },
       );
-      const instructionsText = await renderMagicPrompt(
+      const instructionsText = renderPromptTemplate(
         pendingPlanSend.action === 'improve' ? 'plan.improve.instructions' : 'plan.implement.instructions',
         {
           plan_title: sendPromptTitle,

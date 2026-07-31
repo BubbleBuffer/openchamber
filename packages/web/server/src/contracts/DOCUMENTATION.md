@@ -19,7 +19,7 @@ its domain; route registrars own HTTP wiring and domain services own behavior.
 - `quota.ts` — provider quota routes and degraded results
 - `route-inventory.ts` — authoritative route ownership inventory
 - `settings.ts` — browser settings and server-only persisted settings
-- `skills.ts` — installed skills and catalog/install operations
+- `skills.ts` — read-only installed-skill discovery and detail
 - `system.ts` — health, system, update, and model metadata routes
 - `terminal.ts` — terminal HTTP/SSE/WebSocket transport
 - `themes.ts` — custom theme routes

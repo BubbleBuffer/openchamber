@@ -6,7 +6,21 @@ import os from "node:os";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { createBoundedMap } from "../core/bounded-cache.js";
-import type { BoundedMap } from "../core/bounded-cache.js";
+import { createBranchRemoteService } from "./branch-remote-service.js";
+import { createConflictService } from "./conflict-service.js";
+import { createDiffService } from "./diff-service.js";
+import {
+  buildUpstreamOptions,
+  describePushError,
+  looksLikeMissingUpstream,
+  normalizePushResult,
+  toTaskOptions,
+} from "./operation-support.js";
+import type {
+  GitCommitResponse,
+  GitPullResponse,
+  GitPushResponse,
+} from "../../contracts/git.js";
 import type {
   GitIdentity,
   GitStatusOptions,
@@ -18,23 +32,14 @@ import type {
   GitPushOptions,
   GitFetchOptions,
   GitCommitOptions,
-  GitBranchResult,
-  GitCreateBranchOptions,
-  GitDeleteBranchOptions,
   GitSuccessResult,
   GitWorktreeEntry,
   GitWorktreeBootstrapState,
   GitWorktreeCreateInput,
   GitWorktreeCreateResult,
   GitWorktreeRemoveInput,
-  GitLogEntry,
   GitLogResult,
   GitLogOptions,
-  GitRemoteEntry,
-  GitRemoveRemoteOptions,
-  GitRebaseOptions,
-  GitMergeOptions,
-  GitConflictDetails,
   GitStashOptions,
   GitWorktreeValidateResult,
   GitWorktreePreviewResult,
@@ -205,10 +210,10 @@ const resolveGitBinary = () => {
     ...listWindowsGitInstallCandidates(),
   ]
     .map(normalizeGitExecutableCandidate)
-    .filter(Boolean)
-    .filter((candidate: any) => isExecutableFile(candidate));
+    .filter((candidate): candidate is string => candidate !== null)
+    .filter((candidate) => isExecutableFile(candidate));
 
-  const preferredExe = discovered.find((candidate: any) => candidate.toLowerCase().endsWith('.exe'));
+  const preferredExe = discovered.find((candidate) => candidate.toLowerCase().endsWith('.exe'));
   resolvedGitBinary = preferredExe || discovered[0] || 'git.exe';
   return resolvedGitBinary;
 };
@@ -716,6 +721,14 @@ const runGitCommandOrThrow = async (cwd: string, args: string[], fallbackMessage
   return result;
 };
 
+const diffService = createDiffService({
+  createGit,
+  normalizeDirectoryPath,
+  resolveDefaultBranch,
+  runGitCommand,
+  getGitBinary,
+});
+
 const ensureOpenCodeProjectId = async (primaryWorktree: string): Promise<string> => {
   const gitDir = path.join(primaryWorktree, '.git');
   const idFile = path.join(gitDir, 'opencode');
@@ -1185,6 +1198,14 @@ const setBranchTrackingFallback = async (
   );
 };
 
+const branchRemoteService = createBranchRemoteService({
+  createGit,
+  cleanBranchName,
+  normalizeUpstreamTarget,
+  runGitCommandOrThrow,
+  setBranchTrackingFallback,
+});
+
 const applyUpstreamConfiguration = async (args: UpstreamConfigurationArgs) => {
   const {
     primaryWorktree,
@@ -1496,7 +1517,7 @@ export async function getStatus(directory: string, options: GitStatusOptions = {
       return null;
     };
 
-    let tracking = status.tracking || null;
+    const tracking = status.tracking || null;
     let ahead = status.ahead;
     let behind = status.behind;
 
@@ -1594,452 +1615,54 @@ export async function getStatus(directory: string, options: GitStatusOptions = {
 }
 
 export async function getDiff(directory: string, { path, staged = false, contextLines = 3 }: GitDiffOptions = {}): Promise<string> {
-  const git = await createGit(directory);
-
-  try {
-    const args = ['diff', '--no-color'];
-
-    if (typeof contextLines === 'number' && !Number.isNaN(contextLines)) {
-      args.push(`-U${Math.max(0, contextLines)}`);
-    }
-
-    if (staged) {
-      args.push('--cached');
-    }
-
-    if (path) {
-      args.push('--', path);
-    }
-
-    const diff = await git.raw(args);
-    if (diff && diff.trim().length > 0) {
-      return diff;
-    }
-
-    if (staged) {
-      return diff;
-    }
-
-    try {
-      await git.raw(['ls-files', '--error-unmatch', path as string]);
-      return diff;
-    } catch {
-      const noIndexArgs = ['diff', '--no-color'];
-      if (typeof contextLines === 'number' && !Number.isNaN(contextLines)) {
-        noIndexArgs.push(`-U${Math.max(0, contextLines)}`);
-      }
-      noIndexArgs.push('--no-index', '--', '/dev/null', path as string);
-      try {
-        const noIndexDiff = await git.raw(noIndexArgs);
-        return noIndexDiff;
-      } catch (e) {
-        const noIndexErr = e as { exitCode?: unknown; message?: string };
-        // git diff --no-index returns exit code 1 when differences exist (not a real error)
-        if (noIndexErr.exitCode === 1 && noIndexErr.message) {
-          return noIndexErr.message;
-        }
-        throw e;
-      }
-    }
-  } catch (e) {
-    console.error('Failed to get Git diff:', e);
-    throw e;
-  }
+  return diffService.getDiff(directory, { path, staged, contextLines });
 }
 
 export async function getRangeDiff(directory: string, { base, head, path, contextLines = 3 }: GitRangeDiffOptions): Promise<string> {
-  const git = await createGit(directory);
-  const baseRef = typeof base === 'string' ? base.trim() : '';
-  const headRef = typeof head === 'string' ? head.trim() : '';
-  if (!baseRef || !headRef) {
-    throw new Error('base and head are required');
-  }
-
-  // Prefer remote-tracking base ref so merged commits don't reappear
-  // when local base branch is stale (common when user stays on feature branch).
-  let resolvedBase = baseRef;
-  const originCandidate = `refs/remotes/origin/${baseRef}`;
-  try {
-    const verified = await git.raw(['rev-parse', '--verify', originCandidate]);
-    if (verified && verified.trim()) {
-      resolvedBase = `origin/${baseRef}`;
-    }
-  } catch {
-    // ignore
-  }
-
-  if (resolvedBase === baseRef) {
-    const localExists = await git
-      .raw(['rev-parse', '--verify', baseRef])
-      .then((value: string) => String(value || '').trim())
-      .catch(() => '');
-    if (!localExists) {
-      const fallback = await resolveDefaultBranch(git);
-      if (fallback) {
-        resolvedBase = fallback;
-      } else {
-        throw new Error(`Could not resolve base ref '${baseRef}' and no default branch found`);
-      }
-    }
-  }
-
-  const args = ['diff', '--no-color'];
-  if (typeof contextLines === 'number' && !Number.isNaN(contextLines)) {
-    args.push(`-U${Math.max(0, contextLines)}`);
-  }
-  args.push(`${resolvedBase}...${headRef}`);
-  if (path) {
-    args.push('--', path);
-  }
-  const diff = await git.raw(args);
-  return diff;
+  return diffService.getRangeDiff(directory, { base, head, path, contextLines });
 }
 
 export async function getRangeFiles(directory: string, { base, head }: GitRangeDiffOptions): Promise<string[]> {
-  const git = await createGit(directory);
-  const baseRef = typeof base === 'string' ? base.trim() : '';
-  const headRef = typeof head === 'string' ? head.trim() : '';
-  if (!baseRef || !headRef) {
-    throw new Error('base and head are required');
-  }
-
-  let resolvedBase = baseRef;
-  const originCandidate = `refs/remotes/origin/${baseRef}`;
-  try {
-    const verified = await git.raw(['rev-parse', '--verify', originCandidate]);
-    if (verified && verified.trim()) {
-      resolvedBase = `origin/${baseRef}`;
-    }
-  } catch {
-    // ignore
-  }
-
-  if (resolvedBase === baseRef) {
-    const localExists = await git
-      .raw(['rev-parse', '--verify', baseRef])
-      .then((value: string) => String(value || '').trim())
-      .catch(() => '');
-    if (!localExists) {
-      const fallback = await resolveDefaultBranch(git);
-      if (fallback) {
-        resolvedBase = fallback;
-      } else {
-        throw new Error(`Could not resolve base ref '${baseRef}' and no default branch found`);
-      }
-    }
-  }
-
-  const raw = await git.raw(['diff', '--name-only', `${resolvedBase}...${headRef}`]);
-  return String(raw || '')
-    .split('\n')
-    .map((l: string) => l.trim())
-    .filter(Boolean);
+  return diffService.getRangeFiles(directory, { base, head });
 }
-
-const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp', 'avif'];
-
-const BINARY_SNIFF_BYTES = 8192;
-
-function isImageFile(filePath: string) {
-  const ext = filePath.split('.').pop()?.toLowerCase();
-  return IMAGE_EXTENSIONS.includes(ext || '');
-}
-
-function getImageMimeType(filePath: any) {
-  const ext = filePath.split('.').pop()?.toLowerCase();
-  const mimeMap = {
-    'png': 'image/png',
-    'jpg': 'image/jpeg',
-    'jpeg': 'image/jpeg',
-    'gif': 'image/gif',
-    'svg': 'image/svg+xml',
-    'webp': 'image/webp',
-    'ico': 'image/x-icon',
-    'bmp': 'image/bmp',
-    'avif': 'image/avif',
-  };
-  return (mimeMap as any)[ext] || 'application/octet-stream';
-}
-
-const parseIsBinaryFromNumstat = (raw: string) => {
-  const text = String(raw || '').trim();
-  if (!text) {
-    return false;
-  }
-
-  // Expected format: <added>\t<deleted>\t<path>
-  const firstLine = text.split('\n').map((line: string) => line.trim()).find(Boolean) || '';
-  const [added, deleted] = firstLine.split('\t');
-  return added === '-' || deleted === '-';
-};
-
-const looksBinaryBySniff = async (absolutePath: string) => {
-  try {
-    const handle = await fsp.open(absolutePath, 'r');
-    try {
-      const buffer = Buffer.alloc(BINARY_SNIFF_BYTES);
-      const { bytesRead } = await handle.read(buffer, 0, BINARY_SNIFF_BYTES, 0);
-      if (bytesRead <= 0) {
-        return false;
-      }
-      return buffer.subarray(0, bytesRead).includes(0);
-    } finally {
-      await handle.close();
-    }
-  } catch {
-    return false;
-  }
-};
-
-const isBinaryDiff = async (directoryPath: string, filePath: string, staged: boolean) => {
-  // Fast path: ask git for numstat. For binary, it returns "-\t-\t<path>".
-  const args = ['diff', '--numstat'];
-  if (staged) {
-    args.push('--cached');
-  }
-  args.push('--', filePath);
-
-  const result = await runGitCommand(directoryPath, args);
-  if (parseIsBinaryFromNumstat(result.stdout)) {
-    return true;
-  }
-
-  // Fallback for untracked files (diff output is empty): use --no-index against /dev/null
-  if (!staged) {
-    const tracked = await runGitCommand(directoryPath, ['ls-files', '--error-unmatch', '--', filePath]).then((result: { success: boolean }) => result.success);
-    if (!tracked) {
-      const noIndex = await runGitCommand(directoryPath, ['diff', '--no-index', '--numstat', '--', '/dev/null', filePath]);
-      if (parseIsBinaryFromNumstat(noIndex.stdout) || parseIsBinaryFromNumstat(noIndex.stderr) || parseIsBinaryFromNumstat(noIndex.message || '')) {
-        return true;
-      }
-      const text = `${noIndex.stdout || ''}\n${noIndex.stderr || ''}\n${noIndex.message || ''}`.toLowerCase();
-      if (text.includes('binary files') || text.includes('git binary patch')) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-};
 
 export async function getFileDiff(directory: string, { path: filePath, staged = false }: { path: string; staged?: boolean; contextLines?: number }): Promise<GitFileDiffResult> {
-  if (!directory || !filePath) {
-    throw new Error('directory and path are required for getFileDiff');
-  }
-
-  const directoryPath = normalizeDirectoryPath(directory);
-  const git = await createGit(directoryPath);
-  const isImage = isImageFile(filePath);
-  const mimeType = isImage ? getImageMimeType(filePath) : null;
-
-  if (!isImage) {
-    const absolutePath = path.join(directoryPath as string, filePath);
-    const isBinaryBySniff = await looksBinaryBySniff(absolutePath);
-    const isBinary = isBinaryBySniff || (await isBinaryDiff(directoryPath as string, filePath, staged));
-    if (isBinary) {
-      return {
-        original: '',
-        modified: '',
-        path: filePath,
-        isBinary: true,
-      };
-    }
-  }
-
-  let original = '';
-  try {
-    if (isImage) {
-      // For images, use git show with raw output and convert to base64
-      try {
-        const { stdout } = await execFileAsync(getGitBinary(), ['show', `HEAD:${filePath}`], {
-          cwd: directoryPath,
-          encoding: 'buffer',
-          windowsHide: true,
-          maxBuffer: 50 * 1024 * 1024, // 50MB max
-        });
-        if (stdout && stdout.length > 0) {
-          original = `data:${mimeType};base64,${stdout.toString('base64')}`;
-        }
-      } catch {
-        original = '';
-      }
-    } else {
-      original = await git.show([`HEAD:${filePath}`]);
-    }
-  } catch {
-    original = '';
-  }
-
-  const fullPath = path.join(directoryPath as string, filePath);
-  let modified = '';
-  try {
-    const stat = await fsp.stat(fullPath);
-    if (stat.isFile()) {
-      if (isImage) {
-        // For images, read as binary and convert to data URL
-        const buffer = await fsp.readFile(fullPath);
-        modified = `data:${mimeType};base64,${buffer.toString('base64')}`;
-      } else {
-        modified = await fsp.readFile(fullPath, 'utf8');
-      }
-    }
-  } catch (e) {
-    if (e && typeof e === 'object' && (e as any).code === 'ENOENT') {
-      modified = '';
-    } else {
-      console.error('Failed to read modified file contents for diff:', e);
-      throw e;
-    }
-  }
-
-  return {
-    original,
-    modified,
-    path: filePath,
-    isBinary: false,
-  };
+  return diffService.getFileDiff(directory, { path: filePath, staged });
 }
 
 export async function revertFile(directory: string, filePath: string): Promise<void> {
-  const directoryPath = normalizeDirectoryPath(directory);
-  const git = await createGit(directoryPath);
-  const repoRoot = path.resolve(directoryPath as string);
-  const absoluteTarget = path.resolve(repoRoot, filePath);
-
-  if (!absoluteTarget.startsWith(repoRoot + path.sep) && absoluteTarget !== repoRoot) {
-    throw new Error('Invalid file path');
-  }
-
-  const isTracked = await git
-    .raw(['ls-files', '--error-unmatch', filePath])
-    .then(() => true)
-    .catch(() => false);
-
-  if (!isTracked) {
-    try {
-      await git.raw(['clean', '-f', '-d', '--', filePath]);
-      return;
-    } catch (cleanError) {
-      try {
-        await fsp.rm(absoluteTarget, { recursive: true, force: true });
-        return;
-      } catch (e) {
-        const fsErr = e as { code?: string };
-        if (fsErr && fsErr.code === 'ENOENT') {
-          return;
-        }
-        console.error('Failed to remove untracked file during revert:', e);
-        throw e;
-      }
-    }
-  }
-
-  try {
-    await git.raw(['restore', '--staged', filePath]);
-  } catch (e) {
-    await git.raw(['reset', 'HEAD', '--', filePath]).catch(() => {});
-  }
-
-  try {
-    await git.raw(['restore', filePath]);
-  } catch (e) {
-    try {
-      await git.raw(['checkout', '--', filePath]);
-    } catch (fallbackError) {
-      console.error('Failed to revert git file:', fallbackError);
-      throw fallbackError;
-    }
-  }
+  return diffService.revertFile(directory, filePath);
 }
 
 export async function collectDiffs(directory: string, files: string[] = []): Promise<Array<{path: string; diff: string}>> {
-  const results = [];
-  for (const filePath of files) {
-    try {
-      const diff = await getDiff(directory, { path: filePath });
-      if (diff && diff.trim().length > 0) {
-        results.push({ path: filePath, diff });
-      }
-    } catch (e) {
-      console.error('Failed to diff ' + filePath + ':', e);
-    }
-  }
-  return results;
+  return diffService.collectDiffs(directory, files);
 }
 
-export async function pull(directory: string, options: GitPullOptions = {}): Promise<boolean> {
+export async function pull(directory: string, options: GitPullOptions = {}): Promise<GitPullResponse> {
   const git = await createGit(directory);
 
   try {
     const result = await git.pull(
       options.remote || 'origin',
       options.branch,
-      options.options as any || {}
+      toTaskOptions(options.options)
     );
 
     return {
       success: true,
       summary: result.summary,
       files: result.files,
-      insertions: result.insertions,
-      deletions: result.deletions
-    } as any;
+      insertions: result.summary.insertions,
+      deletions: result.summary.deletions
+    };
   } catch (e) {
     console.error('Failed to pull:', e);
     throw e;
   }
 }
 
-export async function push(directory: string, options: GitPushOptions = {}): Promise<boolean> {
+export async function push(directory: string, options: GitPushOptions = {}): Promise<GitPushResponse> {
   const git = await createGit(directory);
-
-  const describePushError = (error: any) => {
-    const fromNestedGit = error?.git && typeof error.git === 'object'
-      ? [error.git.message, error.git.stderr, error.git.stdout]
-      : [];
-    const candidates = [
-      error.message,
-      error.stderr,
-      error.stdout,
-      ...fromNestedGit,
-    ]
-      .map((value: any) => String(value || '').trim())
-      .filter(Boolean);
-
-    return candidates[0] || 'Failed to push to remote';
-  };
-
-  const buildUpstreamOptions = (raw: any) => {
-    if (Array.isArray(raw)) {
-      return raw.includes('--set-upstream') ? raw : [...raw, '--set-upstream'];
-    }
-
-    if (raw && typeof raw === 'object') {
-      return { ...raw, '--set-upstream': null };
-    }
-
-    return ['--set-upstream'];
-  };
-
-  const looksLikeMissingUpstream = (error: any) => {
-    const message = String(error.message || error.stderr || '').toLowerCase();
-    return (
-      message.includes('has no upstream') ||
-      message.includes('no upstream') ||
-      message.includes('set-upstream') ||
-      message.includes('set upstream') ||
-      (message.includes('upstream') && message.includes('push') && message.includes('-u'))
-    );
-  };
-
-  const normalizePushResult = (result: any) => {
-    return {
-      success: true,
-      pushed: result.pushed,
-      repo: result.repo,
-      ref: result.ref,
-    };
-  };
 
   const remote = String(options.remote || '').trim();
 
@@ -2051,7 +1674,7 @@ export async function push(directory: string, options: GitPushOptions = {}): Pro
         pushed: [],
         repo: directory,
         ref: null,
-      } as any;
+      };
     } catch (e) {
       if (!looksLikeMissingUpstream(e)) {
         const message = describePushError(e);
@@ -2070,8 +1693,7 @@ export async function push(directory: string, options: GitPushOptions = {}): Pro
         }
 
         const result = await git.push(fallbackRemote, branch, buildUpstreamOptions(options.options));
-        // @ts-ignore - return type is widened from boolean, runtime returns object
-        return normalizePushResult(result);
+        return normalizePushResult(result, directory);
       } catch (fallbackError) {
         const message = describePushError(fallbackError);
         console.error('Failed to push (including upstream fallback):', fallbackError);
@@ -2089,7 +1711,7 @@ export async function push(directory: string, options: GitPushOptions = {}): Pro
       const status = await git.status();
       if (status.current && !status.tracking) {
         const result = await git.push(remoteName, status.current, buildUpstreamOptions(options.options));
-        return normalizePushResult(result) as any;
+        return normalizePushResult(result, directory);
       }
     } catch (e) {
       // If we can't read status, fall back to the regular push path below.
@@ -2098,9 +1720,8 @@ export async function push(directory: string, options: GitPushOptions = {}): Pro
   }
 
   try {
-    const result = await git.push(remoteName, options.branch, options.options as any || {});
-    // @ts-ignore - return type is widened from boolean, runtime returns object
-    return normalizePushResult(result);
+    const result = await git.push(remoteName, options.branch, toTaskOptions(options.options));
+    return normalizePushResult(result, directory);
   } catch (e) {
     // Last-resort fallback: retry with upstream if the error suggests it's missing.
     if (!looksLikeMissingUpstream(e)) {
@@ -2118,8 +1739,7 @@ export async function push(directory: string, options: GitPushOptions = {}): Pro
       }
 
       const result = await git.push(remoteName, branch, buildUpstreamOptions(options.options));
-      // @ts-ignore - return type is widened from boolean, runtime returns object
-      return normalizePushResult(result);
+      return normalizePushResult(result, directory);
     } catch (fallbackError) {
       const message = describePushError(fallbackError);
       console.error('Failed to push (including upstream fallback):', fallbackError);
@@ -2128,36 +1748,19 @@ export async function push(directory: string, options: GitPushOptions = {}): Pro
   }
 }
 
-export async function deleteRemoteBranch(directory: string, options: { branch: string; remote?: string } = { branch: '' }): Promise<GitSuccessResult> {
-  const { branch, remote } = options;
-  if (!branch) {
-    throw new Error('branch is required to delete remote branch');
-  }
-
-  const git = await createGit(directory);
-  const targetBranch = branch.startsWith('refs/heads/')
-    ? branch.substring('refs/heads/'.length)
-    : branch;
-  const remoteName = remote || 'origin';
-
-  try {
-    await git.push(remoteName, `:${targetBranch}`);
-    return { success: true };
-  } catch (e) {
-    console.error('Failed to delete remote branch:', e);
-    throw e;
-  }
-}
+export const deleteRemoteBranch = branchRemoteService.deleteRemoteBranch;
 
 export async function fetch(directory: string, options: GitFetchOptions = {}): Promise<GitSuccessResult> {
   const git = await createGit(directory);
 
   try {
-    await (git.fetch as any)(
-      options.remote || 'origin',
-      options.branch,
-      options.options || {}
-    );
+    const remote = options.remote || 'origin';
+    const taskOptions = toTaskOptions(options.options);
+    if (options.branch) {
+      await git.fetch(remote, options.branch, taskOptions);
+    } else {
+      await git.fetch(remote, taskOptions);
+    }
 
     return { success: true };
   } catch (e) {
@@ -2166,7 +1769,7 @@ export async function fetch(directory: string, options: GitFetchOptions = {}): P
   }
 }
 
-export async function commit(directory: string, message: string, options: GitCommitOptions = {}): Promise<boolean> {
+export async function commit(directory: string, message: string, options: GitCommitOptions = {}): Promise<GitCommitResponse> {
   const git = await createGit(directory);
 
   try {
@@ -2227,90 +1830,16 @@ export async function commit(directory: string, message: string, options: GitCom
       commit: result.commit,
       branch: result.branch,
       summary: result.summary
-    } as any;
+    };
   } catch (e) {
     console.error('Failed to commit:', e);
     throw e;
   }
 }
 
-export async function getBranches(directory: string): Promise<GitBranchResult> {
-  const git = await createGit(directory);
-
-  try {
-    const result = await git.branch();
-
-    const allBranches = result.all;
-    const remoteBranches = allBranches.filter((branch: string) => branch.startsWith('remotes/'));
-    const activeRemoteBranches = await filterActiveRemoteBranches(git, remoteBranches);
-
-    const filteredAll = [
-      ...allBranches.filter((branch: string) => !branch.startsWith('remotes/')),
-      ...activeRemoteBranches
-    ];
-
-    return {
-      all: filteredAll,
-      current: result.current,
-      branches: result.branches
-    };
-  } catch (e) {
-    console.error('Failed to get branches:', e);
-    throw e;
-  }
-}
-
-async function filterActiveRemoteBranches(git: SimpleGit, remoteBranches: string[]) {
-  try {
-
-    const lsRemoteResult = await git.raw(['ls-remote', '--heads', 'origin']);
-    const actualRemoteBranches = new Set();
-
-    const lines = lsRemoteResult.trim().split('\n');
-    for (const line of lines) {
-      if (line.includes('\trefs/heads/')) {
-        const branchName = line.split('\t')[1].replace('refs/heads/', '');
-        actualRemoteBranches.add(branchName);
-      }
-    }
-
-    return remoteBranches.filter((remoteBranch: string) => {
-
-      const match = remoteBranch.match(/^remotes\/[^\/]+\/(.+)$/);
-      if (!match) return false;
-
-      const branchName = match[1];
-      return actualRemoteBranches.has(branchName);
-    });
-  } catch (e) {
-    console.warn('Failed to filter active remote branches, returning all:', e instanceof Error ? e.message : String(e));
-    return remoteBranches;
-  }
-}
-
-export async function createBranch(directory: string, branchName: string, options: GitCreateBranchOptions = {}): Promise<boolean> {
-  const git = await createGit(directory);
-
-  try {
-    await git.checkoutBranch(branchName, options.startPoint || 'HEAD');
-    return { success: true, branch: branchName } as any;
-  } catch (e) {
-    console.error('Failed to create branch:', e);
-    throw e;
-  }
-}
-
-export async function checkoutBranch(directory: string, branchName: string): Promise<boolean> {
-  const git = await createGit(directory);
-
-  try {
-    await git.checkout(branchName);
-    return { success: true, branch: branchName } as any;
-  } catch (e) {
-    console.error('Failed to checkout branch:', e);
-    throw e;
-  }
-}
+export const getBranches = branchRemoteService.getBranches;
+export const createBranch = branchRemoteService.createBranch;
+export const checkoutBranch = branchRemoteService.checkoutBranch;
 
 export async function getWorktrees(directory: string): Promise<GitWorktreeEntry[]> {
   const directoryPath = normalizeDirectoryPath(directory);
@@ -2323,12 +1852,14 @@ export async function getWorktrees(directory: string): Promise<GitWorktreeEntry[
       ['worktree', 'list', '--porcelain'],
       'Failed to list git worktrees'
     );
-    return parseWorktreePorcelain(result.stdout).map((entry: any) => ({
-      head: entry.head || '',
-      name: path.basename(entry.worktree || ''),
-      branch: entry.branch || '',
-      path: entry.worktree,
-    }));
+    return parseWorktreePorcelain(result.stdout)
+      .filter((entry): entry is WorktreeListEntry & { worktree: string } => typeof entry.worktree === 'string')
+      .map((entry) => ({
+        head: entry.head || '',
+        name: path.basename(entry.worktree),
+        branch: entry.branch || '',
+        path: entry.worktree,
+      }));
   } catch (e) {
     console.warn('Failed to list worktrees, returning empty list:', e instanceof Error ? e.message : String(e));
     return [];
@@ -2734,7 +2265,7 @@ export async function removeWorktree(directory: string, input: GitWorktreeRemove
   );
 
   if (deleteLocalBranch) {
-    const branchName = cleanBranchName(String((matchedEntry as any).branchRef || (matchedEntry as any).branch || '').trim());
+    const branchName = cleanBranchName(String(matchedEntry.branchRef || matchedEntry.branch || '').trim());
     if (branchName) {
       await runGitCommandOrThrow(
         context.primaryWorktree,
@@ -2755,21 +2286,7 @@ export async function removeWorktree(directory: string, input: GitWorktreeRemove
   return true;
 }
 
-export async function deleteBranch(directory: string, branch: string, options: GitDeleteBranchOptions = {}): Promise<GitSuccessResult> {
-  const git = await createGit(directory);
-
-  try {
-    const branchName = branch.startsWith('refs/heads/')
-      ? branch.substring('refs/heads/'.length)
-      : branch;
-    const args = ['branch', options.force ? '-D' : '-d', branchName];
-    await git.raw(args);
-    return { success: true };
-  } catch (e) {
-    console.error('Failed to delete branch:', e);
-    throw e;
-  }
-}
+export const deleteBranch = branchRemoteService.deleteBranch;
 
 export async function getLog(directory: string, options: GitLogOptions = {}): Promise<GitLogResult> {
   const git = await createGit(directory);
@@ -2778,7 +2295,7 @@ export async function getLog(directory: string, options: GitLogOptions = {}): Pr
     const maxCount = options.maxCount || 50;
 
     let resolvedFrom = options.from;
-    let resolvedTo = options.to;
+    const resolvedTo = options.to;
 
     if (resolvedFrom) {
       const fromExists = await git
@@ -3118,334 +2635,22 @@ export async function getCommitFiles(directory: string, commitHash: string): Pro
   }
 }
 
-export async function renameBranch(directory: string, oldName: string, newName: string): Promise<boolean> {
-  const git = await createGit(directory);
+export const renameBranch = branchRemoteService.renameBranch;
+export const getRemotes = branchRemoteService.getRemotes;
+export const removeRemote = branchRemoteService.removeRemote;
 
-  try {
-    const normalizedOldName = cleanBranchName(String(oldName || '').trim());
-    const normalizedNewName = cleanBranchName(String(newName || '').trim());
-
-    const previousRemote = await git
-      .raw(['config', '--get', `branch.${normalizedOldName}.remote`])
-      .then((value: string) => String(value || '').trim())
-      .catch(() => '');
-    const previousMerge = await git
-      .raw(['config', '--get', `branch.${normalizedOldName}.merge`])
-      .then((value: string) => String(value || '').trim())
-      .catch(() => '');
-
-    // Use git branch -m command to rename the branch
-    await git.raw(['branch', '-m', oldName, newName]);
-
-    if (previousRemote && previousMerge && normalizedNewName) {
-      const previousMergeBranch = cleanBranchName(previousMerge);
-      const nextMergeBranch =
-        previousMergeBranch === normalizedOldName
-          ? normalizedNewName
-          : previousMergeBranch;
-      const upstream = normalizeUpstreamTarget(previousRemote, nextMergeBranch);
-
-      if (upstream) {
-        try {
-          await runGitCommandOrThrow(
-            directory,
-            ['branch', `--set-upstream-to=${upstream.full}`, normalizedNewName],
-            `Failed to set upstream to ${upstream.full}`
-          );
-        } catch {
-          await setBranchTrackingFallback(directory, normalizedNewName, upstream);
-        }
-      }
-    }
-
-    return { success: true, branch: newName } as any;
-  } catch (e) {
-    console.error('Failed to rename branch:', e);
-    throw e;
-  }
-}
-
-export async function getRemotes(directory: string): Promise<GitRemoteEntry[]> {
-  const git = await createGit(directory);
-
-  try {
-    const remotes = await git.getRemotes(true);
-    
-    return remotes.map((remote) => ({
-      name: remote.name,
-      fetchUrl: remote.refs.fetch,
-      pushUrl: remote.refs.push
-    }));
-  } catch (e) {
-    console.error('Failed to get remotes:', e);
-    throw e;
-  }
-}
-
-export async function removeRemote(directory: string, options: GitRemoveRemoteOptions = {} as GitRemoveRemoteOptions): Promise<GitSuccessResult> {
-  const remoteName = String(options.remote || '').trim();
-  if (!remoteName) {
-    throw new Error('remote is required to remove a remote');
-  }
-  if (remoteName === 'origin') {
-    throw new Error('Cannot remove origin remote');
-  }
-
-  const git = await createGit(directory);
-
-  try {
-    await git.removeRemote(remoteName);
-    return { success: true };
-  } catch (e) {
-    console.error('Failed to remove remote:', e);
-    throw e;
-  }
-}
-
-export async function rebase(directory: string, options: GitRebaseOptions = {} as GitRebaseOptions): Promise<boolean> {
-  const git = await createGit(directory);
-
-  try {
-    const { onto } = options;
-    if (!onto) {
-      throw new Error('onto parameter is required for rebase');
-    }
-
-    await git.rebase([onto]);
-
-    return {
-      success: true,
-      conflict: false
-    } as any;
-  } catch (e) {
-    const errorMessage = String((e as any).message || e || '').toLowerCase();
-    const isConflict = errorMessage.includes('conflict') || 
-                       errorMessage.includes('could not apply') ||
-                       errorMessage.includes('merge conflict');
-
-    if (isConflict) {
-      // Get list of conflicted files
-      const status = await git.status().catch(() => ({ conflicted: [] }));
-      return {
-        success: false,
-        conflict: true,
-        conflictFiles: status.conflicted || []
-      } as any;
-    }
-
-    console.error('Failed to rebase:', e);
-    throw e;
-  }
-}
-
-export async function abortRebase(directory: string): Promise<GitSuccessResult> {
-  const git = await createGit(directory);
-
-  try {
-    await git.rebase(['--abort']);
-    return { success: true };
-  } catch (e) {
-    console.error('Failed to abort rebase:', e);
-    throw e;
-  }
-}
-
-export async function merge(directory: string, options: GitMergeOptions = {} as GitMergeOptions): Promise<{ success: boolean; conflicts?: string[] }> {
-  const git = await createGit(directory);
-
-  try {
-    const { branch } = options;
-    if (!branch) {
-      throw new Error('branch parameter is required for merge');
-    }
-
-    await git.merge([branch]);
-
-    return {
-      success: true,
-      conflict: false
-    } as any;
-  } catch (e) {
-    const errorMessage = String((e as any).message || e || '').toLowerCase();
-    const isConflict = errorMessage.includes('conflict') || 
-                       errorMessage.includes('merge conflict') ||
-                       errorMessage.includes('automatic merge failed');
-
-    if (isConflict) {
-      // Get list of conflicted files
-      const status = await git.status().catch(() => ({ conflicted: [] }));
-      return {
-        success: false,
-        conflict: true,
-        conflictFiles: status.conflicted || []
-      } as any;
-    }
-
-    console.error('Failed to merge:', e);
-    throw e;
-  }
-}
-
-export async function abortMerge(directory: string): Promise<GitSuccessResult> {
-  const git = await createGit(directory);
-
-  try {
-    await git.merge(['--abort']);
-    return { success: true };
-  } catch (e) {
-    console.error('Failed to abort merge:', e);
-    throw e;
-  }
-}
-
-export async function continueRebase(directory: string): Promise<boolean> {
-  const directoryPath = normalizeDirectoryPath(directory);
-  const git = await createGit(directoryPath);
-
-  try {
-    // Set GIT_EDITOR to prevent editor prompts
-    await git.env('GIT_EDITOR', 'true').rebase(['--continue']);
-    return { success: true, conflict: false } as any;
-  } catch (e) {
-    const errorMessage = String((e as any).message || e || '').toLowerCase();
-    const isConflict = errorMessage.includes('conflict') || 
-                       errorMessage.includes('needs merge') ||
-                       errorMessage.includes('unmerged') ||
-                       errorMessage.includes('fix conflicts');
-
-    if (isConflict) {
-      const status = await git.status().catch(() => ({ conflicted: [] }));
-      return {
-        success: false,
-        conflict: true,
-        conflictFiles: status.conflicted || []
-      } as any;
-    }
-
-    // Check for "nothing to commit" which means rebase step is complete
-    if (errorMessage.includes('nothing to commit') || errorMessage.includes('no changes')) {
-      // Skip this commit and continue
-      try {
-        await git.env('GIT_EDITOR', 'true').rebase(['--skip']);
-        return { success: true, conflict: false } as any;
-      } catch {
-        // If skip also fails, the rebase may be complete
-        return { success: true, conflict: false } as any;
-      }
-    }
-
-    console.error('Failed to continue rebase:', e);
-    throw e;
-  }
-}
-
-export async function continueMerge(directory: string): Promise<boolean> {
-  const directoryPath = normalizeDirectoryPath(directory);
-  const git = await createGit(directoryPath);
-
-  try {
-    // Check if there are still unmerged files
-    const status = await git.status();
-    if (status.conflicted && status.conflicted.length > 0) {
-      return {
-        success: false,
-        conflict: true,
-        conflictFiles: status.conflicted
-      } as any;
-    }
-
-    // For merge, we commit after resolving conflicts
-    // Use --no-edit to use the default merge commit message
-    await git.env('GIT_EDITOR', 'true').commit([], { '--no-edit': null });
-    return { success: true, conflict: false } as any;
-  } catch (e) {
-    const errorMessage = String((e as any).message || e || '').toLowerCase();
-    const isConflict = errorMessage.includes('conflict') || 
-                       errorMessage.includes('needs merge') ||
-                       errorMessage.includes('unmerged') ||
-                       errorMessage.includes('fix conflicts');
-
-    if (isConflict) {
-      const status = await git.status().catch(() => ({ conflicted: [] }));
-      return {
-        success: false,
-        conflict: true,
-        conflictFiles: status.conflicted || []
-      } as any;
-    }
-
-    // "nothing to commit" can happen if all conflicts resolved to one side
-    if (errorMessage.includes('nothing to commit') || errorMessage.includes('no changes added')) {
-      // The merge is effectively complete (all changes already committed or no changes needed)
-      return { success: true, conflict: false } as any;
-    }
-
-    console.error('Failed to continue merge:', e);
-    throw e;
-  }
-}
-
-export async function getConflictDetails(directory: string): Promise<GitConflictDetails> {
-  const directoryPath = normalizeDirectoryPath(directory);
-  const git = await createGit(directoryPath);
-
-  try {
-    // Get git status --porcelain
-    const statusPorcelain = await git.raw(['status', '--porcelain']).catch(() => '');
-
-    // Get unmerged files
-    const unmergedFilesRaw = await git.raw(['diff', '--name-only', '--diff-filter=U']).catch(() => '');
-    const unmergedFiles = unmergedFilesRaw
-      .split('\n')
-      .map((line: string) => line.trim())
-      .filter(Boolean);
-
-    // Get current diff
-    const diff = await git.raw(['diff']).catch(() => '');
-
-    // Detect operation type and get head info
-    let operation = 'merge';
-    let headInfo = '';
-
-    // Check for MERGE_HEAD (merge in progress)
-    const mergeHeadExists = await git
-      .raw(['rev-parse', '--verify', '--quiet', 'MERGE_HEAD'])
-      .then(() => true)
-      .catch(() => false);
-
-    if (mergeHeadExists) {
-      operation = 'merge';
-      const mergeHead = await git.raw(['rev-parse', 'MERGE_HEAD']).catch(() => '');
-      const mergeMsg = await fsp
-        .readFile(path.join(directoryPath as string, '.git', 'MERGE_MSG'), 'utf8')
-        .catch(() => '');
-      headInfo = `MERGE_HEAD: ${mergeHead.trim()}\n${mergeMsg}`;
-    } else {
-      // Check for REBASE_HEAD (rebase in progress)
-      const rebaseHeadExists = await git
-        .raw(['rev-parse', '--verify', '--quiet', 'REBASE_HEAD'])
-        .then(() => true)
-        .catch(() => false);
-
-      if (rebaseHeadExists) {
-        operation = 'rebase';
-        const rebaseHead = await git.raw(['rev-parse', 'REBASE_HEAD']).catch(() => '');
-        headInfo = `REBASE_HEAD: ${rebaseHead.trim()}`;
-      }
-    }
-
-    return {
-      statusPorcelain: statusPorcelain.trim(),
-      unmergedFiles,
-      diff: diff.trim(),
-      headInfo: headInfo.trim(),
-      operation,
-    };
-  } catch (e) {
-    console.error('Failed to get conflict details:', e);
-    throw e;
-  }
-}
+export const {
+  rebase,
+  abortRebase,
+  merge,
+  abortMerge,
+  continueRebase,
+  continueMerge,
+  getConflictDetails,
+} = createConflictService({
+  createGit,
+  normalizeDirectoryPath,
+});
 
 // ============== Stash Operations ==============
 

@@ -649,3 +649,16 @@ export function createEventPipeline(input: EventPipelineInput) {
 
   return { cleanup }
 }
+
+export {
+  createEventRoutingIndex,
+  findSessionInChildStores,
+  getMessageIdFromPayload,
+  getSessionIdFromPayload,
+  ingestDirectoryStateIntoRoutingIndex,
+  resolveDirectoryFromRoutingIndex,
+  setIndexedSessionDirectory,
+  setIndexedSessionMessages,
+  updateRoutingIndexFromEvent,
+} from "./event-routing-index"
+export type { EventRoutingIndex } from "./event-routing-index"

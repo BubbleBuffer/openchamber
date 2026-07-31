@@ -34,7 +34,6 @@ import {
 import type { SessionContextUsage } from '@/stores/types/sessionTypes';
 import { PROJECT_ICON_MAP, PROJECT_COLOR_MAP, getProjectIconImageUrl } from '@/lib/project/projectMeta';
 import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
-import { toast } from '@/components/ui';
 import { sessionEvents } from '@/lib/session/sessionEvents';
 import {
   Dialog,
@@ -1431,6 +1430,8 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
   // useProjectStatus() are called inside ExpandedMobileSessionStatusBarContent
   // (expanded-only child) to avoid subscription in the collapsed path.
 
+  const [isExpanded, setIsExpanded] = React.useState(false);
+
   // Guard: nothing to show
   if (sessions.length === 0) {
     return null;
@@ -1456,8 +1457,6 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
   const contextLimit = (limit && typeof limit.context === 'number' ? limit.context : 0);
   const outputLimit = (limit && typeof limit.output === 'number' ? limit.output : 0);
   const contextUsage = getContextUsage(contextLimit, outputLimit);
-
-  const [isExpanded, setIsExpanded] = React.useState(false);
 
   // Helper for session title
   const getSessionTitleHelper = (session: Session): string => {

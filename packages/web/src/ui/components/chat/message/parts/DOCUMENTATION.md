@@ -23,6 +23,8 @@ Use this doc when you ask an agent to change tool/header/description behavior.
 - `ToolPart.tsx`
   - Renders expandable tool rows (bash/edit/write/question/task + fallback).
   - Controls expandable header title/description/diff stats/timer and expanded output body.
+  - Delegates task/subagent metadata parsing and summary rendering to
+    `taskToolSummary.ts` and `TaskToolSummary.tsx`.
   - If you want to change expandable tool layout, edit here.
 
 - `toolPresentation.tsx`
@@ -81,7 +83,9 @@ Why: in current pipeline Perplexity is static/grouped, so `StaticToolRow` is the
 ## Quick map of files in this folder
 
 - Text: `AssistantTextPart.tsx`, `UserTextPart.tsx`
-- Tools: `ToolPart.tsx`, `ProgressiveGroup.tsx`, `toolPresentation.tsx`, `toolRenderUtils.ts`, `ToolRevealOnMount.tsx`
+- Tools: `ToolPart.tsx`, `TaskToolSummary.tsx`, `taskToolSummary.ts`,
+  `ProgressiveGroup.tsx`, `toolPresentation.tsx`, `toolRenderUtils.ts`,
+  `ToolRevealOnMount.tsx`
 - Reasoning/justification: `ReasoningPart.tsx`, `JustificationBlock.tsx`
 - Status/placeholders: `WorkingPlaceholder.tsx`, `SessionActiveSpinner.tsx`, `MigratingPart.tsx`, `BusyDots.tsx`
 - Utility renderers: `VirtualizedCodeBlock.tsx`, `MinDurationShineText.tsx`

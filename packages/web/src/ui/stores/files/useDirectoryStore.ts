@@ -399,8 +399,15 @@ export const useDirectoryStore = create<DirectoryStore>()(
   )
 );
 
-if (typeof window !== 'undefined') {
-  initializeHomeDirectory().then((home) => {
+let directoryInitialization: Promise<void> | null = null;
+
+/** Start server-backed home discovery after the UI auth boundary succeeds. */
+export const initializeDirectoryStore = (): Promise<void> => {
+  if (typeof window === 'undefined') return Promise.resolve();
+  if (directoryInitialization) return directoryInitialization;
+
+  directoryInitialization = initializeHomeDirectory().then((home) => {
     useDirectoryStore.getState().synchronizeHomeDirectory(home);
   });
-}
+  return directoryInitialization;
+};

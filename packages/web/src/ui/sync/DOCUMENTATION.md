@@ -101,7 +101,6 @@ So:
 | `viewport-store.ts` | Scroll anchors, session memory, loading indicators | App UI state |
 | `input-store.ts` | Draft input state, attached files, synthetic parts | App UI state |
 | `selection-store.ts` | Model/agent/variant selections | App UI state |
-| `voice-store.ts` | Voice state | App UI state |
 
 ## Session list rules
 
@@ -251,7 +250,6 @@ The optimization multiplies with targeted event cloning: fewer new references pe
 | Store | Owns | When it changes |
 |-------|------|-----------------|
 | `session-ui-store.ts` | Session selection, draft lifecycle, abort, worktree, SDK actions | Session switch, draft open/close |
-| `voice-store.ts` | Voice connection/activity state | Voice toggle |
 | `input-store.ts` | Pending input text, synthetic parts, attached files | User typing, file attach, revert/fork |
 | `selection-store.ts` | Per-session model/agent/variant choices | Model/agent picker |
 | `viewport-store.ts` | Scroll anchors, session memory state, sync status | Streaming, scroll, session switch |
@@ -269,7 +267,6 @@ The optimization multiplies with targeted event cloning: fewer new references pe
 ```typescript
 // WRONG — stuffing unrelated state into one store
 const useEverythingStore = create(() => ({
-  voiceMode: "idle",
   scrollAnchor: 0,
   selectedModel: null,
   pendingInput: "",
@@ -277,7 +274,6 @@ const useEverythingStore = create(() => ({
 }))
 
 // RIGHT — separate stores by concern + change frequency
-const useVoiceStore = create(() => ({ voiceMode: "idle" }))
 const useViewportStore = create(() => ({ scrollAnchor: 0 }))
 const useSelectionStore = create(() => ({ selectedModel: null }))
 const useInputStore = create(() => ({ pendingInput: "" }))

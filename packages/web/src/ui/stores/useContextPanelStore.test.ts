@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { useContextPanelStore } from './useContextPanelStore';
+import { useNavigationStore } from './useNavigationStore';
 
 const resetStore = () => {
   useContextPanelStore.setState({
@@ -75,7 +76,6 @@ describe('useContextPanelStore', () => {
     const pendingBefore = useContextPanelStore.getState().pendingDiffFile;
     expect(pendingBefore).toBeNull();
 
-    const { useNavigationStore } = require('@/stores/useNavigationStore');
     const origGetState = useNavigationStore.getState;
     let tabSet = false;
     useNavigationStore.getState = () => ({
@@ -92,7 +92,6 @@ describe('useContextPanelStore', () => {
   });
 
   it('navigateToDiff respects mainTabGuard and skips when guard rejects', () => {
-    const { useNavigationStore } = require('@/stores/useNavigationStore');
     const origGetState = useNavigationStore.getState;
     let tabSet = false;
     useNavigationStore.getState = () => ({

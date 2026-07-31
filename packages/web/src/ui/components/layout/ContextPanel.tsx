@@ -4,14 +4,17 @@ import { RiArrowLeftRightLine, RiChat4Line, RiCloseLine, RiDonutChartFill, RiFil
 import { FileTypeIcon } from '@/components/icons/FileTypeIcon';
 import { Button } from '@/components/ui/button';
 import { SortableTabsStrip } from '@/components/ui/sortable-tabs-strip';
-import { DiffView, FilesView, PlanView } from '@/components/views';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { cn } from '@/lib/utils';
 import { useFilesViewTabsStore } from '@/stores/files/useFilesViewTabsStore';
-import { useUIStore } from '@/stores/useUIStore';
 import { useContextPanelStore } from '@/stores/useContextPanelStore';
 import { ContextPanelContent } from './ContextSidebarTab';
+import { lazyWithChunkRecovery } from '@/lib/errors/chunkLoadRecovery';
+
+const DiffView = lazyWithChunkRecovery(() => import('@/components/views/DiffView').then((module) => ({ default: module.DiffView })));
+const FilesView = lazyWithChunkRecovery(() => import('@/components/views/FilesView').then((module) => ({ default: module.FilesView })));
+const PlanView = lazyWithChunkRecovery(() => import('@/components/views/PlanView').then((module) => ({ default: module.PlanView })));
 
 const CONTEXT_PANEL_MIN_WIDTH = 360;
 const CONTEXT_PANEL_MAX_WIDTH = 1400;
@@ -409,11 +412,11 @@ export const ContextPanel: React.FC = () => {
   }), [effectiveDirectory, tabs]);
 
   const activeNonChatContent = activeTab?.mode === 'diff'
-    ? <DiffView hideStackedFileSidebar stackedDefaultCollapsedAll hideFileSelector pinSelectedFileHeaderToTopOnNavigate showOpenInEditorAction />
+    ? <React.Suspense fallback={null}><DiffView hideStackedFileSidebar stackedDefaultCollapsedAll hideFileSelector pinSelectedFileHeaderToTopOnNavigate showOpenInEditorAction /></React.Suspense>
     : activeTab?.mode === 'context'
         ? <ContextPanelContent />
         : activeTab?.mode === 'plan'
-          ? <PlanView targetPath={activeTab.targetPath} />
+          ? <React.Suspense fallback={null}><PlanView targetPath={activeTab.targetPath} /></React.Suspense>
           : null;
 
   const chatTabs = React.useMemo(
@@ -533,7 +536,7 @@ export const ContextPanel: React.FC = () => {
       <div className={cn('relative min-h-0 flex-1 overflow-hidden', isResizing && 'pointer-events-none')}>
         {hasFileTabs ? (
           <div className={cn('absolute inset-0', isFileTabActive ? 'block' : 'hidden')}>
-            <FilesView mode="editor-only" />
+            <React.Suspense fallback={null}><FilesView mode="editor-only" /></React.Suspense>
           </div>
         ) : null}
         {chatTabs.map((tab) => {

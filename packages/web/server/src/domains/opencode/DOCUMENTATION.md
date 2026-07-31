@@ -22,8 +22,10 @@ not claim ownership of or cast those SDK payloads into local contracts.
 
 ## Domain invariants and partial states
 
-Configuration writes preserve the existing backup/reload behavior. Skill and
-project-asset operations preserve their domain-coded partial results. Managed
+Configuration writes preserve the existing backup/reload behavior. Installed
+skills are a read-only discovery/detail surface; the detail route reads only
+the exact regular `SKILL.md` selected by server-side discovery, after canonical
+path and size validation. Project-asset operations preserve their domain-coded partial results. Managed
 and external runtime readiness/unavailability is explicit; callers must not
 mistake an unavailable upstream for a valid SDK result. Proxy SSE forwards
 include keepalive comments and retain upstream event data rather than

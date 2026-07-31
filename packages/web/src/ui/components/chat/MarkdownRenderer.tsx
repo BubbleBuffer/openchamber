@@ -8,7 +8,6 @@ import { lazyWithChunkRecovery } from '@/lib/errors/chunkLoadRecovery';
 
 export type { MarkdownVariant } from './MarkdownRendererImpl';
 
-
 const MarkdownRendererLazy = lazyWithChunkRecovery(() =>
   import('./MarkdownRendererImpl').then((m) => ({ default: m.MarkdownRenderer }))
 );
@@ -17,16 +16,23 @@ const SimpleMarkdownRendererLazy = lazyWithChunkRecovery(() =>
   import('./MarkdownRendererImpl').then((m) => ({ default: m.SimpleMarkdownRenderer }))
 );
 
-const fallback = <div className="break-words w-full min-w-0" />;
+type MarkdownRendererProps = React.ComponentPropsWithoutRef<typeof MarkdownRendererLazy>;
+type SimpleMarkdownRendererProps = React.ComponentPropsWithoutRef<typeof SimpleMarkdownRendererLazy>;
 
-export const MarkdownRenderer: React.FC<React.ComponentPropsWithoutRef<typeof MarkdownRendererLazy>> = (props) => (
-  <React.Suspense fallback={fallback}>
+const PlainTextFallback: React.FC<{ content: string; className?: string }> = ({ content, className }) => (
+  <div className={`break-words whitespace-pre-wrap w-full min-w-0 ${className ?? ''}`}>
+    {content}
+  </div>
+);
+
+export const MarkdownRenderer: React.FC<MarkdownRendererProps> = (props) => (
+  <React.Suspense fallback={<PlainTextFallback content={props.content} className={props.className} />}>
     <MarkdownRendererLazy {...props} />
   </React.Suspense>
 );
 
-export const SimpleMarkdownRenderer: React.FC<React.ComponentPropsWithoutRef<typeof SimpleMarkdownRendererLazy>> = (props) => (
-  <React.Suspense fallback={fallback}>
+export const SimpleMarkdownRenderer: React.FC<SimpleMarkdownRendererProps> = (props) => (
+  <React.Suspense fallback={<PlainTextFallback content={props.content} className={props.className} />}>
     <SimpleMarkdownRendererLazy {...props} />
   </React.Suspense>
 );

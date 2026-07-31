@@ -1,6 +1,5 @@
 import React from 'react';
 import { RiChat3Line, RiRestartLine } from '@remixicon/react';
-import * as Sentry from '@sentry/react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
@@ -27,16 +26,9 @@ export class ChatErrorBoundary extends React.Component<ChatErrorBoundaryProps, C
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     this.setState({ error, errorInfo });
-    Sentry.captureException(error, {
-      extra: {
-        source: 'ChatErrorBoundary',
-        sessionId: this.props.sessionId ?? null,
-        componentStack: errorInfo.componentStack,
-      },
+    console.error('[ChatErrorBoundary] Render error', error, {
+      componentStack: errorInfo.componentStack ?? null,
     });
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Chat error caught by boundary:', error, errorInfo);
-    }
   }
 
   handleReset = () => {

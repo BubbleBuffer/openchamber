@@ -25,7 +25,6 @@ import {
 import { generateBranchName } from '@/lib/git/branchNameGenerator';
 import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { useNavigationStore } from '@/stores/useNavigationStore';
-import { useUIStore } from '@/stores/useUIStore';
 import { useContextPanelStore } from '@/stores/useContextPanelStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
@@ -33,7 +32,7 @@ import { useSelectionStore } from '@/sync/selection-store';
 import { useInputStore } from '@/sync/input-store';
 import { createWorktreeSessionForNewBranch } from '@/lib/session/worktreeSessionCreator';
 import { cn } from '@/lib/utils';
-import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
+import { renderPromptTemplate } from '@/lib/tools/promptTemplates';
 import { TodoSendDialog, type TodoSendExecution } from './TodoSendDialog';
 
 interface ProjectNotesTodoPanelProps {
@@ -322,10 +321,10 @@ export const ProjectNotesTodoPanel: React.FC<ProjectNotesTodoPanelProps> = ({
         return;
       }
 
-      const visiblePrompt = await renderMagicPrompt('plan.todo.visible', {
+      const visiblePrompt = renderPromptTemplate('plan.todo.visible', {
         todo_text: pendingSendTarget.todoText,
       });
-      const instructionsText = await renderMagicPrompt('plan.todo.instructions', {
+      const instructionsText = renderPromptTemplate('plan.todo.instructions', {
         todo_text: pendingSendTarget.todoText,
       });
       const syntheticParts = [{ synthetic: true as const, text: instructionsText }];

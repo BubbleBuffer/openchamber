@@ -14,7 +14,6 @@ import { useProviderConfigStore } from "@/stores/config/useProviderConfigStore"
 import { useAgentConfigStore } from "@/stores/agents/useAgentConfigStore";
 import { useCommandsStore } from "@/stores/useCommandsStore";
 import { useProjectsStore } from "@/stores/projects/useProjectsStore";
-import { useSkillsCatalogStore } from "@/stores/skills/useSkillsCatalogStore";
 import { useSkillsStore } from "@/stores/skills/useSkillsStore";
 import { useDirectoryStore } from "@/stores/files/useDirectoryStore";
 
@@ -578,7 +577,6 @@ async function performConfigRefresh(options: {
     const agentConfigStore = useAgentsStore.getState();
     const commandsStore = useCommandsStore.getState();
     const skillsStore = useSkillsStore.getState();
-    const skillsCatalogStore = useSkillsCatalogStore.getState();
 
     const refreshProviders = scopes.includes("all") || scopes.includes("providers");
     const refreshSdkAgents = scopes.includes("all") || scopes.includes("agents");
@@ -602,7 +600,7 @@ async function performConfigRefresh(options: {
     const sdkRefreshTasks: Promise<void>[] = [];
     for (const directory of directoriesToRefresh) {
       if (refreshProviders) {
-        sdkRefreshTasks.push(configStore.loadProviders({ directory }).then(() => undefined));
+        sdkRefreshTasks.push(configStore.loadProviders({ directory, force: true }).then(() => undefined));
       }
       if (refreshSdkAgents) {
         sdkRefreshTasks.push(agentConfig.loadAgents({ directory }).then(() => undefined));
@@ -617,8 +615,7 @@ async function performConfigRefresh(options: {
       uiRefreshTasks.push(commandsStore.loadCommands().then(() => undefined));
     }
     if (refreshSkills) {
-      uiRefreshTasks.push(skillsStore.loadSkills().then(() => undefined));
-      uiRefreshTasks.push(skillsCatalogStore.loadCatalog().then(() => undefined));
+      uiRefreshTasks.push(skillsStore.loadSkills({ force: true }).then(() => undefined));
     }
 
     updateConfigUpdateMessage("Refreshing configuration…");

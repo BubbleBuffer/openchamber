@@ -19,14 +19,13 @@ domain stores and `@/stores/<store>` for the root ones.
 | `files/`      | `useFileSearchStore`, `useFilesViewTabsStore`, `useDirectoryStore` |
 | `config/`     | `useConfigStore`, `useProviderConfigStore`                             |
 | `mcp/`        | `useMcpStore`, `useMcpConfigStore`                                     |
-| `skills/`     | `useSkillsStore`, `useSkillsCatalogStore`                              |
+| `skills/`     | `useSkillsStore` (read-only installed-skill discovery/detail)          |
 | `projects/`   | `useProjectsStore`                                                     |
-| `voice/`      | `useVoiceSettingsStore`                                                |
 | `quota/`      | `useQuotaStore`                                                        |
 | `terminal/`   | `useTerminalStore`                                                     |
 | `types/`      | Shared store-level type definitions                                    |
 | `utils/`      | Shared store-level helpers (`safeStorage`, etc.)                       |
-| (root)        | App-shell / cross-cutting stores: `useUIStore`, `useDialogStore`, `useUpdateStore`, `useFeatureFlagsStore`, `useTodosPersistStore`, `useMultiRunStore`, `useInlineCommentDraftStore`, `useMagicPromptsStore`, `useCommandsStore`, `useGlobalSessionsStore`, `globalSessions`, `messageQueueStore`, `permissionStore`, `contextStore`, `fileStore` |
+| (root)        | App-shell / cross-cutting stores: `useUIStore`, `useDialogStore`, `useUpdateStore`, `useFeatureFlagsStore`, `useTodosPersistStore`, `useMultiRunStore`, `useInlineCommentDraftStore`, `useCommandsStore`, `useGlobalSessionsStore`, `globalSessions`, `messageQueueStore`, `permissionStore`, `contextStore`, `fileStore` |
 
 Not all state in the UI belongs here.
 

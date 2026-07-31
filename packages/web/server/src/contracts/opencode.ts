@@ -45,8 +45,6 @@ export interface SessionFolderDto { id: string; name: string; sessionIds: string
 export interface SessionFoldersResponse { version: number; foldersMap: Record<string, SessionFolderDto[]>; collapsedFolderIds: string[]; updatedAt?: number; }
 export type SessionFoldersUpdateRequest = Required<SessionFoldersResponse>;
 export interface SessionFoldersMutationResponse { success: true; }
-export interface MagicPromptUpdateRequest { text: string; }
-export interface MagicPromptStateResponse { version?: number; overrides: Record<string, string>; }
 
 const invalid = <T = never>(error: string): ParseResult<T> => ({ ok: false, error });
 const optionalTrimmedString = (value: unknown): string | null | undefined => {
@@ -60,26 +58,6 @@ const requiredTrimmedString = (value: unknown): string | null => {
   const parsed = optionalTrimmedString(value);
   return typeof parsed === "string" ? parsed : null;
 };
-const MAGIC_PROMPT_ID_PATTERN = /^[a-z0-9._-]{1,160}$/;
-
-export function parseMagicPromptId(value: unknown): ParseResult<string> {
-  const id = requiredTrimmedString(value);
-  return id && MAGIC_PROMPT_ID_PATTERN.test(id) ? { ok: true, value: id } : invalid("invalid magic prompt id");
-}
-
-export function parseMagicPromptUpdateRequest(value: unknown): ParseResult<MagicPromptUpdateRequest> {
-  const object = parseJsonObject(value);
-  return object.ok && typeof object.value.text === "string" ? { ok: true, value: { text: object.value.text } } : invalid("magic prompt text is required");
-}
-
-export function parseMagicPromptStateResponse(value: unknown): ParseResult<MagicPromptStateResponse> {
-  const object = parseJsonObject(value); if (!object.ok) return object;
-  if (object.value.version !== undefined && !parseJsonNumber(object.value.version).ok) return invalid("invalid magic prompt state");
-  const overrides = parseJsonObject(object.value.overrides); if (!overrides.ok) return invalid("invalid magic prompt state");
-  for (const [id, text] of Object.entries(overrides.value)) if (!MAGIC_PROMPT_ID_PATTERN.test(id) || typeof text !== "string") return invalid("invalid magic prompt state");
-  return { ok: true, value: { ...(object.value.version === undefined ? {} : { version: object.value.version as number }), overrides: overrides.value as Record<string, string> } };
-}
-
 const parseSessionFolders = (value: unknown, requireUpdatedAt: boolean): ParseResult<SessionFoldersResponse> => {
   const object = parseJsonObject(value); if (!object.ok) return object;
   if (!parseJsonNumber(object.value.version).ok) return invalid("invalid session folders state");

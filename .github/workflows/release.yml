@@ -20,7 +20,34 @@ permissions:
   contents: write
 
 jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Verify release-candidate quality layers
+        run: bash scripts/verify.sh
+
+      - name: Install Playwright Chromium
+        run: bun x playwright install --with-deps chromium
+
+      - name: Verify protected browser workflows
+        run: bun run --cwd tests test:browser
+
   create-release:
+    needs: verify
     runs-on: ubuntu-latest
     outputs:
       release_id: ${{ steps.create_release.outputs.id }}
@@ -31,14 +58,19 @@ jobs:
 
       - name: Get version
         id: get_version
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
-          if [[ -n "${{ github.event.inputs.version }}" ]]; then
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          if [[ -n "$INPUT_VERSION" ]]; then
+            version="$INPUT_VERSION"
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            version="${GITHUB_REF#refs/tags/v}"
           else
-            echo "version=0.0.0-dev" >> $GITHUB_OUTPUT
+            echo "A tag or workflow_dispatch version is required." >&2
+            exit 1
           fi
+          node scripts/check-release-version.mjs "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Extract changelog for release
         env:
@@ -78,10 +110,6 @@ jobs:
   publish-npm:
     needs: create-release
     runs-on: ubuntu-latest
-    env:
-      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -105,6 +133,14 @@ jobs:
           npm run --prefix packages/session-state pack
           npm run --prefix packages/web pack
 
+      - name: Smoke-test packed artifacts
+        run: bun run smoke:packages -- packages/session-state/*.tgz packages/web/*.tgz
+
+      - name: Record packed artifact checksums
+        run: |
+          mkdir -p artifacts
+          sha256sum packages/session-state/*.tgz packages/web/*.tgz > artifacts/npm-tarballs.sha256
+
       - name: Upload npm tarball to release
         if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: softprops/action-gh-release@v2
@@ -113,20 +149,19 @@ jobs:
           files: |
             packages/session-state/*.tgz
             packages/web/*.tgz
+            artifacts/npm-tarballs.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish session-state to npm
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        working-directory: packages/session-state
-        run: npm publish --access public
+        run: npm publish packages/session-state/*.tgz --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish web to npm
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        working-directory: packages/web
-        run: npm publish --access public
+        run: npm publish packages/web/*.tgz --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

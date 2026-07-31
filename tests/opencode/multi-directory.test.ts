@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "vitest"
+import { beforeAll, expect, test } from "vitest"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { createOpencodeClient } from "@opencode-ai/sdk/v2"

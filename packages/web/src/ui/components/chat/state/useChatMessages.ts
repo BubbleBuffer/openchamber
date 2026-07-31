@@ -1,7 +1,6 @@
 import React from 'react';
 import type { ChatMessageEntry } from '../lib/turns/types';
 import type { ChatMessagesState } from './types';
-import { useMachineMessages } from './machine/useMachineMessages';
 import {
   useStreamingMessageId as useMachineStreamingMessageId,
   useRetryState as useMachineRetryState,
@@ -19,7 +18,6 @@ export function useChatMessages({
   sessionId,
   renderedMessages,
 }: UseChatMessagesOptions): ChatMessagesState {
-  const { messages } = useMachineMessages({ directory, sessionId });
   const streamingMessageId = useMachineStreamingMessageId(directory, sessionId) ?? undefined;
   const historyState = useMachineHistoryState(directory, sessionId);
   const retryState = useMachineRetryState(directory, sessionId);
@@ -40,10 +38,10 @@ export function useChatMessages({
   }, [retryState.retryMessage, retryState.retryCooldownUntil, sessionId]);
 
   const historyMeta = React.useMemo(() => ({
-    limit: messages.length,
+    limit: renderedMessages.length,
     complete: !historyState.hasMoreAbove,
     loading: historyState.isLoadingOlder,
-  }), [historyState.hasMoreAbove, historyState.isLoadingOlder, messages.length]);
+  }), [historyState.hasMoreAbove, historyState.isLoadingOlder, renderedMessages.length]);
 
   const retryOverlay = React.useMemo(() => {
     if (!retryState.retryMessage || retryState.retryCooldownUntil !== null) {
@@ -59,13 +57,13 @@ export function useChatMessages({
 
   return React.useMemo(
     () => ({
-      messages,
+      messages: renderedMessages,
       renderedMessages,
-      messageCount: messages.length,
+      messageCount: renderedMessages.length,
       streamingMessageId,
       historyMeta,
       retryOverlay,
     }),
-    [historyMeta, messages, renderedMessages, retryOverlay, streamingMessageId],
+    [historyMeta, renderedMessages, retryOverlay, streamingMessageId],
   );
 }

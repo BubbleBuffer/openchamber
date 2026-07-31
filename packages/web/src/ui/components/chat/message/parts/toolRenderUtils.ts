@@ -9,6 +9,27 @@ const STANDALONE_TOOL_NAMES = new Set<string>(['task']);
 
 const SEARCH_TOOL_NAMES = new Set<string>(['grep', 'search', 'find', 'ripgrep', 'glob']);
 
+const STATIC_TOOL_NAMES = new Set<string>([
+    'read',
+    'list',
+    ...SEARCH_TOOL_NAMES,
+    'webfetch',
+    'fetch',
+    'curl',
+    'wget',
+    'websearch',
+    'web-search',
+    'search_web',
+    'codesearch',
+    'perplexity',
+    'todowrite',
+    'todoread',
+    'skill',
+    'plan_enter',
+    'plan_exit',
+    'structuredoutput',
+]);
+
 const normalizeToolName = (toolName: unknown): string => {
     if (typeof toolName !== 'string') return '';
     const trimmed = toolName.trim().toLowerCase();
@@ -31,8 +52,7 @@ export const isStandaloneTool = (toolName: unknown): boolean => {
 };
 
 export const isStaticTool = (toolName: unknown): boolean => {
-    if (typeof toolName !== 'string') return false;
-    return !isExpandableTool(toolName) && !isStandaloneTool(toolName);
+    return STATIC_TOOL_NAMES.has(normalizeToolName(toolName));
 };
 
 export const getStaticGroupToolName = (toolName: string): string => {

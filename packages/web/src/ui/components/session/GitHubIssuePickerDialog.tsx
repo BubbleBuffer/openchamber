@@ -32,7 +32,7 @@ import { useUIStore } from '@/stores/useUIStore';
 import { useRuntimeStore } from '@/stores/useRuntimeStore';
 import { useGitHubAuthStore } from '@/stores/github/useGitHubAuthStore';
 import { opencodeClient } from '@/lib/opencode/client';
-import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
+import { renderPromptTemplate } from '@/lib/tools/promptTemplates';
 import { createWorktreeSessionForNewBranch } from '@/lib/session/worktreeSessionCreator';
 import { generateBranchSlug } from '@/lib/git/branchNameGenerator';
 import type { GitHubIssue, GitHubIssueComment, GitHubIssuesListResult, GitHubIssueSummary } from '@contracts/github';
@@ -457,10 +457,10 @@ export function GitHubIssuePickerDialog({
         }
       }
 
-      const visiblePromptText = await renderMagicPrompt('github.issue.review.visible', {
+      const visiblePromptText = renderPromptTemplate('github.issue.review.visible', {
         issue_number: String(issue.number),
       });
-      const instructionsText = await renderMagicPrompt('github.issue.review.instructions');
+      const instructionsText = renderPromptTemplate('github.issue.review.instructions');
       const contextText = buildIssueContextText({ repo: issueRes.repo, issue, comments });
 
       void opencodeClient.sendMessage({

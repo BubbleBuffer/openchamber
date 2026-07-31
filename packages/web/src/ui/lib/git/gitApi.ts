@@ -3,7 +3,7 @@
 import type { RuntimeAPIs } from '../api/types';
 import * as gitHttp from './gitApiHttp';
 import { opencodeClient } from '../opencode/client';
-import { renderMagicPrompt } from '../tools/magicPrompts';
+import { renderPromptTemplate } from '../tools/promptTemplates';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useContextStore } from '@/stores/contextStore';
 import { useAgentConfigStore } from '@/stores/agents/useAgentConfigStore';
@@ -152,8 +152,8 @@ export async function generateCommitMessage(
     agent: generationSession.agent,
   });
 
-  const visiblePrompt = await renderMagicPrompt('git.commit.generate.visible');
-  const hiddenPrompt = await renderMagicPrompt('git.commit.generate.instructions', {
+  const visiblePrompt = renderPromptTemplate('git.commit.generate.visible');
+  const hiddenPrompt = renderPromptTemplate('git.commit.generate.instructions', {
     selected_files: files.map((file) => `- ${file}`).join('\n'),
   });
 
@@ -269,8 +269,8 @@ export async function generatePullRequestDescription(
     changedFiles: changedFiles.length,
   });
 
-  const visiblePrompt = await renderMagicPrompt('git.pr.generate.visible');
-  const hiddenPrompt = await renderMagicPrompt('git.pr.generate.instructions', {
+  const visiblePrompt = renderPromptTemplate('git.pr.generate.visible');
+  const hiddenPrompt = renderPromptTemplate('git.pr.generate.instructions', {
     base_branch: payload.base,
     head_branch: payload.head,
     commits: commits.map((commit) => `- ${commit.hash.slice(0, 7)} ${commit.subject || '(no subject)'}`).join('\n'),

@@ -4,7 +4,6 @@ import { MessageFreshnessDetector } from '@/lib/messages/messageFreshness';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSessions } from '@/sync/sync-context';
 import { getAllSyncSessions } from '@/sync/sync-refs';
-import { useSessionMountPool, type SessionMountState } from './useSessionMountPool';
 
 type ActiveScrollState = {
     userScrolledUp: boolean;
@@ -19,7 +18,6 @@ const EMPTY_SCROLL_STATE: ActiveScrollState = {
 export type ChatSessionShellState = {
     currentSessionId: string | null;
     draftOpen: boolean;
-    mountedSessions: Map<string, SessionMountState>;
     parentSession: Session | null;
     activeScrollState: ActiveScrollState;
     actions: {
@@ -34,7 +32,6 @@ export const useChatSessionShell = (): ChatSessionShellState => {
     const setCurrentSession = useSessionUIStore((s) => s.setCurrentSession);
     const newSessionDraft = useSessionUIStore((s) => s.newSessionDraft);
     const draftOpen = Boolean(newSessionDraft?.open);
-    const { mountedSessions, activateSession } = useSessionMountPool();
     const [activeScrollState, setActiveScrollState] = React.useState<ActiveScrollState>(EMPTY_SCROLL_STATE);
     const sessions = useSessions();
 
@@ -62,17 +59,16 @@ export const useChatSessionShell = (): ChatSessionShellState => {
 
     React.useEffect(() => {
         if (!currentSessionId) return;
-        activateSession(currentSessionId);
+        setActiveScrollState(EMPTY_SCROLL_STATE);
         const hasHashTarget = typeof window !== 'undefined' && window.location.hash.length > 0;
         if (!hasHashTarget) {
             MessageFreshnessDetector.getInstance().recordSessionStart(currentSessionId);
         }
-    }, [currentSessionId, activateSession]);
+    }, [currentSessionId]);
 
     return {
         currentSessionId,
         draftOpen,
-        mountedSessions,
         parentSession,
         activeScrollState,
         actions: {

@@ -73,7 +73,6 @@ Read the relevant `DOCUMENTATION.md` before modifying that module.
 | opencode                            | `packages/web/server/src/domains/opencode/DOCUMENTATION.md`   |
 | fs                                  | `packages/web/server/src/domains/fs/DOCUMENTATION.md`         |
 | ui-auth                             | `packages/web/server/src/domains/ui-auth/DOCUMENTATION.md`    |
-| skills-catalog                      | `packages/web/server/src/domains/skills-catalog/DOCUMENTATION.md` |
 | contracts (wire ownership)          | `packages/web/server/src/contracts/DOCUMENTATION.md`          |
 | event-stream                        | `packages/web/server/src/domains/event-stream/DOCUMENTATION.md` |
 | settings                            | `packages/web/server/src/domains/settings/DOCUMENTATION.md`   |
@@ -125,6 +124,12 @@ Validation and safety gates MUST live in core command logic, not in prompts. The
 | `scripts/verify.sh`           | Full verification (type-check + lint + build)  |
 
 Run `scripts/verify.sh` before finalising any change. At minimum, run `bun run type-check` and `bun run lint`.
+
+The browser gate is a separate Playwright runner under `tests/browser` and is
+run with `bun run --cwd tests test:browser` after `bun run build`. Its fixtures
+launch only isolated local OpenCode/OpenChamber children and use PID-targeted
+cleanup; never add process-name matching or run it against the live canary by
+default.
 
 ## Test process safety (HARD RULES)
 

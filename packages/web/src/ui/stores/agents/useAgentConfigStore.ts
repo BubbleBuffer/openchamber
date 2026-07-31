@@ -369,17 +369,11 @@ export const useAgentConfigStore = create<AgentConfigStore>()(
 
                                 let resolvedAgent: Agent = fallbackAgent;
 
-                                // Track invalid settings to clear
-                                const invalidSettings: { defaultModel?: string; defaultVariant?: string; defaultAgent?: string } = {};
-
                                 // 1. Check OpenChamber settings for default agent
                                 if (openChamberDefaults.defaultAgent) {
                                     const settingsAgent = safeAgents.find((agent) => agent.name === openChamberDefaults.defaultAgent);
                                     if (settingsAgent) {
                                         resolvedAgent = settingsAgent;
-                                    } else {
-                                        // Agent no longer exists - mark for clearing
-                                        invalidSettings.defaultAgent = '';
                                     }
                                 }
 
@@ -402,13 +396,8 @@ export const useAgentConfigStore = create<AgentConfigStore>()(
                                             const variants = model?.variants;
                                             if (variants && Object.prototype.hasOwnProperty.call(variants, openChamberDefaults.defaultVariant)) {
                                                 resolvedVariant = openChamberDefaults.defaultVariant;
-                                            } else {
-                                                invalidSettings.defaultVariant = '';
                                             }
                                         }
-                                    } else {
-                                        // Model no longer exists - mark for clearing
-                                        invalidSettings.defaultModel = '';
                                     }
                                 }
 
@@ -471,18 +460,6 @@ export const useAgentConfigStore = create<AgentConfigStore>()(
 
                                     return nextState;
                                 });
-
-                                // Clear invalid settings from storage (best-effort cleanup)
-                                if (Object.keys(invalidSettings).length > 0) {
-                                    set({
-                                        settingsDefaultModel: invalidSettings.defaultModel !== undefined ? undefined : get().settingsDefaultModel,
-                                        settingsDefaultVariant: invalidSettings.defaultVariant !== undefined ? undefined : get().settingsDefaultVariant,
-                                        settingsDefaultAgent: invalidSettings.defaultAgent !== undefined ? undefined : get().settingsDefaultAgent,
-                                    });
-                                    updateSettings(invalidSettings).catch(() => {
-                                        // Ignore errors - best effort cleanup
-                                    });
-                                }
 
                                 return true;
                             } catch (error) {

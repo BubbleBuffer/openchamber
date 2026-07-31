@@ -8,27 +8,11 @@ import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
 import { useCommandsStore } from '@/stores/useCommandsStore';
 import { useMcpConfigStore } from '@/stores/mcp/useMcpConfigStore';
 import { useSkillsStore } from '@/stores/skills/useSkillsStore';
-import { useSkillsCatalogStore } from '@/stores/skills/useSkillsCatalogStore';
 import {
-  RiAiAgentLine,
-  RiAiGenerate2,
   RiArrowLeftSLine,
-  RiBarChart2Line,
-  RiBookLine,
-  RiBookOpenLine,
-  RiChatAi3Line,
-  RiChatHistoryLine,
   RiCloseLine,
-  RiCommandLine,
-  RiCloudLine,
-  RiFoldersLine,
-  RiGitBranchLine,
   RiListUnordered,
-  RiNotification3Line,
-  RiPaletteLine,
-  RiRobot2Line,
   RiRestartLine,
-  RiSlashCommands2,
 } from '@remixicon/react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
@@ -46,12 +30,9 @@ import { ProvidersSidebar } from '@/components/sections/providers/ProvidersSideb
 import { ProvidersPage } from '@/components/sections/providers/ProvidersPage';
 import { UsageSidebar } from '@/components/sections/usage/UsageSidebar';
 import { UsagePage } from '@/components/sections/usage/UsagePage';
-import { MagicPromptsSidebar } from '@/components/sections/magic-prompts/MagicPromptsSidebar';
-import { MagicPromptsPage } from '@/components/sections/magic-prompts/MagicPromptsPage';
 import { GitPage } from '@/components/sections/git-identities/GitPage';
 import type { OpenChamberSection } from '@/components/sections/openchamber/types';
 import { OpenChamberPage } from '@/components/sections/openchamber/OpenChamberPage';
-import { McpIcon } from '@/components/icons/McpIcon';
 import { useDeviceInfo } from '@/lib/device';
 import { reloadOpenCodeConfiguration } from '@/stores/agents/useAgentsStore';
 import {
@@ -60,6 +41,7 @@ import {
   resolveSettingsSlug,
   type SettingsPageSlug,
 } from '@/lib/settings/metadata';
+import { getSettingsNavIcon } from '@/lib/settings/navIcons';
 
 // Same constraints as main sidebar
 const SETTINGS_NAV_MIN_WIDTH = 176;
@@ -83,7 +65,6 @@ const pageOrder: SettingsPageSlug[] = [
   'sessions',
   'shortcuts',
   'git',
-  'magic-prompts',
   'projects',
   'agents',
   'commands',
@@ -91,52 +72,7 @@ const pageOrder: SettingsPageSlug[] = [
   'providers',
   'usage',
   'skills.installed',
-  'skills.catalog',
 ];
-
-// eslint-disable-next-line react-refresh/only-export-components
-export function getSettingsNavIcon(slug: SettingsPageSlug): React.ComponentType<{ className?: string }> | null {
-  switch (slug) {
-    case 'projects':
-      return RiFoldersLine;
-    case 'appearance':
-      return RiPaletteLine;
-    case 'chat':
-      return RiChatAi3Line;
-    case 'magic-prompts':
-      return RiAiGenerate2;
-    case 'notifications':
-      return RiNotification3Line;
-    case 'shortcuts':
-      return RiCommandLine;
-    case 'sessions':
-      return RiChatHistoryLine;
-
-    case 'providers':
-      return RiCloudLine;
-    case 'agents':
-      return RiAiAgentLine;
-    case 'commands':
-      return RiSlashCommands2;
-    case 'mcp':
-      return McpIcon;
-
-    case 'skills.installed':
-      return RiBookOpenLine;
-    case 'skills.catalog':
-      return RiBookLine;
-
-    case 'git':
-      return RiGitBranchLine;
-
-    case 'usage':
-      return RiBarChart2Line;
-    case 'home':
-      return null;
-    default:
-      return RiRobot2Line;
-  }
-}
 
 const SettingsHome: React.FC<{ onOpen: (slug: SettingsPageSlug) => void }> = ({ onOpen }) => {
   return (
@@ -174,14 +110,14 @@ const SettingsHome: React.FC<{ onOpen: (slug: SettingsPageSlug) => void }> = ({ 
 
           <button
             type="button"
-            onClick={() => onOpen('skills.catalog')}
+            onClick={() => onOpen('skills.installed')}
             className={cn(
               'rounded-lg border border-border bg-[var(--surface-elevated)] p-4 text-left',
               'hover:bg-[var(--interactive-hover)] transition-colors'
             )}
           >
-            <div className="typography-ui-label text-foreground">Skills Catalog</div>
-            <div className="typography-micro text-muted-foreground/70">Install skills from catalogs</div>
+            <div className="typography-ui-label text-foreground">Installed Skills</div>
+            <div className="typography-micro text-muted-foreground/70">View skills discovered by OpenCode</div>
           </button>
 
           <button
@@ -308,9 +244,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
       void useMcpConfigStore.getState().loadMcpConfigs();
       return;
     }
-    if (settingsSlug === 'skills.installed' || settingsSlug === 'skills.catalog') {
+    if (settingsSlug === 'skills.installed') {
       void useSkillsStore.getState().loadSkills();
-      void useSkillsCatalogStore.getState().loadCatalog();
     }
   }, [activeProjectId, isSettingsDialogOpen, settingsSlug]);
 
@@ -359,8 +294,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
         return <ProvidersSidebar onItemSelect={opts.onItemSelect} />;
       case 'usage':
         return <UsageSidebar onItemSelect={opts.onItemSelect} />;
-      case 'magic-prompts':
-        return <MagicPromptsSidebar onItemSelect={opts.onItemSelect} />;
       default:
         return null;
     }
@@ -379,15 +312,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
       case 'mcp':
         return <McpPage />;
       case 'skills.installed':
-        return <SkillsPage view="installed" />;
-      case 'skills.catalog':
-        return <SkillsPage view="catalog" />;
+        return <SkillsPage />;
       case 'providers':
         return <ProvidersPage />;
       case 'usage':
         return <UsagePage />;
-      case 'magic-prompts':
-        return <MagicPromptsPage />;
       case 'git':
         return <GitPage />;
       case 'appearance':

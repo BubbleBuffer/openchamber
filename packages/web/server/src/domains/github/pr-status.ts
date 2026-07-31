@@ -1,4 +1,4 @@
-import type { Octokit } from "@octokit/rest";
+import type { Octokit, RestEndpointMethodTypes } from "@octokit/rest";
 import { getRemotes, getStatus } from "../git/service.js";
 import { resolveGitHubRepoFromDirectory } from "./repo.js";
 import type { ParsedGitHubRemote, ResolveGitHubPrStatusOptions, ResolvedPrStatus } from "./types.js";
@@ -6,6 +6,23 @@ import type { ParsedGitHubRemote, ResolveGitHubPrStatusOptions, ResolvedPrStatus
 const REPO_DEFAULT_BRANCH_TTL_MS = 5 * 60_000;
 const defaultBranchCache = new Map<string, { defaultBranch: string | null; fetchedAt: number }>();
 const repoMetadataCache = new Map<string, { data: Record<string, unknown> | null; fetchedAt: number }>();
+type PullRequest =
+  | RestEndpointMethodTypes["pulls"]["get"]["response"]["data"]
+  | RestEndpointMethodTypes["pulls"]["list"]["response"]["data"][number];
+type PullListParameters = RestEndpointMethodTypes["pulls"]["list"]["parameters"];
+type SearchPullRequestItem =
+  RestEndpointMethodTypes["search"]["issuesAndPullRequests"]["response"]["data"]["items"][number];
+
+const errorStatus = (error: unknown): number | undefined =>
+  typeof error === "object" && error !== null && "status" in error && typeof error.status === "number"
+    ? error.status
+    : undefined;
+
+const record = (value: unknown): Record<string, unknown> | null =>
+  typeof value === "object" && value !== null ? value as Record<string, unknown> : null;
+
+const nestedRecord = (value: unknown, key: string): Record<string, unknown> | null =>
+  record(record(value)?.[key]);
 
 const normalizeText = (value: unknown): string =>
   typeof value === "string" ? value.trim() : "";
@@ -68,7 +85,7 @@ const rankRemoteNames = (
   return ranked;
 };
 
-const getHeadOwner = (pr: Record<string, any> | null): string => {
+const getHeadOwner = (pr: PullRequest | null): string => {
   const repoOwner = normalizeText(pr?.head?.repo?.owner?.login);
   if (repoOwner) {
     return repoOwner;
@@ -85,7 +102,7 @@ const getHeadOwner = (pr: Record<string, any> | null): string => {
   return "";
 };
 
-const getHeadRepoKey = (pr: Record<string, any> | null, fallbackRepoName: string): string => {
+const getHeadRepoKey = (pr: PullRequest | null, fallbackRepoName: string): string => {
   const repoOwner = normalizeText(pr?.head?.repo?.owner?.login);
   const repoName = normalizeText(pr?.head?.repo?.name);
   if (repoOwner && repoName) {
@@ -117,7 +134,7 @@ const buildSourceMatcher = (sourceCandidates: { repo?: ParsedGitHubRemote | null
     }
   });
 
-  const matches = (pr: Record<string, any> | null, fallbackRepoName: string): boolean => {
+  const matches = (pr: PullRequest | null, fallbackRepoName: string): boolean => {
     const repoKey = getHeadRepoKey(pr, fallbackRepoName);
     if (repoKey && repoRank.has(repoKey)) {
       return true;
@@ -126,7 +143,7 @@ const buildSourceMatcher = (sourceCandidates: { repo?: ParsedGitHubRemote | null
     return Boolean(owner) && ownerRank.has(owner);
   };
 
-  const compare = (left: Record<string, any> | null, right: Record<string, any> | null, fallbackRepoName: string): number => {
+  const compare = (left: PullRequest | null, right: PullRequest | null, fallbackRepoName: string): number => {
     const leftRepoRank = repoRank.get(getHeadRepoKey(left, fallbackRepoName));
     const rightRepoRank = repoRank.get(getHeadRepoKey(right, fallbackRepoName));
     const leftRepoScore = typeof leftRepoRank === "number" ? leftRepoRank : Number.POSITIVE_INFINITY;
@@ -198,8 +215,8 @@ const getRepoMetadata = async (octokit: Octokit, repo: ParsedGitHubRemote | null
       fetchedAt: Date.now(),
     });
     return data;
-  } catch (error: any) {
-    if (error?.status === 403 || error?.status === 404) {
+  } catch (error: unknown) {
+    if (errorStatus(error) === 403 || errorStatus(error) === 404) {
       repoMetadataCache.set(repoKey, {
         data: null,
         fetchedAt: Date.now(),
@@ -262,26 +279,32 @@ const expandRepoNetwork = async (
 
     pushCandidate(candidate.repo, candidate.remoteName, candidate.priority);
 
-    const parent = metadata?.parent as Record<string, any> | undefined;
-    if (parent?.owner?.login && parent?.name) {
+    const parent = record(metadata.parent);
+    const parentOwner = nestedRecord(parent, "owner");
+    const parentOwnerLogin = normalizeText(parentOwner?.login);
+    const parentName = normalizeText(parent?.name);
+    if (parentOwnerLogin && parentName) {
       pushCandidate(
         {
-          owner: parent.owner.login,
-          repo: parent.name,
-          url: parent.html_url || `https://github.com/${parent.owner.login}/${parent.name}`,
+          owner: parentOwnerLogin,
+          repo: parentName,
+          url: normalizeText(parent?.html_url) || `https://github.com/${parentOwnerLogin}/${parentName}`,
         },
         candidate.remoteName,
         candidate.priority + 0.1,
       );
     }
 
-    const source = metadata?.source as Record<string, any> | undefined;
-    if (source?.owner?.login && source?.name) {
+    const source = record(metadata.source);
+    const sourceOwner = nestedRecord(source, "owner");
+    const sourceOwnerLogin = normalizeText(sourceOwner?.login);
+    const sourceName = normalizeText(source?.name);
+    if (sourceOwnerLogin && sourceName) {
       pushCandidate(
         {
-          owner: source.owner.login,
-          repo: source.name,
-          url: source.html_url || `https://github.com/${source.owner.login}/${source.name}`,
+          owner: sourceOwnerLogin,
+          repo: sourceName,
+          url: normalizeText(source?.html_url) || `https://github.com/${sourceOwnerLogin}/${sourceName}`,
         },
         candidate.remoteName,
         candidate.priority + 0.2,
@@ -292,12 +315,12 @@ const expandRepoNetwork = async (
   return expanded.sort((left, right) => left.priority - right.priority);
 };
 
-const safeListPulls = async (octokit: Octokit, options: any): Promise<Record<string, unknown>[]> => {
+const safeListPulls = async (octokit: Octokit, options: PullListParameters): Promise<PullRequest[]> => {
   try {
     const response = await octokit.rest.pulls.list(options);
     return Array.isArray(response?.data) ? response.data : [];
-  } catch (error: any) {
-    if (error?.status === 404 || error?.status === 403) {
+  } catch (error: unknown) {
+    if (errorStatus(error) === 404 || errorStatus(error) === 403) {
       return [];
     }
     throw error;
@@ -337,7 +360,7 @@ const searchFallbackPr = async ({
   octokit: Octokit;
   branch: string;
   repoNames: string[];
-}): Promise<{ repo: ParsedGitHubRemote; pr: Record<string, unknown> } | null> => {
+}): Promise<{ repo: ParsedGitHubRemote; pr: PullRequest } | null> => {
   const repoKey = [...repoNames].sort().join(",").toLowerCase();
 
   const disabledAt = _searchApiDisabledRepos.get(repoKey);
@@ -349,26 +372,26 @@ const searchFallbackPr = async ({
     repoNames.map((name) => normalizeLower(name)).filter(Boolean),
   );
 
-  for (const state of ["open", "closed"]) {
-    let response: any;
+  for (const state of ["open", "closed"] as const) {
+    let items: SearchPullRequestItem[];
     try {
-      response = await octokit.rest.search.issuesAndPullRequests({
+      const response = await octokit.rest.search.issuesAndPullRequests({
         q: `is:pr state:${state} head:${branch}`,
         per_page: 20,
       });
+      items = Array.isArray(response?.data?.items) ? response.data.items : [];
       _searchApiDisabledRepos.delete(repoKey);
-    } catch (error: any) {
-      if (error?.status === 403) {
+    } catch (error: unknown) {
+      if (errorStatus(error) === 403) {
         _searchApiDisabledRepos.set(repoKey, Date.now());
         return null;
       }
-      if (error?.status === 404) {
+      if (errorStatus(error) === 404) {
         continue;
       }
       throw error;
     }
 
-    const items: Record<string, any>[] = Array.isArray(response?.data?.items) ? response.data.items : [];
     for (const item of items) {
       const repo = parseRepoFromApiUrl(item?.repository_url);
       if (!repo) {
@@ -381,7 +404,7 @@ const searchFallbackPr = async ({
         const prResponse = await octokit.rest.pulls.get({
           owner: repo.owner,
           repo: repo.repo,
-          pull_number: item.number as number,
+          pull_number: item.number,
         });
         const pr = prResponse?.data;
         if (!pr || normalizeText(pr.head?.ref) !== branch) {
@@ -395,8 +418,8 @@ const searchFallbackPr = async ({
           },
           pr,
         };
-      } catch (error: any) {
-        if (error?.status === 403 || error?.status === 404) {
+      } catch (error: unknown) {
+        if (errorStatus(error) === 403 || errorStatus(error) === 404) {
           continue;
         }
         throw error;
@@ -417,18 +440,18 @@ const findFirstMatchingPr = async ({
   target: { repo: ParsedGitHubRemote; remoteName: string };
   branch: string;
   sourceCandidates: { repo: ParsedGitHubRemote; remoteName: string }[];
-}): Promise<Record<string, any> | null> => {
+}): Promise<PullRequest | null> => {
   const matcher = buildSourceMatcher(sourceCandidates);
   const sourceOwners: string[] = [];
   sourceCandidates.forEach((candidate) => pushUnique(sourceOwners, candidate.repo?.owner));
 
-  const pickPreferred = (prs: Record<string, any>[]): Record<string, any> | null =>
+  const pickPreferred = (prs: PullRequest[]): PullRequest | null =>
     prs
       .filter((pr) => normalizeText(pr?.head?.ref) === branch)
       .filter((pr) => matcher.matches(pr, target.repo.repo))
       .sort((left, right) => matcher.compare(left, right, target.repo.repo))[0] ?? null;
 
-  for (const state of ["open", "closed"]) {
+  for (const state of ["open", "closed"] as const) {
     for (const owner of sourceOwners) {
       const directCandidates = await safeListPulls(octokit, {
         owner: target.repo.owner,
@@ -472,9 +495,9 @@ export async function resolveGitHubPrStatus({
     getRemotes(directory).catch(() => []),
   ]);
 
-  const trackingRemoteName = parseTrackingRemoteName((status as any)?.tracking);
+  const trackingRemoteName = parseTrackingRemoteName(status?.tracking);
   const rankedRemoteNames = rankRemoteNames(
-    Array.isArray(remotes) ? remotes.map((remote) => (remote as any)?.name).filter(Boolean) : [],
+    Array.isArray(remotes) ? remotes.map((remote) => remote.name).filter(Boolean) : [],
     normalizedRemoteName,
     trackingRemoteName,
   );
@@ -519,7 +542,7 @@ export async function resolveGitHubPrStatus({
     if (pr) {
       return {
         repo: target.repo,
-        pr: pr as any,
+        pr,
         defaultBranch,
         resolvedRemoteName: target.remoteName,
       };
@@ -534,7 +557,7 @@ export async function resolveGitHubPrStatus({
   if (fallbackSearch) {
     return {
       repo: fallbackSearch.repo,
-      pr: fallbackSearch.pr as any,
+      pr: fallbackSearch.pr,
       defaultBranch: await getRepoDefaultBranch(octokit, fallbackSearch.repo),
       resolvedRemoteName: null,
     };

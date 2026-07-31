@@ -1,9 +1,8 @@
 import React from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ChatView } from '@/components/views';
+import { ChatView } from '@/components/views/ChatView';
 import { FireworksProvider } from '@/contexts/FireworksContext';
 import { Toaster } from '@/components/ui/sonner';
-import { MemoryDebugPanel } from '@/components/ui/MemoryDebugPanel';
 import { setStreamPerfEnabled } from '@/stores/utils/streamDebug';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 // useEventStream removed — replaced by SyncProvider + SyncBridge
@@ -30,37 +29,25 @@ import { useSync } from '@/sync/use-sync';
 import { setOptimisticRefs } from '@/sync/session-actions';
 import { useFontPreferences } from '@/hooks/useFontPreferences';
 import { CODE_FONT_OPTION_MAP, DEFAULT_MONO_FONT, DEFAULT_UI_FONT, UI_FONT_OPTION_MAP } from '@/lib/fontOptions';
-import { ConfigUpdateOverlay } from '@/components/ui/ConfigUpdateOverlay';
-import { AboutDialog } from '@/components/ui/AboutDialog';
 import { RuntimeAPIProvider } from '@/contexts/RuntimeAPIProvider';
 import { registerRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 import { useUIStore } from '@/stores/useUIStore';
-import { useDialogStore } from '@/stores/useDialogStore';
 import { useGitHubAuthStore } from '@/stores/github/useGitHubAuthStore';
 import { useFeatureFlagsStore } from '@/stores/useFeatureFlagsStore';
 import type { RuntimeAPIs } from '@/lib/api/types';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { QuickOpenDialog } from '@/components/ui/QuickOpenDialog';
-import { McpOAuthCallbackPage } from '@/components/sections/mcp/McpOAuthCallbackPage';
 import { MCP_OAUTH_CALLBACK_PATH } from '@/components/sections/mcp/mcpOAuth';
 import { lazyWithChunkRecovery } from '@/lib/errors/chunkLoadRecovery';
-import * as Sentry from '@sentry/react';
+import { reportError } from '@/lib/errors/reportError';
+import { DeferredAppOverlays } from '@/components/layout/DeferredAppOverlays';
 
 // Lazy-loaded heavy views — loaded on demand to reduce initial bundle size.
 const OnboardingScreen = lazyWithChunkRecovery(() =>
   import('@/components/onboarding/OnboardingScreen').then((m) => ({ default: m.OnboardingScreen })),
 );
-
-const AboutDialogWrapper: React.FC = () => {
-  const isAboutDialogOpen = useDialogStore((s) => s.isAboutDialogOpen);
-  const setAboutDialogOpen = useDialogStore((s) => s.setAboutDialogOpen);
-  return (
-    <AboutDialog
-      open={isAboutDialogOpen}
-      onOpenChange={setAboutDialogOpen}
-    />
-  );
-};
+const McpOAuthCallbackPage = lazyWithChunkRecovery(() =>
+  import('@/components/sections/mcp/McpOAuthCallbackPage').then((m) => ({ default: m.McpOAuthCallbackPage })),
+);
 
 type AppProps = {
   apis: RuntimeAPIs;
@@ -188,13 +175,6 @@ function App({ apis }: AppProps) {
   const embeddedBackgroundWorkEnabled = !embeddedSessionChat || isEmbeddedVisible;
   const isMcpOAuthCallback = React.useMemo(() => isMcpOAuthCallbackPath(), []);
 
-  // App init breadcrumb — Sentry auto-catches uncaught errors/rejections.
-  React.useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    Sentry.addBreadcrumb({ category: 'app', message: 'App init started', level: 'info', data: { userAgent: navigator.userAgent } });
-  }, []);
-
   React.useEffect(() => {
     setStreamPerfEnabled(showMemoryDebug);
     return () => {
@@ -296,11 +276,9 @@ function App({ apis }: AppProps) {
       }
       initializationInFlightRef.current = true;
       try {
-        Sentry.addBreadcrumb({ category: 'app', message: 'App init: calling initializeApp', level: 'info' });
         await initializeApp();
-        Sentry.addBreadcrumb({ category: 'app', message: 'App init: initializeApp succeeded', level: 'info' });
       } catch (err) {
-        Sentry.captureException(err, { extra: { source: 'initializeApp' } });
+        reportError(err, { action: 'Initialize application', silent: true });
         throw err;
       } finally {
         initializationInFlightRef.current = false;
@@ -580,7 +558,9 @@ function App({ apis }: AppProps) {
   if (isMcpOAuthCallback) {
     return (
       <ErrorBoundary>
-        <McpOAuthCallbackPage />
+        <React.Suspense fallback={<div className="h-full bg-background" />}>
+          <McpOAuthCallbackPage />
+        </React.Suspense>
       </ErrorBoundary>
     );
   }
@@ -601,14 +581,10 @@ function App({ apis }: AppProps) {
                   <MainLayout />
                   <Toaster />
                   {!isBootShell && (
-                    <>
-                      <ConfigUpdateOverlay />
-                      <QuickOpenDialog />
-                      <AboutDialogWrapper />
-                      {showMemoryDebug && (
-                        <MemoryDebugPanel onClose={() => setShowMemoryDebug(false)} />
-                      )}
-                    </>
+                    <DeferredAppOverlays
+                      showMemoryDebug={showMemoryDebug}
+                      onCloseMemoryDebug={() => setShowMemoryDebug(false)}
+                    />
                   )}
                 </div>
               </TooltipProvider>

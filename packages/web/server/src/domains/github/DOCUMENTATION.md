@@ -1,8 +1,9 @@
 # GitHub domain
 
 Authoritative wire contract: [`../../contracts/github.ts`](../../contracts/github.ts).
-`routes.ts` owns `/api/github/*`; auth, device flow, remote resolution, and PR
-status logic remain in this domain.
+`routes.ts` is the thin registrar for `/api/github/*`; `issue-routes.ts` owns
+issue listing, detail, and comment reads, while auth, device flow, remote
+resolution, and PR status logic remain in this domain.
 
 Routes parse OpenChamber-owned requests and return only safe coded provider
 errors. A disconnected account is a normal product state (`connected: false`),

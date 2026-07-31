@@ -22,9 +22,13 @@ const getSdkClient = mock(() => ({
 // --- Mock globalSessions with our controlled listGlobalSessionPages ---
 const listGlobalSessionPages = mock(
   async (
-    _client: unknown,
+    client: unknown,
     opts: { archived: boolean; pageSize: number },
-  ): Promise<Session[]> => [],
+  ): Promise<Session[]> => {
+    void client;
+    void opts;
+    return [];
+  },
 );
 
 mock.module("@/stores/globalSessions", () => ({

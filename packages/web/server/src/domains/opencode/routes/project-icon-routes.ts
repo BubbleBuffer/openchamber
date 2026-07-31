@@ -1,4 +1,5 @@
 import type { Express, Request, Response } from "express";
+import type { FsSearchRuntime } from "../../fs/types.js";
 import {
   parseProjectIconDiscoverRequest,
   parseProjectIconContentResponse,
@@ -16,14 +17,14 @@ interface ProjectIconRoutesDeps {
   crypto: typeof import("crypto");
   openchamberDataDir: string;
   sanitizeProjects: (input: unknown) => Array<Record<string, unknown>> | undefined;
-  readSettingsFromDiskMigrated: () => Promise<any>;
-  persistSettings: (changes: object) => Promise<any>;
+  readSettingsFromDiskMigrated: () => Promise<Record<string, unknown>>;
+  persistSettings: (changes: object) => Promise<Record<string, unknown>>;
   createFsSearchRuntime: (deps: {
     fsPromises: typeof import("fs/promises");
     path: typeof import("path");
     spawn: typeof import("child_process").spawn;
     resolveGitBinaryForSpawn: () => string;
-  }) => any;
+  }) => FsSearchRuntime;
   spawn: typeof import("child_process").spawn;
   resolveGitBinaryForSpawn: () => string;
 }
@@ -224,11 +225,11 @@ export function registerProjectIconRoutes(
   };
 
   const findProjectById = (
-    settings: any,
+    settings: Record<string, unknown>,
     projectId: string
   ): FindProjectResult => {
-    const projects = sanitizeProjects(settings?.projects) || [];
-    const index = projects.findIndex((project) => (project as any).id === projectId);
+    const projects = sanitizeProjects(settings.projects) || [];
+    const index = projects.findIndex((project) => project.id === projectId);
     if (index === -1) {
       return { projects, index: -1, project: null };
     }
@@ -268,7 +269,11 @@ export function registerProjectIconRoutes(
         return;
       }
 
-      const metadataMime = normalizeProjectIconMime((project as any).iconImage?.mime);
+      const iconImage =
+        project.iconImage && typeof project.iconImage === "object"
+          ? (project.iconImage as Record<string, unknown>)
+          : null;
+      const metadataMime = normalizeProjectIconMime(iconImage?.mime);
       const preferredPath = metadataMime ? projectIconPathForMime(projectIdValue, metadataMime) : null;
       const candidates = preferredPath
         ? [preferredPath, ...projectIconPathCandidates(projectIdValue).filter((c) => c !== preferredPath)]
@@ -384,13 +389,19 @@ export function registerProjectIconRoutes(
 
       const updatedAt = Date.now();
       const nextProjects = projects.map((entry) =>
-        (entry as any).id === projectIdValue
+        entry.id === projectIdValue
           ? { ...entry, iconImage: { mime: parsed.mime, updatedAt, source: "custom" } }
           : entry
       );
       const updatedSettings = await persistSettings({ projects: nextProjects });
+      const persistedProjects = Array.isArray(updatedSettings.projects)
+        ? updatedSettings.projects
+        : [];
       const updatedProject =
-        (updatedSettings.projects || []).find((entry: any) => entry.id === projectIdValue) || null;
+        persistedProjects.find(
+          (entry): entry is Record<string, unknown> =>
+            typeof entry === "object" && entry !== null && entry.id === projectIdValue
+        ) || null;
 
       sendProjectIconMutation(res, { project: updatedProject, settings: updatedSettings }, "Failed to upload project icon");
     } catch (error) {
@@ -418,11 +429,17 @@ export function registerProjectIconRoutes(
       await removeProjectIconFiles(projectIdValue);
 
       const nextProjects = projects.map((entry) =>
-        (entry as any).id === projectIdValue ? { ...entry, iconImage: null } : entry
+        entry.id === projectIdValue ? { ...entry, iconImage: null } : entry
       );
       const updatedSettings = await persistSettings({ projects: nextProjects });
+      const persistedProjects = Array.isArray(updatedSettings.projects)
+        ? updatedSettings.projects
+        : [];
       const updatedProject =
-        (updatedSettings.projects || []).find((entry: any) => entry.id === projectIdValue) || null;
+        persistedProjects.find(
+          (entry): entry is Record<string, unknown> =>
+            typeof entry === "object" && entry !== null && entry.id === projectIdValue
+        ) || null;
 
       sendProjectIconMutation(res, { project: updatedProject, settings: updatedSettings }, "Failed to remove project icon");
     } catch (error) {
@@ -453,7 +470,11 @@ export function registerProjectIconRoutes(
         return;
       }
       const force = request.value.force === true;
-      if ((project as any).iconImage?.source === "custom" && !force) {
+      const iconImage =
+        project.iconImage && typeof project.iconImage === "object"
+          ? (project.iconImage as Record<string, unknown>)
+          : null;
+      if (iconImage?.source === "custom" && !force) {
         sendProjectIconMutation(res, {
           project,
           skipped: true,
@@ -462,6 +483,9 @@ export function registerProjectIconRoutes(
         return;
       }
 
+      if (typeof project.path !== "string") {
+        throw new Error("Project path is invalid");
+      }
       const faviconCandidates = await fsSearchRuntime.searchFilesystemFiles(project.path, {
         limit: 200,
         query: "favicon",
@@ -470,8 +494,8 @@ export function registerProjectIconRoutes(
       });
 
       const filtered = faviconCandidates
-        .filter((entry: any) => /(^|\/)favicon\.(ico|png|svg|jpg|jpeg|webp)$/i.test(entry.path))
-        .sort((a: any, b: any) => a.path.length - b.path.length);
+        .filter((entry) => /(^|\/)favicon\.(ico|png|svg|jpg|jpeg|webp)$/i.test(entry.path))
+        .sort((a, b) => a.path.length - b.path.length);
 
       const selected = filtered[0];
       if (!selected) {
@@ -508,13 +532,19 @@ export function registerProjectIconRoutes(
 
       const updatedAt = Date.now();
       const nextProjects = projects.map((entry) =>
-        (entry as any).id === projectIdValue
+        entry.id === projectIdValue
           ? { ...entry, iconImage: { mime, updatedAt, source: "auto" } }
           : entry
       );
       const updatedSettings = await persistSettings({ projects: nextProjects });
+      const persistedProjects = Array.isArray(updatedSettings.projects)
+        ? updatedSettings.projects
+        : [];
       const updatedProject =
-        (updatedSettings.projects || []).find((entry: any) => entry.id === projectIdValue) || null;
+        persistedProjects.find(
+          (entry): entry is Record<string, unknown> =>
+            typeof entry === "object" && entry !== null && entry.id === projectIdValue
+        ) || null;
 
       sendProjectIconMutation(res, {
         project: updatedProject,

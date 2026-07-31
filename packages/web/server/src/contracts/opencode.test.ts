@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   parseDirectorySwitchRequest,
-  parseMagicPromptId,
-  parseMagicPromptStateResponse,
-  parseMagicPromptUpdateRequest,
   parseMcpConfigListResponse,
   parseMcpMutationResponse,
   parsePendingMcpAuthRequest,
@@ -51,16 +48,6 @@ describe("OpenChamber OpenCode wrapper contracts", () => {
     expect(parseSessionFoldersResponse({ version: 1, foldersMap: {}, collapsedFolderIds: [] }).ok).toBe(true);
     expect(parseSessionFoldersUpdateRequest({ ...valid, foldersMap: { project: [{ ...valid.foldersMap.project[0], name: " " }] } }).ok).toBe(false);
     expect(parseSessionFoldersResponse({ ...valid, collapsedFolderIds: [1] }).ok).toBe(false);
-  });
-
-  it("validates magic-prompt paths, bodies, and optional persisted overrides", () => {
-    expect(parseMagicPromptId(" git.commit.generate.visible ").ok).toBe(true);
-    expect(parseMagicPromptId("../../secret").ok).toBe(false);
-    expect(parseMagicPromptUpdateRequest({ text: "prompt" }).ok).toBe(true);
-    expect(parseMagicPromptUpdateRequest({ text: 1 }).ok).toBe(false);
-    expect(parseMagicPromptStateResponse({ version: 1, overrides: {} }).ok).toBe(true);
-    expect(parseMagicPromptStateResponse({ overrides: {} }).ok).toBe(true);
-    expect(parseMagicPromptStateResponse({ version: 1, overrides: { "bad/key": "prompt" } }).ok).toBe(false);
   });
 
   it("accepts only safe contracted authentication, upstream, and internal errors", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { evictSessionCaches } from "./use-sync"
+import { evictSessionCaches, resolveMessageFetchLimit } from "./use-sync"
 import type { State } from "./types"
 import type { Message, Part, SessionStatus, Todo, PermissionRequest, QuestionRequest } from "@/lib/opencode/client"
 import type { FileDiff } from "./types"
@@ -12,6 +12,17 @@ import { SESSION_CACHE_LIMIT } from "./types"
 
 const S1 = "s1"
 const S2 = "s2"
+
+describe("resolveMessageFetchLimit", () => {
+  test("replacement reconciliation never requests fewer messages than are resident", () => {
+    expect(resolveMessageFetchLimit(1, 3)).toBe(3)
+    expect(resolveMessageFetchLimit(5, 3)).toBe(5)
+  })
+
+  test("pagination keeps its requested page size", () => {
+    expect(resolveMessageFetchLimit(5, 20, "prepend")).toBe(5)
+  })
+})
 
 function makeMessages(sessionID: string): Message[] {
   return [
@@ -74,7 +85,7 @@ function makeMockChildStores(seed: {
   } as State
 
   const childStores = {
-    getChild: (_dir: string) => ({
+    getChild: () => ({
       getState: () => store,
       setState: (partial: Partial<State>) => {
         // Zustand shallow merge: mutate the existing store object

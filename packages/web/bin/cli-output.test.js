@@ -39,7 +39,7 @@ describe('CLI output modes', () => {
     expect(shouldRenderHumanOutput({ quiet: true })).toBe(false);
   });
 
-  it('requires both TTY streams for prompting and suppresses prompts for JSON/quiet', () => {
+  it('requires both TTY streams for prompting and suppresses prompts for JSON/quiet', async () => {
     const ttyStreams = { stdout: { isTTY: true }, stdin: { isTTY: true } };
     const pipedStreams = { stdout: { isTTY: false }, stdin: { isTTY: true } };
 
@@ -49,7 +49,7 @@ describe('CLI output modes', () => {
     expect(canPrompt({ quiet: true }, ttyStreams)).toBe(false);
     expect(createSpinner({}, ttyStreams)).not.toBeNull();
     expect(createSpinner({ json: true }, ttyStreams)).toBeNull();
-    expect(createProgress({ quiet: true }, {}, ttyStreams)).resolves.toBeNull();
+    await expect(createProgress({ quiet: true }, {}, ttyStreams)).resolves.toBeNull();
   });
 
   it('normalizes JSON status envelopes and writes one bounded document', () => {

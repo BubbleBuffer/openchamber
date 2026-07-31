@@ -4,7 +4,12 @@ import { opencodeError, parseSessionFoldersMutationResponse, parseSessionFolders
 const MAX_BODY_BYTES = 4 * 1024 * 1024;
 
 export interface SessionFoldersRoutesDeps {
-  fsPromises: { mkdir(path: string, opts?: { recursive?: boolean }): Promise<unknown>; readFile(path: string, encoding: string): Promise<string>; writeFile(path: string, data: string, encoding: string): Promise<void>; rename(oldPath: string, newPath: string): Promise<void> };
+  fsPromises: {
+    mkdir(path: string, opts?: { recursive?: boolean }): Promise<unknown>;
+    readFile(path: string, encoding: "utf8"): Promise<string>;
+    writeFile(path: string, data: string, encoding: "utf8"): Promise<void>;
+    rename(oldPath: string, newPath: string): Promise<void>;
+  };
   path: { join(...paths: string[]): string; dirname(p: string): string };
   openchamberDataDir: string;
 }

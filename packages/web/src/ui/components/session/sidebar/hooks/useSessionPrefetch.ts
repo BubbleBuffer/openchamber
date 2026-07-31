@@ -2,6 +2,7 @@ import React from 'react';
 import type { Session } from '@/lib/opencode/client';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { getSyncMessages } from '@/sync/sync-refs';
+import { useSyncDirectory } from '@/sync/sync-context';
 
 const SESSION_PREFETCH_HOVER_DELAY_MS = 180;
 const SESSION_PREFETCH_SETTLE_MS = 600;
@@ -16,6 +17,7 @@ type Args = {
 };
 
 export const useSessionPrefetch = ({ currentSessionId, sortedSessions, recentSessionIds = [], loadMessages }: Args): void => {
+  const currentDirectory = useSyncDirectory();
   const sessionPrefetchTimersRef = React.useRef<Map<string, number>>(new Map());
   const sessionPrefetchQueueRef = React.useRef<string[]>([]);
   const sessionPrefetchInFlightRef = React.useRef<Set<string>>(new Set());
@@ -87,6 +89,47 @@ export const useSessionPrefetch = ({ currentSessionId, sortedSessions, recentSes
     }, SESSION_PREFETCH_HOVER_DELAY_MS);
     sessionPrefetchTimersRef.current.set(sessionId, timer);
   }, [currentSessionId, pumpSessionPrefetchQueue]);
+
+  const cancelScheduledPrefetch = React.useCallback((sessionId: string | null) => {
+    if (!sessionId) return;
+    const timer = sessionPrefetchTimersRef.current.get(sessionId);
+    if (timer === undefined) return;
+    window.clearTimeout(timer);
+    sessionPrefetchTimersRef.current.delete(sessionId);
+  }, []);
+
+  React.useEffect(() => {
+    const rowFromTarget = (target: EventTarget | null) =>
+      target instanceof Element ? target.closest<HTMLElement>('[data-session-row]') : null;
+    const scheduleFromRow = (row: HTMLElement | null) => {
+      if (!row || row.dataset.sessionScope !== currentDirectory) return;
+      scheduleSessionPrefetch(row.dataset.sessionRow);
+    };
+    const cancelFromRow = (row: HTMLElement | null) => {
+      cancelScheduledPrefetch(row?.dataset.sessionRow ?? null);
+    };
+    const entered = (event: PointerEvent | FocusEvent) => {
+      const row = rowFromTarget(event.target);
+      if (row && event.relatedTarget instanceof Node && row.contains(event.relatedTarget)) return;
+      scheduleFromRow(row);
+    };
+    const left = (event: PointerEvent | FocusEvent) => {
+      const row = rowFromTarget(event.target);
+      if (row && event.relatedTarget instanceof Node && row.contains(event.relatedTarget)) return;
+      cancelFromRow(row);
+    };
+
+    document.addEventListener('pointerover', entered);
+    document.addEventListener('pointerout', left);
+    document.addEventListener('focusin', entered);
+    document.addEventListener('focusout', left);
+    return () => {
+      document.removeEventListener('pointerover', entered);
+      document.removeEventListener('pointerout', left);
+      document.removeEventListener('focusin', entered);
+      document.removeEventListener('focusout', left);
+    };
+  }, [cancelScheduledPrefetch, currentDirectory, scheduleSessionPrefetch]);
 
   // Wait for the active session to finish loading before prefetching neighbors.
   // On rapid session switches the timer resets, so only the final session triggers prefetch.

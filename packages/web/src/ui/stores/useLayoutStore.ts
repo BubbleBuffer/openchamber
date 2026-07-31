@@ -30,7 +30,7 @@ type LayoutState = {
 
 export const useLayoutStore = create<LayoutState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       isSidebarOpen: true,
       sidebarWidth: LEFT_SIDEBAR_MIN_WIDTH,
       isRightSidebarOpen: false,

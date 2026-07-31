@@ -1,7 +1,5 @@
 // packages/web/server/src/index.ts
-import "../instrument.mjs";
 import "reflect-metadata";
-import * as Sentry from "@sentry/node";
 import express from "express";
 import compression from "compression";
 import path from "node:path";
@@ -19,6 +17,10 @@ import {
   runCliEntryIfMain,
 } from "./domains/bootstrap/index.js";
 import { compressionFilter } from "./app/middleware.js";
+import type {
+  StartWebUiServerOptions,
+  WebUiServerController,
+} from "./shared/types.js";
 
 // ── Constants ────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -45,11 +47,26 @@ const OPENCHAMBER_VERSION = (() => {
   }
 })();
 
-const isEnvFlagEnabled = (value: any): boolean => {
+const isEnvFlagEnabled = (value: unknown): boolean => {
   if (value === true || value === 1) return true;
   if (typeof value !== "string") return false;
   const n = value.trim().toLowerCase();
   return n === "1" || n === "true";
+};
+
+export const shouldSkipZenModelValidation = (env: Record<string, unknown> = process.env): boolean =>
+  isEnvFlagEnabled(env.OPENCHAMBER_SKIP_ZEN_MODEL_VALIDATION);
+
+export const runZenModelValidationAtStartup = (
+  env: Record<string, unknown>,
+  validate: () => Promise<void>,
+): boolean => {
+  if (shouldSkipZenModelValidation(env)) {
+    console.log("[zen] Startup model validation skipped by OPENCHAMBER_SKIP_ZEN_MODEL_VALIDATION");
+    return false;
+  }
+  void validate();
+  return true;
 };
 
 const PLAN_MODE_EXPERIMENT_ENABLED =
@@ -64,7 +81,9 @@ let composition = createServerComposition({
 });
 
 // ── main() — the actual server boot ──────────────────────────────
-async function main(options: any = {}): Promise<any> {
+async function main(
+  options: StartWebUiServerOptions = {},
+): Promise<WebUiServerController> {
   const previousComposition = composition;
   const runComposition = previousComposition.state.runResourcesStarted
     ? createServerComposition({
@@ -94,8 +113,6 @@ async function main(options: any = {}): Promise<any> {
     writeSettingsToDisk,
     persistSettings,
     normalizeDirectoryPath,
-    isUnsafeSkillRelativePath,
-    sanitizeSkillCatalogs,
     sanitizeProjects,
     normalizePwaAppName,
     normalizePwaOrientation,
@@ -154,13 +171,13 @@ async function main(options: any = {}): Promise<any> {
   }
 
   console.log(`Starting OpenChamber on port ${port === 0 ? "auto" : port}`);
-  void validateZenModelAtStartup();
+  runZenModelValidationAtStartup(process.env, validateZenModelAtStartup);
 
   const app = express();
   const serverStartedAt = new Date().toISOString();
   app.set("trust proxy", true);
   app.use(
-    (compression as any)({
+    compression({
       filter: compressionFilter,
       threshold: 1024,
     }),
@@ -181,7 +198,7 @@ async function main(options: any = {}): Promise<any> {
   let startupPipelineRunInvoked = false;
   let startupPipelineCompleted = false;
   let openCodeDomainInitialized = false;
-  let previousOpenCodeApp: any = null;
+  let previousOpenCodeApp: express.Express | null = null;
   let previousOpenCodeShuttingDown: boolean | undefined;
   const restorePreviousLifecycleState = (): void => {
     lifecycleState.server = previousLifecycleState.server;
@@ -332,10 +349,6 @@ async function main(options: any = {}): Promise<any> {
     readSettingsFromDiskMigrated,
     persistSettings,
     sanitizeProjects,
-    sanitizeSkillCatalogs,
-    isUnsafeSkillRelativePath,
-    openCodeRuntime,
-    getOpenCodePort: () => openCodeRuntime.getPort(),
     buildAugmentedPath,
   });
 
@@ -399,7 +412,19 @@ async function main(options: any = {}): Promise<any> {
   let activePort: number | null = startupPipelineResult.activePort;
   startupPipelineCompleted = true;
 
-  Sentry.setupExpressErrorHandler(app);
+  app.use((error: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (res.headersSent) {
+      next(error);
+      return;
+    }
+
+    console.error("[server] Unhandled request error", {
+      method: req.method,
+      route: typeof req.route?.path === "string" ? req.route.path : "unmatched",
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    });
+    res.status(500).json({ error: "Internal server error", code: "internal_error" });
+  });
 
   return {
     expressApp: app,
@@ -408,7 +433,7 @@ async function main(options: any = {}): Promise<any> {
     getOpenCodePort: () => openCodeRuntime.getPort(),
     isReady: () => openCodeRuntime.isReady(),
     restartOpenCode: () => openCodeRuntime.restart(),
-    stop: async (shutdownOptions: any = {}) => {
+    stop: async (shutdownOptions: { exitProcess?: boolean } = {}) => {
       if (activePort !== null) {
         openCodeRuntime.setShuttingDown(false);
       }
@@ -452,6 +477,6 @@ runCliEntryIfMain({
 });
 
 const gracefulShutdown = (options?: { exitProcess?: boolean }) => composition.gracefulShutdown(options);
-const setupProxy = (app: any) => composition.setupProxy(app);
+const setupProxy = (app: express.Express) => composition.setupProxy(app);
 const restartOpenCode = () => composition.openCodeRuntime.restart();
 export { gracefulShutdown, setupProxy, restartOpenCode, main as startWebUiServer, parseServeCliOptions as parseArgs };

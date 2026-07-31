@@ -39,7 +39,6 @@ import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { useFileSearchStore } from '@/stores/files/useFileSearchStore';
 import { useFilesViewTabsStore } from '@/stores/files/useFilesViewTabsStore';
-import { useUIStore } from '@/stores/useUIStore';
 import { useContextPanelStore } from '@/stores/useContextPanelStore';
 import { useDeviceInfo } from '@/lib/device';
 import { useGitStatus } from '@/stores/git/useGitStore';

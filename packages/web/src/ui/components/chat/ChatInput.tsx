@@ -12,10 +12,9 @@ import { useMessageQueueStore, type QueuedMessage } from '@/stores/messageQueueS
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSelectionStore } from '@/sync/selection-store';
 import { useInputStore } from '@/sync/input-store';
-import type { AttachedFile } from '@/stores/types/sessionTypes';
 import * as sessionActions from '@/sync/session-actions';
 import { useInlineCommentDraftStore } from '@/stores/useInlineCommentDraftStore';
-import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
+import { renderPromptTemplate } from '@/lib/tools/promptTemplates';
 import { AttachedFilesList } from './FileAttachment';
 import { QueuedMessageChips } from './QueuedMessageChips';
 import type { FileMentionHandle } from './autocomplete/FileMentionAutocomplete';
@@ -36,7 +35,6 @@ import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { GitHubIssuePickerDialog } from '@/components/session/GitHubIssuePickerDialog';
 import { GitHubPrPickerDialog } from '@/components/session/GitHubPrPickerDialog';
 import { useChatSearchDirectory } from '@/hooks/useChatSearchDirectory';
-import { opencodeClient } from '@/lib/opencode/client';
 import { createWorktreeDraft } from '@/lib/session/worktreeSessionCreator';
 import { usePermissionStore } from '@/stores/permissionStore';
 import { ComposerLinkedContextRow } from './chat-input/ComposerLinkedContextRow';
@@ -49,7 +47,6 @@ import {
     collectDroppedFiles as collectDroppedFilesFromTransfer,
     hasDraggedFiles as hasDraggedFilesInTransfer,
     toProjectRelativeMentionPath,
-    toServerFileUrl,
 } from './chat-input/fileDropUtils';
 import {
     buildComposerSubmitPayload,
@@ -66,6 +63,7 @@ import { useComposerTextareaAutosize } from './chat-input/useComposerTextareaAut
 import { useComposerAutocompleteOverlay } from './chat-input/useComposerAutocompleteOverlay';
 import { useComposerHistory } from './chat-input/useComposerHistory';
 import { useComposerKeyboard } from './chat-input/useComposerKeyboard';
+import { useComposerMentions } from './chat-input/useComposerMentions';
 
 const EMPTY_QUEUE: QueuedMessage[] = [];
 const MemoStatusRow = React.memo(StatusRow);
@@ -154,163 +152,17 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
 
     const sendableAttachedFiles = attachedFiles;
 
-    const hasInlineMentionForHighlight = React.useMemo(() => {
-        if (!message || !message.includes('@') || inputMode === 'shell') {
-            return false;
-        }
-        const knownAgentNames = new Set(agents.map((agent) => agent.name.toLowerCase()));
-        const mentionRegex = /@([^\s]+)/g;
-        let match: RegExpExecArray | null;
-        while ((match = mentionRegex.exec(message)) !== null) {
-            const offset = match.index;
-            const charBefore = offset > 0 ? message[offset - 1] : null;
-            if (charBefore && !/(\s|\(|\)|\[|\]|\{|\}|"|'|`|,|\.|;|:)/.test(charBefore)) {
-                continue;
-            }
-            const mentionPath = String(match[1] || '').trim().replace(/[),.;:!?`"'>]+$/g, '');
-            if (!mentionPath) {
-                continue;
-            }
-            if (knownAgentNames.has(mentionPath.toLowerCase())) {
-                return true;
-            }
-            if (isConfirmedFilePath(mentionPath)) {
-                return true;
-            }
-        }
-        return false;
-    }, [agents, inputMode, isConfirmedFilePath, message]);
-
-    const highlightedComposerContent = React.useMemo(() => {
-        if (!hasInlineMentionForHighlight) {
-            return null;
-        }
-
-        const parts: Array<{ text: string; mentionKind: 'none' | 'file' | 'agent' }> = [];
-        const knownAgentNames = new Set(agents.map((agent) => agent.name.toLowerCase()));
-        const mentionRegex = /@([^\s]+)/g;
-        let lastIndex = 0;
-        let match: RegExpExecArray | null;
-
-        while ((match = mentionRegex.exec(message)) !== null) {
-            const full = match[0];
-            const mention = String(match[1] || '').trim().replace(/[),.;:!?`"'>]+$/g, '');
-            const start = match.index;
-            const end = start + full.length;
-            const charBefore = start > 0 ? message[start - 1] : null;
-            const isBoundary = !charBefore || /(\s|\(|\)|\[|\]|\{|\}|"|'|`|,|\.|;|:)/.test(charBefore);
-            const isAgentMention = isBoundary && mention.length > 0 && knownAgentNames.has(mention.toLowerCase());
-            const isFileMention = isBoundary
-                && mention.length > 0
-                && !knownAgentNames.has(mention.toLowerCase())
-                && isConfirmedFilePath(mention);
-
-            if (start > lastIndex) {
-                parts.push({ text: message.slice(lastIndex, start), mentionKind: 'none' });
-            }
-            parts.push({
-                text: full,
-                mentionKind: isFileMention ? 'file' : isAgentMention ? 'agent' : 'none',
-            });
-            lastIndex = end;
-        }
-
-        if (lastIndex < message.length) {
-            parts.push({ text: message.slice(lastIndex), mentionKind: 'none' });
-        }
-
-        return parts;
-    }, [agents, hasInlineMentionForHighlight, isConfirmedFilePath, message]);
-
-    const sanitizeAttachmentsForSend = React.useCallback(
-        (files: AttachedFile[] | undefined): AttachedFile[] => (files ?? [])
-            .map((file) => ({
-                ...file,
-                dataUrl: file.source === 'server' && file.serverPath
-                    ? toServerFileUrl(file.serverPath)
-                    : file.dataUrl,
-            })),
-        [],
-    );
-
-    const extractInlineFileMentions = React.useCallback((rawText: string): { sanitizedText: string; attachments: AttachedFile[] } => {
-        if (!rawText || !rawText.includes('@')) {
-            return { sanitizedText: rawText, attachments: [] };
-        }
-
-        const clientDirectory = opencodeClient.getDirectory() || '';
-        const root = (chatSearchDirectory || clientDirectory).replace(/\\/g, '/').replace(/\/+$/, '');
-        const knownAgentNames = new Set(agents.map((agent) => agent.name.toLowerCase()));
-        const seenPaths = new Set<string>();
-        const attachments: AttachedFile[] = [];
-
-        const mentionRegex = /@([^\s]+)/g;
-        let match: RegExpExecArray | null;
-        while ((match = mentionRegex.exec(rawText)) !== null) {
-            const rawMentionPath = match[1];
-            const offset = match.index;
-            const original = rawText;
-            const charBefore = offset > 0 ? original[offset - 1] : null;
-            if (charBefore && !/(\s|\(|\)|\[|\]|\{|\}|"|'|`|,|\.|;|:)/.test(charBefore)) {
-                continue;
-            }
-
-            const mentionPath = String(rawMentionPath || '')
-                .trim()
-                .replace(/^[`"'<(]+/, '')
-                .replace(/[),.;:!?`"'>]+$/g, '');
-            if (!mentionPath) {
-                continue;
-            }
-
-            if (knownAgentNames.has(mentionPath.toLowerCase())) {
-                continue;
-            }
-
-            const looksLikeFilePath = isConfirmedFilePath(mentionPath);
-            if (!looksLikeFilePath) {
-                continue;
-            }
-
-            const normalizedMentionPath = mentionPath.replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\/+/, '');
-            if (!normalizedMentionPath) {
-                continue;
-            }
-
-            const serverPath = mentionPath.startsWith('/')
-                ? mentionPath.replace(/\\/g, '/')
-                : root
-                    ? `${root}/${normalizedMentionPath}`
-                    : null;
-
-            if (!serverPath) {
-                continue;
-            }
-
-            const normalizedServerPath = serverPath.replace(/\/+/g, '/');
-            if (seenPaths.has(normalizedServerPath)) {
-                continue;
-            }
-            seenPaths.add(normalizedServerPath);
-
-            const filename = normalizedMentionPath.split('/').filter(Boolean).pop() || normalizedMentionPath;
-            attachments.push({
-                id: `inline-server-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-                file: new File([], filename, { type: 'text/plain' }),
-                filename,
-                mimeType: 'text/plain',
-                size: 0,
-                dataUrl: toServerFileUrl(normalizedServerPath),
-                source: 'server',
-                serverPath: normalizedServerPath,
-            });
-        }
-
-        return {
-            sanitizedText: rawText,
-            attachments,
-        };
-    }, [agents, chatSearchDirectory, isConfirmedFilePath]);
+    const {
+        highlightedComposerContent,
+        sanitizeAttachmentsForSend,
+        extractInlineFileMentions,
+    } = useComposerMentions({
+        message,
+        inputMode,
+        agents,
+        isConfirmedFilePath,
+        chatSearchDirectory,
+    });
     const abortTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const prevWasAbortedRef = React.useRef(false);
 
@@ -635,8 +487,8 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                     const topicBlock = topic
                         ? `The user asked you to focus this summary on: ${topic}. Prioritize that topic; mention unrelated threads only in passing.`
                         : '';
-                    const visibleText = await renderMagicPrompt('session.summary.visible', { topic_line: topicLine });
-                    const instructionsText = await renderMagicPrompt('session.summary.instructions', { topic_block: topicBlock });
+                    const visibleText = renderPromptTemplate('session.summary.visible', { topic_line: topicLine });
+                    const instructionsText = renderPromptTemplate('session.summary.instructions', { topic_block: topicBlock });
                     await sendMessage(
                         visibleText,
                         effectiveModel.providerId,
@@ -657,8 +509,8 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
             else if (commandName === 'review' && currentSessionId) {
                 try {
                     await sessionActions.waitForConnectionOrThrow();
-                    const visibleText = await renderMagicPrompt('session.review.visible');
-                    const instructionsText = await renderMagicPrompt('session.review.instructions');
+                    const visibleText = renderPromptTemplate('session.review.visible');
+                    const instructionsText = renderPromptTemplate('session.review.instructions');
                     await sendMessage(
                         visibleText,
                         effectiveModel.providerId,

@@ -82,12 +82,12 @@ function getClientIp(req: Request): string | null {
     return ip;
   }
 
-  const ip = req.ip || (req as any).connection?.remoteAddress;
+  const ip = req.ip || req.socket.remoteAddress;
   if (ip) {
     if (ip.startsWith("::ffff:")) {
-      return (ip as string).substring(7);
+      return ip.substring(7);
     }
-    return ip as string;
+    return ip;
   }
   return null;
 }
@@ -310,15 +310,8 @@ function startRateLimitCleanup(): void {
   }
 }
 
-function stopRateLimitCleanup(): void {
-  if (rateLimitCleanupTimer) {
-    clearInterval(rateLimitCleanupTimer);
-    rateLimitCleanupTimer = null;
-  }
-}
-
 function isSecureRequest(req: Request): boolean {
-  if ((req as any).secure) {
+  if (req.secure) {
     return true;
   }
   const forwardedProto = req.headers["x-forwarded-proto"];
@@ -720,7 +713,7 @@ export function createUiAuth({
       req.headers.accept?.includes("application/json");
     if (
       acceptsJson ||
-      (req as any).path?.startsWith("/api")
+      req.path.startsWith("/api")
     ) {
       res.json({
         error: "UI authentication required",
@@ -827,10 +820,13 @@ export function createUiAuth({
 
   function respondPasskeyError(
     res: Response,
-    error: any,
+    error: unknown,
   ): void {
     const statusCode =
-      typeof error?.statusCode === "number"
+      typeof error === "object" &&
+      error !== null &&
+      "statusCode" in error &&
+      typeof error.statusCode === "number"
         ? error.statusCode
         : 500;
     if (statusCode === 400) {
@@ -1004,7 +1000,6 @@ export function createUiAuth({
     handleResetAuth,
     ensureSessionToken: async (
       req: Request,
-      _res: Response,
     ): Promise<string | null> => {
       const token = getTokenFromRequest(req);
       return (await isSessionValid(token as string))

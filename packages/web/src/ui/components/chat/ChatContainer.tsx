@@ -5,7 +5,6 @@ import { ChatInput } from './ChatInput';
 import ChatEmptyState from './ChatEmptyState';
 import ScrollToBottomButton from './components/ScrollToBottomButton';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 
 import { SessionMount } from './SessionMount';
 import { useChatSessionShell } from './hooks/useChatSessionShell';
@@ -14,7 +13,6 @@ export const ChatContainer: React.FC = () => {
     const {
         currentSessionId,
         draftOpen,
-        mountedSessions,
         parentSession,
         activeScrollState,
         actions,
@@ -35,16 +33,16 @@ export const ChatContainer: React.FC = () => {
         </Button>
     ) : null;
 
-    if (!currentSessionId && !draftOpen) {
-        return (
-            <div className="relative flex flex-col h-full bg-background">
-                {returnToParentButton}
-                <ChatEmptyState />
-            </div>
-        );
-    }
+    if (!currentSessionId) {
+        if (!draftOpen) {
+            return (
+                <div className="relative flex flex-col h-full bg-background">
+                    {returnToParentButton}
+                    <ChatEmptyState />
+                </div>
+            );
+        }
 
-    if (!currentSessionId && draftOpen) {
         return (
             <div className="relative flex flex-col h-full bg-background">
                 {returnToParentButton}
@@ -56,27 +54,21 @@ export const ChatContainer: React.FC = () => {
         );
     }
 
-    // Active session — render mount pool
+    // Keep cached session data, not hidden React trees. A keyed active mount
+    // gives every session one lifecycle owner and prevents background chats
+    // from retaining observers, projections, and broad store subscriptions.
     return (
         <div className="relative flex flex-col h-full bg-background">
             {returnToParentButton}
             <div className="relative flex-1 min-h-0">
-                {Array.from(mountedSessions.values()).map((mountState) => (
-                    <div
-                        key={mountState.id}
-                        className={cn(
-                            'absolute inset-0 flex flex-col transition-opacity duration-150',
-                            mountState.isActive ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 pointer-events-none z-0'
-                        )}
-                        aria-hidden={!mountState.isActive}
-                    >
-                        <SessionMount
-                            sessionId={mountState.id}
-                            isActive={mountState.isActive}
-                            onScrollStateChange={mountState.isActive ? actions.setActiveScrollState : undefined}
-                        />
-                    </div>
-                ))}
+                <div className="absolute inset-0 flex flex-col">
+                    <SessionMount
+                        key={currentSessionId}
+                        sessionId={currentSessionId}
+                        isActive
+                        onScrollStateChange={actions.setActiveScrollState}
+                    />
+                </div>
             </div>
             <div className="relative z-10 bg-background">
                 <ScrollToBottomButton

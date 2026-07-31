@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { createProjectIdFromPath } from "../../projects/index.js";
+import type { ProviderSources } from "../services/types.js";
 import { parseSettingsUpdateRequest } from "../../../contracts/settings.js";
 import {
   parseDirectorySwitchRequest,
@@ -11,20 +12,34 @@ import {
   type OpenCodeErrorCode,
 } from "../../../contracts/opencode.js";
 
+type ProviderConfigScope = "user" | "project" | "custom";
+type ProviderAuthModule = typeof import("../../auth/provider-auth.js");
+type SettingsRecord = Record<string, unknown>;
+interface ProviderSourcesResult {
+  sources: Partial<ProviderSources["sources"]>;
+}
+
 interface OpenCodeRoutesDeps {
   crypto: typeof import("crypto");
   clientReloadDelayMs: number;
   getOpenCodeResolutionSnapshot: (settings: object) => Promise<object>;
   formatSettingsResponse: (settings: object) => object;
-  readSettingsFromDisk: () => Promise<any>;
-  readSettingsFromDiskMigrated: () => Promise<any>;
-  persistSettings: (changes: object) => Promise<any>;
+  readSettingsFromDisk: () => Promise<SettingsRecord>;
+  readSettingsFromDiskMigrated: () => Promise<SettingsRecord>;
+  persistSettings: (changes: object) => Promise<SettingsRecord>;
   sanitizeProjects: (input: unknown) => Array<Record<string, unknown>> | undefined;
-  validateDirectoryPath: (candidate: any) => Promise<{ ok: boolean; directory?: string; error?: string }>;
-  resolveProjectDirectory: (req: Request) => Promise<{ directory?: any; error?: string }>;
-  getProviderSources: (providerId: any, directory: any) => any;
-  removeProviderConfig: (providerId: any, directory: any, scope: any) => boolean;
-  refreshOpenCodeAfterConfigChange: (reason: string, options?: any) => Promise<void>;
+  validateDirectoryPath: (candidate: string) => Promise<{ ok: boolean; directory?: string; error?: string }>;
+  resolveProjectDirectory: (req: Request) => Promise<{ directory?: string | null; error?: string | null }>;
+  getProviderSources: (providerId: string, directory: string | null) => ProviderSourcesResult;
+  removeProviderConfig: (
+    providerId: string,
+    directory: string | null,
+    scope: ProviderConfigScope
+  ) => boolean;
+  refreshOpenCodeAfterConfigChange: (
+    reason: string,
+    options?: Record<string, unknown>
+  ) => Promise<void>;
 }
 
 interface PendingMcpAuthContext {
@@ -38,7 +53,6 @@ export function registerOpenCodeRoutes(
   dependencies: OpenCodeRoutesDeps
 ): void {
   const {
-    crypto,
     clientReloadDelayMs,
     getOpenCodeResolutionSnapshot,
     formatSettingsResponse,
@@ -53,17 +67,16 @@ export function registerOpenCodeRoutes(
     refreshOpenCodeAfterConfigChange,
   } = dependencies;
 
-  let authLibrary: any = null;
+  let authLibrary: ProviderAuthModule | null = null;
   const pendingMcpAuthContextByState = new Map<string, PendingMcpAuthContext | undefined>();
   const PENDING_MCP_AUTH_TTL_MS = 30 * 60 * 1000;
   const safeError = (res: Response, status: number, code: OpenCodeErrorCode): void => {
     res.status(status).json({ error: "Request failed", code });
   };
 
-  const getAuthLibrary = async (): Promise<any> => {
+  const getAuthLibrary = async (): Promise<ProviderAuthModule> => {
     if (!authLibrary) {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      authLibrary = await import("../auth/auth.js" as any);
+      authLibrary = await import("../../auth/provider-auth.js");
     }
     return authLibrary;
   };
@@ -115,7 +128,8 @@ export function registerOpenCodeRoutes(
       const request = parseSettingsUpdateRequest(req.body ?? {});
       if (!request.ok) return res.status(400).json({ error: "Invalid settings request", code: "settings_invalid_request" });
       const updated = await persistSettings(request.value);
-      console.log(`[API:PUT /api/config/settings] Success, returning ${updated.projects?.length || 0} projects`);
+      const projectCount = Array.isArray(updated.projects) ? updated.projects.length : 0;
+      console.log(`[API:PUT /api/config/settings] Success, returning ${projectCount} projects`);
       res.json(updated);
     } catch (error) {
       console.error("[API:PUT /api/config/settings] Failed to save settings:", error);
@@ -203,8 +217,9 @@ export function registerOpenCodeRoutes(
 
   app.get("/api/provider/:providerId/source", async (req: Request, res: Response) => {
     try {
-      const { providerId } = req.params;
-      if (!normalizePendingString(providerId)) return safeError(res, 400, "opencode_invalid_request");
+      const parsedProviderId = parseProviderId(req.params.providerId);
+      if (!parsedProviderId.ok) return safeError(res, 400, "opencode_invalid_request");
+      const providerId = parsedProviderId.value;
 
       const headerDirectory = typeof req.get === "function" ? req.get("x-opencode-directory") : null;
       const queryDirectory = Array.isArray(req.query?.directory)
@@ -224,7 +239,7 @@ export function registerOpenCodeRoutes(
       const authLib = await getAuthLibrary();
       const { getProviderAuth } = authLib;
       const auth = getProviderAuth(providerId);
-      (sources.sources as any).auth.exists = Boolean(auth);
+      sources.sources.auth = { exists: Boolean(auth) };
 
       const response = {
         providerId,

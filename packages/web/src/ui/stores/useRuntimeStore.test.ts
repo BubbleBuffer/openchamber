@@ -40,9 +40,6 @@ describe('useRuntimeStore', () => {
   it('setKeyboardOpen is no-op when same value', () => {
     // Set initial value
     useRuntimeStore.setState({ isKeyboardOpen: true }, false);
-    const stateBefore = useRuntimeStore.getState();
-    const refBefore = stateBefore.isKeyboardOpen;
-
     // Calling with same value should return same state ref
     useRuntimeStore.getState().setKeyboardOpen(true);
     const stateAfter = useRuntimeStore.getState();

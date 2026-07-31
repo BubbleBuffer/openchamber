@@ -35,7 +35,7 @@ export function registerCommonMiddleware(app: Express): void {
 export function registerJsonBodyParsing(app: Express): void {
   const largeBodyRoutes = [
     "/api/config/", "/api/projects", "/api/fs", "/api/git",
-    "/api/magic-prompts", "/api/prompts", "/api/terminal",
+    "/api/terminal",
     "/api/opencode", "/api/push", "/api/notifications",
     "/api/session-folders",
   ];

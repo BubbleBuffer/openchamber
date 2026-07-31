@@ -76,8 +76,8 @@ export function getDeviceInfo(): DeviceInfo {
   const isTabletWidth = width > BREAKPOINTS.md && width <= BREAKPOINTS.lg;
   const isMobileWidth = width <= BREAKPOINTS.md;
 
-  let isMobile = hasTouchInput && isMobileWidth;
-  let isTablet = hasTouchInput && !isMobile && isTabletWidth;
+  const isMobile = hasTouchInput && isMobileWidth;
+  const isTablet = hasTouchInput && !isMobile && isTabletWidth;
   let isDesktop = !hasTouchInput || width > BREAKPOINTS.lg;
   let deviceType: DeviceType = 'desktop';
 

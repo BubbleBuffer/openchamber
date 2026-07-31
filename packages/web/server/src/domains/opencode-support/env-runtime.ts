@@ -2,9 +2,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { EnvRuntimeDeps, EnvRuntimeState, OpenCodeEnvRuntime } from "./types.js";
-
-type State = EnvRuntimeState;
+import type { EnvRuntimeDeps, OpenCodeEnvRuntime } from "./types.js";
 
 export function createOpenCodeEnvRuntime(deps: EnvRuntimeDeps): OpenCodeEnvRuntime {
   const {

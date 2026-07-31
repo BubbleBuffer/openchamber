@@ -1,3 +1,12 @@
+import type {
+  AppSettings,
+  PersistedSettings,
+} from "../../contracts/settings.js";
+
+export type SettingsRecord = Record<string, unknown>;
+export type AppSettingsRecord = AppSettings & SettingsRecord;
+export type PersistedSettingsRecord = PersistedSettings & SettingsRecord;
+
 export interface SettingsNormalizationDeps {
   os: typeof import("os");
   path: typeof import("path");
@@ -7,7 +16,7 @@ export interface SettingsNormalizationDeps {
 export interface SettingsNormalizationRuntime {
   normalizeDirectoryPath(value: unknown): string | unknown;
   normalizePathForPersistence(value: unknown): string | unknown;
-  normalizeSettingsPaths(input: any): { settings: any; changed: boolean };
+  normalizeSettingsPaths(input: object): { settings: object; changed: boolean };
   isUnsafeSkillRelativePath(value: unknown): boolean;
   sanitizeTypographySizesPartial(input: unknown): Record<string, string> | undefined;
   normalizeStringArray(input: unknown): string[];
@@ -29,9 +38,9 @@ export interface SettingsHelpersDeps {
 export interface SettingsHelpers {
   normalizePwaAppName(value: unknown, fallback?: string): string;
   normalizePwaOrientation(value: unknown, fallback?: string): string;
-  sanitizeSettingsUpdate(payload: object): any;
-  mergePersistedSettings(current: any, changes: any): any;
-  formatSettingsResponse(settings: any): any;
+  sanitizeSettingsUpdate(payload: object): object;
+  mergePersistedSettings(current: object, changes: object): object;
+  formatSettingsResponse(settings: object): object;
 }
 
 export interface SettingsRuntimeDeps {
@@ -49,10 +58,10 @@ export interface SettingsRuntimeDeps {
 }
 
 export interface SettingsRuntime {
-  readSettingsFromDisk(): Promise<any>;
-  readSettingsFromDiskMigrated(): Promise<any>;
-  writeSettingsToDisk(settings: any): Promise<void>;
-  persistSettings(changes: any): Promise<any>;
+  readSettingsFromDisk(): Promise<PersistedSettingsRecord>;
+  readSettingsFromDiskMigrated(): Promise<PersistedSettingsRecord>;
+  writeSettingsToDisk(settings: object): Promise<void>;
+  persistSettings<T extends object | void = AppSettingsRecord>(changes: object): Promise<T>;
 }
 
 export interface ThemeRuntimeDeps {

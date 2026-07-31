@@ -3,7 +3,6 @@ import { RiErrorWarningLine, RiRestartLine } from '@remixicon/react';
 import { Button } from './button';
 import { Card, CardContent, CardHeader, CardTitle } from './card';
 import { copyTextToClipboard } from '@/lib/clipboard';
-import * as Sentry from '@sentry/react';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -30,13 +29,8 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     this.setState({ error, errorInfo, copied: false });
 
-    console.error('Error caught by boundary:', error, errorInfo);
-
-    Sentry.captureException(error, {
-      extra: {
-        componentStack: errorInfo.componentStack ?? null,
-        source: 'ErrorBoundary',
-      },
+    console.error('[ErrorBoundary] Render error', error, {
+      componentStack: errorInfo.componentStack ?? null,
     });
   }
 

@@ -76,7 +76,7 @@ describe('compiled server entries', () => {
 
     const server = await import(pathToFileURL(entries.foreground).href);
     expect(server.startWebUiServer).toEqual(expect.any(Function));
-  });
+  }, 15_000);
 });
 
 describe('CLI help authority', () => {

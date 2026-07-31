@@ -52,7 +52,6 @@ export type CommitFileEntry = import('@contracts/git').GitCommitFilesResponse['f
 export type GitWorktreeValidationError = import('@contracts/git').GitWorktreeValidationResult['errors'][number];
 export type { AppSettings as SettingsPayload } from '@contracts/settings';
 export type { TerminalStreamEvent } from '@/lib/terminal/terminalApi';
-export type { SkillsError as SkillsInstallError } from '@contracts/skills';
 
 /** Aggregate browser runtime bridge; domain API contracts live beside browser adapters. */
 export interface RuntimeDescriptor { platform: 'web'; label?: string; }

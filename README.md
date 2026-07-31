@@ -33,7 +33,6 @@
 
 - Branchable chat timeline with `/undo`, `/redo`, and one-click forks from earlier turns
 - Smart tool UIs for diffs, file operations, permissions, and long-running task progress
-- Voice mode with speech input and read-aloud responses for hands-free workflows
 - Multi-agent runs from one prompt with isolated worktrees for safe side-by-side comparisons
 - Git workflows in-app: identities, commits, PR creation, checks, and merge actions
 - GitHub-native workflows: start sessions from issues and pull requests with context already attached
@@ -242,7 +241,6 @@ chown -R 1000:1000 data/
 
 - Branchable chat timeline with `/undo`, `/redo`, and one-click forks from any turn
 - Multi-agent runs from one prompt with isolated worktrees for safe side-by-side comparisons
-- Voice mode with speech input and read-aloud responses for hands-free workflows
 - Plan/Build mode with a dedicated plan view for drafting and iterating steps
 - Inline comment drafts on diffs, files, and plans - send feedback back to the agent
 - Shell mode via leading `!` with inline output

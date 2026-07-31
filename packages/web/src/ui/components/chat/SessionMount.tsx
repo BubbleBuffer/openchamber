@@ -42,6 +42,8 @@ export const SessionMount = React.memo(({
     );
 
     const data = useChatSessionData(sessionId);
+    const statusIsWorking = data.status.type !== 'idle';
+    const wasStatusWorkingRef = React.useRef(statusIsWorking);
     const messageListRef = React.useRef<MessageListHandle | null>(null);
     const scrollRef = React.useRef<HTMLDivElement | null>(null);
     const scrollToBottomRef = React.useRef<() => void>(() => {});
@@ -76,6 +78,7 @@ export const SessionMount = React.memo(({
         directory,
         sessionId,
         isActive,
+        resourceLoaded: data.loaded,
     });
 
     const resumeToLatestInstant = React.useCallback(() => {
@@ -123,6 +126,17 @@ export const SessionMount = React.memo(({
         }
         handleMessageContentChange();
     }, [data.blockingRequests.permissions, data.blockingRequests.questions, handleMessageContentChange]);
+
+    React.useEffect(() => {
+        const wasWorking = wasStatusWorkingRef.current;
+        wasStatusWorkingRef.current = statusIsWorking;
+        if (wasWorking && !statusIsWorking) {
+            // Reconcile once at the end of a turn. SSE deltas keep ordinary
+            // text responsive, while the canonical REST snapshot guarantees
+            // multi-step tool messages and rich result payloads are complete.
+            void sync.syncSession(sessionId, true);
+        }
+    }, [sessionId, statusIsWorking, sync]);
 
     const handleLoadOlder = React.useCallback(() => {
         void timelineController.loadEarlier();

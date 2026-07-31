@@ -5,7 +5,6 @@ import {
   RiCheckboxCircleLine,
   RiAiGenerate2,
   RiArrowDownSLine,
-  RiArrowRightSLine,
   RiCloseLine,
   RiEditLine,
   RiErrorWarningLine,
@@ -21,13 +20,6 @@ import { toast } from '@/components/ui';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -37,14 +29,13 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { ScrollShadow } from '@/components/ui/ScrollShadow';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { generatePullRequestDescription } from '@/lib/git/gitApi';
-import { renderMagicPrompt } from '@/lib/tools/magicPrompts';
+import { renderPromptTemplate } from '@/lib/tools/promptTemplates';
 import { openExternalUrl } from '@/lib/url';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { useDeviceInfo } from '@/lib/device';
@@ -61,11 +52,15 @@ import { useGitHubAuthStore } from '@/stores/github/useGitHubAuthStore';
 import { getGitHubPrStatusKey, useGitHubPrStatusStore } from '@/stores/github/useGitHubPrStatusStore';
 import type {
   GitHubPullRequest,
-  GitHubCheckRun,
   GitHubPullRequestContextResult,
   GitHubPullRequestStatus,
   GitRemote,
 } from '@/lib/api/types';
+import {
+  PullRequestChecksDialog,
+  PullRequestCommentsDialog,
+} from './pull-request/PullRequestDialogs';
+import type { PullRequestTimelineComment } from './pull-request/pullRequestPresentation';
 
 type MergeMethod = 'merge' | 'squash' | 'rebase';
 
@@ -248,18 +243,6 @@ const rankRemotesForAutoSelect = (
   return ordered;
 };
 
-type TimelineCommentItem = {
-  id: string;
-  body: string;
-  authorName: string;
-  authorLogin: string | null;
-  avatarUrl: string | null;
-  createdAt?: string;
-  context: string;
-  path: string | null;
-  line: number | null;
-};
-
 type ChatDispatchTarget = {
   sessionId: string;
   providerID: string;
@@ -422,7 +405,6 @@ export const PullRequestSection: React.FC<{
   const [checksDialogOpen, setChecksDialogOpen] = React.useState(false);
   const [checkDetails, setCheckDetails] = React.useState<GitHubPullRequestContextResult | null>(null);
   const [isLoadingCheckDetails, setIsLoadingCheckDetails] = React.useState(false);
-  const [expandedCheckStepKeys, setExpandedCheckStepKeys] = React.useState<Set<string>>(new Set());
   const [commentsDialogOpen, setCommentsDialogOpen] = React.useState(false);
   const [commentsDetails, setCommentsDetails] = React.useState<GitHubPullRequestContextResult | null>(null);
   const [isLoadingCommentsDetails, setIsLoadingCommentsDetails] = React.useState(false);
@@ -525,7 +507,6 @@ export const PullRequestSection: React.FC<{
     if (!pr) return;
 
     setChecksDialogOpen(true);
-    setExpandedCheckStepKeys(new Set());
     setIsLoadingCheckDetails(true);
     try {
       const ctx = await github.prContext(directory, pr.number, {
@@ -564,70 +545,10 @@ export const PullRequestSection: React.FC<{
     }
   }, [directory, github, pr]);
 
-  const formatTimestamp = React.useCallback((value?: string) => {
-    if (!value) return '';
-    const ts = Date.parse(value);
-    if (!Number.isFinite(ts)) {
-      return value;
-    }
-    return new Date(ts).toLocaleString();
-  }, []);
-
   const connectedGitHubLogin = React.useMemo(() => {
     const login = githubAuthStatus?.user?.login;
     return typeof login === 'string' ? login.trim() : '';
   }, [githubAuthStatus]);
-
-  const selfMentionHighlightClass = React.useMemo(() => {
-    return "[&_a[href*='oc-self-mention=1']]:!text-[var(--primary-base)] [&_a[href*='oc-self-mention=1']]:font-semibold [&_a[href*='oc-self-mention=1']]:!no-underline [&_a[href*='oc-self-mention=1']:hover]:!text-[var(--primary-hover)]";
-  }, []);
-
-  const linkifyMentionsMarkdown = React.useCallback((content: string) => {
-    const selfLoginLower = connectedGitHubLogin.toLowerCase();
-    const mentionRegex = /(^|[^\w`])@([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,38}))/g;
-    return content.replace(mentionRegex, (_match, prefix: string, username: string) => {
-      const mention = `@${username}`;
-      const usernameLower = username.toLowerCase();
-      const selfTag = selfLoginLower && usernameLower === selfLoginLower ? '?oc-self-mention=1' : '';
-      return `${prefix}[${mention}](https://github.com/${usernameLower}${selfTag})`;
-    });
-  }, [connectedGitHubLogin]);
-
-  const timelineComments = React.useMemo<TimelineCommentItem[]>(() => {
-    const issue = (commentsDetails?.issueComments ?? []).map((comment) => ({
-      id: `issue-${comment.id}`,
-      body: comment.body || '',
-      authorName: comment.author?.name || comment.author?.login || 'Unknown author',
-      authorLogin: comment.author?.login || null,
-      avatarUrl: comment.author?.avatarUrl || null,
-      createdAt: comment.createdAt,
-      context: 'General comment',
-      path: null as string | null,
-      line: null as number | null,
-    }));
-
-    const review = (commentsDetails?.reviewComments ?? []).map((comment) => ({
-      id: `review-${comment.id}`,
-      body: comment.body || '',
-      authorName: comment.author?.name || comment.author?.login || 'Unknown author',
-      authorLogin: comment.author?.login || null,
-      avatarUrl: comment.author?.avatarUrl || null,
-      createdAt: comment.createdAt,
-      context: 'Code review comment',
-      path: comment.path || null,
-      line: comment.line ?? null,
-    }));
-
-    const all = [...issue, ...review];
-    all.sort((a, b) => {
-      const aTs = a.createdAt ? Date.parse(a.createdAt) : 0;
-      const bTs = b.createdAt ? Date.parse(b.createdAt) : 0;
-      const aVal = Number.isFinite(aTs) ? aTs : 0;
-      const bVal = Number.isFinite(bTs) ? bTs : 0;
-      return aVal - bVal;
-    });
-    return all;
-  }, [commentsDetails]);
 
   const resolveChatDispatchTarget = React.useCallback((): ChatDispatchTarget | null => {
     if (!currentSessionId) {
@@ -679,136 +600,6 @@ export const PullRequestSection: React.FC<{
     });
   }, []);
 
-  const renderCheckRunSummary = React.useCallback((run: GitHubCheckRun) => {
-    const status = run.status || 'unknown';
-    const conclusion = run.conclusion ?? undefined;
-    const statusText = conclusion ? `${status} / ${conclusion}` : status;
-    const appName = run.app?.name || run.app?.slug;
-    return (
-      <div className="space-y-2">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="typography-ui-label text-foreground truncate">{run.name}</div>
-            <div className="typography-micro text-muted-foreground truncate">
-              {appName ? `${appName} · ${statusText}` : statusText}
-            </div>
-          </div>
-
-          {run.detailsUrl ? (
-            <Button variant="outline" size="sm" asChild className="flex-shrink-0">
-              <a href={run.detailsUrl} target="_blank" rel="noopener noreferrer">
-                <RiExternalLinkLine className="size-4" />
-                Open
-              </a>
-            </Button>
-          ) : null}
-        </div>
-
-        {run.output?.title ? (
-          <div className="typography-micro text-foreground">{run.output.title}</div>
-        ) : null}
-        {run.output?.summary ? (
-          <div className="typography-micro text-muted-foreground whitespace-pre-wrap">
-            {run.output.summary}
-          </div>
-        ) : null}
-        {run.output?.text ? (
-          <div className="rounded border border-border/40 bg-transparent px-2 py-2 typography-micro text-muted-foreground whitespace-pre-wrap max-h-48 overflow-y-auto">
-            {run.output.text}
-          </div>
-        ) : null}
-
-        {Array.isArray(run.annotations) && run.annotations.length > 0 ? (
-          <div className="space-y-1">
-            <div className="typography-micro text-muted-foreground">
-              Failed annotations{run.annotations.length > 20 ? ` (showing 20/${run.annotations.length})` : ''}
-            </div>
-            <div className="space-y-1">
-              {run.annotations.slice(0, 20).map((annotation, idx) => (
-                <div key={`${annotation.path || 'file'}:${annotation.startLine || idx}:${idx}`} className="rounded border border-[var(--status-error-border)] bg-[var(--status-error-background)]/40 px-2 py-2">
-                  <div className="typography-micro text-[var(--status-error)]">
-                    {annotation.title || annotation.level || 'Issue'}
-                    {annotation.path ? ` · ${annotation.path}` : ''}
-                    {typeof annotation.startLine === 'number' ? `:${annotation.startLine}` : ''}
-                    {typeof annotation.endLine === 'number' && annotation.endLine !== annotation.startLine ? `-${annotation.endLine}` : ''}
-                  </div>
-                  <div className="typography-micro text-foreground whitespace-pre-wrap mt-1">
-                    {annotation.message}
-                  </div>
-                  {annotation.rawDetails ? (
-                    <div className="typography-micro text-muted-foreground whitespace-pre-wrap mt-1">
-                      {annotation.rawDetails}
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {run.job?.steps && run.job.steps.length > 0 ? (
-          <div className="space-y-1">
-            <div className="typography-micro text-muted-foreground">Steps</div>
-            <div className="space-y-1">
-              {run.job.steps.map((step, idx) => {
-                const c = (step.conclusion || '').toLowerCase();
-                const isFail = c && !['success', 'neutral', 'skipped'].includes(c);
-                const stepKey = `${run.id ?? 'run'}:${run.job?.jobId ?? 'job'}:${step.number ?? idx}:${step.name}`;
-                const stepExpanded = expandedCheckStepKeys.has(stepKey);
-                if (!isFail) {
-                  return (
-                    <div
-                      key={stepKey}
-                      className="typography-micro flex w-full items-center gap-2 rounded px-2 py-1 text-muted-foreground"
-                    >
-                      <span className="truncate">{step.name}</span>
-                      {step.conclusion ? <span className="ml-auto flex-shrink-0">{step.conclusion}</span> : null}
-                    </div>
-                  );
-                }
-                return (
-                  <Collapsible key={stepKey} open={stepExpanded}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setExpandedCheckStepKeys((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(stepKey)) {
-                            next.delete(stepKey);
-                          } else {
-                            next.add(stepKey);
-                          }
-                          return next;
-                        });
-                      }}
-                      className={
-                        'typography-micro flex w-full items-center gap-2 rounded px-2 py-1 text-left ' +
-                        (isFail ? 'bg-destructive/10 text-destructive' : 'text-muted-foreground')
-                      }
-                    >
-                      {stepExpanded ? <RiArrowDownSLine className="size-4" /> : <RiArrowRightSLine className="size-4" />}
-                      <span className="truncate">{step.name}</span>
-                      {step.conclusion ? <span className="ml-auto flex-shrink-0">{step.conclusion}</span> : null}
-                    </button>
-                    <CollapsibleContent>
-                      <div className="ml-6 mt-1 rounded border border-border/40 bg-transparent px-2 py-2 typography-micro text-muted-foreground space-y-1">
-                        {typeof step.number === 'number' ? <div>Step: {step.number}</div> : null}
-                        {step.status ? <div>Status: {step.status}</div> : null}
-                        {step.conclusion ? <div>Conclusion: {step.conclusion}</div> : null}
-                        {step.startedAt ? <div>Started: {formatTimestamp(step.startedAt)}</div> : null}
-                        {step.completedAt ? <div>Completed: {formatTimestamp(step.completedAt)}</div> : null}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                );
-              })}
-            </div>
-          </div>
-        ) : null}
-      </div>
-    );
-  }, [expandedCheckStepKeys, formatTimestamp]);
-
   const sendFailedChecksToChat = React.useCallback(async () => {
     setActiveMainTab('chat');
 
@@ -836,8 +627,8 @@ export const PullRequestSection: React.FC<{
         return;
       }
 
-      const visibleText = await renderMagicPrompt('github.pr.checks.review.visible');
-      const instructionsText = await renderMagicPrompt('github.pr.checks.review.instructions');
+      const visibleText = renderPromptTemplate('github.pr.checks.review.visible');
+      const instructionsText = renderPromptTemplate('github.pr.checks.review.instructions');
       const failedAnnotations = failed.flatMap((run) => {
         const annotations = Array.isArray(run.annotations) ? run.annotations : [];
         return annotations.map((annotation) => ({
@@ -888,8 +679,8 @@ export const PullRequestSection: React.FC<{
         return;
       }
 
-      const visibleText = await renderMagicPrompt('github.pr.comments.review.visible');
-      const instructionsText = await renderMagicPrompt('github.pr.comments.review.instructions');
+      const visibleText = renderPromptTemplate('github.pr.comments.review.visible');
+      const instructionsText = renderPromptTemplate('github.pr.comments.review.instructions');
       const payloadText = `GitHub PR comments (JSON)\n${JSON.stringify({
         repo: context.repo ?? null,
         pr: context.pr ?? null,
@@ -904,7 +695,7 @@ export const PullRequestSection: React.FC<{
     }
   }, [directory, dispatchSyntheticPrompt, github, pr, resolveChatDispatchTarget, setActiveMainTab]);
 
-  const sendSingleCommentToChat = React.useCallback(async (comment: TimelineCommentItem) => {
+  const sendSingleCommentToChat = React.useCallback(async (comment: PullRequestTimelineComment) => {
     setCommentsDialogOpen(false);
     setActiveMainTab('chat');
 
@@ -913,8 +704,8 @@ export const PullRequestSection: React.FC<{
       return;
     }
 
-    const visibleText = await renderMagicPrompt('github.pr.comment.single.visible');
-    const instructionsText = await renderMagicPrompt('github.pr.comment.single.instructions');
+    const visibleText = renderPromptTemplate('github.pr.comment.single.visible');
+    const instructionsText = renderPromptTemplate('github.pr.comment.single.instructions');
     const payloadText = `GitHub PR comment (JSON)\n${JSON.stringify({
       repo: commentsDetails?.repo ?? null,
       pr: commentsDetails?.pr ?? pr ?? null,
@@ -1837,137 +1628,24 @@ export const PullRequestSection: React.FC<{
             )}
       </div>
 
-      <Dialog open={checksDialogOpen} onOpenChange={setChecksDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[70vh] flex flex-col min-h-0">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <RiGitPullRequestLine className="h-5 w-5" />
-              Check Details
-            </DialogTitle>
-            <DialogDescription>
-              {pr ? `PR #${pr.number}` : 'Pull request'}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex-1 min-h-0 overflow-y-auto mt-2">
-            {isLoadingCheckDetails ? (
-              <div className="text-center text-muted-foreground py-8 flex items-center justify-center gap-2">
-                <RiLoader4Line className="h-4 w-4 animate-spin" />
-                Loading...
-              </div>
-            ) : null}
-
-            {!isLoadingCheckDetails ? (
-              <div className="space-y-3">
-                {Array.isArray(checkDetails?.checkRuns) && checkDetails?.checkRuns.length > 0 ? (
-                  checkDetails.checkRuns.map((run, idx) => {
-                    const key = `${run.id ?? 'run'}:${run.job?.jobId ?? 'job'}:${run.name}:${idx}`;
-                    return (
-                      <div key={key} className="p-1">
-                        {renderCheckRunSummary(run)}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-center text-muted-foreground py-8">No check details available.</div>
-                )}
-              </div>
-            ) : null}
-          </div>
-
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={commentsDialogOpen} onOpenChange={setCommentsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[82vh] min-h-[38rem] flex flex-col gap-2">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <RiGitPullRequestLine className="h-5 w-5" />
-              PR Comments
-              {pr ? (
-                <span className="typography-meta text-muted-foreground">PR #{pr.number}</span>
-              ) : null}
-            </DialogTitle>
-          </DialogHeader>
-
-          <ScrollShadow className="mt-2 max-h-[66vh] overflow-y-auto overlay-scrollbar-target overlay-scrollbar-container">
-            {isLoadingCommentsDetails ? (
-              <div className="text-center text-muted-foreground py-8 flex items-center justify-center gap-2">
-                <RiLoader4Line className="h-4 w-4 animate-spin" />
-                Loading...
-              </div>
-            ) : null}
-
-            {!isLoadingCommentsDetails ? (
-              <div className="space-y-4">
-                {timelineComments.length > 0 ? (
-                  <div className="relative pl-3">
-                    <div>
-                      {timelineComments.map((comment, idx) => {
-                        const initial = (comment.authorName || '?').charAt(0).toUpperCase();
-                        const isLast = idx === timelineComments.length - 1;
-                        return (
-                          <div key={comment.id} className="relative pl-10 pb-5 last:pb-0">
-                            {!isLast ? <div className="absolute left-4 top-[2.375rem] bottom-[0.375rem] w-px bg-border/60" /> : null}
-                            <div className="absolute left-0 top-0 z-10 flex size-8 items-center justify-center overflow-hidden rounded-full border border-border/60 bg-surface-elevated text-xs text-muted-foreground">
-                              {comment.avatarUrl ? (
-                                <img src={comment.avatarUrl} alt={comment.authorName} className="h-full w-full object-cover" />
-                              ) : (
-                                <span>{initial}</span>
-                              )}
-                            </div>
-                            <div className="rounded-lg bg-surface-elevated px-3 pt-0 pb-3 space-y-2">
-                              <div className="flex flex-col items-start gap-1 typography-micro text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-1 sm:gap-y-1">
-                                <span className="text-foreground whitespace-nowrap">
-                                  {comment.authorName}
-                                  {comment.authorLogin && comment.authorLogin !== comment.authorName ? ` · @${comment.authorLogin}` : ''}
-                                </span>
-                                {comment.createdAt ? <span className="whitespace-nowrap">{formatTimestamp(comment.createdAt)}</span> : null}
-                                <Tooltip delayDuration={300}>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-6 px-0 has-[>svg]:px-0 sm:px-2 sm:has-[>svg]:px-2.5 text-[var(--status-success)] hover:bg-[var(--status-success-background)] hover:text-[var(--status-success)] justify-start"
-                                      onClick={() => {
-                                        void sendSingleCommentToChat(comment);
-                                      }}
-                                      aria-label="Send this comment to agent"
-                                    >
-                                      <RiAiGenerate2 className="size-3.5" />
-                                      Send to agent
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent><p>Send this comment to agent</p></TooltipContent>
-                                </Tooltip>
-                              </div>
-                              <div className="typography-micro text-muted-foreground">
-                                {comment.context}
-                                {comment.path ? ` · ${comment.path}` : ''}
-                                {comment.line ? `:${comment.line}` : ''}
-                              </div>
-                              <SimpleMarkdownRenderer
-                                content={linkifyMentionsMarkdown(comment.body)}
-                                className={[
-                                  'typography-markdown-body text-foreground break-words [&_a]:no-underline [&_a:hover]:no-underline',
-                                  selfMentionHighlightClass,
-                                ].filter(Boolean).join(' ')}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center text-muted-foreground py-8">No comments found.</div>
-                )}
-              </div>
-            ) : null}
-          </ScrollShadow>
-
-        </DialogContent>
-      </Dialog>
+      <PullRequestChecksDialog
+        open={checksDialogOpen}
+        onOpenChange={setChecksDialogOpen}
+        prNumber={pr?.number}
+        details={checkDetails}
+        isLoading={isLoadingCheckDetails}
+      />
+      <PullRequestCommentsDialog
+        open={commentsDialogOpen}
+        onOpenChange={setCommentsDialogOpen}
+        prNumber={pr?.number}
+        details={commentsDetails}
+        isLoading={isLoadingCommentsDetails}
+        connectedGitHubLogin={connectedGitHubLogin}
+        onSendComment={(comment) => {
+          void sendSingleCommentToChat(comment);
+        }}
+      />
     </section>
   );
 };

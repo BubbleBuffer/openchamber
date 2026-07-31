@@ -35,19 +35,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-// (dropdown menu used inside IntegrateCommitsSection)
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
 
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { useLayoutStore } from '@/stores/useLayoutStore';
-import { useUIStore } from '@/stores/useUIStore';
 import { useContextPanelStore } from '@/stores/useContextPanelStore';
 import { useRuntimeStore } from '@/stores/useRuntimeStore';
 import { useDetectedWorktreeMetadata } from '@/hooks/useDetectedWorktreeRoot';
@@ -70,6 +60,11 @@ import { getRootBranch } from '@/lib/worktrees/worktreeStatus';
 import { cn } from '@/lib/utils';
 import { generateCommitMessage as generateSessionCommitMessage, getGitWorktreeBootstrapStatus } from '@/lib/git/gitApi';
 import { sessionEvents } from '@/lib/session/sessionEvents';
+import {
+  matchGitmojiFromSubject,
+  useGitmojis,
+} from './git/gitmoji-data';
+import { GitmojiPickerDialog } from './git/GitmojiPickerDialog';
 
 type SyncAction = 'fetch' | 'pull' | 'push' | null;
 type CommitAction = 'commit' | 'commitAndPush' | null;
@@ -94,136 +89,8 @@ type GitViewSnapshot = {
   generatedHighlights: string[];
 };
 
-type GitmojiEntry = {
-  emoji: string;
-  code: string;
-  description: string;
-};
-
-type GitmojiCachePayload = {
-  gitmojis: GitmojiEntry[];
-  fetchedAt: number;
-  version: string;
-};
-
-const GITMOJI_CACHE_KEY = 'gitmojiCache';
-const GITMOJI_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7;
-const GITMOJI_CACHE_VERSION = '1';
 const GIT_DIFF_PRIORITY_PREFETCH_LIMIT = 40;
 const GIT_DIFF_PRIORITY_BASELINE_LIMIT = 20;
-const GITMOJI_SOURCE_URL =
-  'https://raw.githubusercontent.com/carloscuesta/gitmoji/master/packages/gitmojis/src/gitmojis.json';
-
-const KEYWORD_MAP: Record<string, string> = {
-  'feat': ':sparkles:',
-  'feature': ':sparkles:',
-  'fix': ':bug:',
-  'bug': ':bug:',
-  'hotfix': ':ambulance:',
-  'docs': ':memo:',
-  'documentation': ':memo:',
-  'style': ':lipstick:',
-  'refactor': ':recycle:',
-  'perf': ':zap:',
-  'performance': ':zap:',
-  'test': ':white_check_mark:',
-  'tests': ':white_check_mark:',
-  'build': ':construction_worker:',
-  'ci': ':green_heart:',
-  'chore': ':wrench:',
-  'revert': ':rewind:',
-  'wip': ':construction:',
-  'security': ':lock:',
-  'release': ':bookmark:',
-  'merge': ':twisted_rightwards_arrows:',
-  'mv': ':truck:',
-  'move': ':truck:',
-  'rename': ':truck:',
-  'remove': ':fire:',
-  'delete': ':fire:',
-  'add': ':sparkles:',
-  'create': ':sparkles:',
-  'implement': ':sparkles:',
-  'update': ':recycle:',
-  'improve': ':zap:',
-  'optimize': ':zap:',
-  'upgrade': ':arrow_up:',
-  'downgrade': ':arrow_down:',
-  'deploy': ':rocket:',
-  'init': ':tada:',
-  'initial': ':tada:',
-};
-
-const isGitmojiEntry = (value: unknown): value is GitmojiEntry => {
-  if (!value || typeof value !== 'object') return false;
-  const candidate = value as Record<string, unknown>;
-  return (
-    typeof candidate.emoji === 'string' &&
-    typeof candidate.code === 'string' &&
-    typeof candidate.description === 'string'
-  );
-};
-
-const readGitmojiCache = (): GitmojiCachePayload | null => {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem(GITMOJI_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<GitmojiCachePayload>;
-    if (!parsed || parsed.version !== GITMOJI_CACHE_VERSION || typeof parsed.fetchedAt !== 'number') {
-      return null;
-    }
-    if (!Array.isArray(parsed.gitmojis)) return null;
-    const gitmojis = parsed.gitmojis.filter(isGitmojiEntry);
-    return { gitmojis, fetchedAt: parsed.fetchedAt, version: parsed.version };
-  } catch {
-    return null;
-  }
-};
-
-const writeGitmojiCache = (gitmojis: GitmojiEntry[]) => {
-  if (typeof window === 'undefined') return;
-  try {
-    const payload: GitmojiCachePayload = {
-      gitmojis,
-      fetchedAt: Date.now(),
-      version: GITMOJI_CACHE_VERSION,
-    };
-    localStorage.setItem(GITMOJI_CACHE_KEY, JSON.stringify(payload));
-  } catch {
-    return;
-  }
-};
-
-const isGitmojiCacheFresh = (payload: GitmojiCachePayload) =>
-  Date.now() - payload.fetchedAt < GITMOJI_CACHE_TTL_MS;
-
-const matchGitmojiFromSubject = (subject: string, gitmojis: GitmojiEntry[]): GitmojiEntry | null => {
-  const lowerSubject = subject.toLowerCase();
-
-  // 1. Check for conventional commit prefix (e.g. "feat:", "fix(scope):")
-  const conventionalRegex = /^([a-z]+)(?:\(.*\))?!?:/;
-  const match = lowerSubject.match(conventionalRegex);
-
-  if (match) {
-    const type = match[1];
-    // Map common types to gitmoji codes
-    const mappedCode = KEYWORD_MAP[type];
-    if (mappedCode) {
-      return gitmojis.find((g) => g.code === mappedCode) || null;
-    }
-  }
-
-  // 2. Check for starting words (e.g. "Add", "Fix")
-  const firstWord = lowerSubject.split(' ')[0];
-  const mappedCode = KEYWORD_MAP[firstWord];
-  if (mappedCode) {
-    return gitmojis.find((g) => g.code === mappedCode) || null;
-  }
-
-  return null;
-};
-
 const gitViewSnapshots = new Map<string, GitViewSnapshot>();
 
 const normalizePath = (value?: string | null): string =>
@@ -509,8 +376,7 @@ export const GitView: React.FC = () => {
   const [loadingCommitHashes, setLoadingCommitHashes] = React.useState<Set<string>>(new Set());
   const [historyBranchDivider, setHistoryBranchDivider] = React.useState<HistoryBranchDivider>(null);
   const [remoteUrl, setRemoteUrl] = React.useState<string | null>(null);
-  const [gitmojiEmojis, setGitmojiEmojis] = React.useState<GitmojiEntry[]>([]);
-  const [gitmojiSearch, setGitmojiSearch] = React.useState('');
+  const gitmojiEmojis = useGitmojis(settingsGitmojiEnabled);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = React.useState(false);
 
   const actionTabItems = React.useMemo(() => [
@@ -696,50 +562,6 @@ export const GitView: React.FC = () => {
   React.useEffect(() => {
     void refreshRemotes();
   }, [refreshRemotes]);
-
-  React.useEffect(() => {
-    if (!settingsGitmojiEnabled) {
-      setGitmojiEmojis([]);
-      return;
-    }
-
-    let cancelled = false;
-
-    const cached = readGitmojiCache();
-    if (cached) {
-      setGitmojiEmojis(cached.gitmojis);
-      if (isGitmojiCacheFresh(cached)) {
-        return () => {
-          cancelled = true;
-        };
-      }
-    }
-
-    const loadGitmojis = async () => {
-      try {
-        const response = await fetch(GITMOJI_SOURCE_URL);
-        if (!response.ok) {
-          throw new Error(`Failed to load gitmojis: ${response.statusText}`);
-        }
-        const payload = (await response.json()) as { gitmojis?: GitmojiEntry[] };
-        const gitmojis = Array.isArray(payload.gitmojis) ? payload.gitmojis.filter(isGitmojiEntry) : [];
-        if (!cancelled) {
-          setGitmojiEmojis(gitmojis);
-          writeGitmojiCache(gitmojis);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.warn('Failed to load gitmoji list:', error);
-        }
-      }
-    };
-
-    void loadGitmojis();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [settingsGitmojiEnabled]);
 
   React.useEffect(() => {
     if (currentDirectory) {
@@ -1588,8 +1410,6 @@ export const GitView: React.FC = () => {
       const prefix = token.endsWith(' ') ? token : `${token} `;
       return `${prefix}${current}`.trimStart();
     });
-    setGitmojiSearch('');
-    setIsGitmojiPickerOpen(false);
   }, []);
 
   const handleLogMaxCountChange = React.useCallback(
@@ -2226,46 +2046,12 @@ export const GitView: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isGitmojiPickerOpen} onOpenChange={setIsGitmojiPickerOpen}>
-        <DialogContent className="max-w-md p-0 overflow-hidden">
-          <DialogHeader className="px-4 pt-4">
-            <DialogTitle>Pick a gitmoji</DialogTitle>
-          </DialogHeader>
-          <Command className="h-[420px]">
-            <CommandInput
-              placeholder="Search gitmojis..."
-              value={gitmojiSearch}
-              onValueChange={setGitmojiSearch}
-            />
-            <CommandList>
-              <CommandEmpty>No gitmojis found.</CommandEmpty>
-              <CommandGroup>
-                {(gitmojiEmojis.length === 0
-                  ? []
-                  : gitmojiEmojis.filter((entry) => {
-                    const term = gitmojiSearch.trim().toLowerCase();
-                    if (!term) return true;
-                    return (
-                      entry.emoji.includes(term) ||
-                      entry.code.toLowerCase().includes(term) ||
-                      entry.description.toLowerCase().includes(term)
-                    );
-                  })
-                ).map((entry) => (
-                  <CommandItem
-                    key={entry.code}
-                    onSelect={() => handleSelectGitmoji(entry.emoji, entry.code)}
-                  >
-                    <span className="text-lg">{entry.emoji}</span>
-                    <span className="typography-ui-label text-foreground">{entry.code}</span>
-                    <span className="typography-meta text-muted-foreground">{entry.description}</span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </DialogContent>
-      </Dialog>
+      <GitmojiPickerDialog
+        gitmojis={gitmojiEmojis}
+        open={isGitmojiPickerOpen}
+        onOpenChange={setIsGitmojiPickerOpen}
+        onSelect={handleSelectGitmoji}
+      />
 
       {currentDirectory && (
         <ConflictDialog

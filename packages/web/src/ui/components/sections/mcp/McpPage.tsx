@@ -1,5 +1,4 @@
 import React from 'react';
-import { parsePendingMcpAuthResponse } from '@contracts/opencode';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -35,7 +34,20 @@ import {
 } from '@remixicon/react';
 import { cn } from '@/lib/utils';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
-import { MCP_OAUTH_CALLBACK_PATH, parseMcpOAuthCallbackContext, parseMcpOAuthCallbackStateKey } from '@/components/sections/mcp/mcpOAuth';
+import { parseMcpOAuthCallbackStateKey } from '@/components/sections/mcp/mcpOAuth';
+import {
+  buildMcpOAuthRedirectUri,
+  buildMcpRuntimeActionKey,
+  clearPendingMcpAuthContext,
+  extractAuthorizationResponse,
+  getPendingMcpAuthContext,
+  getStatusDescription,
+  normalizeMcpAuthErrorMessage,
+  queuePendingMcpAuthContext,
+  shouldShowFullStatusCard,
+  statusCardClass,
+} from './mcpRuntime';
+import { McpStatusBadge } from './McpStatusBadge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Dialog,
@@ -82,37 +94,6 @@ function parseShellCommand(raw: string): string[] {
   }
   if (current) args.push(current);
   return args;
-}
-
-function extractAuthorizationResponse(raw: string): {
-  code: string | null;
-  context: { name: string; directory: string | null } | null;
-  stateKey: string | null;
-} {
-  const trimmed = raw.trim();
-  if (!trimmed) {
-    return { code: null, context: null, stateKey: null };
-  }
-
-  try {
-    const parsed = new URL(trimmed);
-    const code = parsed.searchParams.get('code');
-    if (typeof code === 'string' && code.trim()) {
-      return {
-        code: code.trim(),
-        context: parseMcpOAuthCallbackContext(parsed.searchParams),
-        stateKey: parseMcpOAuthCallbackStateKey(parsed.searchParams),
-      };
-    }
-  } catch {
-    // Fall through to treating the pasted value as a raw authorization code.
-  }
-
-  return {
-    code: trimmed,
-    context: null,
-    stateKey: null,
-  };
 }
 
 const CommandTextarea: React.FC<CommandTextareaProps> = ({ value, onChange }) => {
@@ -392,157 +373,6 @@ const EnvEditor: React.FC<EnvEditorProps> = ({
       )}
     </div>
   );
-};
-
-// ─────────────────────────────────────────────────────────────
-// Status badge
-// ─────────────────────────────────────────────────────────────
-const STATUS_LABEL: Record<string, string> = {
-  connected: 'Connected',
-  failed: 'Failed',
-  needs_auth: 'Needs auth',
-  needs_client_registration: 'Needs registration',
-};
-
-const StatusBadge: React.FC<{ status: string | undefined; enabled: boolean; variant?: 'compact' | 'pill' }> = ({ status, enabled, variant = 'compact' }) => {
-  if (!enabled) return null;
-  if (!status) return null;
-
-  const colorClassMap: Record<string, { text: string; bg: string }> = {
-    connected: { text: 'text-[var(--status-success)]', bg: 'bg-[var(--status-success)]/10' },
-    failed: { text: 'text-[var(--status-error)]', bg: 'bg-[var(--status-error)]/10' },
-    needs_auth: { text: 'text-[var(--status-warning)]', bg: 'bg-[var(--status-warning)]/10' },
-    needs_client_registration: { text: 'text-[var(--status-warning)]', bg: 'bg-[var(--status-warning)]/10' },
-  };
-
-  const colors = colorClassMap[status] ?? { text: 'text-muted-foreground', bg: '' };
-
-  if (variant === 'pill') {
-    return (
-      <span className={cn('typography-micro font-medium rounded-full px-2 py-0.5', colors.text, colors.bg)}>
-        ● {STATUS_LABEL[status] ?? status}
-      </span>
-    );
-  }
-
-  return (
-    <span className={cn('typography-micro font-medium', colors.text)}>
-      ● {STATUS_LABEL[status] ?? status}
-    </span>
-  );
-};
-
-const getStatusDescription = (status: string | undefined, error?: string): string => {
-  switch (status) {
-    case 'connected':
-      return 'Connected and ready for OpenCode to discover tools and resources.';
-    case 'failed':
-      return error?.trim() || 'OpenCode could not reach this MCP server.';
-    case 'needs_auth':
-      return 'This remote MCP server requires authorization before it can connect.';
-    case 'needs_client_registration':
-      return error?.trim() || 'This remote MCP server requires client registration before authorization can complete.';
-    case 'disabled':
-      return 'This MCP server is disabled in configuration.';
-    default:
-      return 'Refresh or test the connection to load live runtime status.';
-  }
-};
-
-const statusCardClass = (status: string | undefined): string => {
-  switch (status) {
-    case 'failed':
-      return 'border-[var(--status-error-border)] bg-[var(--status-error-background)]';
-    case 'needs_auth':
-    case 'needs_client_registration':
-      return 'border-[var(--status-warning-border)] bg-[var(--status-warning-background)]';
-    default:
-      return 'border-[var(--interactive-border)] bg-[var(--surface-elevated)]';
-  }
-};
-
-const shouldShowFullStatusCard = (status: string | undefined, authUrl: string | null, needsAuthorization: boolean, isAuthPolling: boolean): boolean => {
-  // Only show full card for error/warning states or when auth is in progress
-  if (status === 'failed' || status === 'needs_auth' || status === 'needs_client_registration') return true;
-  if (authUrl) return true;
-  if (needsAuthorization || isAuthPolling) return true;
-  return false;
-};
-
-const buildMcpOAuthRedirectUri = (name?: string | null, directory?: string | null): string | null => {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  const url = new URL(MCP_OAUTH_CALLBACK_PATH, window.location.origin);
-  if (typeof name === 'string' && name.trim()) {
-    url.searchParams.set('server', name.trim());
-  }
-  if (typeof directory === 'string' && directory.trim()) {
-    url.searchParams.set('directory', directory.trim());
-  }
-  return url.toString();
-};
-
-const queuePendingMcpAuthContext = async (input: {
-  state: string;
-  name: string;
-  directory?: string | null;
-}): Promise<void> => {
-  const response = await fetch('/api/mcp/auth/pending', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      state: input.state,
-      name: input.name,
-      directory: typeof input.directory === 'string' && input.directory.trim() ? input.directory.trim() : null,
-    }),
-  });
-
-  if (!response.ok) {
-    const payload = await response.json().catch(() => null);
-    throw new Error(payload?.error || 'Failed to prepare MCP authorization callback');
-  }
-};
-
-const getPendingMcpAuthContext = async (stateKey: string): Promise<{ name: string; directory: string | null } | null> => {
-  const response = await fetch(`/api/mcp/auth/pending?state=${encodeURIComponent(stateKey)}`);
-  if (!response.ok) {
-    return null;
-  }
-
-  const parsed = parsePendingMcpAuthResponse(await response.json().catch(() => null));
-  if (!parsed.ok || !parsed.value || !('name' in parsed.value) || !parsed.value.name) {
-    return null;
-  }
-
-  return {
-    name: parsed.value.name,
-    directory: parsed.value.directory ?? null,
-  };
-};
-
-const clearPendingMcpAuthContext = async (stateKey: string | null | undefined): Promise<void> => {
-  if (typeof stateKey !== 'string' || !stateKey.trim()) {
-    return;
-  }
-
-  await fetch(`/api/mcp/auth/pending?state=${encodeURIComponent(stateKey.trim())}`, { method: 'DELETE' }).catch(() => undefined);
-};
-
-const normalizeMcpAuthErrorMessage = (error: unknown, fallback: string): string => {
-  const message = error instanceof Error ? error.message : fallback;
-  if (/oauth state required/i.test(message)) {
-    return 'Authorization session expired or was cleared during reload. Click Authorize again.';
-  }
-  return message;
-};
-
-const buildMcpRuntimeActionKey = (name: string | null, directory?: string | null): string => {
-  const normalizedDirectory = typeof directory === 'string' && directory.trim()
-    ? directory.trim()
-    : '__global__';
-  return `${name ?? '__none__'}::${normalizedDirectory}`;
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -1261,7 +1091,7 @@ export const McpPage: React.FC = () => {
             ) : (
               <div className="flex items-center gap-2 min-w-0">
                 <h2 className="typography-ui-header font-semibold text-foreground truncate">{selectedMcpName}</h2>
-                <StatusBadge status={effectiveRuntimeStatus?.status} enabled={enabled} variant="pill" />
+                <McpStatusBadge status={effectiveRuntimeStatus?.status} enabled={enabled} variant="pill" />
               </div>
             )}
             <div className="flex items-center gap-2 mt-0.5">
@@ -1326,7 +1156,7 @@ export const McpPage: React.FC = () => {
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="typography-ui-label text-foreground">Runtime Status</span>
-                    <StatusBadge status={effectiveRuntimeStatus?.status} enabled={enabled} />
+                    <McpStatusBadge status={effectiveRuntimeStatus?.status} enabled={enabled} />
                   </div>
                   <p className="typography-meta text-muted-foreground">{runtimeDescription}</p>
                   <p className="typography-micro text-muted-foreground/80">

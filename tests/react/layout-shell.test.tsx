@@ -1,9 +1,9 @@
-import { screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, test, vi } from "vitest"
 import { setViewport } from "./helpers/browser"
 import { renderWithApp } from "./helpers/render"
-import { seedContextPanelStore, seedDialogStore, seedUIStore } from "./helpers/stores"
+import { seedContextPanelStore, seedDialogStore } from "./helpers/stores"
 
 let deviceIsMobile = false
 
@@ -62,7 +62,6 @@ import { MainLayout } from "@/components/layout/MainLayout"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { useLayoutStore } from "@/stores/useLayoutStore"
 import { useNavigationStore } from "@/stores/useNavigationStore"
-import { useUIStore } from "@/stores/useUIStore"
 import { useRuntimeStore } from "@/stores/useRuntimeStore"
 
 describe("Sidebar", () => {
@@ -152,5 +151,15 @@ describe("MainLayout", () => {
     renderWithApp(<MainLayout />, { resetStores: false })
 
     expect(await screen.findByLabelText("Settings window")).toBeTruthy()
+  })
+
+  test("does not mount a deferred command palette until it is requested", async () => {
+    renderWithApp(<MainLayout />, { resetStores: false })
+
+    expect(screen.queryByTestId("command-palette")).toBeNull()
+
+    act(() => seedDialogStore({ isCommandPaletteOpen: true }))
+
+    expect(await screen.findByTestId("command-palette")).toBeTruthy()
   })
 })

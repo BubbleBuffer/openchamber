@@ -99,6 +99,7 @@ export const registerOpenCodeProxy = (app: any, deps: {
         return resolved;
       }
     } catch {
+      // Fall through to the configured base URL and then the local-port fallback.
     }
 
     const externalBase = normalizeProxyTarget(openCodeRuntime.getBaseUrl());
@@ -124,7 +125,9 @@ export const registerOpenCodeProxy = (app: any, deps: {
       if (keepaliveInterval) return;
       keepaliveInterval = setInterval(() => {
         if (!res.writableEnded) {
-          try { res.write(": keepalive\n\n"); } catch {}
+          try { res.write(": keepalive\n\n"); } catch {
+            // A closed response is handled by the request close listener.
+          }
         }
       }, 15_000);
     };
@@ -214,6 +217,7 @@ export const registerOpenCodeProxy = (app: any, deps: {
           await (upstream.body as any).cancel();
         }
       } catch {
+        // The upstream may already be closed or unlocked during teardown.
       }
     }
   };
@@ -275,6 +279,7 @@ export const registerOpenCodeProxy = (app: any, deps: {
             .map((project: any) => (typeof project?.path === "string" ? project.path.trim() : ""))
             .filter(Boolean);
         } catch {
+          // Missing or malformed settings simply means there are no extra project directories.
         }
 
         const seen = new Set(
@@ -305,6 +310,7 @@ export const registerOpenCodeProxy = (app: any, deps: {
                 }
               }
             } catch {
+              // A single unavailable project must not fail the global session response.
             }
           }
         }

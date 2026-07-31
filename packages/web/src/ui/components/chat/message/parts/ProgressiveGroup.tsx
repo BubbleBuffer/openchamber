@@ -17,12 +17,14 @@ import { getToolMetadata } from '@/lib/tools/toolHelpers';
 import { isExpandableTool, isStandaloneTool, isStaticTool } from './toolRenderUtils';
 import { RuntimeAPIContext } from '@/contexts/runtimeAPIContext';
 import { useDirectoryStore } from '@/stores/files/useDirectoryStore';
-import { useUIStore } from '@/stores/useUIStore';
 import { useContextPanelStore } from '@/stores/useContextPanelStore';
 import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
 import ReasoningPart from './ReasoningPart';
 import JustificationBlock from './JustificationBlock';
 import { areRenderRelevantPartsEqual } from '../renderCompare';
+import { FallbackToolRow } from './FallbackToolRow';
+
+export { InspectableToolRow } from './FallbackToolRow';
 
 interface ProgressiveGroupProps {
     parts: TurnActivityPart[];
@@ -884,17 +886,11 @@ const ProgressiveGroup: React.FC<ProgressiveGroupProps> = ({
 
             case 'tool-fallback':
                 return (
-                    <MemoExpandableToolRow
+                    <FallbackToolRow
                         key={row.activity.id}
-                        activity={row.activity}
-                        isExpanded={expandedTools.has(row.activity.id)}
-                        syntaxTheme={syntaxTheme}
-                        isMobile={isMobile}
-                        onToggleTool={onToggleTool}
+                        part={row.activity.part as ToolPartType}
                         onShowPopup={onShowPopup}
-                        onContentChange={onContentChange}
                         animateTailText={Boolean(animatedToolIds?.has(row.activity.id))}
-                        animateRows={animateRows}
                     />
                 );
 

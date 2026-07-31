@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { RuntimeAPIContext } from '@/contexts/runtimeAPIContext';
-import { RiArrowDownSLine, RiArrowRightSLine, RiExternalLinkLine } from '@remixicon/react';
+import { RiArrowDownSLine, RiArrowRightSLine } from '@remixicon/react';
 import { PatchDiff } from '@pierre/diffs/react';
 import { cn } from '@/lib/utils';
 import { SimpleMarkdownRenderer } from '../../MarkdownRenderer';
@@ -18,7 +18,6 @@ import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
 import { useSessionActivity } from '@/hooks/useSessionActivity';
 import { opencodeClient } from '@/lib/opencode/client';
 import { sessionEvents } from '@/lib/session/sessionEvents';
-import { ScrollShadow } from '@/components/ui/ScrollShadow';
 import { Text } from '@/components/ui/text';
 import { FileTypeIcon } from '@/components/icons/FileTypeIcon';
 import type { ContentChangeReason } from '@/components/chat/timeline/types';
@@ -36,11 +35,23 @@ import {
 import { JsonTreeViewer } from '@/components/ui/JsonTreeViewer';
 import { DiffViewToggle, type DiffViewMode } from '../DiffViewToggle';
 import { MinDurationShineText } from './MinDurationShineText';
-import { ToolRevealOnMount } from './ToolRevealOnMount';
 import { getToolIcon } from './toolPresentation';
 import { useDurationTickerNow } from './useDurationTicker';
 import { resolveFallbackTaskSessionId } from './resolveFallbackTaskSessionId';
 import { areRenderRelevantPartsEqual } from '../renderCompare';
+import {
+    buildTaskSessionMessagesSignature,
+    buildTaskSummaryEntriesFromSession,
+    normalizeTaskSummaryEntries,
+    parseTaskMetadataBlock,
+    readTaskSessionIdFromOutput,
+    readTaskSessionIdFromRecord,
+    renderAnimatedPathWithIcon,
+    renderPathLikeGitChanges,
+    TaskToolSummary,
+    type TaskToolSummaryEntry,
+    ToolScrollableSection,
+} from './toolPartSupport';
 
 type ToolStateWithMetadata = ToolStateUnion & { metadata?: Record<string, unknown>; input?: Record<string, unknown>; output?: string; error?: string; time?: { start: number; end?: number } };
 
@@ -630,38 +641,6 @@ const getToolDescription = (part: ToolPartType, state: ToolStateUnion, currentDi
     return typeof desc === 'string' ? desc : '';
 };
 
-interface ToolScrollableSectionProps {
-    children: React.ReactNode;
-    maxHeightClass?: string;
-    className?: string;
-    outerClassName?: string;
-    disableHorizontal?: boolean;
-}
-
-const ToolScrollableSection: React.FC<ToolScrollableSectionProps> = ({
-    children,
-    maxHeightClass = 'max-h-[60vh]',
-    className,
-    outerClassName,
-    disableHorizontal = false,
-}) => (
-    <div className={cn('w-full min-w-0 flex-none overflow-hidden', outerClassName)}>
-        <ScrollShadow
-            className={cn(
-                'tool-output-surface p-2 rounded-xl w-full min-w-0',
-                maxHeightClass,
-                disableHorizontal ? 'overflow-y-auto overflow-x-hidden' : 'overflow-auto',
-                className,
-            )}
-            size={24}
-        >
-            <div className="w-full min-w-0">
-                {children}
-            </div>
-        </ScrollShadow>
-    </div>
-);
-
 const getToolOutputLanguage = (
     output: string,
     part: ToolPartType,
@@ -737,435 +716,6 @@ const ToolScrollableTextOutput: React.FC<{
 
 ToolScrollableTextOutput.displayName = 'ToolScrollableTextOutput';
 
-type TaskToolSummaryEntry = {
-    id?: string;
-    tool?: string;
-    state?: {
-        status?: string;
-        title?: string;
-        input?: Record<string, unknown>;
-    };
-};
-
-type SessionMessageWithParts = MessageRecord;
-
-const normalizeSessionIdCandidate = (value: unknown): string | undefined => {
-    if (typeof value !== 'string') {
-        return undefined;
-    }
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : undefined;
-};
-
-const readTaskSessionIdFromRecord = (value: unknown): string | undefined => {
-    if (!value || typeof value !== 'object') {
-        return undefined;
-    }
-
-    const record = value as Record<string, unknown>;
-    return (
-        normalizeSessionIdCandidate(record.sessionID)
-        ?? normalizeSessionIdCandidate(record.sessionId)
-    );
-};
-
-const readTaskSessionIdFromOutput = (output: string | undefined): string | undefined => {
-    if (typeof output !== 'string' || output.trim().length === 0) {
-        return undefined;
-    }
-    const parsedMetadata = parseTaskMetadataBlock(output);
-    if (parsedMetadata.sessionId) {
-        return parsedMetadata.sessionId;
-    }
-    const taskMatch = output.match(/task_id\s*:\s*([^\s<"']+)/i);
-    const sessionMatch = output.match(/session[_\s-]?id\s*:\s*([^\s<"']+)/i);
-    const candidate = taskMatch?.[1] ?? sessionMatch?.[1];
-    return normalizeSessionIdCandidate(candidate);
-};
-
-const buildTaskSummaryEntriesFromSession = (messages: SessionMessageWithParts[]): TaskToolSummaryEntry[] => {
-    const entries: TaskToolSummaryEntry[] = [];
-
-    for (const message of messages) {
-        if (message?.info?.role !== 'assistant') {
-            continue;
-        }
-        const parts = Array.isArray(message.parts) ? message.parts : [];
-        for (const part of parts) {
-            if (part?.type !== 'tool') {
-                continue;
-            }
-            const toolName = normalizeToolName(part.tool);
-            if (!toolName || toolName === 'task' || toolName === 'todowrite' || toolName === 'todoread') {
-                continue;
-            }
-            const partState = part.state as { status?: string; title?: string; input?: unknown } | undefined;
-            entries.push({
-                id: part.id,
-                tool: part.tool,
-                state: {
-                    status: partState?.status,
-                    title: partState?.title,
-                    input: partState?.input && typeof partState.input === 'object'
-                        ? (partState.input as Record<string, unknown>)
-                        : undefined,
-                },
-            });
-        }
-    }
-
-    return entries;
-};
-
-const buildTaskSessionMessagesSignature = (messages: SessionMessageWithParts[]): string => {
-    if (!Array.isArray(messages) || messages.length === 0) {
-        return '0';
-    }
-
-    const lastMessage = messages[messages.length - 1];
-    const lastMessageId = typeof lastMessage?.info?.id === 'string' ? lastMessage.info.id : '';
-    const lastMessageUpdated =
-        typeof lastMessage?.info?.time?.completed === 'number'
-            ? lastMessage.info.time.completed
-            : typeof lastMessage?.info?.time?.created === 'number'
-                ? lastMessage.info.time.created
-                : 0;
-    const lastParts = Array.isArray(lastMessage?.parts) ? lastMessage.parts : [];
-    const lastPart = lastParts[lastParts.length - 1] as Record<string, unknown> | undefined;
-    const tailType = typeof lastPart?.type === 'string' ? lastPart.type : '';
-    const tailId = typeof lastPart?.id === 'string' ? lastPart.id : '';
-    const tailTextLength = (() => {
-        const textCandidate = lastPart?.text;
-        if (typeof textCandidate === 'string') {
-            return textCandidate.length;
-        }
-        const stateCandidate = lastPart?.state;
-        if (stateCandidate && typeof stateCandidate === 'object') {
-            const stateStatus = (stateCandidate as Record<string, unknown>).status;
-            if (typeof stateStatus === 'string') {
-                return stateStatus.length;
-            }
-        }
-        return 0;
-    })();
-
-    return `${messages.length}:${lastMessageId}:${lastMessageUpdated}:${lastParts.length}:${tailType}:${tailId}:${tailTextLength}`;
-};
-
-const getTaskSummaryLabel = (entry: TaskToolSummaryEntry): string => {
-    const title = entry.state?.title;
-    if (typeof title === 'string' && title.trim().length > 0) {
-        return title;
-    }
-
-    const input = entry.state?.input;
-    if (input && typeof input === 'object') {
-        const pathCandidate = input.filePath ?? input.file_path ?? input.path;
-        if (typeof pathCandidate === 'string' && pathCandidate.trim().length > 0) {
-            return pathCandidate.trim();
-        }
-
-        const urlCandidate = input.url;
-        if (typeof urlCandidate === 'string' && urlCandidate.trim().length > 0) {
-            return urlCandidate.trim();
-        }
-    }
-
-    return '';
-};
-
-const FILE_PATH_LABEL_TOOLS = new Set([
-    'read',
-    'view',
-    'file_read',
-    'cat',
-    'write',
-    'create',
-    'file_write',
-    'edit',
-    'multiedit',
-    'apply_patch',
-]);
-
-const shouldRenderGitPathLabel = (toolName: string, label: string): boolean => {
-    if (!FILE_PATH_LABEL_TOOLS.has(toolName.toLowerCase())) {
-        return false;
-    }
-
-    const trimmed = label.trim();
-    if (!trimmed || trimmed === 'Patch' || /^\d+\s+files$/.test(trimmed)) {
-        return false;
-    }
-
-    if (trimmed.includes('/') || trimmed.includes('\\')) {
-        return true;
-    }
-
-    const baseName = trimmed.split(/[\\/]/).pop() || trimmed;
-    if (baseName.startsWith('.') || baseName.includes('.')) {
-        return true;
-    }
-
-    return /^[A-Za-z0-9_-]+$/.test(baseName);
-};
-
-const stripTaskMetadataFromOutput = (output: string): string => {
-    // Strip only a trailing <task_metadata>...</task_metadata> block.
-    return output.replace(/\n*<task_metadata>[\s\S]*?<\/task_metadata>\s*$/i, '').trimEnd();
-};
-
-const normalizeTaskSummaryEntries = (value: unknown): TaskToolSummaryEntry[] => {
-    if (!Array.isArray(value)) {
-        return [];
-    }
-
-    const normalized: TaskToolSummaryEntry[] = [];
-    for (const entry of value) {
-        if (typeof entry === 'string') {
-            normalized.push({
-                tool: 'tool',
-                state: { status: 'completed', title: entry },
-            });
-            continue;
-        }
-
-        if (!entry || typeof entry !== 'object') {
-            continue;
-        }
-
-        const record = entry as {
-            id?: unknown;
-            tool?: unknown;
-            title?: unknown;
-            status?: unknown;
-            state?: { status?: unknown; title?: unknown; input?: unknown };
-        };
-
-        const stateStatus = typeof record.state?.status === 'string' ? record.state.status : undefined;
-        const stateTitle = typeof record.state?.title === 'string' ? record.state.title : undefined;
-        const status = stateStatus ?? (typeof record.status === 'string' ? record.status : undefined);
-        const title = stateTitle ?? (typeof record.title === 'string' ? record.title : undefined);
-
-        normalized.push({
-            id: typeof record.id === 'string' ? record.id : undefined,
-            tool: typeof record.tool === 'string' ? record.tool : 'tool',
-            state: {
-                status,
-                title,
-                input: record.state?.input && typeof record.state.input === 'object'
-                    ? (record.state.input as Record<string, unknown>)
-                    : undefined,
-            },
-        });
-    }
-
-    return normalized;
-};
-
-const parseTaskMetadataBlock = (output: string | undefined): {
-    sessionId?: string;
-    summaryEntries: TaskToolSummaryEntry[];
-} => {
-    if (typeof output !== 'string' || output.trim().length === 0) {
-        return { summaryEntries: [] };
-    }
-
-    const blockMatch = output.match(/<task_metadata>\s*([\s\S]*?)\s*<\/task_metadata>/i);
-    if (!blockMatch?.[1]) {
-        return { summaryEntries: [] };
-    }
-
-    const raw = blockMatch[1].trim();
-    if (!raw) {
-        return { summaryEntries: [] };
-    }
-
-    try {
-        const parsed = JSON.parse(raw) as {
-            sessionId?: unknown;
-            sessionID?: unknown;
-            summary?: unknown;
-            entries?: unknown;
-            tools?: unknown;
-            calls?: unknown;
-        };
-
-        const summaryEntries = normalizeTaskSummaryEntries(
-            parsed.summary ?? parsed.entries ?? parsed.tools ?? parsed.calls
-        );
-
-        const sessionId =
-            (typeof parsed.sessionId === 'string' && parsed.sessionId.trim().length > 0
-                ? parsed.sessionId.trim()
-                : undefined) ??
-            (typeof parsed.sessionID === 'string' && parsed.sessionID.trim().length > 0
-                ? parsed.sessionID.trim()
-                : undefined);
-
-        return { sessionId, summaryEntries };
-    } catch {
-        return { summaryEntries: [] };
-    }
-};
-
-const TaskToolSummary: React.FC<{
-    entries: TaskToolSummaryEntry[];
-    isExpanded: boolean;
-    isMobile: boolean;
-    output?: string;
-    sessionId?: string;
-    onShowPopup?: (content: ToolPopupContent) => void;
-    input?: Record<string, unknown>;
-    animateTailText?: boolean;
-    isActive?: boolean;
-}> = ({ entries, isExpanded, isMobile, output, sessionId, onShowPopup, input, animateTailText = true, isActive = false }) => {
-    const setCurrentSession = useSessionUIStore((state) => state.setCurrentSession);
-    const showToolFileIcons = useChatRenderingStore((state) => state.showToolFileIcons);
-    const displayEntries = entries;
-
-    const trimmedOutput = typeof output === 'string'
-        ? stripTaskMetadataFromOutput(output)
-        : '';
-    const hasOutput = trimmedOutput.length > 0;
-    const [isOutputExpanded, setIsOutputExpanded] = React.useState(false);
-
-    const handleOpenSession = (event: React.MouseEvent) => {
-        event.stopPropagation();
-        if (sessionId) {
-            setCurrentSession(sessionId);
-        }
-    };
-
-    const agentType = typeof input?.subagent_type === 'string'
-        ? input.subagent_type
-        : 'subagent';
-
-    if (displayEntries.length === 0 && !hasOutput && !sessionId) {
-        return (
-            <div className="relative pr-2 pb-2 pt-2 space-y-2 pl-[1.4375rem]">
-                <div className="typography-meta text-muted-foreground/70">
-                    {isActive ? 'Waiting for subagent activity...' : 'No subagent session id on task metadata.'}
-                </div>
-            </div>
-        );
-    }
-
-    const visibleEntries = isExpanded ? displayEntries : displayEntries.slice(-6);
-    const hiddenCount = Math.max(0, displayEntries.length - visibleEntries.length);
-
-    return (
-        <div
-            className={cn(
-                'relative pr-2 pb-2 pt-2 space-y-2 pl-[1.4375rem]',
-                'before:absolute before:left-[0.4375rem] before:w-px before:bg-border/80 before:content-[""]',
-                'before:top-[-0.25rem] before:bottom-0'
-            )}
-        >
-            {displayEntries.length > 0 ? (
-                <ToolScrollableSection maxHeightClass={isExpanded ? 'max-h-[40vh]' : 'max-h-56'} disableHorizontal>
-                    <div className="w-full min-w-0 space-y-1">
-                        {hiddenCount > 0 ? (
-                            <div className="typography-micro text-muted-foreground/70">+{hiddenCount} more…</div>
-                        ) : null}
-
-                        {visibleEntries.map((entry, idx) => {
-                            const normalizedToolName = normalizeToolName(entry.tool);
-                            const toolName = normalizedToolName.length > 0 ? normalizedToolName : 'tool';
-                            const label = getTaskSummaryLabel(entry);
-                            const hasLabel = label.trim().length > 0;
-                            const status = entry.state?.status;
-
-                            const displayName = getToolMetadata(toolName).displayName;
-
-                            return (
-                                <ToolRevealOnMount key={entry.id ?? `${toolName}-${idx}`} animate={animateTailText} wipe>
-                                    <div className={cn("flex gap-2 min-w-0 w-full", isMobile ? 'items-start' : 'items-center')}>
-                                        <span className="flex-shrink-0 text-foreground/80">{getToolIcon(toolName)}</span>
-                                        <span
-                                            className="typography-meta text-foreground/80 flex-shrink-0"
-                                            style={{ color: 'var(--tools-title)' }}
-                                            title={displayName}
-                                        >
-                                            {displayName}
-                                        </span>
-                                        {hasLabel ? (
-                                            status !== 'error' && shouldRenderGitPathLabel(toolName, label) ? (
-                                                renderAnimatedPathWithIcon(label, animateTailText, true, showToolFileIcons)
-                                            ) : (
-                                                status === 'error' ? (
-                                                    <span className={cn(
-                                                        'typography-meta flex-1 min-w-0 text-[var(--status-error)]',
-                                                        isMobile ? 'whitespace-normal break-words' : 'truncate'
-                                                    )}>
-                                                        {label}
-                                                    </span>
-                                                ) : (
-                                                    <Text
-                                                        variant={animateTailText ? 'generate-effect' : 'static'}
-                                                        className={cn(
-                                                            'typography-meta flex-1 min-w-0 text-muted-foreground/70',
-                                                            isMobile ? 'whitespace-normal break-words' : 'truncate'
-                                                        )}
-                                                        style={{ color: 'var(--tools-description)' }}
-                                                        title={label}
-                                                    >
-                                                        {label}
-                                                    </Text>
-                                                )
-                                            )
-                                        ) : null}
-                                    </div>
-                                </ToolRevealOnMount>
-                            );
-                        })}
-                    </div>
-                </ToolScrollableSection>
-            ) : null}
-
-            {sessionId && (
-                <button
-                    type="button"
-                    className="flex items-center gap-2 typography-meta text-primary hover:text-primary/80 w-full"
-                    onPointerDown={(event) => event.stopPropagation()}
-                    onClick={handleOpenSession}
-                >
-                    <RiExternalLinkLine className="h-3.5 w-3.5 flex-shrink-0" />
-                    <span className="typography-meta text-primary font-medium">Open {agentType.charAt(0).toUpperCase() + agentType.slice(1)} subtask</span>
-                </button>
-            )}
-
-            {hasOutput ? (
-                <div className={cn('space-y-1', (displayEntries.length > 0 || sessionId) && 'pt-1')}
-                >
-                    <button
-                        type="button"
-                        className="flex items-center gap-2 typography-meta text-foreground/80 hover:text-foreground w-full"
-                        onPointerDown={(event) => event.stopPropagation()}
-                        onClick={(event) => {
-                            event.stopPropagation();
-                            setIsOutputExpanded((prev) => !prev);
-                        }}
-                    >
-                        {isOutputExpanded ? (
-                            <RiArrowDownSLine className="h-3.5 w-3.5 flex-shrink-0" />
-                        ) : (
-                            <RiArrowRightSLine className="h-3.5 w-3.5 flex-shrink-0" />
-                        )}
-                        <span className="typography-meta text-foreground/80 font-medium">Output</span>
-                    </button>
-                    {isOutputExpanded ? (
-                        <ToolScrollableSection maxHeightClass="max-h-[50vh]">
-                            <div className="w-full min-w-0">
-                                <SimpleMarkdownRenderer content={trimmedOutput} variant="tool" onShowPopup={onShowPopup} />
-                            </div>
-                        </ToolScrollableSection>
-                    ) : null}
-                </div>
-            ) : null}
-        </div>
-    );
-};
-
 interface DiffPreviewProps {
     diff: string;
     pierreTheme: { light: string; dark: string };
@@ -1194,86 +744,6 @@ type DiffPatchEntry = {
     id: string;
     title: string;
     patch: string;
-};
-
-const renderPathLikeGitChanges = (path: string, grow = true) => {
-    const lastSlash = path.lastIndexOf('/');
-    if (lastSlash === -1) {
-        return (
-            <span
-                className={cn('min-w-0 truncate typography-ui-label text-foreground', grow && 'flex-1')}
-                style={{ direction: 'rtl', textAlign: 'left' }}
-                title={path}
-            >
-                {path}
-            </span>
-        );
-    }
-
-    const dir = path.slice(0, lastSlash);
-    const name = path.slice(lastSlash + 1);
-    const hasAbsoluteRoot = dir.startsWith('/');
-    const displayDir = hasAbsoluteRoot ? dir.slice(1) : dir;
-
-    return (
-        <span className={cn('min-w-0 flex items-baseline overflow-hidden typography-ui-label', grow && 'flex-1')} title={path}>
-            {hasAbsoluteRoot ? <span className="flex-shrink-0 text-muted-foreground">/</span> : null}
-            <span className="min-w-0 truncate text-muted-foreground" style={{ direction: 'rtl', textAlign: 'left' }}>
-                {displayDir}
-            </span>
-            <span className="flex-shrink-0">
-                <span className="text-muted-foreground">/</span>
-                <span className="text-foreground">{name}</span>
-            </span>
-        </span>
-    );
-};
-
-const renderAnimatedPathWithIcon = (path: string, _animate = true, grow = true, showFileIcons = true) => {
-    void _animate;
-    const lastSlash = path.lastIndexOf('/');
-
-    if (lastSlash === -1) {
-        return (
-            <span className={cn('min-w-0 inline-flex items-center gap-1 overflow-hidden', grow && 'flex-1')} title={path}>
-                {showFileIcons ? <FileTypeIcon filePath={path} className="h-3.5 w-3.5 flex-shrink-0" /> : null}
-                <span
-                    className={cn('min-w-0 truncate whitespace-nowrap typography-meta', grow && 'flex-1')}
-                    style={{ color: 'var(--tools-title)' }}
-                >
-                    {path}
-                </span>
-            </span>
-        );
-    }
-
-    const dir = path.slice(0, lastSlash);
-    const name = path.slice(lastSlash + 1);
-    const hasAbsoluteRoot = dir.startsWith('/');
-    const displayDir = hasAbsoluteRoot ? dir.slice(1) : dir;
-
-    return (
-        <span className={cn('min-w-0 inline-flex items-center gap-1 overflow-hidden', grow && 'flex-1')} title={path}>
-            {showFileIcons ? <FileTypeIcon filePath={path} className="h-3.5 w-3.5 flex-shrink-0" /> : null}
-            <span className={cn('min-w-0 inline-flex max-w-full items-baseline overflow-hidden typography-meta', grow && 'flex-1')}>
-                {hasAbsoluteRoot ? <span className="flex-shrink-0" style={{ color: 'var(--tools-description)' }}>/</span> : null}
-                <span
-                    className="min-w-0 shrink truncate whitespace-nowrap"
-                    style={{
-                        color: 'var(--tools-description)',
-                        direction: 'rtl',
-                        textAlign: 'left',
-                    }}
-                >
-                    {displayDir}
-                </span>
-                <span className="flex-shrink-0" style={{ color: 'var(--tools-description)' }}>/</span>
-                <span className="flex-shrink-0" style={{ color: 'var(--tools-title)' }}>
-                    {name}
-                </span>
-            </span>
-        </span>
-    );
 };
 
 const getDiffPatchEntries = (
@@ -2097,7 +1567,7 @@ const ToolPart: React.FC<ToolPartProps> = ({
                 if (Array.isArray(messages) && messages.length > 0) {
                     const childStores = getSyncChildStores();
                     childStores.update(currentDirectory, (prev) => {
-                        const records = messages as SessionMessageWithParts[];
+                        const records = messages as MessageRecord[];
                         const partPatch: Record<string, import('@/lib/opencode/client').Part[]> = { ...prev.part };
                         for (const rec of records) {
                             partPatch[rec.info.id] = rec.parts;
@@ -2233,7 +1703,7 @@ const ToolPart: React.FC<ToolPartProps> = ({
                     return;
                 }
 
-                const nextSignature = buildTaskSessionMessagesSignature(messages as SessionMessageWithParts[]);
+                const nextSignature = buildTaskSessionMessagesSignature(messages as MessageRecord[]);
                 if (nextSignature === taskPollLastSignatureRef.current) {
                     taskPollNoChangeCountRef.current += 1;
                     return;
@@ -2244,7 +1714,7 @@ const ToolPart: React.FC<ToolPartProps> = ({
                 // Inject fetched subagent messages into sync child store
                 const childStores = getSyncChildStores();
                 childStores.update(currentDirectory, (prev) => {
-                    const records = messages as SessionMessageWithParts[];
+                    const records = messages as MessageRecord[];
                     const partPatch: Record<string, import('@/lib/opencode/client').Part[]> = { ...prev.part };
                     for (const rec of records) {
                         partPatch[rec.info.id] = rec.parts;

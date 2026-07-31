@@ -12,7 +12,6 @@ const CACHE_VERSION = 'v1';
 const CACHE_NAMES = {
   appShell: `app-shell-${CACHE_VERSION}`,
   staticAssets: `static-assets-${CACHE_VERSION}`,
-  api: `api-cache-${CACHE_VERSION}`,
   images: `image-cache-${CACHE_VERSION}`,
 } as const;
 
@@ -20,15 +19,11 @@ const CACHE_NAMES = {
 const CACHE_LIMITS = {
   appShell: 10,
   staticAssets: 100,
-  api: 50,
   images: 60,
 } as const;
 
 // Maximum age in milliseconds (30 days)
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
-
-// API cache max age (1 hour)
-const API_MAX_AGE_MS = 60 * 60 * 1000;
 
 declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: Array<string | { url: string; revision?: string }>;
@@ -89,31 +84,20 @@ async function cacheFirst(request: Request, cacheName: string, options?: { maxAg
   }
 }
 
-async function networkFirst(request: Request, cacheName: string, options?: { timeoutMs?: number; maxAgeMs?: number }): Promise<Response> {
+async function networkFirst(request: Request, cacheName: string): Promise<Response> {
   const cache = await caches.open(cacheName);
-  const timeoutMs = options?.timeoutMs ?? 3000;
-  const maxAge = options?.maxAgeMs ?? API_MAX_AGE_MS;
-
-  const networkPromise = fetch(request).then(async (response) => {
-    if (response.ok && response.status !== 206) {
-      cache.put(request, response.clone());
-      await trimCache(cacheName, CACHE_LIMITS[cacheName as keyof typeof CACHE_LIMITS] ?? 50);
-    }
-    return response;
-  });
-
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('Network timeout')), timeoutMs);
-  });
-
   try {
-    return await Promise.race([networkPromise, timeoutPromise]);
-  } catch {
-    const cached = await cache.match(request);
-    if (cached && !(await isCacheExpired(cached, maxAge))) {
-      return cached;
+    const networkResponse = await fetch(request);
+    if (networkResponse.ok) {
+      void cache.put(request, networkResponse.clone())
+        .then(() => trimCache(cacheName, CACHE_LIMITS[cacheName as keyof typeof CACHE_LIMITS] ?? 100))
+        .catch(() => undefined);
     }
-    throw new Error('Network failed and no valid cache');
+    return networkResponse;
+  } catch (error) {
+    const cached = await cache.match(request);
+    if (cached) return cached;
+    throw error;
   }
 }
 
@@ -141,7 +125,17 @@ self.addEventListener('activate', (event) => {
 
 // ── Fetch ───────────────────────────────────────────────────────────────────
 
-self.addEventListener('fetch', (event) => {
+export const isProtectedRequest = (request: Request): boolean => {
+  const { pathname } = new URL(request.url);
+  return pathname === '/api'
+    || pathname.startsWith('/api/')
+    || pathname === '/auth'
+    || pathname.startsWith('/auth/')
+    || pathname === '/global/event'
+    || pathname === '/event';
+};
+
+export const handleFetchEvent = (event: FetchEvent): void => {
   const { request } = event;
   const url = new URL(request.url);
 
@@ -151,11 +145,10 @@ self.addEventListener('fetch', (event) => {
   // Skip non-HTTP(S) requests
   if (!url.protocol.startsWith('http')) return;
 
-  // API calls: NetworkFirst
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(networkFirst(request, CACHE_NAMES.api, { timeoutMs: 3000, maxAgeMs: API_MAX_AGE_MS }));
-    return;
-  }
+  // Never cache cross-origin resources or protected/authenticated traffic.
+  // Authentication, stream freshness, and failures remain browser/network
+  // concerns rather than service-worker Cache Storage concerns.
+  if (url.origin !== self.location.origin || isProtectedRequest(request)) return;
 
   // Images: CacheFirst
   if (/\.(png|jpg|jpeg|gif|svg|webp|ico|bmp|tif|tiff)$/i.test(url.pathname)) {
@@ -169,10 +162,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // HTML navigation (app shell): CacheFirst with offline fallback
+  // HTML navigation: prefer the current deployed shell and use a cached page
+  // only when offline. Cache-first here can pin an old application for weeks.
   if (request.mode === 'navigate' || request.destination === 'document') {
     event.respondWith(
-      cacheFirst(request, CACHE_NAMES.appShell).catch(async () => {
+      networkFirst(request, CACHE_NAMES.appShell).catch(async () => {
         const cache = await caches.open(CACHE_NAMES.appShell);
         const offlineFallback = await cache.match('/offline.html');
         if (offlineFallback) return offlineFallback;
@@ -185,7 +179,9 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
-});
+};
+
+self.addEventListener('fetch', handleFetchEvent);
 
 // ── Push ────────────────────────────────────────────────────────────────────
 

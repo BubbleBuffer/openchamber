@@ -61,7 +61,6 @@ COPY --from=builder /app/packages/session-state/package.json ./packages/session-
 COPY --from=builder /app/packages/session-state/dist ./packages/session-state/dist
 COPY --from=builder /app/packages/web/package.json ./packages/web/package.json
 COPY --from=builder /app/packages/web/bin ./packages/web/bin
-COPY --from=builder /app/packages/web/server/instrument.mjs ./packages/web/server/instrument.mjs
 COPY --from=builder /app/packages/web/server/dist ./packages/web/server/dist
 COPY --from=builder /app/packages/web/dist ./packages/web/dist
 

@@ -39,7 +39,7 @@ import {
 import { createWorktreeSession } from '@/lib/session/worktreeSessionCreator';
 import { formatShortcutForDisplay, getEffectiveShortcutCombo } from '@/lib/shortcuts';
 import { SETTINGS_PAGE_METADATA, SETTINGS_GROUP_LABELS } from '@/lib/settings/metadata';
-import { getSettingsNavIcon } from '@/components/views/SettingsView';
+import { getSettingsNavIcon } from '@/lib/settings/navIcons';
 
 export const CommandPalette: React.FC = () => {
   const isCommandPaletteOpen = useDialogStore((s) => s.isCommandPaletteOpen);

@@ -1,13 +1,11 @@
 import React from 'react';
-import { RiArrowDownSLine, RiArrowRightSLine, RiEditLine, RiGitCommitLine, RiLoader4Line, RiTextWrap } from '@remixicon/react';
+import { RiArrowDownSLine, RiEditLine, RiGitCommitLine, RiLoader4Line, RiTextWrap } from '@remixicon/react';
 
-import { useUIStore } from '@/stores/useUIStore';
 import { useContextPanelStore } from '@/stores/useContextPanelStore';
 import { useDiffPreferencesStore } from '@/stores/useDiffPreferencesStore';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { useGitStore, useGitStatus, useIsGitRepo, useGitFileCount, useGitLoadingStatus } from '@/stores/git/useGitStore';
 import { cn } from '@/lib/utils';
-import type { GitStatus } from '@/lib/api/types';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -21,20 +19,27 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui';
 
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
-import { getLanguageFromExtension, isImageFile } from '@/lib/tools/toolHelpers';
+import { isImageFile } from '@/lib/tools/toolHelpers';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { DiffViewToggle } from '@/components/chat/message/DiffViewToggle';
 import type { DiffViewMode } from '@/components/chat/message/types';
-import { PierreDiffViewer } from './PierreDiffViewer';
 import { useDeviceInfo } from '@/lib/device';
 import { FileTypeIcon } from '@/components/icons/FileTypeIcon';
 import { getContextFileOpenFailureMessage, validateContextFileOpen } from '@/lib/files/contextFileOpenGuard';
 import { sessionEvents } from '@/lib/session/sessionEvents';
+import { SingleDiffViewer } from './diff-view/DiffContentViewers';
+import { DiffTotals } from './diff-view/DiffTotals';
+import { MultiFileDiffEntry } from './diff-view/MultiFileDiffEntry';
+import {
+    describeChange,
+    isNewStatusFile,
+    type DiffData,
+    type FileEntry,
+} from './diff-view/diffFileModel';
 
 // Minimum width for side-by-side diff view (px)
 const SIDE_BY_SIDE_MIN_WIDTH = 1100;
 const DIFF_REQUEST_TIMEOUT_MS = 15000;
-const LARGE_DIFF_CHANGED_LINES = 500;
 
 // Perf: limit concurrent expanded diffs in stacked view.
 // Expanding many diffs mounts many Pierre instances + lots of DOM.
@@ -45,40 +50,7 @@ const getStackedViewDefaultExpandedCount = (fileCount: number): number => {
     return 2;
 };
 
-type FileEntry = GitStatus['files'][number] & {
-    insertions: number;
-    deletions: number;
-    isNew: boolean;
-};
-
-type DiffData = { original: string; modified: string; isBinary?: boolean };
-
-const BinaryDiffPlaceholder = React.memo(() => {
-    return (
-        <div className="rounded-lg border border-border/60 bg-background px-3 py-2">
-            <div className="typography-meta text-muted-foreground">Content of this file cannot be viewed.</div>
-        </div>
-    );
-});
-
 type DiffTabViewMode = 'single' | 'stacked';
-
-type ChangeDescriptor = {
-    code: string;
-    color: string;
-    description: string;
-};
-
-const CHANGE_DESCRIPTORS: Record<string, ChangeDescriptor> = {
-    '?': { code: '?', color: 'var(--status-info)', description: 'Untracked file' },
-    A: { code: 'A', color: 'var(--status-success)', description: 'New file' },
-    D: { code: 'D', color: 'var(--status-error)', description: 'Deleted file' },
-    R: { code: 'R', color: 'var(--status-info)', description: 'Renamed file' },
-    C: { code: 'C', color: 'var(--status-info)', description: 'Copied file' },
-    M: { code: 'M', color: 'var(--status-warning)', description: 'Modified file' },
-};
-
-const DEFAULT_CHANGE_DESCRIPTOR = CHANGE_DESCRIPTORS.M;
 
 const DIFF_VIEW_MODE_OPTIONS: Array<{
     value: DiffTabViewMode;
@@ -96,26 +68,6 @@ const DIFF_VIEW_MODE_OPTIONS: Array<{
         description: 'Stack all modified files together',
     },
 ];
-
-const getChangeSymbol = (file: GitStatus['files'][number]): string => {
-    const indexCode = file.index?.trim();
-    const workingCode = file.working_dir?.trim();
-
-    if (indexCode && indexCode !== '?') return indexCode.charAt(0);
-    if (workingCode) return workingCode.charAt(0);
-
-    return indexCode?.charAt(0) || workingCode?.charAt(0) || 'M';
-};
-
-const describeChange = (file: GitStatus['files'][number]): ChangeDescriptor => {
-    const symbol = getChangeSymbol(file);
-    return CHANGE_DESCRIPTORS[symbol] ?? DEFAULT_CHANGE_DESCRIPTOR;
-};
-
-const isNewStatusFile = (file: GitStatus['files'][number]): boolean => {
-    const { index, working_dir: workingDir } = file;
-    return index === 'A' || workingDir === 'A' || index === '?' || workingDir === '?';
-};
 
 const isAbsolutePath = (value: string): boolean => {
     return value.startsWith('/') || value.startsWith('//') || /^[A-Za-z]:\//.test(value);
@@ -175,15 +127,7 @@ const getFirstVisibleModifiedLineFromPatch = (patch: string): number | null => {
 };
 
 const formatDiffTotals = (insertions?: number, deletions?: number) => {
-    const added = insertions ?? 0;
-    const removed = deletions ?? 0;
-    if (!added && !removed) return null;
-    return (
-        <span className="typography-meta flex flex-shrink-0 items-center gap-1 text-xs whitespace-nowrap">
-            {added ? <span style={{ color: 'var(--status-success)' }}>+{added}</span> : null}
-            {removed ? <span style={{ color: 'var(--status-error)' }}>-{removed}</span> : null}
-        </span>
-    );
+    return <DiffTotals insertions={insertions} deletions={deletions} />;
 };
 
 interface FileSelectorProps {
@@ -370,556 +314,6 @@ const FileList = React.memo<FileListProps>(({
                 })}
             </ul>
         </ScrollableOverlay>
-    );
-});
-
-// Image diff viewer for binary image files
-interface ImageDiffViewerProps {
-    filePath: string;
-    diff: DiffData;
-    isVisible: boolean;
-    renderSideBySide: boolean;
-}
-
-const ImageDiffViewer = React.memo<ImageDiffViewerProps>(({
-    filePath,
-    diff,
-    isVisible,
-    renderSideBySide,
-}) => {
-    const hasOriginal = diff.original.length > 0;
-    const hasModified = diff.modified.length > 0;
-
-    if (!isVisible) {
-        return <div className="absolute inset-0 hidden" />;
-    }
-
-    // Render side-by-side or stacked based on preference
-    const containerClass = renderSideBySide
-        ? 'flex flex-row gap-6 items-start justify-center h-full'
-        : 'flex flex-col gap-4 items-center';
-
-    const imageContainerClass = renderSideBySide
-        ? 'flex flex-col items-center gap-2 flex-1 min-w-0 h-full'
-        : 'flex flex-col items-center gap-2';
-
-    return (
-        <div className="absolute inset-0 overflow-auto p-4" style={{ contain: 'size layout' }}>
-            <div className={containerClass}>
-                {hasOriginal && (
-                    <div className={imageContainerClass}>
-                        <span className="typography-meta text-muted-foreground font-medium">Original</span>
-                        <img
-                            src={diff.original}
-                            alt={`Original: ${filePath}`}
-                            className={renderSideBySide ? "max-w-full max-h-[calc(100%-2rem)] object-contain" : "max-w-full object-contain"}
-                            style={{ imageRendering: 'auto' }}
-                        />
-                    </div>
-                )}
-                {hasModified && (
-                    <div className={imageContainerClass}>
-                        <span className="typography-meta text-muted-foreground font-medium">
-                            {hasOriginal ? 'Modified' : 'New'}
-                        </span>
-                        <img
-                            src={diff.modified}
-                            alt={`Modified: ${filePath}`}
-                            className={renderSideBySide ? "max-w-full max-h-[calc(100%-2rem)] object-contain" : "max-w-full object-contain"}
-                            style={{ imageRendering: 'auto' }}
-                        />
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-});
-
-interface InlineImageDiffViewerProps {
-    filePath: string;
-    diff: DiffData;
-    renderSideBySide: boolean;
-}
-
-const InlineImageDiffViewer = React.memo<InlineImageDiffViewerProps>(({
-    filePath,
-    diff,
-    renderSideBySide,
-}) => {
-    const hasOriginal = diff.original.length > 0;
-    const hasModified = diff.modified.length > 0;
-
-    const containerClass = renderSideBySide
-        ? 'flex flex-row gap-6 items-start justify-center'
-        : 'flex flex-col gap-4 items-center';
-
-    const imageContainerClass = renderSideBySide
-        ? 'flex flex-col items-center gap-2 flex-1 min-w-0'
-        : 'flex flex-col items-center gap-2';
-
-    return (
-        <div className="w-full overflow-auto p-4" style={{ contain: 'layout' }}>
-            <div className={containerClass}>
-                {hasOriginal && (
-                    <div className={imageContainerClass}>
-                        <span className="typography-meta text-muted-foreground font-medium">Original</span>
-                        <img
-                            src={diff.original}
-                            alt={`Original: ${filePath}`}
-                            className={renderSideBySide ? "max-w-full max-h-[70vh] object-contain" : "max-w-full object-contain"}
-                            style={{ imageRendering: 'auto' }}
-                        />
-                    </div>
-                )}
-                {hasModified && (
-                    <div className={imageContainerClass}>
-                        <span className="typography-meta text-muted-foreground font-medium">
-                            {hasOriginal ? 'Modified' : 'New'}
-                        </span>
-                        <img
-                            src={diff.modified}
-                            alt={`Modified: ${filePath}`}
-                            className={renderSideBySide ? "max-w-full max-h-[70vh] object-contain" : "max-w-full object-contain"}
-                            style={{ imageRendering: 'auto' }}
-                        />
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-});
-
-interface InlineDiffViewerProps {
-    filePath: string;
-    diff: DiffData;
-    renderSideBySide: boolean;
-    wrapLines: boolean;
-}
-
-const InlineDiffViewer = React.memo<InlineDiffViewerProps>(({ 
-    filePath,
-    diff,
-    renderSideBySide,
-    wrapLines,
-}) => {
-    const language = React.useMemo(
-        () => getLanguageFromExtension(filePath) || 'text',
-        [filePath]
-    );
-
-    if (diff.isBinary) {
-        return <BinaryDiffPlaceholder />;
-    }
-
-    if (isImageFile(filePath)) {
-        return (
-            <InlineImageDiffViewer
-                filePath={filePath}
-                diff={diff}
-                renderSideBySide={renderSideBySide}
-            />
-        );
-    }
-
-    return (
-        <div className="w-full" style={{ contain: 'layout' }}>
-            <PierreDiffViewer
-                original={diff.original}
-                modified={diff.modified}
-                language={language}
-                fileName={filePath}
-                renderSideBySide={renderSideBySide}
-                wrapLines={wrapLines}
-                layout="inline"
-            />
-        </div>
-    );
-});
-
-// Single diff viewer instance
-interface SingleDiffViewerProps {
-    filePath: string;
-    diff: DiffData;
-    isVisible: boolean;
-    renderSideBySide: boolean;
-    wrapLines: boolean;
-}
-
-const SingleDiffViewer = React.memo<SingleDiffViewerProps>(({ 
-    filePath,
-    diff,
-    isVisible,
-    renderSideBySide,
-    wrapLines,
-}) => {
-    const language = React.useMemo(
-        () => getLanguageFromExtension(filePath) || 'text',
-        [filePath]
-    );
-
-    if (diff.isBinary) {
-        return <BinaryDiffPlaceholder />;
-    }
-
-    // Don't render if not visible (memory optimization)
-    if (!isVisible) {
-        return null;
-    }
-
-    // Check if this is an image file
-    if (isImageFile(filePath)) {
-        return (
-            <ImageDiffViewer
-                filePath={filePath}
-                diff={diff}
-                isVisible={isVisible}
-                renderSideBySide={renderSideBySide}
-            />
-        );
-    }
-
-    return (
-        <ScrollableOverlay
-            outerClassName="absolute inset-0"
-            disableHorizontal={false}
-            observeMutations={false}
-            preventOverscroll
-            data-diff-virtual-root
-            data-diff-virtual-content
-        >
-            <PierreDiffViewer
-                original={diff.original}
-                modified={diff.modified}
-                language={language}
-                fileName={filePath}
-                renderSideBySide={renderSideBySide}
-                wrapLines={wrapLines}
-                layout="inline"
-            />
-        </ScrollableOverlay>
-    );
-});
-
-interface MultiFileDiffEntryProps {
-    directory: string;
-    file: FileEntry;
-    layout: 'inline' | 'side-by-side';
-    wrapLines: boolean;
-    scrollRootRef: React.RefObject<HTMLElement | null>;
-    isSelected: boolean;
-    onSelect: (path: string) => void;
-    registerSectionRef: (path: string, node: HTMLDivElement | null) => void;
-    /** Start collapsed to reduce memory with many files */
-    defaultCollapsed?: boolean;
-    expandRequestPath?: string | null;
-    expandRequestNonce?: number;
-    showOpenInEditorAction?: boolean;
-    isOpeningInEditor?: boolean;
-    onOpenInEditor?: (filePath: string, diffData: DiffData | null) => void;
-}
-
-const MultiFileDiffEntry = React.memo<MultiFileDiffEntryProps>(({
-    directory,
-    file,
-    layout,
-    wrapLines,
-    scrollRootRef,
-    isSelected,
-    onSelect,
-    registerSectionRef,
-    defaultCollapsed = false,
-    expandRequestPath = null,
-    expandRequestNonce = 0,
-    showOpenInEditorAction = false,
-    isOpeningInEditor = false,
-    onOpenInEditor,
-}) => {
-    const { git } = useRuntimeAPIs();
-    const cachedDiff = useGitStore(
-        React.useCallback((state) => {
-            return state.directories.get(directory)?.diffCache.get(file.path) ?? null;
-        }, [directory, file.path])
-    );
-    const setDiff = useGitStore((state) => state.setDiff);
-    const setDiffFileLayout = useDiffPreferencesStore((state) => state.setDiffFileLayout);
-
-    const [isExpanded, setIsExpanded] = React.useState(!defaultCollapsed);
-    const [hasBeenVisible, setHasBeenVisible] = React.useState(false);
-    const [diffRetryNonce, setDiffRetryNonce] = React.useState(0);
-    const [diffLoadError, setDiffLoadError] = React.useState<string | null>(null);
-    const [isLoading, setIsLoading] = React.useState(false);
-    const [forceRenderLarge, setForceRenderLarge] = React.useState(false);
-    const lastDiffRequestRef = React.useRef<string | null>(null);
-    const sectionRef = React.useRef<HTMLDivElement | null>(null);
-
-    const descriptor = React.useMemo(() => describeChange(file), [file]);
-    const renderSideBySide = layout === 'side-by-side';
-
-    const diffData = React.useMemo<DiffData | null>(() => {
-        if (!cachedDiff) return null;
-        return { original: cachedDiff.original, modified: cachedDiff.modified, isBinary: cachedDiff.isBinary };
-    }, [cachedDiff]);
-
-    const setSectionRef = React.useCallback((node: HTMLDivElement | null) => {
-        sectionRef.current = node;
-        registerSectionRef(file.path, node);
-    }, [file.path, registerSectionRef]);
-
-    const handleOpenChange = React.useCallback((open: boolean) => {
-        setIsExpanded(open);
-        if (open) {
-            setHasBeenVisible(true);
-        }
-    }, []);
-
-    const handleSelect = React.useCallback(() => {
-        onSelect(file.path);
-    }, [file.path, onSelect]);
-
-    React.useEffect(() => {
-        if (!isExpanded || hasBeenVisible) return;
-        const target = sectionRef.current;
-        if (!target) return;
-
-        if (!scrollRootRef.current || typeof IntersectionObserver === 'undefined') {
-            setHasBeenVisible(true);
-            return;
-        }
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (entries.some((entry) => entry.isIntersecting)) {
-                    setHasBeenVisible(true);
-                    observer.disconnect();
-                }
-            },
-            { root: scrollRootRef.current, rootMargin: '200px 0px', threshold: 0.1 }
-        );
-
-        observer.observe(target);
-        return () => observer.disconnect();
-    }, [hasBeenVisible, isExpanded, scrollRootRef]);
-
-    React.useEffect(() => {
-        if (expandRequestNonce <= 0 || expandRequestPath !== file.path) {
-            return;
-        }
-
-        setIsExpanded(true);
-        setHasBeenVisible(true);
-    }, [expandRequestNonce, expandRequestPath, file.path]);
-
-    React.useEffect(() => {
-        if (!isExpanded || !hasBeenVisible) return;
-        if (!directory || diffData) {
-            lastDiffRequestRef.current = null;
-            setIsLoading(false);
-            return;
-        }
-
-        const requestKey = `${directory}::${file.path}::${diffRetryNonce}`;
-        if (lastDiffRequestRef.current === requestKey) {
-            return;
-        }
-        lastDiffRequestRef.current = requestKey;
-        setDiffLoadError(null);
-        setIsLoading(true);
-
-        let cancelled = false;
-        const fetchPromise = git.getGitFileDiff(directory, { path: file.path });
-        const timeoutMs = DIFF_REQUEST_TIMEOUT_MS;
-        const timeoutPromise = new Promise<never>((_, reject) => {
-            setTimeout(() => reject(new Error(`Timed out after ${timeoutMs}ms`)), timeoutMs);
-        });
-
-        void Promise.race([fetchPromise, timeoutPromise])
-            .then((response) => {
-                if (cancelled) return;
-
-                setDiff(directory, file.path, {
-                    original: response.original ?? '',
-                    modified: response.modified ?? '',
-                    isBinary: response.isBinary,
-                });
-                setIsLoading(false);
-            })
-            .catch((error) => {
-                if (cancelled) return;
-                const message = error instanceof Error ? error.message : String(error);
-                setDiffLoadError(message);
-                setIsLoading(false);
-            });
-
-        return () => {
-            cancelled = true;
-            if (lastDiffRequestRef.current === requestKey) {
-                lastDiffRequestRef.current = null;
-            }
-        };
-    }, [directory, diffData, diffRetryNonce, file.path, git, hasBeenVisible, isExpanded, setDiff]);
-
-    const handleToggle = React.useCallback(() => {
-        handleOpenChange(!isExpanded);
-        handleSelect();
-    }, [handleOpenChange, handleSelect, isExpanded]);
-
-    return (
-        <div ref={setSectionRef} className="scroll-mt-4">
-            <div className="sticky top-0 z-10 bg-background">
-                <button
-                    type="button"
-                    onClick={handleToggle}
-                    className={cn(
-                        'group/header relative flex w-full items-center gap-2 px-3 py-1.5 rounded-t-xl border border-border/60 overflow-hidden',
-                        'bg-background',
-                        isExpanded ? 'rounded-b-none' : 'rounded-b-xl',
-                        'text-muted-foreground hover:text-foreground',
-                        isSelected ? 'ring-1 ring-inset ring-[var(--interactive-selection)]' : null
-                    )}
-                >
-                    <div className="absolute inset-0 pointer-events-none group-hover/header:bg-interactive-hover" />
-                    <div className="relative flex min-w-0 flex-1 items-center gap-2">
-                        <span className="flex size-5 items-center justify-center opacity-70 group-hover/header:opacity-100">
-                            {isExpanded ? (
-                                <RiArrowDownSLine className="size-4" />
-                            ) : (
-                                <RiArrowRightSLine className="size-4" />
-                            )}
-                        </span>
-                        <span
-                            className="typography-micro font-semibold leading-none w-4 text-center uppercase"
-                            style={{ color: descriptor.color }}
-                            title={descriptor.description}
-                            aria-label={descriptor.description}
-                        >
-                            {descriptor.code}
-                        </span>
-                        <span
-                            className="min-w-0 flex-1 overflow-hidden typography-ui-label"
-                            title={file.path}
-                        >
-                            <span className="flex min-w-0 items-center gap-2">
-                                <FileTypeIcon filePath={file.path} className="h-3.5 w-3.5 flex-shrink-0 align-middle" />
-                                {(() => {
-                                    const lastSlash = file.path.lastIndexOf('/');
-                                    if (lastSlash === -1) {
-                                        return (
-                                            <span
-                                                className="block min-w-0 truncate typography-ui-label text-foreground"
-                                                style={{ direction: 'rtl', textAlign: 'left' }}
-                                            >
-                                                {file.path}
-                                            </span>
-                                        );
-                                    }
-
-                                    const dir = file.path.slice(0, lastSlash);
-                                    const name = file.path.slice(lastSlash + 1);
-
-                                    return (
-                                        <span className="flex min-w-0 items-baseline overflow-hidden">
-                                            <span
-                                                className="min-w-0 truncate typography-ui-label text-muted-foreground"
-                                                style={{ direction: 'rtl', textAlign: 'left' }}
-                                            >
-                                                {dir}
-                                            </span>
-                                            <span className="flex-shrink-0 typography-ui-label">
-                                                <span className="text-muted-foreground">/</span>
-                                                <span className="text-foreground">{name}</span>
-                                            </span>
-                                        </span>
-                                    );
-                                })()}
-                            </span>
-                        </span>
-                    </div>
-                    <div className="relative flex items-center gap-2">
-                        {formatDiffTotals(file.insertions, file.deletions)}
-                        {showOpenInEditorAction && onOpenInEditor ? (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-5 w-5 p-0 opacity-70 hover:opacity-100"
-                                title="Open this file in editor at change"
-                                onClick={(event) => {
-                                    event.stopPropagation();
-                                    onOpenInEditor(file.path, diffData);
-                                }}
-                                disabled={isOpeningInEditor}
-                            >
-                                {isOpeningInEditor ? (
-                                    <RiLoader4Line className="size-3.5 animate-spin" />
-                                ) : (
-                                    <RiEditLine className="size-3.5" />
-                                )}
-                            </Button>
-                        ) : null}
-                        <DiffViewToggle
-                            mode={renderSideBySide ? 'side-by-side' : 'unified'}
-                            onModeChange={(mode: DiffViewMode) => {
-                                const nextLayout: 'inline' | 'side-by-side' =
-                                    mode === 'side-by-side' ? 'side-by-side' : 'inline';
-                                setDiffFileLayout(file.path, nextLayout);
-                            }}
-                            className="opacity-70"
-                        />
-                    </div>
-                </button>
-            </div>
-            {isExpanded && (
-                <div className="relative border border-t-0 border-border/60 bg-background rounded-b-xl overflow-hidden">
-                    {diffLoadError ? (
-                        <div className="flex flex-col items-center gap-2 px-4 py-8 text-sm text-muted-foreground">
-                            <div className="typography-ui-label font-semibold text-foreground">
-                                Failed to load diff
-                            </div>
-                            <div className="typography-meta text-muted-foreground max-w-[32rem] text-center">
-                                {diffLoadError}
-                            </div>
-                            <button
-                                type="button"
-                                className="typography-ui-label text-primary hover:underline"
-                                onClick={() => setDiffRetryNonce((nonce) => nonce + 1)}
-                            >
-                                Retry
-                            </button>
-                        </div>
-                    ) : null}
-                    {isLoading && !diffData && !diffLoadError ? (
-                        <div className="flex items-center justify-center gap-2 px-4 py-8 text-sm text-muted-foreground">
-                            <RiLoader4Line size={16} className="animate-spin" />
-                            Loading diff…
-                        </div>
-                    ) : null}
-                    {diffData && !forceRenderLarge && (file.insertions + file.deletions) > LARGE_DIFF_CHANGED_LINES ? (
-                        <div className="flex flex-col items-center gap-2 px-4 py-8 text-sm text-muted-foreground">
-                            <div className="typography-ui-label font-semibold text-foreground">
-                                Large diff ({file.insertions + file.deletions} changed lines)
-                            </div>
-                            <div className="typography-meta text-muted-foreground">
-                                Rendering may be slow. You can still view the diff by clicking below.
-                            </div>
-                            <button
-                                type="button"
-                                className="typography-ui-label text-primary hover:underline"
-                                onClick={() => setForceRenderLarge(true)}
-                            >
-                                Render anyway
-                            </button>
-                        </div>
-                    ) : null}
-                    {diffData && (forceRenderLarge || (file.insertions + file.deletions) <= LARGE_DIFF_CHANGED_LINES) ? (
-                        <InlineDiffViewer
-                            filePath={file.path}
-                            diff={diffData}
-                            renderSideBySide={renderSideBySide}
-                            wrapLines={wrapLines}
-                        />
-                    ) : null}
-                </div>
-            )}
-        </div>
     );
 });
 

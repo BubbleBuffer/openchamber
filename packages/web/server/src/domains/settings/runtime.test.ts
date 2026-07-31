@@ -122,7 +122,7 @@ describe("persisted settings boundary", () => {
     await writeFile(settingsPath, JSON.stringify({ projects: [{ id: "one", path: "/one" }], collapsedProjects: ["one"], vapidKeys: { publicKey: "public", privateKey: "secret" } }));
     const runtime = createSettingsRuntime({ fsPromises: fs, path, crypto, SETTINGS_FILE_PATH: settingsPath, sanitizeProjects: (v) => Array.isArray(v) ? v : [], sanitizeSettingsUpdate: (v) => v, mergePersistedSettings: (a, b) => ({ ...a, ...b }), normalizeSettingsPaths: (settings) => ({ settings, changed: false }), normalizeStringArray: (v) => Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [], formatSettingsResponse: (settings) => settings, resolveDirectoryCandidate: () => null });
     const migrated = await runtime.readSettingsFromDiskMigrated();
-    expect(migrated.projects[0].sidebarCollapsed).toBe(true);
+    expect(migrated.projects?.[0]?.sidebarCollapsed).toBe(true);
     expect(migrated.collapsedProjects).toBeUndefined();
     expect(migrated.vapidKeys).toEqual({ publicKey: "public", privateKey: "secret" });
   });
