@@ -507,14 +507,9 @@ vi.mock("@/stores/useUpdateStore", () => ({
       selector({
         checking: sessionSidebarTestState.updateChecking,
         available: sessionSidebarTestState.updateAvailable,
-        downloading: false,
-        downloaded: false,
         info: null,
-        progress: null,
         error: null,
         checkForUpdates: vi.fn(),
-        downloadUpdate: vi.fn(),
-        restartToUpdate: vi.fn(),
         dismiss: vi.fn(),
         reset: vi.fn(),
       }),
@@ -522,14 +517,9 @@ vi.mock("@/stores/useUpdateStore", () => ({
       getState: () => ({
         checking: sessionSidebarTestState.updateChecking,
         available: sessionSidebarTestState.updateAvailable,
-        downloading: false,
-        downloaded: false,
         info: null,
-        progress: null,
         error: null,
         checkForUpdates: vi.fn(),
-        downloadUpdate: vi.fn(),
-        restartToUpdate: vi.fn(),
         dismiss: vi.fn(),
         reset: vi.fn(),
       }),
@@ -646,13 +636,11 @@ vi.mock("@/stores/useDialogStore", () => ({
         setSettingsDialogOpen: vi.fn(),
         toggleHelpDialog: vi.fn(),
         setAboutDialogOpen: vi.fn(),
-        setScheduledTasksDialogOpen: vi.fn(),
         openMultiRunLauncher: vi.fn(),
         isSettingsDialogOpen: false,
         isCommandPaletteOpen: false,
         isHelpDialogOpen: false,
         isAboutDialogOpen: false,
-        isScheduledTasksDialogOpen: false,
         isMultiRunLauncherOpen: false,
       }),
     {
@@ -668,7 +656,6 @@ vi.mock("@/stores/useDialogStore", () => ({
 
 vi.mock("@/hooks/useRuntimeAPIs", () => ({
   useRuntimeAPIs: () => ({
-    runtime: { isVSCode: false },
     github: {
       authStatus: vi.fn(),
       listPrStatuses: vi.fn(),
@@ -677,14 +664,12 @@ vi.mock("@/hooks/useRuntimeAPIs", () => ({
   }),
   useRuntimeAPI: (selector: (api: Record<string, unknown>) => unknown) =>
     selector({
-      runtime: { isVSCode: false },
       github: {
         authStatus: vi.fn(),
         listPrStatuses: vi.fn(),
         listPullRequests: vi.fn(),
       },
     }),
-  useIsVSCodeRuntime: () => false,
 }))
 
 vi.mock("@/lib/opencode/client", () => ({
@@ -694,7 +679,6 @@ vi.mock("@/lib/opencode/client", () => ({
     getFilesystemHome: () => "/home/test",
     getSdkClient: vi.fn(),
     getSystemInfo: () => ({}),
-    getDesktopHomeDirectory: () => undefined,
     sendMessage: vi.fn(),
     listSessions: vi.fn(),
     createSession: vi.fn(),
@@ -704,17 +688,6 @@ vi.mock("@/lib/opencode/client", () => ({
     getGlobalSessionStatus: vi.fn(),
     getSessionStatusForDirectory: vi.fn(),
   },
-}))
-
-vi.mock("@/lib/desktop/desktop", () => ({
-  isTauriShell: () => false,
-  isDesktopShell: () => false,
-  isDesktopLocalOriginActive: () => false,
-  isVSCodeRuntime: () => false,
-  isWebRuntime: () => true,
-  getDesktopHomeDirectory: () => undefined,
-  checkForDesktopUpdates: vi.fn(),
-  downloadDesktopUpdate: vi.fn(),
 }))
 
 vi.mock("@/lib/session/sessionEvents", () => ({
@@ -728,10 +701,6 @@ vi.mock("@/lib/session/sessionEvents", () => ({
     onGitRefreshHint: vi.fn(() => () => {}),
     requestGitRefresh: vi.fn(),
   },
-}))
-
-vi.mock("@/lib/config/openchamberEvents", () => ({
-  subscribeOpenchamberEvents: vi.fn(() => () => {}),
 }))
 
 vi.mock("@/lib/worktrees/worktreeManager", () => ({

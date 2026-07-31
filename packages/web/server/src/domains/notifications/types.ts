@@ -7,17 +7,25 @@ import type { EventBus } from "../core/event-bus.js";
 // ---------------------------------------------------------------------------
 
 export interface NotificationEmitterDeps {
-  process: typeof import("process");
-  getDesktopNotifyEnabled: () => boolean;
-  desktopNotifyPrefix: string;
   getUiNotificationClients: () => Set<any>;
   getBroadcastGlobalUiEvent: () => ((payload: any) => void) | null;
 }
 
 export interface NotificationEmitterRuntime {
   writeSseEvent: (res: any, payload: any) => void;
-  emitDesktopNotification: (payload: any) => void;
   broadcastUiNotification: (payload: any) => void;
+}
+
+export interface NotificationDeliveryRuntimeDeps {
+  eventBus: EventBus;
+  broadcastUiNotification: NotificationEmitterRuntime["broadcastUiNotification"];
+  sendPushToAllUiSessions: PushRuntime["sendPushToAllUiSessions"];
+  notificationTriggerRuntime: Pick<NotificationTriggerRuntime, "dispose">;
+  notificationTemplateRuntime?: Pick<NotificationTemplateRuntime, "dispose">;
+}
+
+export interface NotificationDeliveryRuntime {
+  dispose: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -139,7 +147,7 @@ export interface NotificationRoutesDeps {
   getSessionStateSnapshot: () => any;
   getSessionAttentionSnapshot: () => any;
   getSessionState: (sessionId: string) => any;
-  getSessionAttentionState: (sessionId: string) => any;
+  getSessionAttentionState: (sessionId: string) => boolean | null;
   markSessionViewed: (sessionId: string, clientId: string) => void;
   markSessionUnviewed: (sessionId: string, clientId: string) => void;
   markUserMessageSent: (sessionId: string) => void;

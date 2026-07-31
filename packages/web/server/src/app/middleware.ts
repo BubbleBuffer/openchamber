@@ -9,7 +9,7 @@ function headerIncludesEventStream(value: unknown): boolean {
   return false;
 }
 
-function shouldSkipCompression(req: Request, res: Response): boolean {
+export function shouldSkipCompression(req: Request, res: Response): boolean {
   if (headerIncludesEventStream(req.headers.accept)) return true;
   const pathname = req.path || req.url || "";
   if (pathname.startsWith("/api/terminal/") && pathname.endsWith("/stream")) return true;
@@ -19,8 +19,12 @@ function shouldSkipCompression(req: Request, res: Response): boolean {
   return headerIncludesEventStream(res.getHeader("Content-Type"));
 }
 
+export function compressionFilter(req: Request, res: Response): boolean {
+  return shouldSkipCompression(req, res) ? false : compression.filter(req, res);
+}
+
 export function registerCommonMiddleware(app: Express): void {
-  app.use(compression({ filter: shouldSkipCompression, threshold: 1024 }));
+  app.use(compression({ filter: compressionFilter, threshold: 1024 }));
   app.use((req, _res, next) => {
     const timestamp = new Date().toISOString();
     process.stdout.write(`${timestamp} - ${req.method} ${req.path}\n`);
@@ -31,7 +35,7 @@ export function registerCommonMiddleware(app: Express): void {
 export function registerJsonBodyParsing(app: Express): void {
   const largeBodyRoutes = [
     "/api/config/", "/api/projects", "/api/fs", "/api/git",
-    "/api/magic-prompts", "/api/prompts", "/api/terminal",
+    "/api/terminal",
     "/api/opencode", "/api/push", "/api/notifications",
     "/api/session-folders",
   ];

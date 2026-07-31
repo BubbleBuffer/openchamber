@@ -4,14 +4,10 @@ OpenChamber is a mobile-first UI for an OpenCode server. The UI talks to OpenCod
 
 ## Runtime map
 
-| Surface          | Path                | Status                                                                                |
-| ---------------- | ------------------- | ------------------------------------------------------------------------------------- |
-| Shared UI        | `packages/ui`       | Active. Mobile-first.                                                                 |
-| Web app + server | `packages/web`      | Active. All backend logic lives here.                                                 |
-| Desktop (Electron) | `packages/electron` | **Active — all new desktop work goes here.** Boots the web server in-process.       |
-| VS Code          | `packages/vscode`   | Active. Extension + webview.                                                          |
-
-Electron imports the web server via `@openchamber/web/server/index.js` and calls `startWebUiServer({...})`. The native shell is for menu, dialogs, notifications, updater, deep-links, and quit only — never feature logic. `packages/electron/preload.mjs` exposes a `__TAURI__` IPC shim so renderer code stays shell-agnostic.
+| Surface          | Path                         | Status                                              |
+| ---------------- | ---------------------------- | --------------------------------------------------- |
+| Web app + server | `packages/web`               | Active. All backend logic lives here.               |
+| Browser UI       | `packages/web/src/ui`        | Active. Presentation and browser state owner.       |
 
 ## Principles
 
@@ -36,38 +32,32 @@ Skills live in `.opencode/skills/<name>/SKILL.md`. Load the matching skill befor
 
 ## Where new code goes
 
-- New shared component → `packages/ui/src/components/`. Mobile variant if applicable (`Mobile<Name>` paired with the desktop one).
-- New zustand store → `packages/ui/src/stores/`. Split by change frequency and subscriber set; do not bolt onto an existing broad store.
-- New sync-layer state (live session/message/streaming) → `packages/ui/src/sync/`. Read `packages/ui/src/sync/DOCUMENTATION.md` first.
+- New shared component → `packages/web/src/ui/components/`. Mobile variant if applicable (`Mobile<Name>` paired with the desktop one).
+- New zustand store → `packages/web/src/ui/stores/`. Split by change frequency and subscriber set; do not bolt onto an existing broad store.
+- New sync-layer state (live session/message/streaming) → `packages/web/src/ui/sync/`. Read `packages/web/src/ui/sync/DOCUMENTATION.md` first.
 - New server route or server-side module → `packages/web/server/src/domains/<domain>/` with a `DOCUMENTATION.md`.
-- New desktop IPC handler → `packages/electron/main.mjs` + `preload.mjs` (preserve the `__TAURI__` shim).
-- New VS Code bridge → `packages/vscode/src/bridge-*-runtime.ts`.
 
 ## Tech stack
 
 - Bun (`packageManager`), Node ≥20 (`engines`)
 - React + TypeScript + Vite + Tailwind v4
-- State: Zustand (`packages/ui/src/stores/` and sync child stores in `packages/ui/src/sync/`)
-- UI primitives: **Base UI** (`@base-ui/react`) — wrappers in `packages/ui/src/components/ui/`. Radix UI and HeroUI are legacy; do not use for new code. Icons: Remixicon.
+- State: Zustand (`packages/web/src/ui/stores/` and sync child stores in `packages/web/src/ui/sync/`)
+- UI primitives: **Base UI** (`@base-ui/react`) — wrappers in `packages/web/src/ui/components/ui/`. Radix UI and HeroUI are legacy; do not use for new code. Icons: Remixicon.
 - Server: Express
-- Desktop: Electron 41 (forward)
 - PWA: `vite-plugin-pwa`
 
 ## Entry points
 
-- Web bootstrap: `packages/web/src/main.tsx`
-- Web server: `packages/web/server/index.js`
+- Web bootstrap: `packages/web/src/ui/main.tsx`
+- Web server: `packages/web/server/src/index.ts`
 - Web CLI: `packages/web/bin/cli.js`
-- Electron main: `packages/electron/main.mjs` (preload: `packages/electron/preload.mjs`)
-- VS Code extension host: `packages/vscode/src/extension.ts`
-- VS Code webview bootstrap: `packages/vscode/webview/main.tsx`
 
 ## OpenCode integration
 
-- UI client wrapper: `packages/ui/src/lib/opencode/client.ts` (imports `@opencode-ai/sdk/v2`)
-- Live event stream: `packages/ui/src/hooks/useEventStream.ts`
-- Server boot: `createOpencodeServer` in `packages/web/server/index.js`
-- Filesystem endpoints: search `packages/web/server/index.js` for `/api/fs/`
+- UI client wrapper: `packages/web/src/ui/lib/opencode/client.ts` (imports `@opencode-ai/sdk/v2`)
+- Live event stream: `SyncProvider` in `packages/web/src/ui/sync/sync-context.tsx`
+- Server boot: `startWebUiServer` in `packages/web/server/src/index.ts`
+- Filesystem endpoints: `packages/web/server/src/domains/fs/routes.ts`
 - External server: set `OPENCODE_HOST` (full base URL) or `OPENCODE_PORT`, plus `OPENCODE_SKIP_START=true`, to connect to an existing OpenCode instance.
 
 ## Documentation map
@@ -76,26 +66,39 @@ Read the relevant `DOCUMENTATION.md` before modifying that module.
 
 | Module                              | Docs                                                          |
 | ----------------------------------- | ------------------------------------------------------------- |
-| Sync layer (live session / streaming) | `packages/ui/src/sync/DOCUMENTATION.md`                     |
+| Sync layer (live session / streaming) | `packages/web/src/ui/sync/DOCUMENTATION.md`                 |
 | quota                               | `packages/web/server/src/domains/quota/DOCUMENTATION.md`      |
 | git                                 | `packages/web/server/src/domains/git/DOCUMENTATION.md`        |
 | github                              | `packages/web/server/src/domains/github/DOCUMENTATION.md`     |
 | opencode                            | `packages/web/server/src/domains/opencode/DOCUMENTATION.md`   |
 | fs                                  | `packages/web/server/src/domains/fs/DOCUMENTATION.md`         |
 | ui-auth                             | `packages/web/server/src/domains/ui-auth/DOCUMENTATION.md`    |
-| skills-catalog                      | `packages/web/server/src/domains/skills-catalog/DOCUMENTATION.md` |
+| contracts (wire ownership)          | `packages/web/server/src/contracts/DOCUMENTATION.md`          |
+| event-stream                        | `packages/web/server/src/domains/event-stream/DOCUMENTATION.md` |
+| settings                            | `packages/web/server/src/domains/settings/DOCUMENTATION.md`   |
+| notifications                       | `packages/web/server/src/domains/notifications/DOCUMENTATION.md` |
+| terminal                            | `packages/web/server/src/domains/terminal/DOCUMENTATION.md`   |
+
+CLI work is bounded by `packages/web/bin/DOCUMENTATION.md`. Keep
+`packages/web/bin/cli.js` as the thin published entrypoint; command behavior,
+instance persistence, process policy, daemon readiness, and output formatting
+belong to the focused modules under `packages/web/bin/cli/` and
+`cli-output.js`.
 
 ## Styling rules
 
 - Theme tokens only — no hex, no Tailwind colour classes. Use `useThemeSystem()` hook or CSS variables (`var(--surface-elevated)`).
-- Typography via `packages/ui/src/lib/typography.ts`.
+- Typography via `packages/web/src/ui/lib/typography.ts`.
 - Toasts: import the wrapper from `@/components/ui`. Never import `sonner` directly.
 
 ## Architecture patterns
 
 - **Thin entrypoints, focused modules.** Route/domain logic lives in focused modules with clear ownership.
-- **Cross-runtime parity.** Shared route/payload contracts must work in web, Electron, and VS Code.
 - **Partial-failure-safe flows.** Prefer per-item results, rollback paths, or resumable cleanup over all-or-nothing assumptions.
+- **Owned wire contracts.** Define new OpenChamber-owned network behavior in
+  `packages/web/server/src/contracts/<domain>.ts`, validate it at both the
+  route and browser seams, and keep it out of route-local DTOs and unchecked
+  casts. SDK payloads are opaque pass-through data, not local contracts.
 
 ## CLI parity (terminal CLI — `packages/web/bin/*`)
 
@@ -105,16 +108,28 @@ Validation and safety gates MUST live in core command logic, not in prompts. The
 
 | Command                       | Purpose                              |
 | ----------------------------- | ------------------------------------ |
+| `bun run dev`                 | Web development watchers             |
+| `bun run build`               | Build session state, web, and server |
+| `bun run start:web`           | Build and start the web product      |
+| `bun run pack:session-state`  | Pack the session-state package       |
+| `bun run pack:web`            | Pack the web package                 |
 | `bun run type-check`          | TypeScript validation                |
 | `bun run lint`                | ESLint                               |
-| `bun run build`               | Build all packages                   |
-| `bun run electron:dev`        | Desktop dev (Electron — primary)     |
-| `bun run electron:build`      | Desktop build (Electron — primary)   |
-| `bun run vscode:build`        | VS Code extension                    |
-| `bun run release:test`        | Release smoke (`scripts/test-release-build.sh`) |
+| `bun run test:stores`         | Browser store tests                  |
+| `bun run test:web`            | Web integration tests                |
+| `bun run test:react`          | React component tests                |
+| `bun run test:integration`    | End-to-end integration tests         |
+| `bun run test:opencode`       | OpenCode integration tests           |
+| `bun run test:perf`           | Performance benchmarks               |
 | `scripts/verify.sh`           | Full verification (type-check + lint + build)  |
 
 Run `scripts/verify.sh` before finalising any change. At minimum, run `bun run type-check` and `bun run lint`.
+
+The browser gate is a separate Playwright runner under `tests/browser` and is
+run with `bun run --cwd tests test:browser` after `bun run build`. Its fixtures
+launch only isolated local OpenCode/OpenChamber children and use PID-targeted
+cleanup; never add process-name matching or run it against the live canary by
+default.
 
 ## Test process safety (HARD RULES)
 

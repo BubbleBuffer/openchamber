@@ -1,0 +1,1125 @@
+import React from 'react';
+import type { Part } from '@/lib/opencode/client';
+
+import AssistantTextPart from './parts/AssistantTextPart';
+import ReasoningPart from './parts/ReasoningPart';
+import { MessageFilesDisplay } from '../FileAttachment';
+import { TurnChangedFilesDropdown } from '../diff/TurnChangedFilesDropdown';
+import type { ToolPart as ToolPartType } from '@/lib/opencode/client';
+import type { StreamPhase, ToolPopupContent, AgentMentionInfo } from './types';
+import type { TurnGroupingContext } from '../lib/turns/types';
+import { cn } from '@/lib/utils';
+import { isEmptyTextPart } from './partUtils';
+import { FadeInOnReveal } from './FadeInOnReveal';
+import { Button } from '@/components/ui/button';
+import { SaveProjectPlanDialog } from '@/components/session/SaveProjectPlanDialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { RiCheckLine, RiFileCopyLine, RiChatNewLine, RiHourglassLine, RiTimeLine, RiImageDownloadLine, RiLoader4Line, RiErrorWarningLine, RiBookletLine } from '@remixicon/react';
+import { ArrowsMerge } from '@/components/icons/ArrowsMerge';
+import type { ContentChangeReason } from '@/components/chat/timeline/types';
+
+import { SimpleMarkdownRenderer } from '../MarkdownRenderer';
+import { useSessionUIStore } from '@/sync/session-ui-store';
+import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
+import { useDialogStore } from '@/stores/useDialogStore';
+import { flattenAssistantTextParts, suggestPlanTitleFromText } from '@/lib/messages/messageText';
+import { MULTIRUN_EXECUTION_FORK_PROMPT_META_TEXT } from '@/lib/messages/executionMeta';
+import { useProjectsStore } from '@/stores/projects/useProjectsStore';
+import { TextSelectionMenu } from './TextSelectionMenu';
+import { toPng } from 'html-to-image';
+import { toast } from '@/components/ui';
+import { formatTimestampForDisplay } from './timeFormat';
+import { ToolRevealOnMount } from './parts/ToolRevealOnMount';
+import { InspectableToolRow, StaticToolRow } from './parts/ProgressiveGroup';
+import { isStandaloneTool, isStaticTool } from './parts/toolRenderUtils';
+import TurnActivity from '../components/TurnActivity';
+import { createProjectPlanFile } from '@/lib/config/openchamberConfig';
+import { resolveProjectForSessionDirectory } from '@/lib/project/projectResolution';
+import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
+import { useSessions } from '@/sync/sync-context';
+import { UserMessageBody } from './UserMessageBody';
+
+const formatTurnDuration = (durationMs: number): string => {
+    const totalSeconds = durationMs / 1000;
+    if (totalSeconds < 60) {
+        return `${totalSeconds.toFixed(1)}s`;
+    }
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = Math.round(totalSeconds % 60);
+    return `${minutes}m ${seconds}s`;
+};
+
+
+
+interface MessageBodyProps {
+    sessionId?: string;
+    messageId: string;
+    parts: Part[];
+    isUser: boolean;
+    isMessageCompleted: boolean;
+    messageFinish?: string;
+    messageCompletedAt?: number;
+    messageCreatedAt?: number;
+
+    syntaxTheme: { [key: string]: React.CSSProperties };
+
+    isMobile: boolean;
+    hasTouchInput?: boolean;
+    copiedCode: string | null;
+    onCopyCode: (code: string) => void;
+    expandedTools: Set<string>;
+    onToggleTool: (toolId: string) => void;
+    onShowPopup: (content: ToolPopupContent) => void;
+    streamPhase: StreamPhase;
+    allowAnimation: boolean;
+    onContentChange?: (reason?: ContentChangeReason, messageId?: string) => void;
+
+    shouldShowHeader?: boolean;
+    hasTextContent?: boolean;
+    onCopyMessage?: () => void;
+    copiedMessage?: boolean;
+    onAuxiliaryContentComplete?: () => void;
+    showReasoningTraces?: boolean;
+    agentMention?: AgentMentionInfo;
+    turnGroupingContext?: TurnGroupingContext;
+    onRevert?: () => void;
+    onFork?: () => void;
+    errorMessage?: string;
+    userActionsMode?: 'inline' | 'external-content' | 'external-actions';
+    stickyUserHeaderEnabled?: boolean;
+}
+
+const TOOL_REVEAL_CACHE_MAX = 200;
+const revealedToolIdsByMessage = new Map<string, Set<string>>();
+
+const readRevealedToolIds = (messageId: string): Set<string> => {
+    const cached = revealedToolIdsByMessage.get(messageId);
+    return cached ? new Set(cached) : new Set<string>();
+};
+
+const writeRevealedToolIds = (messageId: string, value: Set<string>): void => {
+    if (revealedToolIdsByMessage.size >= TOOL_REVEAL_CACHE_MAX && !revealedToolIdsByMessage.has(messageId)) {
+        const oldest = revealedToolIdsByMessage.keys().next().value;
+        if (oldest) {
+            revealedToolIdsByMessage.delete(oldest);
+        }
+    }
+    revealedToolIdsByMessage.set(messageId, new Set(value));
+};
+
+const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
+    sessionId,
+    messageId,
+    parts,
+    isMessageCompleted,
+    messageFinish,
+    messageCompletedAt,
+    messageCreatedAt,
+
+    syntaxTheme,
+    isMobile,
+    hasTouchInput,
+    expandedTools,
+    onToggleTool,
+    onShowPopup,
+    streamPhase: _streamPhase,
+    allowAnimation: _allowAnimation,
+    onContentChange,
+    hasTextContent = false,
+    onCopyMessage,
+    copiedMessage = false,
+    onAuxiliaryContentComplete,
+    showReasoningTraces = false,
+    turnGroupingContext,
+    errorMessage,
+}) => {
+    const streamPhase = _streamPhase;
+    void _allowAnimation;
+    const [copyHintVisible, setCopyHintVisible] = React.useState(false);
+    const copyHintTimeoutRef = React.useRef<number | null>(null);
+    const messageContentRef = React.useRef<HTMLDivElement>(null);
+    const toolRevealReadyRef = React.useRef(false);
+
+    React.useEffect(() => {
+        toolRevealReadyRef.current = true;
+    }, []);
+
+    const canCopyMessage = Boolean(onCopyMessage);
+    const isMessageCopied = Boolean(copiedMessage);
+    const isTouchContext = Boolean(hasTouchInput ?? isMobile);
+    const awaitingMessageCompletion = !isMessageCompleted;
+    const animateActivityRows = awaitingMessageCompletion || Boolean(turnGroupingContext?.isWorking);
+
+    const visibleParts = React.useMemo(() => {
+        return parts
+            .filter((part) => !isEmptyTextPart(part))
+            .filter((part) => {
+                const rawPart = part as Record<string, unknown>;
+                return rawPart.type !== 'compaction';
+            });
+    }, [parts]);
+
+    const toolParts = React.useMemo(() => {
+        return visibleParts.filter((part): part is ToolPartType => part.type === 'tool');
+    }, [visibleParts]);
+
+    const toolRevealStateRef = React.useRef<{
+        messageId: string;
+        hasCommitted: boolean;
+        persistedToolIds: Set<string>;
+        animatedToolIds: Set<string>;
+    }>({
+        messageId,
+        hasCommitted: false,
+        persistedToolIds: readRevealedToolIds(messageId),
+        animatedToolIds: new Set<string>(),
+    });
+
+    if (toolRevealStateRef.current.messageId !== messageId) {
+        toolRevealStateRef.current = {
+            messageId,
+            hasCommitted: false,
+            persistedToolIds: readRevealedToolIds(messageId),
+            animatedToolIds: new Set<string>(),
+        };
+    }
+
+    const currentToolIds = React.useMemo(() => {
+        const ids = new Set<string>();
+
+        for (const toolPart of toolParts) {
+            ids.add(toolPart.id);
+        }
+
+        const activitySegments = turnGroupingContext?.activityGroupSegments;
+        if (Array.isArray(activitySegments)) {
+            for (const segment of activitySegments) {
+                if (segment.anchorMessageId !== messageId) {
+                    continue;
+                }
+                for (const activity of segment.parts) {
+                    if (activity.kind !== 'tool') {
+                        continue;
+                    }
+                    const toolId = (activity.part as { id?: unknown }).id;
+                    if (typeof toolId === 'string' && toolId.length > 0) {
+                        ids.add(toolId);
+                    }
+                }
+            }
+        }
+
+        return Array.from(ids);
+    }, [messageId, toolParts, turnGroupingContext?.activityGroupSegments]);
+    const shouldAnimateNewToolMount = Boolean(turnGroupingContext?.isWorking && toolRevealReadyRef.current);
+    const persistedToolIds = toolRevealStateRef.current.persistedToolIds;
+    const animatedToolIds = toolRevealStateRef.current.animatedToolIds;
+
+    if (shouldAnimateNewToolMount && toolRevealStateRef.current.hasCommitted) {
+        for (const toolId of currentToolIds) {
+            if (!persistedToolIds.has(toolId)) {
+                animatedToolIds.add(toolId);
+            }
+        }
+    }
+
+    const animatedToolIdsKey = Array.from(animatedToolIds).join('\u0000');
+    const animatedToolIdsLookup = React.useMemo(
+        () => new Set(animatedToolIdsKey ? animatedToolIdsKey.split('\u0000') : []),
+        [animatedToolIdsKey]
+    );
+
+    React.useEffect(() => {
+        const nextPersistedToolIds = new Set(toolRevealStateRef.current.persistedToolIds);
+        for (const toolId of currentToolIds) {
+            nextPersistedToolIds.add(toolId);
+        }
+        toolRevealStateRef.current.persistedToolIds = nextPersistedToolIds;
+        toolRevealStateRef.current.hasCommitted = true;
+        writeRevealedToolIds(messageId, nextPersistedToolIds);
+    }, [currentToolIds, messageId]);
+
+    const assistantTextParts = React.useMemo(() => {
+        return visibleParts.filter((part) => part.type === 'text');
+    }, [visibleParts]);
+    const assistantPlanText = React.useMemo(() => flattenAssistantTextParts(assistantTextParts), [assistantTextParts]);
+    const suggestedPlanTitle = React.useMemo(() => suggestPlanTitleFromText(assistantPlanText), [assistantPlanText]);
+
+    const createSessionFromAssistantMessage = useSessionUIStore((state) => state.createSessionFromAssistantMessage);
+    const currentSessionId = useSessionUIStore((state) => state.currentSessionId);
+    const openMultiRunLauncherWithPrompt = useDialogStore((state) => state.openMultiRunLauncherWithPrompt);
+    const projects = useProjectsStore((state) => state.projects);
+    const effectiveDirectory = useEffectiveDirectory();
+    const sessions = useSessions();
+    const [isPlanDialogOpen, setIsPlanDialogOpen] = React.useState(false);
+    const [isSavingPlan, setIsSavingPlan] = React.useState(false);
+    const chatRenderMode = useChatRenderingStore((state) => state.chatRenderMode);
+    const isSortedRenderMode = chatRenderMode === 'sorted';
+    const collapsedPreviewCount = 7;
+    const isLastAssistantInTurn = turnGroupingContext?.isLastAssistantInTurn ?? false;
+    const hasStopFinish = messageFinish === 'stop';
+
+    const currentSession = React.useMemo(() => {
+        if (!currentSessionId) {
+            return null;
+        }
+        return sessions.find((session) => session.id === currentSessionId) ?? null;
+    }, [currentSessionId, sessions]);
+
+    const availableWorktreesByProject = useSessionUIStore((state) => state.availableWorktreesByProject);
+    const currentProjectRef = React.useMemo(() => {
+        const directory = effectiveDirectory
+            ?? (typeof currentSession?.directory === 'string' ? currentSession.directory : '');
+        const resolved = resolveProjectForSessionDirectory(projects, availableWorktreesByProject, directory);
+        return resolved ? { id: resolved.id, path: resolved.path } : null;
+    }, [availableWorktreesByProject, currentSession?.directory, effectiveDirectory, projects]);
+
+
+    const hasTools = toolParts.length > 0;
+
+    const hasPendingTools = React.useMemo(() => {
+        return toolParts.some((toolPart) => {
+            const state = (toolPart as Record<string, unknown>).state as Record<string, unknown> | undefined ?? {};
+            const status = state?.status;
+            return status === 'pending' || status === 'running' || status === 'started';
+        });
+    }, [toolParts]);
+
+    const isActiveTool = React.useCallback((toolPart: ToolPartType): boolean => {
+        const state = (toolPart as Record<string, unknown>).state as Record<string, unknown> | undefined ?? {};
+        const status = state?.status;
+        return status === 'pending' || status === 'running' || status === 'started';
+    }, []);
+
+    const isToolFinalized = React.useCallback((toolPart: ToolPartType) => {
+        const state = (toolPart as Record<string, unknown>).state as Record<string, unknown> | undefined ?? {};
+        const status = state?.status;
+        if (status === 'pending' || status === 'running' || status === 'started') {
+            return false;
+        }
+        const time = state?.time as Record<string, unknown> | undefined ?? {};
+        const endTime = typeof time?.end === 'number' ? time.end : undefined;
+        const startTime = typeof time?.start === 'number' ? time.start : undefined;
+        if (typeof endTime !== 'number') {
+            return false;
+        }
+        if (typeof startTime === 'number' && endTime < startTime) {
+            return false;
+        }
+        return true;
+    }, []);
+
+    const shouldShowTool = React.useCallback((toolPart: ToolPartType): boolean => {
+        return isActiveTool(toolPart) || isToolFinalized(toolPart);
+    }, [isActiveTool, isToolFinalized]);
+
+    const allToolsFinalized = React.useMemo(() => {
+        if (toolParts.length === 0) {
+            return true;
+        }
+        if (hasPendingTools) {
+            return false;
+        }
+        return toolParts.every((toolPart) => isToolFinalized(toolPart));
+    }, [toolParts, hasPendingTools, isToolFinalized]);
+
+
+    const reasoningParts = React.useMemo(() => {
+        return visibleParts.filter((part) => part.type === 'reasoning');
+    }, [visibleParts]);
+
+    const reasoningComplete = React.useMemo(() => {
+        if (reasoningParts.length === 0) {
+            return true;
+        }
+        return reasoningParts.every((part) => {
+            const time = (part as Record<string, unknown>).time as { end?: number } | undefined;
+            return typeof time?.end === 'number';
+        });
+    }, [reasoningParts]);
+
+    // Message is considered to have an "open step" if info.finish is not yet present
+    const hasOpenStep = typeof messageFinish !== 'string';
+
+    const shouldHoldForReasoning =
+        reasoningParts.length > 0 &&
+        hasTools &&
+        (hasPendingTools || hasOpenStep || !allToolsFinalized);
+
+
+    const shouldHoldTools = awaitingMessageCompletion
+        || (hasTools && (hasPendingTools || hasOpenStep || !allToolsFinalized));
+    const shouldHoldReasoning = awaitingMessageCompletion || shouldHoldForReasoning;
+
+    const hasAuxiliaryContent = hasTools || reasoningParts.length > 0;
+    const isTextlessAssistantMessage = assistantTextParts.length === 0;
+    const auxiliaryContentComplete = hasAuxiliaryContent && isTextlessAssistantMessage && !shouldHoldTools && !shouldHoldReasoning && allToolsFinalized && reasoningComplete;
+    const auxiliaryCompletionAnnouncedRef = React.useRef(false);
+    const soloReasoningScrollTriggeredRef = React.useRef(false);
+
+    React.useEffect(() => {
+        soloReasoningScrollTriggeredRef.current = false;
+    }, [messageId]);
+
+    React.useEffect(() => {
+        if (!auxiliaryContentComplete) {
+            auxiliaryCompletionAnnouncedRef.current = false;
+            return;
+        }
+        if (auxiliaryCompletionAnnouncedRef.current) {
+            return;
+        }
+        auxiliaryCompletionAnnouncedRef.current = true;
+        onAuxiliaryContentComplete?.();
+    }, [auxiliaryContentComplete, onAuxiliaryContentComplete]);
+
+    React.useEffect(() => {
+        if (awaitingMessageCompletion) {
+            soloReasoningScrollTriggeredRef.current = false;
+            return;
+        }
+        if (hasTools) {
+            soloReasoningScrollTriggeredRef.current = false;
+            return;
+        }
+        if (reasoningParts.length === 0) {
+            return;
+        }
+        if (shouldHoldReasoning || !reasoningComplete) {
+            return;
+        }
+        if (soloReasoningScrollTriggeredRef.current) {
+            return;
+        }
+        soloReasoningScrollTriggeredRef.current = true;
+        onContentChange?.('structural');
+    }, [awaitingMessageCompletion, hasTools, onContentChange, reasoningComplete, reasoningParts.length, shouldHoldReasoning]);
+
+    const hasCopyableText = Boolean(hasTextContent) && !awaitingMessageCompletion;
+
+    const clearCopyHintTimeout = React.useCallback(() => {
+        if (copyHintTimeoutRef.current !== null && typeof window !== 'undefined') {
+            window.clearTimeout(copyHintTimeoutRef.current);
+            copyHintTimeoutRef.current = null;
+        }
+    }, []);
+
+    const revealCopyHint = React.useCallback(() => {
+        if (!isTouchContext || !canCopyMessage || !hasCopyableText || typeof window === 'undefined') {
+            return;
+        }
+
+        clearCopyHintTimeout();
+        setCopyHintVisible(true);
+        copyHintTimeoutRef.current = window.setTimeout(() => {
+            setCopyHintVisible(false);
+            copyHintTimeoutRef.current = null;
+        }, 1800);
+    }, [canCopyMessage, clearCopyHintTimeout, hasCopyableText, isTouchContext]);
+
+    React.useEffect(() => {
+        if (!hasCopyableText) {
+            setCopyHintVisible(false);
+            clearCopyHintTimeout();
+        }
+    }, [clearCopyHintTimeout, hasCopyableText]);
+
+    const handleCopyButtonClick = React.useCallback(
+        (event: React.MouseEvent<HTMLButtonElement>) => {
+            if (!onCopyMessage || !hasCopyableText) {
+                return;
+            }
+
+            event.stopPropagation();
+            event.preventDefault();
+            onCopyMessage();
+
+            if (isTouchContext) {
+                revealCopyHint();
+            }
+        },
+        [hasCopyableText, isTouchContext, onCopyMessage, revealCopyHint]
+    );
+
+    const handleForkClick = React.useCallback(
+        (event: React.MouseEvent<HTMLButtonElement>) => {
+            event.stopPropagation();
+            event.preventDefault();
+            if (!createSessionFromAssistantMessage) {
+                return;
+            }
+            void createSessionFromAssistantMessage(messageId);
+        },
+        [createSessionFromAssistantMessage, messageId]
+    );
+
+    const handleForkMultiRunClick = React.useCallback(
+        (event: React.MouseEvent<HTMLButtonElement>) => {
+            event.stopPropagation();
+            event.preventDefault();
+
+            if (!assistantPlanText.trim()) {
+                return;
+            }
+
+            const prefilledPrompt = `${MULTIRUN_EXECUTION_FORK_PROMPT_META_TEXT}\n\n${assistantPlanText}`;
+            openMultiRunLauncherWithPrompt(prefilledPrompt);
+        },
+        [assistantPlanText, openMultiRunLauncherWithPrompt]
+    );
+
+    const handleSaveAsPlanClick = React.useCallback(
+        (event: React.MouseEvent<HTMLButtonElement>) => {
+            event.stopPropagation();
+            event.preventDefault();
+            if (!assistantPlanText.trim()) {
+                return;
+            }
+            setIsPlanDialogOpen(true);
+        },
+        [assistantPlanText]
+    );
+
+    const handleConfirmSaveAsPlan = React.useCallback(
+        async (title: string) => {
+            if (!assistantPlanText.trim()) {
+                return;
+            }
+            if (!currentProjectRef) {
+                toast.error('No project found for this session');
+                return;
+            }
+
+            setIsSavingPlan(true);
+            try {
+                const created = await createProjectPlanFile(currentProjectRef, {
+                    title,
+                    body: assistantPlanText,
+                });
+                if (!created) {
+                    toast.error('Failed to save plan');
+                    return;
+                }
+                window.dispatchEvent(new CustomEvent('openchamber:project-plan-saved', {
+                    detail: { projectId: currentProjectRef.id },
+                }));
+                setIsPlanDialogOpen(false);
+                toast.success('Plan saved');
+            } finally {
+                setIsSavingPlan(false);
+            }
+        },
+        [assistantPlanText, currentProjectRef]
+    );
+
+    const [isSharing, setIsSharing] = React.useState(false);
+
+    const handleShareImage = React.useCallback(
+        async (event: React.MouseEvent<HTMLButtonElement>) => {
+            event.stopPropagation();
+            event.preventDefault();
+
+            if (!messageContentRef.current || isSharing) return;
+
+            setIsSharing(true);
+            let wrapper: HTMLDivElement | null = null;
+            try {
+                const originalElement = messageContentRef.current;
+                const computedStyle = window.getComputedStyle(originalElement);
+                const rootStyle = window.getComputedStyle(document.documentElement);
+                const resolvedBackgroundColor =
+                    rootStyle.getPropertyValue('--surface-background').trim() ||
+                    computedStyle.backgroundColor ||
+                    window.getComputedStyle(document.body).backgroundColor;
+                const paddingSize = 24;
+
+                wrapper = document.createElement('div');
+                wrapper.style.cssText = `
+                    padding: ${paddingSize}px;
+                    background-color: ${resolvedBackgroundColor};
+                    display: inline-block;
+                `;
+
+                const clone = originalElement.cloneNode(true) as HTMLElement;
+                clone.style.cssText = `
+                    ${computedStyle.cssText}
+                    transform: none;
+                    contain: none;
+                `;
+
+                const timestampElements = clone.querySelectorAll<HTMLElement>('[aria-label^="Message time:"]');
+                const footerRowsAdjusted = new Set<HTMLElement>();
+                timestampElements.forEach((element) => {
+                    const label = element.getAttribute('aria-label');
+                    const timestamp = label?.replace('Message time:', '').trim();
+                    if (!timestamp || element.textContent?.includes(timestamp)) {
+                        return;
+                    }
+
+                    const timestampText = document.createElement('span');
+                    timestampText.style.marginLeft = '4px';
+                    timestampText.textContent = timestamp;
+                    element.appendChild(timestampText);
+
+                    const metaGroup = element.parentElement;
+                    const footerRow = metaGroup?.parentElement as HTMLElement | null;
+                    const actionsGroup = footerRow?.firstElementChild as HTMLElement | null;
+                    if (!footerRow || !actionsGroup || actionsGroup === metaGroup || footerRowsAdjusted.has(footerRow)) {
+                        return;
+                    }
+
+                    actionsGroup.style.display = 'none';
+                    footerRow.style.justifyContent = 'flex-start';
+                    footerRowsAdjusted.add(footerRow);
+                });
+
+                wrapper.appendChild(clone);
+                document.body.appendChild(wrapper);
+
+                const dataUrl = await toPng(wrapper, {
+                    quality: 1,
+                    pixelRatio: 2,
+                    backgroundColor: resolvedBackgroundColor,
+                });
+
+                const fileName = `message-${messageId}.png`;
+
+                const link = document.createElement('a');
+                link.download = fileName;
+                link.href = dataUrl;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                toast.success('Image saved');
+            } catch (error) {
+                console.error('Failed to generate image:', error);
+                toast.error('Failed to generate image');
+            } finally {
+                if (wrapper && wrapper.parentNode) {
+                    wrapper.parentNode.removeChild(wrapper);
+                }
+                setIsSharing(false);
+            }
+        },
+        [messageId, isSharing]
+    );
+
+    React.useEffect(() => {
+        return () => {
+            clearCopyHintTimeout();
+        };
+    }, [clearCopyHintTimeout]);
+
+    const activityPartsForTurn = React.useMemo(() => {
+        const all = turnGroupingContext?.activityParts;
+        if (!isSortedRenderMode || !all) {
+            return [];
+        }
+        return all;
+    }, [isSortedRenderMode, turnGroupingContext?.activityParts]);
+
+    const activityGroupSegmentsForMessage = React.useMemo(() => {
+        const all = turnGroupingContext?.activityGroupSegments;
+        if (!isSortedRenderMode || !all) {
+            return [];
+        }
+        return all.filter((segment) => segment.anchorMessageId === messageId);
+    }, [isSortedRenderMode, messageId, turnGroupingContext?.activityGroupSegments]);
+
+    const hasAnchoredActivitySegments = activityGroupSegmentsForMessage.length > 0;
+
+    const activityByPart = React.useMemo(() => {
+        const byRef = new Map<Part, (typeof activityPartsForTurn)[number]>();
+        const byId = new Map<string, (typeof activityPartsForTurn)[number]>();
+        activityPartsForTurn.forEach((activity) => {
+            byRef.set(activity.part, activity);
+            const partId = (activity.part as { id?: unknown }).id;
+            if (typeof partId === 'string' && partId.length > 0) {
+                byId.set(partId, activity);
+            }
+        });
+
+        return {
+            get: (part: Part) => {
+                const direct = byRef.get(part);
+                if (direct) {
+                    return direct;
+                }
+                const partId = (part as { id?: unknown }).id;
+                if (typeof partId === 'string' && partId.length > 0) {
+                    return byId.get(partId);
+                }
+                return undefined;
+            },
+        };
+    }, [activityPartsForTurn]);
+
+    const toggleActivityGroup = turnGroupingContext?.toggleGroup;
+    const isActivityOwnerMessage = !isSortedRenderMode
+        || !turnGroupingContext?.activityOwnerMessageId
+        || turnGroupingContext.activityOwnerMessageId === messageId
+        || hasAnchoredActivitySegments;
+
+    const shouldRenderActivityGroup = isSortedRenderMode
+        && isActivityOwnerMessage
+        && hasAnchoredActivitySegments
+        && Boolean(toggleActivityGroup);
+
+    const shouldDeferSortedInlineText = isSortedRenderMode && !hasStopFinish;
+
+
+    const renderedParts = React.useMemo(() => {
+        const rendered: React.ReactNode[] = [];
+
+        if (shouldRenderActivityGroup && toggleActivityGroup) {
+            activityGroupSegmentsForMessage.forEach((segment) => {
+                const visibleSegmentParts = showReasoningTraces
+                    ? segment.parts
+                    : segment.parts.filter((activity) => activity.kind !== 'reasoning');
+                if (visibleSegmentParts.length === 0) {
+                    return;
+                }
+                rendered.push(
+                    <div key={`progressive-group-${segment.id}`} className="mb-3">
+                        <TurnActivity
+                            parts={visibleSegmentParts}
+                            isExpanded={turnGroupingContext.isGroupExpanded === true}
+                            collapsedPreviewCount={collapsedPreviewCount}
+                            onToggle={toggleActivityGroup}
+                            syntaxTheme={syntaxTheme}
+                            isMobile={isMobile}
+                            expandedTools={expandedTools}
+                            onToggleTool={onToggleTool}
+                            onShowPopup={onShowPopup}
+                            onContentChange={onContentChange}
+                            streamPhase={streamPhase}
+                            showHeader={true}
+                            animateRows={animateActivityRows}
+                            animatedToolIds={animatedToolIdsLookup}
+                            diffStats={turnGroupingContext.diffStats}
+                        />
+                    </div>
+                );
+            });
+        }
+
+        // Flat rendering: iterate parts in natural order.
+        // Group consecutive static tools (read, grep, glob, etc.) into compact rows.
+        // Expandable tools (bash, edit, task) get individual rows.
+        // Text and reasoning render inline at their natural position.
+        let i = 0;
+        while (i < visibleParts.length) {
+            const part = visibleParts[i];
+
+            if (part.type === 'text') {
+                const activity = activityByPart.get(part);
+                if (shouldDeferSortedInlineText) {
+                    i += 1;
+                    continue;
+                }
+                if (activity?.kind === 'justification') {
+                    i += 1;
+                    continue;
+                }
+                rendered.push(
+                    <AssistantTextPart
+                        key={`assistant-text-${messageId}-${i}`}
+                        part={part}
+                        sessionId={sessionId}
+                        messageId={messageId}
+                        streamPhase={streamPhase}
+                        chatRenderMode={chatRenderMode}
+                        onContentChange={onContentChange}
+                    />
+                );
+                i++;
+                continue;
+            }
+
+            if (part.type === 'reasoning') {
+                const activity = activityByPart.get(part);
+                if (activity?.kind === 'reasoning') {
+                    i += 1;
+                    continue;
+                }
+                if (showReasoningTraces) {
+                    if (isSortedRenderMode) {
+                        rendered.push(
+                            <ReasoningPart
+                                key={`reasoning-${messageId}-${i}`}
+                                part={part}
+                                messageId={messageId}
+                                onContentChange={onContentChange}
+                            />
+                        );
+                    } else {
+                        rendered.push(
+                            <AssistantTextPart
+                                key={`reasoning-${messageId}-${i}`}
+                                part={part}
+                                sessionId={sessionId}
+                                messageId={messageId}
+                                streamPhase={streamPhase}
+                                chatRenderMode={chatRenderMode}
+                                onContentChange={onContentChange}
+                            />
+                        );
+                    }
+                }
+                i++;
+                continue;
+            }
+
+            if (part.type === 'tool') {
+                const toolPart = part as ToolPartType;
+                const toolName = toolPart.tool?.toLowerCase() ?? '';
+
+                if (isSortedRenderMode && !isActivityOwnerMessage) {
+                    i += 1;
+                    continue;
+                }
+
+                const activity = activityByPart.get(part);
+                if (activity?.kind === 'tool' && (shouldRenderActivityGroup || !isStandaloneTool(toolName))) {
+                    i += 1;
+                    continue;
+                }
+
+                if (!shouldShowTool(toolPart)) {
+                    i++;
+                    continue;
+                }
+
+                if (!isStaticTool(toolName)) {
+                    rendered.push(
+                        <FadeInOnReveal key={`tool-${toolPart.id}`}>
+                            <ToolRevealOnMount animate={animatedToolIdsLookup.has(toolPart.id)} wipe>
+                                <InspectableToolRow
+                                    part={toolPart}
+                                    isExpanded={expandedTools.has(toolPart.id)}
+                                    onToggle={onToggleTool}
+                                    syntaxTheme={syntaxTheme}
+                                    isMobile={isMobile}
+                                    onContentChange={onContentChange}
+                                    onShowPopup={onShowPopup}
+                                    animateTailText={animatedToolIdsLookup.has(toolPart.id)}
+                                />
+                            </ToolRevealOnMount>
+                        </FadeInOnReveal>
+                    );
+                    i++;
+                    continue;
+                }
+
+                // Static tools: one row per tool call (no grouping)
+                rendered.push(
+                    <FadeInOnReveal key={`static-tools-${toolPart.id}`}>
+                        <ToolRevealOnMount animate={animatedToolIdsLookup.has(toolPart.id)} wipe>
+                            <StaticToolRow
+                                toolName={toolName}
+                                activities={[
+                                    {
+                                        id: toolPart.id,
+                                        turnId: '',
+                                        messageId,
+                                        partIndex: 0,
+                                        part: toolPart,
+                                        kind: 'tool' as const,
+                                    },
+                                ]}
+                                animateTailText={animatedToolIdsLookup.has(toolPart.id)}
+                            />
+                        </ToolRevealOnMount>
+                    </FadeInOnReveal>
+                );
+                i++;
+                continue;
+            }
+
+            // Unknown part type — skip
+            i++;
+        }
+
+        return rendered;
+    }, [
+        activityByPart,
+        activityGroupSegmentsForMessage,
+        animatedToolIdsLookup,
+        animateActivityRows,
+        chatRenderMode,
+        collapsedPreviewCount,
+        expandedTools,
+        isMobile,
+        isActivityOwnerMessage,
+        isSortedRenderMode,
+        messageId,
+        sessionId,
+        onContentChange,
+        onShowPopup,
+        onToggleTool,
+        shouldRenderActivityGroup,
+        shouldShowTool,
+        streamPhase,
+        showReasoningTraces,
+        shouldDeferSortedInlineText,
+        syntaxTheme,
+        toggleActivityGroup,
+        turnGroupingContext,
+        visibleParts,
+    ]);
+
+    // With flat rendering, no collapsed summary is needed — text renders inline.
+
+    const showErrorMessage = Boolean(errorMessage);
+
+    const shouldShowFooter = isLastAssistantInTurn && hasTextContent && (hasStopFinish || Boolean(errorMessage));
+
+    const turnDurationText = React.useMemo(() => {
+        if (!isLastAssistantInTurn || !hasStopFinish) return undefined;
+        const userCreatedAt = turnGroupingContext?.userMessageCreatedAt;
+        if (typeof userCreatedAt !== 'number' || typeof messageCompletedAt !== 'number') return undefined;
+        if (messageCompletedAt <= userCreatedAt) return undefined;
+        return formatTurnDuration(messageCompletedAt - userCreatedAt);
+    }, [isLastAssistantInTurn, hasStopFinish, turnGroupingContext?.userMessageCreatedAt, messageCompletedAt]);
+
+    const footerTimestamp = React.useMemo(() => {
+        const timestamp = typeof messageCompletedAt === 'number' && messageCompletedAt > 0
+            ? messageCompletedAt
+            : (typeof messageCreatedAt === 'number' && messageCreatedAt > 0 ? messageCreatedAt : null);
+        if (timestamp === null) return null;
+
+        const formatted = formatTimestampForDisplay(timestamp);
+        return formatted.length > 0 ? formatted : null;
+    }, [messageCompletedAt, messageCreatedAt]);
+
+    const footerTimestampClassName = 'text-sm text-muted-foreground/60 tabular-nums flex items-center gap-1';
+
+    const footerButtons = (
+        <>
+            {onCopyMessage && (
+                <Tooltip delayDuration={1000}>
+                    <TooltipTrigger asChild>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            data-visible={copyHintVisible || isMessageCopied ? 'true' : undefined}
+                            className={cn(
+                                'h-8 w-8 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50',
+                                !hasCopyableText && 'opacity-50'
+                            )}
+                            disabled={!hasCopyableText}
+                            aria-label="Copy message text"
+                            aria-hidden={!hasCopyableText}
+                            onPointerDown={(event) => event.stopPropagation()}
+                            onClick={handleCopyButtonClick}
+                            onFocus={() => {
+                                if (hasCopyableText) {
+                                    setCopyHintVisible(true);
+                                }
+                            }}
+                            onBlur={() => {
+                                if (!isMessageCopied) {
+                                    setCopyHintVisible(false);
+                                }
+                            }}
+                        >
+                            {isMessageCopied ? (
+                                <RiCheckLine className="h-3.5 w-3.5 text-[color:var(--status-success)]" />
+                            ) : (
+                                <RiFileCopyLine className="h-3.5 w-3.5" />
+                            )}
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent sideOffset={6}>Copy answer</TooltipContent>
+                </Tooltip>
+            )}
+            <Tooltip delayDuration={1000}>
+                <TooltipTrigger asChild>
+                    <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        disabled={isSharing || !hasCopyableText}
+                        className={cn(
+                            'h-8 w-8 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50',
+                            (!hasCopyableText || isSharing) && 'opacity-50'
+                        )}
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={handleShareImage}
+                    >
+                        {isSharing ? (
+                            <RiLoader4Line className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <RiImageDownloadLine className="h-4 w-4" />
+                        )}
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent sideOffset={6}>{isSharing ? 'Saving image...' : 'Save as image'}</TooltipContent>
+            </Tooltip>
+            <Tooltip delayDuration={1000}>
+                <TooltipTrigger asChild>
+                    <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        disabled={!hasCopyableText || !currentProjectRef}
+                        className={cn(
+                            'h-8 w-8 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50',
+                            (!hasCopyableText || !currentProjectRef) && 'opacity-50'
+                        )}
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={handleSaveAsPlanClick}
+                    >
+                        <RiBookletLine className="h-4 w-4" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent sideOffset={6}>Save as plan</TooltipContent>
+            </Tooltip>
+            <Tooltip delayDuration={1000}>
+                <TooltipTrigger asChild>
+                    <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50"
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={handleForkClick}
+                    >
+                        <RiChatNewLine className="h-4 w-4" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent sideOffset={6}>Start new session from this answer</TooltipContent>
+            </Tooltip>
+            <Tooltip delayDuration={1000}>
+                <TooltipTrigger asChild>
+                    <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50"
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={handleForkMultiRunClick}
+                    >
+                        <ArrowsMerge className="h-4 w-4" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent sideOffset={6}>Start new multi-run from this answer</TooltipContent>
+            </Tooltip>
+        </>
+    );
+
+    return (
+
+        <div
+            ref={messageContentRef}
+            className={cn(
+                'relative w-full group/message'
+            )}
+            style={{
+                contain: 'layout',
+                transform: 'translateZ(0)',
+            }}
+            onTouchStart={isTouchContext && canCopyMessage && hasCopyableText ? revealCopyHint : undefined}
+        >
+            <TextSelectionMenu containerRef={messageContentRef} />
+            <SaveProjectPlanDialog
+                open={isPlanDialogOpen}
+                onOpenChange={setIsPlanDialogOpen}
+                initialTitle={suggestedPlanTitle}
+                sourceText={assistantPlanText}
+                saving={isSavingPlan}
+                onSave={handleConfirmSaveAsPlan}
+            />
+            <div>
+                <div
+                    className="message-content-text leading-relaxed overflow-hidden text-foreground/90 [&_p:last-child]:mb-0 [&_ul:last-child]:mb-0 [&_ol:last-child]:mb-0"
+                >
+                    {renderedParts}
+                    {showErrorMessage && (
+                        <FadeInOnReveal key="assistant-error">
+                            <div className="group/assistant-text relative mt-3 p-3 rounded-lg border bg-[var(--status-error-background)] border-[var(--status-error-border)] break-all max-w-full">
+                                <div className="flex items-start gap-2">
+                                    <RiErrorWarningLine className="h-4 w-4 shrink-0 mt-0.5 text-[var(--status-error)]" />
+                                    <div className="break-all min-w-0 flex-1">
+                                        <SimpleMarkdownRenderer content={errorMessage ?? ''} onShowPopup={onShowPopup} />
+                                    </div>
+                                </div>
+                            </div>
+                        </FadeInOnReveal>
+                    )}
+                </div>
+                <MessageFilesDisplay files={parts} onShowPopup={onShowPopup} />
+                {shouldShowFooter && (
+                    <div
+                        className="mt-2 mb-1 flex items-center justify-start gap-1.5"
+                        style={{ containerType: 'inline-size', containerName: 'message-footer' }}
+                    >
+                        <div className="flex items-center gap-1.5">
+                            {footerButtons}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            {turnDurationText ? (
+                                <Tooltip delayDuration={300}>
+                                    <TooltipTrigger asChild>
+                                        <span className="text-sm text-muted-foreground/60 tabular-nums flex items-center gap-1">
+                                            <RiHourglassLine className="h-3.5 w-3.5" />
+                                            <span className="message-footer__label">{turnDurationText}</span>
+                                        </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>{turnDurationText}</TooltipContent>
+                                </Tooltip>
+                            ) : null}
+                            {footerTimestamp ? (
+                                <Tooltip delayDuration={300}>
+                                    <TooltipTrigger asChild>
+                                        <span
+                                            className={footerTimestampClassName}
+                                            aria-label={`Message time: ${footerTimestamp}`}
+                                        >
+                                            <RiTimeLine className="h-3.5 w-3.5" />
+                                            <span className="message-footer__label">{footerTimestamp}</span>
+                                        </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>{footerTimestamp}</TooltipContent>
+                                </Tooltip>
+                            ) : null}
+                            {isLastAssistantInTurn && hasStopFinish ? (
+                                <TurnChangedFilesDropdown activityParts={turnGroupingContext?.activityParts} />
+                            ) : null}
+                        </div>
+                    </div>
+                )}
+
+            </div>
+        </div>
+    );
+};
+
+const MessageBody: React.FC<MessageBodyProps> = ({ isUser, ...props }) => {
+
+    if (isUser) {
+        return (
+            <UserMessageBody
+                messageId={props.messageId}
+                parts={props.parts}
+                isMobile={props.isMobile}
+                hasTouchInput={props.hasTouchInput}
+                hasTextContent={props.hasTextContent}
+                onCopyMessage={props.onCopyMessage}
+                copiedMessage={props.copiedMessage}
+                onShowPopup={props.onShowPopup}
+                agentMention={props.agentMention}
+                onRevert={props.onRevert}
+                onFork={props.onFork}
+                userActionsMode={props.userActionsMode}
+                stickyUserHeaderEnabled={props.stickyUserHeaderEnabled}
+            />
+        );
+    }
+
+    return <AssistantMessageBody {...props} />;
+};
+
+export default MessageBody;

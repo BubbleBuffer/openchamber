@@ -573,7 +573,7 @@ export function updateAgent(
   const jsonTarget = jsonSource.exists
     ? { config: jsonSource.config, path: jsonSource.path }
     : getJsonWriteTarget(layers, AGENT_SCOPE.USER);
-  let config = (jsonTarget.config as Record<string, unknown>) || {};
+  const config = (jsonTarget.config as Record<string, unknown>) || {};
 
   const isBuiltinOverride = !mdExists && !hasJsonFields;
 

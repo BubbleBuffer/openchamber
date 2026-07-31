@@ -211,7 +211,6 @@ export function createSettingsNormalizationRuntime(
 
     normalizePathField("lastDirectory");
     normalizePathField("homeDirectory");
-    normalizePathArrayField("approvedDirectories");
     normalizePathArrayField("pinnedDirectories");
 
     if (Array.isArray(settings.projects)) {

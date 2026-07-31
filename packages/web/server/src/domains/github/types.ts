@@ -1,29 +1,9 @@
 import type { Octokit, RestEndpointMethodTypes } from "@octokit/rest";
+import type { GitHubAuthAccount as GitHubAuthAccountContract, GitHubUserSummary } from "../../contracts/github.js";
 
-export interface GitHubAuthUser {
-  login: string | null;
-  avatarUrl: string | null;
-  id: number | null;
-  name: string | null;
-  email: string | null;
-}
-
-export interface GitHubAuthEntry {
-  accessToken: string;
-  scope: string;
-  tokenType: string;
-  createdAt: number | null;
-  user: GitHubAuthUser | null;
-  current: boolean;
-  accountId: string;
-}
-
-export interface GitHubAuthAccount {
-  id: string;
-  user: GitHubAuthUser;
-  scope: string;
-  current: boolean;
-}
+export type GitHubAuthUser = GitHubUserSummary;
+export interface GitHubAuthEntry { accessToken: string; scope: string; tokenType: string; createdAt: number | null; user: GitHubAuthUser | null; current: boolean; accountId: string; }
+export type GitHubAuthAccount = GitHubAuthAccountContract;
 
 export interface StartDeviceFlowParams {
   clientId: string;
@@ -59,7 +39,10 @@ export interface ResolveGitHubPrStatusOptions {
 
 export interface ResolvedPrStatus {
   repo: { owner: string; repo: string } | null;
-  pr: RestEndpointMethodTypes["pulls"]["get"]["response"]["data"] | null;
+  pr:
+    | RestEndpointMethodTypes["pulls"]["get"]["response"]["data"]
+    | RestEndpointMethodTypes["pulls"]["list"]["response"]["data"][number]
+    | null;
   defaultBranch?: string | null;
   resolvedRemoteName?: string | null;
 }

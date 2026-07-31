@@ -4,6 +4,7 @@ import {
   MESSAGE_STREAM_WS_MAX_BUFFERED_BYTES,
   type SseEventEnvelope,
 } from "./types.js";
+import { parseSseEventEnvelope as parseContractSseEventEnvelope } from "../../contracts/event-stream.js";
 
 export { MESSAGE_STREAM_WS_MAX_BUFFERED_BYTES };
 
@@ -31,36 +32,8 @@ export function parseSseEventEnvelope(block: string): SseEventEnvelope | null {
   }
 
   try {
-    const parsed = JSON.parse(payloadText);
-    if (
-      parsed &&
-      typeof parsed === "object" &&
-      typeof parsed.payload === "object" &&
-      parsed.payload !== null
-    ) {
-      return {
-        eventId,
-        directory:
-          typeof parsed.directory === "string" && parsed.directory.length > 0
-            ? parsed.directory
-            : null,
-        payload: parsed.payload,
-      };
-    }
-
-    const directory =
-      typeof parsed?.directory === "string" && parsed.directory.length > 0
-        ? parsed.directory
-        : typeof parsed?.properties?.directory === "string" &&
-            parsed.properties.directory.length > 0
-          ? parsed.properties.directory
-          : null;
-
-    return {
-      eventId,
-      directory,
-      payload: parsed,
-    };
+    const parsed = parseContractSseEventEnvelope(JSON.parse(payloadText));
+    return parsed.ok ? { ...parsed.value, eventId } : null;
   } catch {
     return null;
   }

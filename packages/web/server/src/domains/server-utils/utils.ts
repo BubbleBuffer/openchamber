@@ -11,9 +11,7 @@ export function createServerUtilsRuntime(
     path,
     process: proc,
     openCodeReadyGraceMs,
-    longRequestTimeoutMs,
-    getOpenCodeRuntime: _getOpenCodeRuntime,
-    getUiNotificationClients: _getUiNotificationClients,
+    getOpenCodeRuntime,
     getLoginShellPath,
   } = deps;
 
@@ -39,7 +37,7 @@ export function createServerUtilsRuntime(
   }
 
   async function waitForOpenCodePort(timeoutMs = 15000): Promise<number> {
-    const runtime = _getOpenCodeRuntime();
+    const runtime = getOpenCodeRuntime();
     const port = runtime?.getPort() ?? null;
     if (port !== null) {
       return port;
@@ -48,7 +46,7 @@ export function createServerUtilsRuntime(
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       await new Promise((resolve) => setTimeout(resolve, 50));
-      const updatedPort = _getOpenCodeRuntime()?.getPort() ?? null;
+      const updatedPort = getOpenCodeRuntime()?.getPort() ?? null;
       if (updatedPort !== null) {
         return updatedPort;
       }
@@ -58,7 +56,6 @@ export function createServerUtilsRuntime(
   }
 
   function buildAugmentedPath(): string {
-    const home = os.homedir();
     const currentPath = proc.env.PATH || "";
     const loginShellPath = getLoginShellPath();
     const currentPathLooksUserConfigured = pathLooksUserConfigured(currentPath);
@@ -129,7 +126,7 @@ export function createServerUtilsRuntime(
   }
 
   const fetchArraySnapshot = async (route: string, invalidMessage: string): Promise<unknown[]> => {
-    const runtime = _getOpenCodeRuntime();
+    const runtime = getOpenCodeRuntime();
     if (!runtime?.getPort()) {
       throw new Error("OpenCode port is not available");
     }
@@ -160,7 +157,7 @@ export function createServerUtilsRuntime(
       os,
       path,
       OPEN_CODE_READY_GRACE_MS: openCodeReadyGraceMs,
-      openCodeRuntime: _getOpenCodeRuntime(),
+      openCodeRuntime: getOpenCodeRuntime(),
     });
   }
 

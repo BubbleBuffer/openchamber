@@ -17,15 +17,15 @@
  *      - Generates derived sections (markdown, chat, tools)
  *      - Adds default config (fonts, radius, transitions)
  *   3. Saves the converted theme to:
- *      packages/ui/src/lib/theme/themes/<theme-id>.json
+ *      packages/web/src/ui/lib/theme/themes/<theme-id>.json
  *   4. Auto-registers the theme in presets.ts:
  *      - Adds import statement
  *      - Adds to presetThemes array
  *      - Skips if already registered (no duplicates)
  * 
  * OUTPUT:
- *   - Theme file: packages/ui/src/lib/theme/themes/<theme-name>-<variant>.json
- *   - Updated: packages/ui/src/lib/theme/themes/presets.ts
+ *   - Theme file: packages/web/src/ui/lib/theme/themes/<theme-name>-<variant>.json
+ *   - Updated: packages/web/src/ui/lib/theme/themes/presets.ts
  * 
  * COMPATIBILITY:
  *   Works with standard VS Code themes that have:
@@ -41,8 +41,9 @@ const REPO_ROOT = path.resolve(__dirname, '..');
 const THEMES_DIR = path.join(
   REPO_ROOT,
   'packages',
-  'ui',
+  'web',
   'src',
+  'ui',
   'lib',
   'theme',
   'themes',
@@ -469,7 +470,7 @@ function convertWriteAndRegisterTheme(inputPath) {
 
 // Main execution
 if (process.argv.length < 3) {
-  console.error('Usage: node convert-vscode-theme.js <path-to-vscode-theme.json>');
+  console.error('Usage: node scripts/convert-vscode-theme.cjs <path-to-vscode-theme.json>');
   process.exit(1);
 }
 

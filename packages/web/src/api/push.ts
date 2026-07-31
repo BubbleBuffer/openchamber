@@ -1,4 +1,20 @@
-import type { PushAPI, PushSubscribePayload, PushUnsubscribePayload } from '@openchamber/ui/lib/api/types';
+import { parsePushResponse, parseVapidPublicKeyResponse } from '@contracts/notifications';
+import type {
+  PushResponse,
+  PushSubscribeRequest,
+  PushUnsubscribeRequest,
+  PushVisibilityRequest,
+  VapidPublicKeyResponse,
+} from '@contracts/notifications';
+
+export type PushSubscribePayload = PushSubscribeRequest & { origin?: string };
+export type PushUnsubscribePayload = PushUnsubscribeRequest;
+export interface PushAPI {
+  getVapidPublicKey(): Promise<VapidPublicKeyResponse | null>;
+  subscribe(payload: PushSubscribePayload): Promise<PushResponse | null>;
+  unsubscribe(payload: PushUnsubscribePayload): Promise<PushResponse | null>;
+  setVisibility(payload: PushVisibilityRequest): Promise<PushResponse | null>;
+}
 
 const fetchJson = async <T>(input: RequestInfo | URL, init?: RequestInit): Promise<T | null> => {
   try {
@@ -15,7 +31,9 @@ const fetchJson = async <T>(input: RequestInfo | URL, init?: RequestInit): Promi
       return null;
     }
 
-    return (await res.json()) as T;
+    const payload = await res.json().catch(() => undefined);
+    const parsed = parsePushResponse(payload);
+    return parsed.ok ? parsed.value as T : null;
   } catch {
     return null;
   }
@@ -23,11 +41,17 @@ const fetchJson = async <T>(input: RequestInfo | URL, init?: RequestInit): Promi
 
 export const createWebPushAPI = (): PushAPI => ({
   async getVapidPublicKey() {
-    return fetchJson<{ publicKey: string }>('/api/push/vapid-public-key');
+    try {
+      const res = await fetch('/api/push/vapid-public-key', { credentials: 'include', headers: { Accept: 'application/json' } });
+      const parsed = parseVapidPublicKeyResponse(await res.json().catch(() => undefined));
+      return res.ok && parsed.ok ? parsed.value : null;
+    } catch {
+      return null;
+    }
   },
 
   async subscribe(payload: PushSubscribePayload) {
-    return fetchJson<{ ok: true }>('/api/push/subscribe', {
+    return fetchJson<PushResponse>('/api/push/subscribe', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -37,7 +61,7 @@ export const createWebPushAPI = (): PushAPI => ({
   },
 
   async unsubscribe(payload: PushUnsubscribePayload) {
-    return fetchJson<{ ok: true }>('/api/push/subscribe', {
+    return fetchJson<PushResponse>('/api/push/subscribe', {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -46,8 +70,8 @@ export const createWebPushAPI = (): PushAPI => ({
     });
   },
 
-  async setVisibility(payload: { visible: boolean }) {
-    return fetchJson<{ ok: true }>('/api/push/visibility', {
+  async setVisibility(payload: PushVisibilityRequest) {
+    return fetchJson<PushResponse>('/api/push/visibility', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

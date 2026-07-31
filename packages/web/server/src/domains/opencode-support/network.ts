@@ -26,7 +26,7 @@ export const createOpenCodeNetworkRuntime = (deps: NetworkRuntimeDeps): OpenCode
       try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 3000);
-        const authHeaders = await Promise.resolve(getOpenCodeAuthHeaders());
+        const authHeaders = getOpenCodeAuthHeaders();
         const response = await fetch(`${url.replace(/\/+$/, "")}/global/health`, {
           method: "GET",
           headers: { Accept: "application/json", ...authHeaders },

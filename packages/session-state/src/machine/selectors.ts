@@ -1,7 +1,7 @@
-import type { SessionMachineContext, SessionMessageRecord, SessionPartRecord } from './context'
-import type { SessionRetrySnapshot, SessionHistorySnapshot } from './snapshots'
-import { createSessionSnapshot } from './snapshots'
-import type { SessionSnapshotV1 } from './snapshots'
+import type { SessionMachineContext, SessionMessageRecord, SessionPartRecord } from './context.js'
+import type { SessionRetrySnapshot, SessionHistorySnapshot } from './snapshots.js'
+import { createSessionSnapshot } from './snapshots.js'
+import type { SessionSnapshotV1 } from './snapshots.js'
 
 // ---------------------------------------------------------------------------
 // Streaming

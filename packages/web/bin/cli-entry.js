@@ -49,7 +49,21 @@ function isModuleCliExecution(
   }
 }
 
+function resolveCompiledServerEntries(packagePath) {
+  const serverDist = path.join(packagePath, 'server', 'dist');
+  return {
+    daemon: path.join(serverDist, 'main.js'),
+    foreground: path.join(serverDist, 'index.js'),
+  };
+}
+
+function resolveCliDaemonEntry(packagePath) {
+  return path.join(path.resolve(packagePath), 'bin', 'cli', 'daemon-entry.js');
+}
+
 export {
   normalizeCliEntryPath,
   isModuleCliExecution,
+  resolveCompiledServerEntries,
+  resolveCliDaemonEntry,
 };

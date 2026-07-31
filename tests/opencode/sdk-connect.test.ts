@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest"
+import { expect, test } from "vitest"
 import { describeWithOpenCode } from "../helpers/integration-suite"
 
 describeWithOpenCode("OpenCode HTTP connectivity", { timeoutMs: 20_000 }, (ctx) => {

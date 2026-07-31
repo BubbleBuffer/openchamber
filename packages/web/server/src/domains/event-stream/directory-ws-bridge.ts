@@ -17,6 +17,10 @@ function shouldTriggerUpstreamHealthCheck(
   return upstream.status >= 500;
 }
 
+function shouldForwardDirectoryEvent(requestedDirectory: string, eventDirectory: string | null): boolean {
+  return requestedDirectory.length === 0 || eventDirectory === requestedDirectory;
+}
+
 export function acceptDirectoryMessageStreamWsConnection({
   socket,
   requestedLastEventId,
@@ -69,6 +73,10 @@ export function acceptDirectoryMessageStreamWsConnection({
 
   const run = async () => {
     const forwardEvent = ({ envelope, payload }: { envelope: { eventId: string | null; directory: string | null; payload: unknown }; payload: unknown }) => {
+      if (!shouldForwardDirectoryEvent(requestedDirectory, envelope.directory)) {
+        return;
+      }
+
       const directory = requestedDirectory || envelope?.directory || "global";
 
       sendMessageStreamWsEvent(socket, payload, {
@@ -112,14 +120,10 @@ export function acceptDirectoryMessageStreamWsConnection({
           buildUrlFailed = false;
           let targetUrl;
           try {
-            targetUrl = new URL(openCodeRuntime.getUrl("/event", ""));
+            targetUrl = new URL(openCodeRuntime.getUrl("/global/event", ""));
           } catch {
             buildUrlFailed = true;
             throw new Error("OpenCode service unavailable");
-          }
-
-          if (requestedDirectory) {
-            targetUrl.searchParams.set("directory", requestedDirectory);
           }
 
           return targetUrl;

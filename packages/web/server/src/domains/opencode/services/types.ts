@@ -82,48 +82,6 @@ export interface SkillItem {
   description: string;
 }
 
-export interface SkillScopeResult {
-  scope: string | null;
-  path: string | null;
-  source: string | null;
-}
-
-export interface SkillSources {
-  md: {
-    exists: boolean;
-    path: string | null;
-    dir: string | null;
-    scope: string | null;
-    source: string | null;
-    fields: string[];
-    description?: string;
-    name?: string;
-    instructions?: string;
-    supportingFiles: SkillSupportingFile[];
-  };
-  projectMd: {
-    exists: boolean;
-    path: string | null;
-    dir: string | null;
-  };
-  claudeMd: {
-    exists: boolean;
-    path: string | null;
-    dir: string | null;
-  };
-  userMd: {
-    exists: boolean;
-    path: string | null;
-    dir: string | null;
-  };
-}
-
-export interface SkillSupportingFile {
-  name: string;
-  path: string;
-  fullPath: string;
-}
-
 export interface McpEntry {
   type: 'remote' | 'local';
   command?: string[];

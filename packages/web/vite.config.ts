@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { VitePWA } from 'vite-plugin-pwa';
 import { themeStoragePlugin } from '../../vite-theme-plugin';
-import { sentryVitePlugin } from '@sentry/vite-plugin';
+import { vendorChunkName } from './vite.chunking';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageJson = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8'));
@@ -60,24 +60,14 @@ export default defineConfig({
         type: 'module',
       },
     }),
-    sentryVitePlugin({
-      org: process.env.SENTRY_ORG,
-      project: process.env.SENTRY_PROJECT,
-      authToken: process.env.SENTRY_AUTH_TOKEN,
-      release: {
-        name: process.env.SENTRY_RELEASE || packageJson.version,
-      },
-      sourcemaps: {
-        filesToDeleteAfterUpload: ['./dist/**/*.map'],
-      },
-    }),
   ],
   resolve: {
     alias: [
       { find: '@opencode-ai/sdk/v2', replacement: path.resolve(__dirname, '../../node_modules/@opencode-ai/sdk/dist/v2/client.js') },
-      { find: '@openchamber/ui', replacement: path.resolve(__dirname, '../ui/src') },
+      { find: '@openchamber/session-state', replacement: path.resolve(__dirname, '../session-state/src/index.ts') },
       { find: '@web', replacement: path.resolve(__dirname, './src') },
-      { find: '@', replacement: path.resolve(__dirname, '../ui/src') },
+      { find: '@contracts', replacement: path.resolve(__dirname, './server/src/contracts') },
+      { find: '@', replacement: path.resolve(__dirname, './src/ui') },
     ],
   },
   worker: {
@@ -112,31 +102,14 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, 'dist'),
     emptyOutDir: true,
-    sourcemap: 'hidden',
+    // Sentry previously deleted hidden maps after upload. With telemetry
+    // removed, do not ship browser source maps in the public static bundle.
+    sourcemap: false,
     chunkSizeWarningLimit: 500,
     rollupOptions: {
       external: ['node:child_process', 'node:fs', 'node:path', 'node:url'],
       output: {
-        manualChunks(id) {
-          if (!id.includes('node_modules')) return undefined;
-
-          const match = id.split('node_modules/')[1];
-          if (!match) return undefined;
-
-          const segments = match.split('/');
-          const packageName = match.startsWith('@') ? `${segments[0]}/${segments[1]}` : segments[0];
-
-          if (packageName === 'react' || packageName === 'react-dom') return 'vendor-react';
-          if (packageName === 'zustand' || packageName === 'zustand/middleware') return 'vendor-zustand';
-
-          if (packageName === '@opencode-ai/sdk') return 'vendor-opencode-sdk';
-          if (packageName.includes('remark') || packageName.includes('rehype') || packageName === 'react-markdown') return 'vendor-markdown';
-          if (packageName === '@base-ui/react' || packageName.startsWith('@base-ui')) return 'vendor-base-ui';
-          if (packageName.includes('react-syntax-highlighter') || packageName.includes('highlight.js')) return 'vendor-syntax';
-
-          const sanitized = packageName.replace(/^@/, '').replace(/\//g, '-');
-          return `vendor-${sanitized}`;
-        },
+        manualChunks: vendorChunkName,
       },
     },
   },

@@ -1,0 +1,940 @@
+import React, { useRef, useEffect } from 'react';
+import { motion, useMotionValue, animate } from 'motion/react';
+import { Header } from './Header';
+import { MobileShell } from './MobileShell';
+import { BottomTerminalDock } from './BottomTerminalDock';
+import { Sidebar, SIDEBAR_CONTENT_WIDTH } from './Sidebar';
+import { RightSidebar, RIGHT_SIDEBAR_CONTENT_WIDTH } from './RightSidebar';
+import { RightSidebarTabs } from './RightSidebarTabs';
+import { ContextPanel } from './ContextPanel';
+import { ErrorBoundary } from '../ui/ErrorBoundary';
+import { SessionSidebar } from '@/components/session/SessionSidebar';
+import { SessionDialogs } from '@/components/session/SessionDialogs';
+import { DiffWorkerProvider } from '@/contexts/DiffWorkerProvider';
+import { DrawerProvider } from '@/contexts/DrawerContext';
+
+import { useLayoutStore } from '@/stores/useLayoutStore';
+import { useNavigationStore } from '@/stores/useNavigationStore';
+import { useContextPanelStore } from '@/stores/useContextPanelStore';
+import { useRuntimeStore } from '@/stores/useRuntimeStore';
+import { useDialogStore } from '@/stores/useDialogStore';
+import { useUpdateStore } from '@/stores/useUpdateStore';
+import { useDeviceInfo } from '@/lib/device';
+import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
+import { cn } from '@/lib/utils';
+import { lazyWithChunkRecovery } from '@/lib/errors/chunkLoadRecovery';
+import { OfflineIndicator } from '@/components/ui/OfflineIndicator';
+import {
+    DesktopDeferredDialogs,
+    GlobalDeferredDialogs,
+    MobileDeferredMultiRunLauncher,
+} from './DeferredLayoutDialogs';
+
+import { ChatView } from '@/components/views/ChatView';
+
+// Heavy views loaded on-demand to reduce initial bundle parse time.
+const PlanView = lazyWithChunkRecovery(() => import('@/components/views/PlanView').then(m => ({ default: m.PlanView })));
+const GitView = lazyWithChunkRecovery(() => import('@/components/views/GitView').then(m => ({ default: m.GitView })));
+const DiffView = lazyWithChunkRecovery(() => import('@/components/views/DiffView').then(m => ({ default: m.DiffView })));
+const TerminalView = lazyWithChunkRecovery(() => import('@/components/views/TerminalView').then(m => ({ default: m.TerminalView })));
+const FilesView = lazyWithChunkRecovery(() => import('@/components/views/FilesView').then(m => ({ default: m.FilesView })));
+const SettingsView = lazyWithChunkRecovery(() => import('@/components/views/SettingsView').then(m => ({ default: m.SettingsView })));
+
+// Mobile drawer width as screen percentage
+const MOBILE_DRAWER_WIDTH_PERCENT = 85;
+const DESKTOP_SIDEBAR_MIN_WIDTH = 250;
+const DESKTOP_SIDEBAR_MAX_WIDTH = 500;
+const DESKTOP_RIGHT_SIDEBAR_MIN_WIDTH = 400;
+const DESKTOP_RIGHT_SIDEBAR_MAX_WIDTH = 860;
+
+const normalizeDirectoryKey = (value: string): string => {
+    if (!value) return '';
+
+    const raw = value.replace(/\\/g, '/');
+    const hadUncPrefix = raw.startsWith('//');
+    let normalized = raw.replace(/\/+$/g, '');
+    normalized = normalized.replace(/\/+/g, '/');
+
+    if (hadUncPrefix && !normalized.startsWith('//')) {
+        normalized = `/${normalized}`;
+    }
+
+    if (normalized === '') {
+        return raw.startsWith('/') ? '/' : '';
+    }
+
+    return normalized;
+};
+
+export const MainLayout: React.FC = () => {
+    const RIGHT_SIDEBAR_AUTO_CLOSE_WIDTH = 1140;
+    const RIGHT_SIDEBAR_AUTO_OPEN_WIDTH = 1220;
+    const BOTTOM_TERMINAL_AUTO_CLOSE_HEIGHT = 640;
+    const BOTTOM_TERMINAL_AUTO_OPEN_HEIGHT = 700;
+    const isSidebarOpen = useLayoutStore((state) => state.isSidebarOpen);
+    const isRightSidebarOpen = useLayoutStore((state) => state.isRightSidebarOpen);
+    const isBottomTerminalOpen = useLayoutStore((state) => state.isBottomTerminalOpen);
+    const setRightSidebarOpen = useLayoutStore((state) => state.setRightSidebarOpen);
+    const setBottomTerminalOpen = useLayoutStore((state) => state.setBottomTerminalOpen);
+    const activeMainTab = useNavigationStore((state) => state.activeMainTab);
+    const setIsMobile = useRuntimeStore((state) => state.setIsMobile);
+    const isSessionSwitcherOpen = useNavigationStore((state) => state.isSessionSwitcherOpen);
+    const isSettingsDialogOpen = useDialogStore((state) => state.isSettingsDialogOpen);
+    const setSettingsDialogOpen = useDialogStore((state) => state.setSettingsDialogOpen);
+
+    const { isMobile } = useDeviceInfo();
+    const sidebarWidth = useLayoutStore((state) => state.sidebarWidth);
+    const rightSidebarWidth = useLayoutStore((state) => state.rightSidebarWidth);
+    const [desktopRightSidebarActionsHost, setDesktopRightSidebarActionsHost] = React.useState<HTMLDivElement | null>(null);
+    const effectiveDirectory = useEffectiveDirectory() ?? '';
+    const directoryKey = React.useMemo(() => normalizeDirectoryKey(effectiveDirectory), [effectiveDirectory]);
+    const isContextPanelOpen = useContextPanelStore((state) => {
+        if (!directoryKey) {
+            return false;
+        }
+        const panelState = state.contextPanelByDirectory[directoryKey];
+        const tabs = panelState?.tabs ?? [];
+        const activeTab = tabs.find((tab) => tab.id === panelState?.activeTabId) ?? tabs[tabs.length - 1];
+        return Boolean(panelState?.isOpen && activeTab);
+    });
+    const setSidebarOpen = useLayoutStore((state) => state.setSidebarOpen);
+    const rightSidebarAutoClosedRef = React.useRef(false);
+    const bottomTerminalAutoClosedRef = React.useRef(false);
+    const leftSidebarAutoClosedByContextRef = React.useRef(false);
+
+    // Mobile drawer state
+    const [mobileLeftDrawerOpen, setMobileLeftDrawerOpen] = React.useState(false);
+    const mobileRightDrawerOpenRef = React.useRef(false);
+
+    // Left drawer motion value
+    const leftDrawerX = useMotionValue(0);
+    const leftDrawerWidth = useRef(0);
+
+    // Right drawer motion value
+    const rightDrawerX = useMotionValue(0);
+    const rightDrawerWidth = useRef(0);
+
+    // Compute drawer width
+    useEffect(() => {
+        if (isMobile) {
+            leftDrawerWidth.current = window.innerWidth * (MOBILE_DRAWER_WIDTH_PERCENT / 100);
+            rightDrawerWidth.current = window.innerWidth * (MOBILE_DRAWER_WIDTH_PERCENT / 100);
+        }
+    }, [isMobile]);
+
+    // Sync left drawer state and motion value
+    useEffect(() => {
+        if (!isMobile) return;
+        const targetX = mobileLeftDrawerOpen ? 0 : -leftDrawerWidth.current;
+        animate(leftDrawerX, targetX, {
+            type: "spring",
+            stiffness: 400,
+            damping: 35,
+            mass: 0.8
+        });
+    }, [mobileLeftDrawerOpen, isMobile, leftDrawerX]);
+
+    // Sync right drawer state and motion value
+    useEffect(() => {
+        if (!isMobile) return;
+        mobileRightDrawerOpenRef.current = isRightSidebarOpen;
+        const targetX = isRightSidebarOpen ? 0 : rightDrawerWidth.current;
+        animate(rightDrawerX, targetX, {
+            type: "spring",
+            stiffness: 400,
+            damping: 35,
+            mass: 0.8
+        });
+    }, [isMobile, isRightSidebarOpen, rightDrawerX]);
+
+    // Sync session switcher state to left drawer (one-way)
+    useEffect(() => {
+        if (isMobile) {
+            setMobileLeftDrawerOpen(isSessionSwitcherOpen);
+        }
+    }, [isSessionSwitcherOpen, isMobile]);
+
+    // Ensure mobile drawers are closed when opening full-screen settings
+    useEffect(() => {
+        if (!isMobile || !isSettingsDialogOpen) {
+            return;
+        }
+
+        setMobileLeftDrawerOpen(false);
+        if (isSessionSwitcherOpen) {
+            useNavigationStore.getState().setSessionSwitcherOpen(false);
+        }
+        if (isRightSidebarOpen) {
+            setRightSidebarOpen(false);
+        }
+    }, [isMobile, isSettingsDialogOpen, isSessionSwitcherOpen, isRightSidebarOpen, setRightSidebarOpen]);
+
+    // Sync right drawer and git sidebar state
+    useEffect(() => {
+        if (isMobile) {
+            mobileRightDrawerOpenRef.current = isRightSidebarOpen;
+        }
+    }, [isRightSidebarOpen, isMobile]);
+
+    // Trigger initial update check shortly after mount, then repeat using server-suggested cadence.
+    const checkForUpdates = useUpdateStore((state) => state.checkForUpdates);
+    React.useEffect(() => {
+        const initialDelayMs = 3000;
+        const defaultIntervalMs = 60 * 60 * 1000;
+        const minIntervalMs = 5 * 60 * 1000;
+        const maxIntervalMs = 24 * 60 * 60 * 1000;
+        let disposed = false;
+        let timer: number | null = null;
+
+        const clampIntervalMs = (seconds: number): number => {
+            const ms = Math.round(seconds * 1000);
+            return Math.max(minIntervalMs, Math.min(maxIntervalMs, ms));
+        };
+
+        const scheduleNext = (delayMs: number) => {
+            if (disposed) return;
+            timer = window.setTimeout(async () => {
+                const suggestedSec = await checkForUpdates();
+                const nextDelay = typeof suggestedSec === 'number' && Number.isFinite(suggestedSec)
+                    ? clampIntervalMs(suggestedSec)
+                    : defaultIntervalMs;
+                scheduleNext(nextDelay);
+            }, delayMs);
+        };
+
+        scheduleNext(initialDelayMs);
+
+        return () => {
+            disposed = true;
+            if (timer !== null) {
+                window.clearTimeout(timer);
+            }
+        };
+    }, [checkForUpdates]);
+
+    React.useEffect(() => {
+        const previous = useRuntimeStore.getState().isMobile;
+        if (previous !== isMobile) {
+            setIsMobile(isMobile);
+        }
+    }, [isMobile, setIsMobile]);
+
+    React.useEffect(() => {
+        if (isContextPanelOpen) {
+            const currentlyOpen = useLayoutStore.getState().isSidebarOpen;
+            if (currentlyOpen) {
+                setSidebarOpen(false);
+                leftSidebarAutoClosedByContextRef.current = true;
+            }
+            return;
+        }
+
+        if (leftSidebarAutoClosedByContextRef.current) {
+            setSidebarOpen(true);
+            leftSidebarAutoClosedByContextRef.current = false;
+        }
+    }, [isContextPanelOpen, setSidebarOpen]);
+
+    React.useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        let timeoutId: number | undefined;
+
+        const handleResponsivePanels = () => {
+            const state = useLayoutStore.getState();
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            const shouldCloseRightSidebar = width < RIGHT_SIDEBAR_AUTO_CLOSE_WIDTH;
+            const canAutoOpenRightSidebar = width >= RIGHT_SIDEBAR_AUTO_OPEN_WIDTH;
+
+            if (shouldCloseRightSidebar) {
+                if (state.isRightSidebarOpen) {
+                    setRightSidebarOpen(false);
+                    rightSidebarAutoClosedRef.current = true;
+                }
+            } else if (canAutoOpenRightSidebar && rightSidebarAutoClosedRef.current) {
+                setRightSidebarOpen(true);
+                rightSidebarAutoClosedRef.current = false;
+            }
+
+            const shouldCloseBottomTerminal =
+                height < BOTTOM_TERMINAL_AUTO_CLOSE_HEIGHT;
+            const canAutoOpenBottomTerminal =
+                height >= BOTTOM_TERMINAL_AUTO_OPEN_HEIGHT;
+
+            if (shouldCloseBottomTerminal) {
+                if (state.isBottomTerminalOpen) {
+                    setBottomTerminalOpen(false);
+                    bottomTerminalAutoClosedRef.current = true;
+                }
+            } else if (canAutoOpenBottomTerminal && bottomTerminalAutoClosedRef.current) {
+                setBottomTerminalOpen(true);
+                bottomTerminalAutoClosedRef.current = false;
+            }
+        };
+
+        const handleResize = () => {
+            if (timeoutId !== undefined) {
+                window.clearTimeout(timeoutId);
+            }
+
+            timeoutId = window.setTimeout(() => {
+                handleResponsivePanels();
+            }, 100);
+        };
+
+        handleResponsivePanels();
+        window.addEventListener('resize', handleResize);
+
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            if (timeoutId !== undefined) {
+                window.clearTimeout(timeoutId);
+            }
+        };
+    }, [setBottomTerminalOpen, setRightSidebarOpen]);
+
+    React.useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        const unsubscribe = useLayoutStore.subscribe((state, prevState) => {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            const rightCanAutoOpen = width >= RIGHT_SIDEBAR_AUTO_OPEN_WIDTH;
+            const bottomCanAutoOpen =
+                height >= BOTTOM_TERMINAL_AUTO_OPEN_HEIGHT;
+
+            if (state.isRightSidebarOpen !== prevState.isRightSidebarOpen && rightCanAutoOpen) {
+                rightSidebarAutoClosedRef.current = false;
+            }
+
+            if (state.isBottomTerminalOpen !== prevState.isBottomTerminalOpen && bottomCanAutoOpen) {
+                bottomTerminalAutoClosedRef.current = false;
+            }
+        });
+
+        return () => {
+            unsubscribe();
+        };
+    }, []);
+
+    React.useEffect(() => {
+        if (typeof window === 'undefined' || typeof document === 'undefined') {
+            return;
+        }
+
+        const root = document.documentElement;
+
+        let stickyKeyboardInset = 0;
+        let ignoreOpenUntilZero = false;
+        let previousHeight = 0;
+        let maxObservedLayoutHeight = 0;
+        let previousOrientation = '';
+        let keyboardAvoidTarget: HTMLElement | null = null;
+
+        const setKeyboardOpen = useRuntimeStore.getState().setKeyboardOpen;
+        const userAgent = typeof navigator === 'undefined' ? '' : navigator.userAgent;
+        const isAndroid = /Android/i.test(userAgent);
+        const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+
+        const clearKeyboardAvoidTarget = () => {
+            if (!keyboardAvoidTarget) {
+                return;
+            }
+            keyboardAvoidTarget.style.setProperty('--oc-keyboard-avoid-offset', '0px');
+            keyboardAvoidTarget.removeAttribute('data-keyboard-avoid-active');
+            keyboardAvoidTarget = null;
+        };
+
+        const resolveKeyboardAvoidTarget = (active: HTMLElement | null) => {
+            if (!active) {
+                return null;
+            }
+            const explicitTargetId = active.getAttribute('data-keyboard-avoid-target-id');
+            if (explicitTargetId) {
+                const explicitTarget = document.getElementById(explicitTargetId);
+                if (explicitTarget instanceof HTMLElement) {
+                    return explicitTarget;
+                }
+            }
+            const markedTarget = active.closest('[data-keyboard-avoid]') as HTMLElement | null;
+            if (markedTarget) {
+                // data-keyboard-avoid="none" opts out of translateY avoidance entirely.
+                // Used by components with their own scroll (e.g. CodeMirror).
+                if (markedTarget.getAttribute('data-keyboard-avoid') === 'none') {
+                    return null;
+                }
+                return markedTarget;
+            }
+            if (active.classList.contains('overlay-scrollbar-container')) {
+                const parent = active.parentElement;
+                if (parent instanceof HTMLElement) {
+                    return parent;
+                }
+            }
+            return active;
+        };
+
+        const forceKeyboardClosed = () => {
+            stickyKeyboardInset = 0;
+            ignoreOpenUntilZero = true;
+            root.style.setProperty('--oc-keyboard-inset', '0px');
+            setKeyboardOpen(false);
+        };
+
+        let rafId = 0;
+
+        const updateVisualViewport = () => {
+            const viewport = window.visualViewport;
+
+            const height = viewport ? Math.round(viewport.height) : window.innerHeight;
+            const offsetTop = viewport ? Math.max(0, Math.round(viewport.offsetTop)) : 0;
+            const orientation = window.innerWidth >= window.innerHeight ? 'landscape' : 'portrait';
+
+            root.style.setProperty('--oc-visual-viewport-offset-top', `${offsetTop}px`);
+            root.style.setProperty('--oc-visual-viewport-height', `${height}px`);
+
+            const active = document.activeElement as HTMLElement | null;
+            const tagName = active?.tagName;
+            const isInput = tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT';
+            const isTextTarget = isInput || Boolean(active?.isContentEditable);
+
+            const layoutHeight = Math.round(root.clientHeight || window.innerHeight);
+            if (previousOrientation !== orientation) {
+                previousOrientation = orientation;
+                maxObservedLayoutHeight = layoutHeight;
+            } else if (layoutHeight > maxObservedLayoutHeight || maxObservedLayoutHeight === 0) {
+                maxObservedLayoutHeight = layoutHeight;
+            }
+            const viewportSum = height + offsetTop;
+            const rawInset = Math.max(0, layoutHeight - viewportSum);
+            const rawAndroidResizeInset = isAndroid
+                ? Math.max(0, maxObservedLayoutHeight - layoutHeight)
+                : 0;
+
+            const openThreshold = isTextTarget ? 120 : 180;
+            const measuredInset = rawInset >= openThreshold ? rawInset : 0;
+            const androidResizeInset = isTextTarget && rawAndroidResizeInset >= openThreshold
+                ? rawAndroidResizeInset
+                : 0;
+            const effectiveMeasuredInset = Math.max(measuredInset, androidResizeInset);
+
+            if (ignoreOpenUntilZero) {
+                if (effectiveMeasuredInset === 0) {
+                    ignoreOpenUntilZero = false;
+                }
+                stickyKeyboardInset = 0;
+            } else if (stickyKeyboardInset === 0) {
+                if (effectiveMeasuredInset > 0 && isTextTarget) {
+                    stickyKeyboardInset = effectiveMeasuredInset;
+                    setKeyboardOpen(true);
+                }
+            } else {
+                const closingByHeight = !isTextTarget && height > previousHeight + 6;
+
+                if (effectiveMeasuredInset === 0) {
+                    stickyKeyboardInset = 0;
+                    setKeyboardOpen(false);
+                } else if (closingByHeight) {
+                    forceKeyboardClosed();
+                } else if (effectiveMeasuredInset > 0 && isTextTarget) {
+                    stickyKeyboardInset = effectiveMeasuredInset;
+                    setKeyboardOpen(true);
+                } else if (effectiveMeasuredInset > stickyKeyboardInset) {
+                    stickyKeyboardInset = effectiveMeasuredInset;
+                    setKeyboardOpen(true);
+                }
+            }
+
+            root.style.setProperty('--oc-keyboard-inset', `${stickyKeyboardInset}px`);
+            previousHeight = height;
+
+            const keyboardHomeIndicator = isIOS && stickyKeyboardInset > 0 ? 34 : 0;
+            root.style.setProperty('--oc-keyboard-home-indicator', `${keyboardHomeIndicator}px`);
+
+            const avoidTarget = isTextTarget ? resolveKeyboardAvoidTarget(active) : null;
+
+            if (!isMobile || !avoidTarget || !active) {
+                clearKeyboardAvoidTarget();
+            } else {
+                if (avoidTarget !== keyboardAvoidTarget) {
+                    clearKeyboardAvoidTarget();
+                    keyboardAvoidTarget = avoidTarget;
+                }
+                const viewportBottom = offsetTop + height;
+                const rect = active.getBoundingClientRect();
+                const overlap = rect.bottom - viewportBottom;
+                const clearance = 8;
+                const keyboardInset = Math.max(stickyKeyboardInset, effectiveMeasuredInset);
+                const avoidOffset = overlap > clearance && keyboardInset > 0
+                    ? Math.min(overlap, keyboardInset)
+                    : 0;
+                const target = keyboardAvoidTarget;
+                if (target) {
+                    target.style.setProperty('--oc-keyboard-avoid-offset', `${avoidOffset}px`);
+                    target.setAttribute('data-keyboard-avoid-active', 'true');
+                }
+            }
+
+            if (isMobile && isTextTarget) {
+                const scroller = document.scrollingElement;
+                if (scroller && scroller.scrollTop !== 0) {
+                    scroller.scrollTop = 0;
+                }
+                if (window.scrollY !== 0) {
+                    window.scrollTo(0, 0);
+                }
+            }
+        };
+
+        const scheduleVisualViewportUpdate = () => {
+            if (rafId) return;
+            rafId = requestAnimationFrame(() => {
+                rafId = 0;
+                updateVisualViewport();
+            });
+        };
+
+        updateVisualViewport();
+
+        const viewport = window.visualViewport;
+        viewport?.addEventListener('resize', scheduleVisualViewportUpdate);
+        viewport?.addEventListener('scroll', scheduleVisualViewportUpdate);
+        window.addEventListener('resize', scheduleVisualViewportUpdate);
+        window.addEventListener('orientationchange', scheduleVisualViewportUpdate);
+        const isTextInputTarget = (element: HTMLElement | null) => {
+            if (!element) {
+                return false;
+            }
+            const tagName = element.tagName;
+            const isInput = tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT';
+            return isInput || element.isContentEditable;
+        };
+
+        const handleFocusIn = (event: FocusEvent) => {
+            const target = event.target as HTMLElement | null;
+            if (isTextInputTarget(target)) {
+                ignoreOpenUntilZero = false;
+            }
+            scheduleVisualViewportUpdate();
+        };
+        document.addEventListener('focusin', handleFocusIn, true);
+
+        const handleFocusOut = (event: FocusEvent) => {
+            const target = event.target as HTMLElement | null;
+            if (!isTextInputTarget(target)) {
+                return;
+            }
+
+            const related = event.relatedTarget as HTMLElement | null;
+            if (isTextInputTarget(related)) {
+                return;
+            }
+
+            window.requestAnimationFrame(() => {
+                if (isTextInputTarget(document.activeElement as HTMLElement | null)) {
+                    return;
+                }
+
+                const currentViewport = window.visualViewport;
+                const height = currentViewport ? Math.round(currentViewport.height) : window.innerHeight;
+                const offsetTop = currentViewport ? Math.max(0, Math.round(currentViewport.offsetTop)) : 0;
+                const layoutHeight = Math.round(root.clientHeight || window.innerHeight);
+                const viewportSum = height + offsetTop;
+                const rawInset = Math.max(0, layoutHeight - viewportSum);
+
+                if (rawInset > 0) {
+                    updateVisualViewport();
+                    return;
+                }
+
+                forceKeyboardClosed();
+                updateVisualViewport();
+            });
+        };
+
+        document.addEventListener('focusout', handleFocusOut, true);
+
+        return () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            viewport?.removeEventListener('resize', scheduleVisualViewportUpdate);
+            viewport?.removeEventListener('scroll', scheduleVisualViewportUpdate);
+            window.removeEventListener('resize', scheduleVisualViewportUpdate);
+            window.removeEventListener('orientationchange', scheduleVisualViewportUpdate);
+            document.removeEventListener('focusin', handleFocusIn, true);
+            document.removeEventListener('focusout', handleFocusOut, true);
+            clearKeyboardAvoidTarget();
+        };
+    }, [isMobile]);
+
+    const secondaryView = React.useMemo(() => {
+        switch (activeMainTab) {
+            case 'plan':
+                return <React.Suspense fallback={null}><PlanView /></React.Suspense>;
+            case 'git':
+                return <React.Suspense fallback={null}><GitView /></React.Suspense>;
+            case 'diff':
+                return <React.Suspense fallback={null}><DiffView /></React.Suspense>;
+            case 'terminal':
+                return <React.Suspense fallback={null}><TerminalView /></React.Suspense>;
+            case 'files':
+                return <React.Suspense fallback={null}><FilesView /></React.Suspense>;
+            default:
+                return null;
+        }
+    }, [activeMainTab]);
+
+    const isChatActive = activeMainTab === 'chat';
+    const visibleSidebarWidth = React.useMemo(() => {
+        const rawWidth = sidebarWidth || SIDEBAR_CONTENT_WIDTH;
+        return Math.min(DESKTOP_SIDEBAR_MAX_WIDTH, Math.max(DESKTOP_SIDEBAR_MIN_WIDTH, rawWidth));
+    }, [sidebarWidth]);
+    const visibleRightSidebarWidth = React.useMemo(() => {
+        const rawWidth = rightSidebarWidth || RIGHT_SIDEBAR_CONTENT_WIDTH;
+        return Math.min(DESKTOP_RIGHT_SIDEBAR_MAX_WIDTH, Math.max(DESKTOP_RIGHT_SIDEBAR_MIN_WIDTH, rawWidth));
+    }, [rightSidebarWidth]);
+
+    return (
+        <DiffWorkerProvider>
+            <div
+                className={cn(
+                    'main-content-safe-area',
+                    isMobile ? 'h-full' : 'h-[100dvh]',
+                    isMobile ? 'flex flex-col' : 'flex',
+                    'bg-background'
+                )}
+            >
+                <GlobalDeferredDialogs />
+                <SessionDialogs />
+
+                {isMobile ? (
+                <MobileShell showHeader={false}>
+                <DrawerProvider value={{
+                    leftDrawerOpen: mobileLeftDrawerOpen,
+                    rightDrawerOpen: isRightSidebarOpen,
+                    toggleLeftDrawer: () => {
+                        if (isRightSidebarOpen) {
+                            setRightSidebarOpen(false);
+                        }
+                        setMobileLeftDrawerOpen(!mobileLeftDrawerOpen);
+                    },
+                    toggleRightDrawer: () => {
+                        if (mobileLeftDrawerOpen) {
+                            setMobileLeftDrawerOpen(false);
+                        }
+                        setRightSidebarOpen(!isRightSidebarOpen);
+                    },
+                    leftDrawerX,
+                    rightDrawerX,
+                    leftDrawerWidth,
+                    rightDrawerWidth,
+                    setMobileLeftDrawerOpen,
+                    setRightSidebarOpen,
+                }}>
+                    {/* Mobile: header + drawer mode */}
+                    {!isSettingsDialogOpen && <Header 
+                        onToggleLeftDrawer={() => {
+                            if (isRightSidebarOpen) {
+                                setRightSidebarOpen(false);
+                            }
+                            setMobileLeftDrawerOpen(!mobileLeftDrawerOpen);
+                        }}
+                        onToggleRightDrawer={() => {
+                            if (mobileLeftDrawerOpen) {
+                                setMobileLeftDrawerOpen(false);
+                            }
+                            setRightSidebarOpen(!isRightSidebarOpen);
+                        }}
+                        leftDrawerOpen={mobileLeftDrawerOpen}
+                        rightDrawerOpen={isRightSidebarOpen}
+                    />}
+                    
+                    {/* Backdrop */}
+                    <motion.button
+                        type="button"
+                        initial={false}
+                        animate={{
+                            opacity: mobileLeftDrawerOpen || isRightSidebarOpen ? 1 : 0,
+                            pointerEvents: mobileLeftDrawerOpen || isRightSidebarOpen ? 'auto' : 'none',
+                        }}
+                        className="fixed left-0 right-0 bottom-0 top-[var(--oc-header-height,56px)] z-40 bg-black/50 cursor-default"
+                        onClick={() => {
+                            setMobileLeftDrawerOpen(false);
+                            setRightSidebarOpen(false);
+                        }}
+                        aria-label="Close drawer"
+                    />
+                    
+                    {/* Left drawer (Session) */}
+                    <motion.aside
+                        drag="x"
+                        dragElastic={0.08}
+                        dragMomentum={false}
+                        dragConstraints={{ left: -(leftDrawerWidth.current || window.innerWidth * 0.85), right: 0 }}
+                        style={{
+                            width: `${MOBILE_DRAWER_WIDTH_PERCENT}%`,
+                            x: leftDrawerX,
+                        }}
+                        onDragEnd={(_, info) => {
+                            const drawerWidthPx = leftDrawerWidth.current || window.innerWidth * 0.85;
+                            const threshold = drawerWidthPx * 0.3;
+                            const velocityThreshold = 500;
+                            const currentX = leftDrawerX.get();
+                            
+                            const shouldClose = info.offset.x < -threshold || info.velocity.x < -velocityThreshold;
+                            const shouldOpen = info.offset.x > threshold || info.velocity.x > velocityThreshold;
+                            
+                            if (shouldClose) {
+                                leftDrawerX.set(-drawerWidthPx);
+                                setMobileLeftDrawerOpen(false);
+                            } else if (shouldOpen) {
+                                leftDrawerX.set(0);
+                                setMobileLeftDrawerOpen(true);
+                            } else {
+                                if (currentX > -drawerWidthPx / 2) {
+                                    leftDrawerX.set(0);
+                                } else {
+                                    leftDrawerX.set(-drawerWidthPx);
+                                }
+                            }
+                        }}
+                        className={cn(
+                            'fixed left-0 top-[var(--oc-header-height,56px)] z-50 h-[calc(100%-var(--oc-header-height,56px))] bg-background',
+                            'cursor-grab active:cursor-grabbing'
+                        )}
+                        aria-hidden={!mobileLeftDrawerOpen}
+                    >
+                        <div
+                            className="h-full overflow-hidden flex bg-[var(--surface-background)] shadow-none drawer-safe-area"
+                            style={{ backgroundImage: 'linear-gradient(var(--surface-muted), var(--surface-muted))' }}
+                        >
+                            <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
+                                <ErrorBoundary>
+                                    <SessionSidebar mobileVariant />
+                                </ErrorBoundary>
+                            </div>
+                        </div>
+                    </motion.aside>
+                    
+                    {/* Right drawer (Git) */}
+                    <motion.aside
+                        drag="x"
+                        dragElastic={0.08}
+                        dragMomentum={false}
+                        dragConstraints={{ left: 0, right: rightDrawerWidth.current || window.innerWidth * 0.85 }}
+                        style={{
+                            width: `${MOBILE_DRAWER_WIDTH_PERCENT}%`,
+                            x: rightDrawerX,
+                        }}
+                        onDragEnd={(_, info) => {
+                            const drawerWidthPx = rightDrawerWidth.current || window.innerWidth * 0.85;
+                            const threshold = drawerWidthPx * 0.3;
+                            const velocityThreshold = 500;
+                            const currentX = rightDrawerX.get();
+                            
+                            const shouldClose = info.offset.x > threshold || info.velocity.x > velocityThreshold;
+                            const shouldOpen = info.offset.x < -threshold || info.velocity.x < -velocityThreshold;
+                            
+                            if (shouldClose) {
+                                rightDrawerX.set(drawerWidthPx);
+                                setRightSidebarOpen(false);
+                            } else if (shouldOpen) {
+                                rightDrawerX.set(0);
+                                setRightSidebarOpen(true);
+                            } else {
+                                if (currentX < drawerWidthPx / 2) {
+                                    rightDrawerX.set(0);
+                                } else {
+                                    rightDrawerX.set(drawerWidthPx);
+                                }
+                            }
+                        }}
+                        className={cn(
+                            'fixed right-0 top-[var(--oc-header-height,56px)] z-50 h-[calc(100%-var(--oc-header-height,56px))] bg-background',
+                            'cursor-grab active:cursor-grabbing'
+                        )}
+                        aria-hidden={!isRightSidebarOpen}
+                    >
+                        <div className="h-full overflow-hidden flex flex-col bg-background shadow-none drawer-safe-area">
+                            <ErrorBoundary>
+                                <React.Suspense fallback={null}><GitView /></React.Suspense>
+                            </ErrorBoundary>
+                        </div>
+                    </motion.aside>
+                    
+                    {/* Main content area (fixed) */}
+                    <div
+                        className={cn(
+                            'flex flex-1 overflow-hidden relative',
+                            isSettingsDialogOpen && 'hidden'
+                        )}
+                    >
+                        <main className="w-full h-full overflow-hidden bg-background relative">
+                            <div className={cn('absolute inset-0', !isChatActive && 'invisible')}>
+                                <ErrorBoundary><ChatView /></ErrorBoundary>
+                            </div>
+                            {secondaryView && (
+                                <div className="absolute inset-0">
+                                    <ErrorBoundary>{secondaryView}</ErrorBoundary>
+                                </div>
+                            )}
+                            <MobileDeferredMultiRunLauncher />
+                        </main>
+                    </div>
+
+                    {/* Mobile settings: full screen */}
+                    {isSettingsDialogOpen && (
+                        <div
+                            className="absolute inset-0 z-10 bg-background"
+                            style={{ paddingTop: 'var(--oc-safe-area-top, 0px)' }}
+                        >
+                            <ErrorBoundary>
+                                <React.Suspense fallback={null}>
+                                    <SettingsView onClose={() => setSettingsDialogOpen(false)} />
+                                </React.Suspense>
+                            </ErrorBoundary>
+                        </div>
+                    )}
+                </DrawerProvider>
+                </MobileShell>
+            ) : (
+                <>
+                    {/* Desktop: Sidebar is a left column; header belongs to content column */}
+                    <div className="flex flex-1 overflow-hidden relative">
+                        <div className={cn(
+                            'absolute inset-0 flex overflow-hidden',
+                            'bg-sidebar'
+                        )}>
+                            {isSidebarOpen ? (
+                                <>
+                                    <div
+                                        aria-hidden
+                                        className={cn(
+                                            'pointer-events-none absolute top-0 z-0',
+                                            'bg-sidebar'
+                                        )}
+                                        style={{
+                                            left: `${visibleSidebarWidth}px`,
+                                            width: '10px',
+                                            height: '10px',
+                                            WebkitMaskImage: 'radial-gradient(circle at 100% 100%, transparent calc(10px - 1px), black 10px)',
+                                            maskImage: 'radial-gradient(circle at 100% 100%, transparent calc(10px - 1px), black 10px)',
+                                        }}
+                                    />
+                                    <div
+                                        aria-hidden
+                                        className={cn(
+                                            'pointer-events-none absolute bottom-0 z-0',
+                                            'bg-sidebar'
+                                        )}
+                                        style={{
+                                            left: `${visibleSidebarWidth}px`,
+                                            width: '10px',
+                                            height: '10px',
+                                            WebkitMaskImage: 'radial-gradient(circle at 100% 0%, transparent calc(10px - 1px), black 10px)',
+                                            maskImage: 'radial-gradient(circle at 100% 0%, transparent calc(10px - 1px), black 10px)',
+                                        }}
+                                    />
+                                </>
+                            ) : null}
+                            {isRightSidebarOpen ? (
+                                <>
+                                    <div
+                                        aria-hidden
+                                        className={cn(
+                                            'pointer-events-none absolute top-0 z-0',
+                                            'bg-sidebar'
+                                        )}
+                                        style={{
+                                            right: `${visibleRightSidebarWidth}px`,
+                                            width: '10px',
+                                            height: '10px',
+                                            WebkitMaskImage: 'radial-gradient(circle at 0 100%, transparent calc(10px - 1px), black 10px)',
+                                            maskImage: 'radial-gradient(circle at 0 100%, transparent calc(10px - 1px), black 10px)',
+                                        }}
+                                    />
+                                    <div
+                                        aria-hidden
+                                        className={cn(
+                                            'pointer-events-none absolute bottom-0 z-0',
+                                            'bg-sidebar'
+                                        )}
+                                        style={{
+                                            right: `${visibleRightSidebarWidth}px`,
+                                            width: '10px',
+                                            height: '10px',
+                                            WebkitMaskImage: 'radial-gradient(circle at 0 0, transparent calc(10px - 1px), black 10px)',
+                                            maskImage: 'radial-gradient(circle at 0 0, transparent calc(10px - 1px), black 10px)',
+                                        }}
+                                    />
+                                </>
+                            ) : null}
+                            <Sidebar
+                                isOpen={isSidebarOpen}
+                                isMobile={isMobile}
+                                className="border-0"
+                            >
+                                <SessionSidebar />
+                            </Sidebar>
+                            <div className={cn(
+                                'relative flex flex-1 min-w-0 flex-col overflow-hidden',
+                                'bg-sidebar',
+                                isSidebarOpen && 'border-l border-border/50 rounded-tl-[10px] rounded-bl-[10px]',
+                                isRightSidebarOpen && 'border-r border-border/50 rounded-tr-[10px] rounded-br-[10px]'
+                            )}>
+                                <Header desktopRightSidebarActionsHost={desktopRightSidebarActionsHost} />
+                                <div className={cn(
+                                    'flex flex-1 min-h-0 overflow-hidden',
+                                    isSidebarOpen || isChatActive ? '' : 'border-l border-border/50',
+                                    isRightSidebarOpen ? '' : 'border-r border-border/50'
+                                )}>
+                                    <div className="relative flex flex-1 min-h-0 min-w-0 overflow-hidden">
+                                        <main className="flex-1 overflow-hidden bg-background relative">
+                                            <div className={cn('absolute inset-0', !isChatActive && 'invisible')}>
+                                                <ErrorBoundary><ChatView /></ErrorBoundary>
+                                            </div>
+                                            {secondaryView && (
+                                                <div className="absolute inset-0">
+                                                    <ErrorBoundary>{secondaryView}</ErrorBoundary>
+                                                </div>
+                                            )}
+                                        </main>
+                                        <ContextPanel />
+                                    </div>
+                                </div>
+                                <BottomTerminalDock isOpen={isBottomTerminalOpen} isMobile={isMobile}>
+                                    {isBottomTerminalOpen ? (
+                                        <ErrorBoundary>
+                                            <React.Suspense fallback={null}>
+                                                <TerminalView />
+                                            </React.Suspense>
+                                        </ErrorBoundary>
+                                    ) : null}
+                                </BottomTerminalDock>
+                            </div>
+                            <RightSidebar
+                                isOpen={isRightSidebarOpen}
+                                className="border-0"
+                                onTopActionsHostChange={setDesktopRightSidebarActionsHost}
+                            >
+                                <ErrorBoundary><RightSidebarTabs /></ErrorBoundary>
+                            </RightSidebar>
+                        </div>
+
+                    </div>
+
+                    <DesktopDeferredDialogs />
+                </>
+            )}
+
+        </div>
+        <OfflineIndicator />
+    </DiffWorkerProvider>
+    );
+};

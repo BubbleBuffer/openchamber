@@ -1,9 +1,16 @@
 import { defineConfig } from "vitest/config"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
+
+const testsDir = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
+  resolve: {
+    alias: { "@contracts": path.resolve(testsDir, "../packages/web/server/src/contracts") },
+  },
   test: {
     environment: "node",
-    include: ["opencode/**/*.test.ts", "web/**/*.test.ts"],
+    include: ["opencode/**/*.test.ts", "web/**/*.test.ts", "helpers/**/*.test.ts"],
     testTimeout: 60_000,
     hookTimeout: 60_000,
     pool: "forks",

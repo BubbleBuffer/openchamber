@@ -5,14 +5,11 @@
  * useAllSessionStatuses() map and only re-renders when the current session's
  * status changes.
  */
-import { act } from "react"
 import { beforeEach, describe, expect, test, vi } from "vitest"
 import { renderWithApp } from "./helpers/render"
-import { createCommitCollector, createProfiledElement, expectNoUpdateCommits } from "./helpers/renderMetrics"
 import { seedUIStore } from "./helpers/stores"
 import { useRuntimeStore } from "@/stores/useRuntimeStore"
 import { MobileSessionStatusBar } from "@/components/chat/mobile-session-status-bar/MobileSessionStatusBar"
-import { useSessionUIStore } from "@/sync/session-ui-store"
 import type { Session } from "@/lib/opencode/client"
 
 // ---------------------------------------------------------------------------
@@ -181,12 +178,6 @@ vi.mock("@/contexts/useThemeSystem", () => ({
   }),
 }))
 
-vi.mock("@/lib/desktop/desktop", () => ({
-  isTauriShell: () => false,
-  isDesktopLocalOriginActive: () => false,
-  requestDirectoryAccess: () => Promise.resolve({ success: false, error: "not available" }),
-}))
-
 vi.mock("@/lib/opencode/client", () => ({
   opencodeClient: {
     getDirectory: () => "/workspace",
@@ -194,7 +185,6 @@ vi.mock("@/lib/opencode/client", () => ({
     getFilesystemHome: () => "/home/test",
     getSystemInfo: () => ({}),
     getSdkClient: vi.fn(),
-    getDesktopHomeDirectory: () => undefined,
   },
 }))
 

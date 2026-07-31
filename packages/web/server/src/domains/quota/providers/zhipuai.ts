@@ -25,8 +25,9 @@ function getApiKey(): string | null {
     for (const alias of aliases) {
       const providerConfig = (mergedConfig as Record<string, unknown>)?.provider as Record<string, unknown> | undefined;
       const config = providerConfig?.[alias] as Record<string, unknown> | undefined;
-      if ((config as any)?.options?.apiKey) {
-        return (config as any).options.apiKey;
+      const options = config?.options;
+      if (options && typeof options === "object" && "apiKey" in options && options.apiKey) {
+        return options.apiKey as string;
       }
     }
   } catch {

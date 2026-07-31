@@ -37,7 +37,6 @@ import type { ChatMessagesState, ChatInterruptionsState } from "@/components/cha
 import type { AnimationHandlers } from "@/components/chat/timeline/types"
 import { ChatSessionView } from "@/components/chat/ChatSessionView"
 import { useLayoutStore } from "@/stores/useLayoutStore"
-import { useUIStore } from "@/stores/useUIStore"
 
 type SessionViewProps = ComponentProps<typeof ChatSessionView>
 

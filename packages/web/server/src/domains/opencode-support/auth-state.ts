@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { AuthStateRuntimeDeps, OpenCodeAuthStateRuntime } from "./types.js";
 
 const normalizeOpenCodePassword = (value: unknown): string => {
@@ -11,9 +10,9 @@ const normalizeOpenCodePassword = (value: unknown): string => {
 const isValidOpenCodePassword = (password: unknown): boolean =>
   typeof password === "string" && password.trim().length > 0;
 
-export async function createOpenCodeAuthStateRuntime(
+export function createOpenCodeAuthStateRuntime(
   deps: AuthStateRuntimeDeps,
-): Promise<OpenCodeAuthStateRuntime> {
+): OpenCodeAuthStateRuntime {
   const {
     crypto,
     process,
@@ -50,7 +49,7 @@ export async function createOpenCodeAuthStateRuntime(
     return normalized;
   };
 
-  const getOpenCodeAuthHeaders = (): { Authorization?: string } => {
+  const getOpenCodeAuthHeaders = (): Record<string, string> => {
     const password = normalizeOpenCodePassword(
       getAuthPassword() || process.env.OPENCODE_SERVER_PASSWORD || "",
     );
@@ -92,8 +91,8 @@ export async function createOpenCodeAuthStateRuntime(
   };
 
   return {
-    getOpenCodeAuthHeaders: getOpenCodeAuthHeaders as any,
+    getOpenCodeAuthHeaders,
     isOpenCodeConnectionSecure,
-    ensureLocalOpenCodeServerPassword: ensureLocalOpenCodeServerPassword as any,
+    ensureLocalOpenCodeServerPassword,
   };
 }

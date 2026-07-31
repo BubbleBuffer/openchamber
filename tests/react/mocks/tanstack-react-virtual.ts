@@ -4,7 +4,7 @@
  * This file replaces the real useVirtualizer hook in the test environment.
  * All mock handles are exported so tests can control virtualizer behaviour.
  *
- * The mock types are intentionally permissive (broad `any` shapes) so that
+ * The mock types intentionally cover the small shared surface that
  * production code that imports @tanstack/react-virtual through this alias
  * (ChangesSection.tsx, VirtualizedMessageList.tsx, useChatScrollManager.ts,
  * etc.) type-checks correctly via tests/tsconfig.json without needing to
@@ -13,43 +13,60 @@
 
 import { vi } from "vitest"
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const mockGetTotalSize = vi.fn<() => number>(() => 0)
-export const mockGetVirtualItems = vi.fn<() => any[]>(() => [])
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const mockScrollToIndex = vi.fn<(index: number, options?: any) => void>()
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const mockMeasureElement = vi.fn<(el: any) => void>()
+export const mockGetVirtualItems = vi.fn<() => VirtualItem[]>(() => [])
+export const mockScrollToIndex = vi.fn<(index: number, options?: ScrollOptions) => void>()
+export const mockMeasureElement = vi.fn<(element: Element | null) => void>()
 export const mockMeasure = vi.fn<() => void>()
 
-// Permissive virtualizer instance — exposes every field production code reads
-// (scrollElement, range, measure, measureElement, scrollToIndex, scrollToOffset,
-// getVirtualItems, getTotalSize, etc.) as optional `any`.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type Virtualizer<TScrollElement = any, TItemElement = any> = {
-  getTotalSize: () => number
-  getVirtualItems: () => any[]
-  measure: () => void
-  measureElement: (el: TItemElement | null) => void
-  scrollToIndex: (index: number, options?: any) => void
-  scrollToOffset: (offset: number, options?: any) => void
-  scrollElement: TScrollElement | null
-  range: { startIndex: number; endIndex: number; overscan: number } | null
-  options: any
-  [key: string]: any
+export type VirtualItem = {
+  index: number
+  key: string | number
+  start: number
+  size: number
 }
 
-export const useVirtualizer = vi.fn(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (_options: any): Virtualizer => ({
+type ScrollOptions = {
+  align?: "auto" | "start" | "center" | "end"
+  behavior?: ScrollBehavior
+}
+
+type VirtualizerOptions<TScrollElement extends Element> = Record<string, unknown> & {
+  getScrollElement?: () => TScrollElement | null
+}
+
+// Focused virtualizer instance — exposes every field production code reads
+// (scrollElement, range, measure, measureElement, scrollToIndex, scrollToOffset,
+// getVirtualItems, getTotalSize, etc.).
+export type Virtualizer<TScrollElement extends Element = Element, TItemElement extends Element = Element> = {
+  getTotalSize: () => number
+  getVirtualItems: () => VirtualItem[]
+  measure: () => void
+  measureElement: (el: TItemElement | null) => void
+  scrollToIndex: (index: number, options?: ScrollOptions) => void
+  scrollToOffset: (offset: number, options?: ScrollOptions) => void
+  scrollElement: TScrollElement | null
+  range: { startIndex: number; endIndex: number; overscan: number } | null
+  options: VirtualizerOptions<TScrollElement>
+}
+
+const useVirtualizerImplementation = <
+  TScrollElement extends Element = Element,
+  TItemElement extends Element = Element,
+>(
+  options: VirtualizerOptions<TScrollElement>,
+): Virtualizer<TScrollElement, TItemElement> => ({
     getTotalSize: mockGetTotalSize,
     getVirtualItems: mockGetVirtualItems,
     measure: mockMeasure,
-    measureElement: mockMeasureElement,
+    measureElement: mockMeasureElement as (element: TItemElement | null) => void,
     scrollToIndex: mockScrollToIndex,
     scrollToOffset: vi.fn(),
     scrollElement: null,
     range: null,
-    options: _options,
-  }),
-)
+    options,
+  })
+
+export const useVirtualizer = vi.fn(
+  useVirtualizerImplementation,
+) as typeof useVirtualizerImplementation

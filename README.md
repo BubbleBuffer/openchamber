@@ -13,7 +13,6 @@
 ![Settings](docs/references/settings_example.png)
 ![Web Version](docs/references/web_version_example.png)
 ![Diff View](docs/references/diff_example.png)
-![VS Code Extension](packages/vscode/extension.jpg)
 
 <p>
 <img src="docs/references/pwa_chat_example.png" width="45%" alt="PWA Chat">
@@ -34,7 +33,6 @@
 
 - Branchable chat timeline with `/undo`, `/redo`, and one-click forks from earlier turns
 - Smart tool UIs for diffs, file operations, permissions, and long-running task progress
-- Voice mode with speech input and read-aloud responses for hands-free workflows
 - Multi-agent runs from one prompt with isolated worktrees for safe side-by-side comparisons
 - Git workflows in-app: identities, commits, PR creation, checks, and merge actions
 - GitHub-native workflows: start sessions from issues and pull requests with context already attached
@@ -52,39 +50,16 @@
 - Background notifications plus reliable cross-tab session activity tracking
 - Built-in self-update + restart flow that keeps your server settings intact
 
-### Desktop (macOS)
-
-- Native macOS menu integration with polished app actions and deep-link handling
-- Multi-window support for parallel project/session workflows
-- "Open In" shortcuts for Finder, Terminal, and your preferred editor
-- Fast switching between local and remote instances
-- Workspace-first startup flow with directory picker and steadier window restore behavior
-
-### VS Code Extension
-
-- Editor-native workflow: open files directly from tool output and keep sessions beside your code
-- Agent Manager for parallel multi-model runs from a single prompt
-- Right-click actions to add context, explain selections, and improve code in-place
-- In-extension settings, responsive layout, and theme mapping that matches your editor
-- Hardened runtime lifecycle and health checks for faster startup and fewer stuck reconnect states
-
 ### Custom Themes
 
 - **Use it from anywhere** - Cloudflare tunnel with QR code onboarding. Scan, connect, code from your couch.
 - **Branchable chat timeline** - Undo, redo, fork from any turn. Explore different approaches without losing your place.
 - **GitHub-native workflows** - Start sessions from issues and PRs with context already attached. Review checks, merge - all in-app.
-- **Project Actions** - Run dev servers, configure SSH port forwarding, open remote URLs locally. Your project commands, one click away.
-- **Connect to remote machines** - Desktop app connects to remote OpenChamber instances over SSH, with dedicated lifecycle and UX flows.
+- **Project Actions** - Run dev servers and manage project commands, one click away.
 
 ## Quick Start
 
 > **Prerequisite:** [OpenCode CLI](https://opencode.ai) installed.
-
-### **Desktop (macOS)**
-Download from [Releases](https://github.com/btriapitsyn/openchamber/releases).
-
-### **VS Code**
-Install from [Marketplace](https://marketplace.visualstudio.com/items?itemName=fedaykindev.openchamber) or search "OpenChamber" in Extensions.
 
 ### **CLI (Web + PWA)**
 _requires Node.js 20+_
@@ -266,7 +241,6 @@ chown -R 1000:1000 data/
 
 - Branchable chat timeline with `/undo`, `/redo`, and one-click forks from any turn
 - Multi-agent runs from one prompt with isolated worktrees for safe side-by-side comparisons
-- Voice mode with speech input and read-aloud responses for hands-free workflows
 - Plan/Build mode with a dedicated plan view for drafting and iterating steps
 - Inline comment drafts on diffs, files, and plans - send feedback back to the agent
 - Shell mode via leading `!` with inline output
@@ -307,29 +281,6 @@ chown -R 1000:1000 data/
 - Background notifications and cross-tab session tracking
 - Self-update + restart flow that keeps your server settings intact
 - Installable as PWA with project-aware naming
-
-</details>
-
-<details>
-<summary><strong>Desktop (macOS)</strong></summary>
-
-- Connect to remote OpenChamber instances over SSH with dedicated lifecycle flows
-- Project Actions: run dev servers, SSH port forwarding, open remote URLs locally
-- Multi-window support for parallel project workflows
-- "Open In" shortcuts for Finder, Terminal, and your preferred editor
-- Fast switching between local and remote instances
-- Native macOS menu, deep-link handling, and polished startup
-
-</details>
-
-<details>
-<summary><strong>VS Code Extension</strong></summary>
-
-- Editor-native: open files from tool output, keep sessions beside your code
-- Agent Manager for parallel multi-model runs from a single prompt
-- Right-click actions: add context, explain selections, improve code in-place
-- Session editor panel, responsive layout, and theme mapping to your editor
-- Edit-style tool results open directly in focused diff views
 
 </details>
 
@@ -378,7 +329,6 @@ Independent project, not affiliated with the OpenCode team.
 - [OpenCode](https://opencode.ai) - For the excellent API and extensible architecture.
 - [Flexoki](https://github.com/kepano/flexoki) - Beautiful color scheme by [Steph Ango](https://stephango.com/flexoki).
 - [Pierre](https://pierrejs-docs.vercel.app/) - Fast, beautiful diff viewer with syntax highlighting.
-- [Tauri](https://github.com/tauri-apps/tauri) - Desktop application framework.
 - [Ghostty-web](https://github.com/coder/ghostty-web) - Great implementation of a Ghostty web renderer.
 - [David Hill](https://x.com/iamdavidhill) - Who inspired me to release this without [overthinking](https://x.com/iamdavidhill/status/1993648326450020746).
 - [My wife](https://github.com/yulia-ivashko), who - with zero AI background - sat down with the app for the first time and built the firework celebration that plays on every successful push.

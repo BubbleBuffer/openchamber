@@ -1,0 +1,151 @@
+import React from 'react';
+import { OpenChamberVisualSettings } from './OpenChamberVisualSettings';
+import { AboutSettings } from './AboutSettings';
+import { SessionRetentionSettings } from './SessionRetentionSettings';
+import { PasskeySettings } from './PasskeySettings';
+import { DefaultsSettings } from './DefaultsSettings';
+import { GitSettings } from './GitSettings';
+import { NotificationSettings } from './NotificationSettings';
+import { GitHubSettings } from './GitHubSettings';
+import { OpenCodeCliSettings } from './OpenCodeCliSettings';
+import { KeyboardShortcutsSettings } from './KeyboardShortcutsSettings';
+import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
+import { useDeviceInfo } from '@/lib/device';
+import type { OpenChamberSection } from './types';
+
+interface OpenChamberPageProps {
+    /** Which section to display. If undefined, shows all sections (mobile/legacy behavior) */
+    section?: OpenChamberSection;
+}
+
+export const OpenChamberPage: React.FC<OpenChamberPageProps> = ({ section }) => {
+    const { isMobile } = useDeviceInfo();
+    const showAbout = isMobile;
+
+    // If no section specified, show all (mobile/legacy behavior)
+    if (!section) {
+        return (
+            <ScrollableOverlay
+                outerClassName="h-full"
+                className="w-full"
+            >
+                <div className="openchamber-page-body mx-auto max-w-3xl space-y-3 p-3 sm:space-y-6 sm:p-6 sm:pt-8">
+                    <OpenChamberVisualSettings />
+                    <div className="border-t border-border/40 pt-6">
+                        <DefaultsSettings />
+                    </div>
+                    <div className="border-t border-border/40 pt-6">
+                        <OpenCodeCliSettings />
+                    </div>
+                    <div className="border-t border-border/40 pt-6">
+                        <SessionRetentionSettings />
+                    </div>
+                    <div className="border-t border-border/40 pt-6">
+                        <PasskeySettings />
+                    </div>
+                    {showAbout && (
+                        <div className="border-t border-border/40 pt-6">
+                            <AboutSettings />
+                        </div>
+                    )}
+                </div>
+            </ScrollableOverlay>
+        );
+    }
+
+    // Show specific section content
+    const renderSectionContent = () => {
+        switch (section) {
+            case 'visual':
+                return <VisualSectionContent />;
+            case 'chat':
+                return <ChatSectionContent />;
+            case 'sessions':
+                return <SessionsSectionContent />;
+            case 'shortcuts':
+                return <ShortcutsSectionContent />;
+            case 'git':
+                return <GitSectionContent />;
+            case 'github':
+                return <GitHubSectionContent />;
+            case 'notifications':
+                return <NotificationSectionContent />;
+            default:
+                return null;
+        }
+    };
+
+    return (
+        <ScrollableOverlay
+            outerClassName="h-full"
+            className="w-full"
+        >
+            <div className="openchamber-page-body mx-auto max-w-3xl space-y-6 p-3 sm:p-6 sm:pt-8">
+                {renderSectionContent()}
+            </div>
+        </ScrollableOverlay>
+    );
+};
+
+const ShortcutsSectionContent: React.FC = () => {
+    return <KeyboardShortcutsSettings />;
+};
+
+// Visual section: Theme Mode, Font Size, Spacing, Input Bar Offset (mobile), Nav Rail
+const VisualSectionContent: React.FC = () => {
+    return <OpenChamberVisualSettings visibleSettings={[
+        'theme',
+        'pwaInstallName',
+        'pwaOrientation',
+        'timeFormat',
+        'weekStart',
+        'fontSize',
+        'terminalFontSize',
+        'spacing',
+        'inputBarOffset',
+        'terminalQuickKeys',
+        'reportUsage',
+    ]} />;
+};
+
+// Chat section: User message rendering, Diff layout, Mobile status bar, Show reasoning traces, Queue mode, Persist draft
+const ChatSectionContent: React.FC = () => {
+    return <OpenChamberVisualSettings visibleSettings={['chatRenderMode', 'messageTransport', 'activityRenderMode', 'userMessageRendering', 'mermaidRendering', 'reasoning', 'showToolFileIcons', 'expandedTools', 'stickyUserHeader', 'diffLayout', 'mobileStatusBar', 'dotfiles', 'queueMode', 'persistDraft', 'inputSpellcheck']} />;
+};
+
+// Sessions section: Default model & agent, Session retention
+const SessionsSectionContent: React.FC = () => {
+    return (
+        <div className="space-y-6">
+            <DefaultsSettings />
+            <div className="border-t border-border/40 pt-6">
+                <OpenCodeCliSettings />
+            </div>
+            <div className="border-t border-border/40 pt-6">
+                <SessionRetentionSettings />
+            </div>
+            <div className="border-t border-border/40 pt-6">
+                <PasskeySettings />
+            </div>
+        </div>
+    );
+};
+
+// Git section: Commit message model, Worktree settings
+const GitSectionContent: React.FC = () => {
+    return (
+        <div className="space-y-6">
+            <GitSettings />
+        </div>
+    );
+};
+
+// GitHub section: Connect account for PR/issue workflows
+const GitHubSectionContent: React.FC = () => {
+    return <GitHubSettings />;
+};
+
+// Notifications section: Native browser notifications
+const NotificationSectionContent: React.FC = () => {
+    return <NotificationSettings />;
+};

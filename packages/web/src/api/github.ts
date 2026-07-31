@@ -1,233 +1,68 @@
-import type {
-  GitHubAPI,
-  GitHubAuthStatus,
-  GitHubIssueCommentsResult,
-  GitHubIssueGetResult,
-  GitHubIssuesListResult,
-  GitHubPullRequestContextResult,
-  GitHubPullRequestsListResult,
-  GitHubPullRequest,
-  GitHubPullRequestCreateInput,
-  GitHubPullRequestMergeInput,
-  GitHubPullRequestMergeResult,
-  GitHubPullRequestReadyInput,
-  GitHubPullRequestReadyResult,
-  GitHubPullRequestUpdateInput,
-  GitHubPullRequestStatus,
-  GitHubDeviceFlowComplete,
-  GitHubDeviceFlowStart,
-  GitHubUserSummary,
-} from '@openchamber/ui/lib/api/types';
+import {
+  parseGitHubAuthStatusResponse, parseGitHubDeviceFlowCompleteResponse, parseGitHubDeviceFlowStartResponse,
+  parseGitHubErrorResponse, parseGitHubIssueCommentsResponse, parseGitHubIssueGetResponse,
+  parseGitHubIssuesListResponse, parseGitHubPullRequestContextResponse, parseGitHubPullRequestMergeResponse,
+  parseGitHubPullRequestReadyResponse, parseGitHubPullRequestResponse, parseGitHubPullRequestStatusResponse,
+  parseGitHubPullRequestsListResponse, parseGitHubUserResponse,
+  type GitHubPullRequestCreateInput, type GitHubPullRequestMergeInput, type GitHubPullRequestReadyInput, type GitHubPullRequestUpdateInput,
+} from "@contracts/github";
+import type { ParseResult } from "@contracts/common";
+import type * as GitHub from '@contracts/github';
 
-const jsonOrNull = async <T>(response: Response): Promise<T | null> => {
-  return (await response.json().catch(() => null)) as T | null;
+export interface GitHubAPI {
+  authStatus(): Promise<GitHub.GitHubAuthStatus>;
+  authStart(): Promise<GitHub.GitHubDeviceFlowStart>;
+  authComplete(deviceCode: string): Promise<GitHub.GitHubDeviceFlowComplete>;
+  authDisconnect(): Promise<GitHub.GitHubAuthDisconnectResult>;
+  authActivate(accountId: string): Promise<GitHub.GitHubAuthStatus>;
+  me?(): Promise<GitHub.GitHubUserSummary>;
+  prStatus(directory: string, branch: string, remote?: string): Promise<GitHub.GitHubPullRequestStatus>;
+  prCreate(payload: GitHub.GitHubPullRequestCreateInput): Promise<GitHub.GitHubPullRequest>;
+  prUpdate(payload: GitHub.GitHubPullRequestUpdateInput): Promise<GitHub.GitHubPullRequest>;
+  prMerge(payload: GitHub.GitHubPullRequestMergeInput): Promise<GitHub.GitHubPullRequestMergeResult>;
+  prReady(payload: GitHub.GitHubPullRequestReadyInput): Promise<GitHub.GitHubPullRequestReadyResult>;
+  prsList(directory: string, options?: { page?: number }): Promise<GitHub.GitHubPullRequestsListResult>;
+  prContext(directory: string, number: number, options?: { includeDiff?: boolean; includeCheckDetails?: boolean }): Promise<GitHub.GitHubPullRequestContextResult>;
+  issuesList(directory: string, options?: { page?: number }): Promise<GitHub.GitHubIssuesListResult>;
+  issueGet(directory: string, number: number): Promise<GitHub.GitHubIssueGetResult>;
+  issueComments(directory: string, number: number): Promise<GitHub.GitHubIssueCommentsResult>;
+}
+
+const read = async (response: Response) => response.json().catch(() => undefined);
+const decode = async <T>(response: Response, parser: (value: unknown) => ParseResult<T>, fallback: string): Promise<T> => {
+  const payload = await read(response);
+  const error = parseGitHubErrorResponse(payload);
+  if (!response.ok) throw new Error(error.ok ? error.value.code : fallback);
+  const parsed = parser(payload);
+  if (!parsed.ok) throw new Error(fallback);
+  return parsed.value;
 };
+const json = (body: unknown) => ({ "Content-Type": "application/json", Accept: "application/json", body: JSON.stringify(body) });
 
 export const createWebGitHubAPI = (): GitHubAPI => ({
-  async authStatus(): Promise<GitHubAuthStatus> {
-    const response = await fetch('/api/github/auth/status', { method: 'GET', headers: { Accept: 'application/json' } });
-    const payload = await jsonOrNull<GitHubAuthStatus & { error?: string }>(response);
-    if (!response.ok || !payload) {
-      throw new Error(payload?.error || response.statusText || 'Failed to load GitHub status');
-    }
-    return payload;
+  authStatus: () => fetch("/api/github/auth/status", { headers: { Accept: "application/json" } }).then((res) => decode(res, parseGitHubAuthStatusResponse, "Failed to load GitHub status")),
+  authStart: () => fetch("/api/github/auth/start", { method: "POST", ...json({}) }).then((res) => decode(res, parseGitHubDeviceFlowStartResponse, "Failed to start GitHub auth")),
+  authComplete: (deviceCode: string) => fetch("/api/github/auth/complete", { method: "POST", ...json({ deviceCode }) }).then((res) => decode(res, parseGitHubDeviceFlowCompleteResponse, "Failed to complete GitHub auth")),
+  async authDisconnect() {
+    const response = await fetch("/api/github/auth", { method: "DELETE", headers: { Accept: "application/json" } });
+    const payload = await read(response);
+    const error = parseGitHubErrorResponse(payload);
+    if (!response.ok || !payload || typeof payload.removed !== "boolean") throw new Error(error.ok ? error.value.code : "Failed to disconnect GitHub");
+    return { removed: payload.removed };
   },
-
-  async authStart(): Promise<GitHubDeviceFlowStart> {
-    const response = await fetch('/api/github/auth/start', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({}),
-    });
-    const payload = await jsonOrNull<GitHubDeviceFlowStart & { error?: string }>(response);
-    if (!response.ok || !payload || !('deviceCode' in payload)) {
-      throw new Error((payload as { error?: string } | null)?.error || response.statusText || 'Failed to start GitHub auth');
-    }
-    return payload;
+  authActivate: (accountId: string) => fetch("/api/github/auth/activate", { method: "POST", ...json({ accountId }) }).then((res) => decode(res, parseGitHubAuthStatusResponse, "Failed to activate GitHub account")),
+  me: () => fetch("/api/github/me", { headers: { Accept: "application/json" } }).then((res) => decode(res, parseGitHubUserResponse, "Failed to fetch GitHub user")),
+  prStatus(directory, branch, remote) {
+    const params = new URLSearchParams({ directory, branch, ...(remote ? { remote } : {}) });
+    return fetch(`/api/github/pr/status?${params}`, { headers: { Accept: "application/json" } }).then((res) => decode(res, parseGitHubPullRequestStatusResponse, "Failed to load PR status"));
   },
-
-  async authComplete(deviceCode: string): Promise<GitHubDeviceFlowComplete> {
-    const response = await fetch('/api/github/auth/complete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ deviceCode }),
-    });
-    const payload = await jsonOrNull<GitHubDeviceFlowComplete & { error?: string }>(response);
-    if (!response.ok || !payload) {
-      throw new Error((payload as { error?: string } | null)?.error || response.statusText || 'Failed to complete GitHub auth');
-    }
-    return payload;
-  },
-
-  async authDisconnect(): Promise<{ removed: boolean }> {
-    const response = await fetch('/api/github/auth', { method: 'DELETE', headers: { Accept: 'application/json' } });
-    const payload = await jsonOrNull<{ removed?: boolean; error?: string }>(response);
-    if (!response.ok) {
-      throw new Error(payload?.error || response.statusText || 'Failed to disconnect GitHub');
-    }
-    return { removed: Boolean(payload?.removed) };
-  },
-
-  async authActivate(accountId: string): Promise<GitHubAuthStatus> {
-    const response = await fetch('/api/github/auth/activate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ accountId }),
-    });
-    const payload = await jsonOrNull<GitHubAuthStatus & { error?: string }>(response);
-    if (!response.ok || !payload) {
-      throw new Error(payload?.error || response.statusText || 'Failed to activate GitHub account');
-    }
-    return payload;
-  },
-
-  async me(): Promise<GitHubUserSummary> {
-    const response = await fetch('/api/github/me', { method: 'GET', headers: { Accept: 'application/json' } });
-    const payload = await jsonOrNull<GitHubUserSummary & { error?: string }>(response);
-    if (!response.ok || !payload) {
-      throw new Error(payload?.error || response.statusText || 'Failed to fetch GitHub user');
-    }
-    return payload;
-  },
-
-  async prStatus(directory: string, branch: string, remote?: string): Promise<GitHubPullRequestStatus> {
-    const params = new URLSearchParams({
-      directory,
-      branch,
-      ...(remote ? { remote } : {}),
-    });
-    const response = await fetch(
-      `/api/github/pr/status?${params.toString()}`,
-      { method: 'GET', headers: { Accept: 'application/json' } }
-    );
-    const payload = await jsonOrNull<GitHubPullRequestStatus & { error?: string }>(response);
-    if (!response.ok || !payload) {
-      throw new Error(payload?.error || response.statusText || 'Failed to load PR status');
-    }
-    return payload;
-  },
-
-  async prCreate(payload: GitHubPullRequestCreateInput): Promise<GitHubPullRequest> {
-    const response = await fetch('/api/github/pr/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const body = await jsonOrNull<GitHubPullRequest & { error?: string }>(response);
-    if (!response.ok || !body) {
-      throw new Error((body as { error?: string } | null)?.error || response.statusText || 'Failed to create PR');
-    }
-    return body;
-  },
-
-  async prUpdate(payload: GitHubPullRequestUpdateInput): Promise<GitHubPullRequest> {
-    const response = await fetch('/api/github/pr/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const body = await jsonOrNull<GitHubPullRequest & { error?: string }>(response);
-    if (!response.ok || !body) {
-      throw new Error((body as { error?: string } | null)?.error || response.statusText || 'Failed to update PR');
-    }
-    return body;
-  },
-
-  async prMerge(payload: GitHubPullRequestMergeInput): Promise<GitHubPullRequestMergeResult> {
-    const response = await fetch('/api/github/pr/merge', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const body = await jsonOrNull<GitHubPullRequestMergeResult & { error?: string }>(response);
-    if (!response.ok || !body) {
-      throw new Error((body as { error?: string } | null)?.error || response.statusText || 'Failed to merge PR');
-    }
-    return body;
-  },
-
-  async prReady(payload: GitHubPullRequestReadyInput): Promise<GitHubPullRequestReadyResult> {
-    const response = await fetch('/api/github/pr/ready', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const body = await jsonOrNull<GitHubPullRequestReadyResult & { error?: string }>(response);
-    if (!response.ok || !body) {
-      throw new Error((body as { error?: string } | null)?.error || response.statusText || 'Failed to mark PR ready');
-    }
-    return body;
-  },
-
-  async prsList(directory: string, options?: { page?: number }): Promise<GitHubPullRequestsListResult> {
-    const page = options?.page ?? 1;
-    const response = await fetch(
-      `/api/github/pulls/list?directory=${encodeURIComponent(directory)}&page=${encodeURIComponent(String(page))}`,
-      { method: 'GET', headers: { Accept: 'application/json' } }
-    );
-    const body = await jsonOrNull<GitHubPullRequestsListResult & { error?: string }>(response);
-    if (!response.ok || !body) {
-      throw new Error(body?.error || response.statusText || 'Failed to load pull requests');
-    }
-    return body;
-  },
-
-  async prContext(
-    directory: string,
-    number: number,
-    options?: { includeDiff?: boolean; includeCheckDetails?: boolean }
-  ): Promise<GitHubPullRequestContextResult> {
-    const url = new URL('/api/github/pulls/context', window.location.origin);
-    url.searchParams.set('directory', directory);
-    url.searchParams.set('number', String(number));
-    if (options?.includeDiff) {
-      url.searchParams.set('diff', '1');
-    }
-    if (options?.includeCheckDetails) {
-      url.searchParams.set('checkDetails', '1');
-    }
-    const response = await fetch(url.toString(), { method: 'GET', headers: { Accept: 'application/json' } });
-    const body = await jsonOrNull<GitHubPullRequestContextResult & { error?: string }>(response);
-    if (!response.ok || !body) {
-      throw new Error(body?.error || response.statusText || 'Failed to load pull request context');
-    }
-    return body;
-  },
-
-  async issuesList(directory: string, options?: { page?: number }): Promise<GitHubIssuesListResult> {
-    const page = options?.page ?? 1;
-    const response = await fetch(
-      `/api/github/issues/list?directory=${encodeURIComponent(directory)}&page=${encodeURIComponent(String(page))}`,
-      { method: 'GET', headers: { Accept: 'application/json' } }
-    );
-    const payload = await jsonOrNull<GitHubIssuesListResult & { error?: string }>(response);
-    if (!response.ok || !payload) {
-      throw new Error(payload?.error || response.statusText || 'Failed to load issues');
-    }
-    return payload;
-  },
-
-  async issueGet(directory: string, number: number): Promise<GitHubIssueGetResult> {
-    const response = await fetch(
-      `/api/github/issues/get?directory=${encodeURIComponent(directory)}&number=${encodeURIComponent(String(number))}`,
-      { method: 'GET', headers: { Accept: 'application/json' } }
-    );
-    const payload = await jsonOrNull<GitHubIssueGetResult & { error?: string }>(response);
-    if (!response.ok || !payload) {
-      throw new Error(payload?.error || response.statusText || 'Failed to load issue');
-    }
-    return payload;
-  },
-
-  async issueComments(directory: string, number: number): Promise<GitHubIssueCommentsResult> {
-    const response = await fetch(
-      `/api/github/issues/comments?directory=${encodeURIComponent(directory)}&number=${encodeURIComponent(String(number))}`,
-      { method: 'GET', headers: { Accept: 'application/json' } }
-    );
-    const payload = await jsonOrNull<GitHubIssueCommentsResult & { error?: string }>(response);
-    if (!response.ok || !payload) {
-      throw new Error(payload?.error || response.statusText || 'Failed to load issue comments');
-    }
-    return payload;
-  },
+  prCreate: (payload: GitHubPullRequestCreateInput) => fetch("/api/github/pr/create", { method: "POST", ...json(payload) }).then((res) => decode(res, parseGitHubPullRequestResponse, "Failed to create PR")),
+  prUpdate: (payload: GitHubPullRequestUpdateInput) => fetch("/api/github/pr/update", { method: "POST", ...json(payload) }).then((res) => decode(res, parseGitHubPullRequestResponse, "Failed to update PR")),
+  prMerge: (payload: GitHubPullRequestMergeInput) => fetch("/api/github/pr/merge", { method: "POST", ...json(payload) }).then((res) => decode(res, parseGitHubPullRequestMergeResponse, "Failed to merge PR")),
+  prReady: (payload: GitHubPullRequestReadyInput) => fetch("/api/github/pr/ready", { method: "POST", ...json(payload) }).then((res) => decode(res, parseGitHubPullRequestReadyResponse, "Failed to mark PR ready")),
+  prsList(directory, options) { const page = options?.page ?? 1; return fetch(`/api/github/pulls/list?directory=${encodeURIComponent(directory)}&page=${page}`, { headers: { Accept: "application/json" } }).then((res) => decode(res, parseGitHubPullRequestsListResponse, "Failed to load pull requests")); },
+  prContext(directory, number, options) { const params = new URLSearchParams({ directory, number: String(number), ...(options?.includeDiff ? { diff: "1" } : {}), ...(options?.includeCheckDetails ? { checkDetails: "1" } : {}) }); return fetch(`/api/github/pulls/context?${params}`, { headers: { Accept: "application/json" } }).then((res) => decode(res, parseGitHubPullRequestContextResponse, "Failed to load pull request context")); },
+  issuesList(directory, options) { const page = options?.page ?? 1; return fetch(`/api/github/issues/list?directory=${encodeURIComponent(directory)}&page=${page}`, { headers: { Accept: "application/json" } }).then((res) => decode(res, parseGitHubIssuesListResponse, "Failed to load issues")); },
+  issueGet(directory, number) { return fetch(`/api/github/issues/get?directory=${encodeURIComponent(directory)}&number=${number}`, { headers: { Accept: "application/json" } }).then((res) => decode(res, parseGitHubIssueGetResponse, "Failed to load issue")); },
+  issueComments(directory, number) { return fetch(`/api/github/issues/comments?directory=${encodeURIComponent(directory)}&number=${number}`, { headers: { Accept: "application/json" } }).then((res) => decode(res, parseGitHubIssueCommentsResponse, "Failed to load issue comments")); },
 });

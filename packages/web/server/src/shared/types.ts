@@ -1,7 +1,6 @@
 import type { Express } from "express";
 import type { Server as HttpServer } from "http";
 import type { LifecycleRegistry } from "./lifecycle.js";
-import type { EventBus } from "../domains/core/event-bus.js";
 
 export interface ServerConfig {
   port: number;
@@ -12,9 +11,7 @@ export interface ServerConfig {
   openchamberDataDir: string;
   settingsFilePath: string;
   pushSubscriptionsFilePath: string;
-  onDesktopNotification: ((payload: unknown) => void) | null;
   openchamberVersion: string;
-  isDesktopNotifyEnabled: boolean;
 }
 
 export interface WebUiServerController {
@@ -56,7 +53,6 @@ export interface StartWebUiServerOptions {
   attachSignals?: boolean;
   exitOnShutdown?: boolean;
   uiPassword?: string | null;
-  onDesktopNotification?: (payload: unknown) => void;
 }
 
 export interface HealthSnapshot {
@@ -66,7 +62,6 @@ export interface HealthSnapshot {
   openCodeAuthSource: string | null;
   isOpenCodeReady: boolean;
   lastOpenCodeError: string | null;
-  desktopNotifyEnabled: boolean;
 }
 
 export const DEFAULT_PORT = 3000;
@@ -78,7 +73,6 @@ export const SSE_PATH_PREFIXES = [
   "/api/event",
   "/api/global/event",
   "/api/notifications/stream",
-  "/api/openchamber/events",
 ] as const;
 
 export const TERMINAL_INPUT_WS_HEARTBEAT_INTERVAL_MS = 15_000;

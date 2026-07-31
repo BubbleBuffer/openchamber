@@ -1,20 +1,45 @@
 import type { Express, Request, Response } from "express";
 import { createProjectIdFromPath } from "../../projects/index.js";
+import type { ProviderSources } from "../services/types.js";
+import { parseSettingsUpdateRequest } from "../../../contracts/settings.js";
+import {
+  parseDirectorySwitchRequest,
+  parsePendingMcpAuthRequest,
+  parseOpenCodeResolutionResponse,
+  parseProviderDisconnectResponse,
+  parseProviderId,
+  parseProviderSourceResponse,
+  type OpenCodeErrorCode,
+} from "../../../contracts/opencode.js";
+
+type ProviderConfigScope = "user" | "project" | "custom";
+type ProviderAuthModule = typeof import("../../auth/provider-auth.js");
+type SettingsRecord = Record<string, unknown>;
+interface ProviderSourcesResult {
+  sources: Partial<ProviderSources["sources"]>;
+}
 
 interface OpenCodeRoutesDeps {
   crypto: typeof import("crypto");
   clientReloadDelayMs: number;
   getOpenCodeResolutionSnapshot: (settings: object) => Promise<object>;
   formatSettingsResponse: (settings: object) => object;
-  readSettingsFromDisk: () => Promise<any>;
-  readSettingsFromDiskMigrated: () => Promise<any>;
-  persistSettings: (changes: object) => Promise<any>;
+  readSettingsFromDisk: () => Promise<SettingsRecord>;
+  readSettingsFromDiskMigrated: () => Promise<SettingsRecord>;
+  persistSettings: (changes: object) => Promise<SettingsRecord>;
   sanitizeProjects: (input: unknown) => Array<Record<string, unknown>> | undefined;
-  validateDirectoryPath: (candidate: any) => Promise<{ ok: boolean; directory?: string; error?: string }>;
-  resolveProjectDirectory: (req: Request) => Promise<{ directory?: any; error?: string }>;
-  getProviderSources: (providerId: any, directory: any) => any;
-  removeProviderConfig: (providerId: any, directory: any, scope: any) => boolean;
-  refreshOpenCodeAfterConfigChange: (reason: string, options?: any) => Promise<void>;
+  validateDirectoryPath: (candidate: string) => Promise<{ ok: boolean; directory?: string; error?: string }>;
+  resolveProjectDirectory: (req: Request) => Promise<{ directory?: string | null; error?: string | null }>;
+  getProviderSources: (providerId: string, directory: string | null) => ProviderSourcesResult;
+  removeProviderConfig: (
+    providerId: string,
+    directory: string | null,
+    scope: ProviderConfigScope
+  ) => boolean;
+  refreshOpenCodeAfterConfigChange: (
+    reason: string,
+    options?: Record<string, unknown>
+  ) => Promise<void>;
 }
 
 interface PendingMcpAuthContext {
@@ -28,7 +53,6 @@ export function registerOpenCodeRoutes(
   dependencies: OpenCodeRoutesDeps
 ): void {
   const {
-    crypto,
     clientReloadDelayMs,
     getOpenCodeResolutionSnapshot,
     formatSettingsResponse,
@@ -43,14 +67,16 @@ export function registerOpenCodeRoutes(
     refreshOpenCodeAfterConfigChange,
   } = dependencies;
 
-  let authLibrary: any = null;
+  let authLibrary: ProviderAuthModule | null = null;
   const pendingMcpAuthContextByState = new Map<string, PendingMcpAuthContext | undefined>();
   const PENDING_MCP_AUTH_TTL_MS = 30 * 60 * 1000;
+  const safeError = (res: Response, status: number, code: OpenCodeErrorCode): void => {
+    res.status(status).json({ error: "Request failed", code });
+  };
 
-  const getAuthLibrary = async (): Promise<any> => {
+  const getAuthLibrary = async (): Promise<ProviderAuthModule> => {
     if (!authLibrary) {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      authLibrary = await import("../auth/auth.js" as any);
+      authLibrary = await import("../../auth/provider-auth.js");
     }
     return authLibrary;
   };
@@ -87,45 +113,48 @@ export function registerOpenCodeRoutes(
     try {
       const settings = await readSettingsFromDiskMigrated();
       const resolution = await getOpenCodeResolutionSnapshot(settings);
-      res.json(resolution);
+      const parsed = parseOpenCodeResolutionResponse(resolution);
+      if (!parsed.ok) return safeError(res, 500, "opencode_invalid_response");
+      res.json(parsed.value);
     } catch (error) {
       console.error("Failed to resolve OpenCode binary:", error);
-      res.status(500).json({ error: "Failed to resolve OpenCode binary" });
+      safeError(res, 500, "opencode_internal_error");
     }
   });
 
   app.put("/api/config/settings", async (req: Request, res: Response) => {
     console.log("[API:PUT /api/config/settings] Received request");
     try {
-      const updated = await persistSettings(req.body ?? {});
-      console.log(`[API:PUT /api/config/settings] Success, returning ${updated.projects?.length || 0} projects`);
+      const request = parseSettingsUpdateRequest(req.body ?? {});
+      if (!request.ok) return res.status(400).json({ error: "Invalid settings request", code: "settings_invalid_request" });
+      const updated = await persistSettings(request.value);
+      const projectCount = Array.isArray(updated.projects) ? updated.projects.length : 0;
+      console.log(`[API:PUT /api/config/settings] Success, returning ${projectCount} projects`);
       res.json(updated);
     } catch (error) {
       console.error("[API:PUT /api/config/settings] Failed to save settings:", error);
       console.error("[API:PUT /api/config/settings] Error stack:", (error as Error)?.stack);
-      res.status(500).json({ error: "Failed to save settings" });
+      res.status(500).json({ error: "Failed to save settings", code: "settings_write_failed" });
     }
   });
 
   app.post("/api/mcp/auth/pending", async (req: Request, res: Response) => {
     try {
       pruneExpiredPendingMcpAuthContexts();
-
-      const state = normalizePendingString(req.body?.state);
+      const parsed = parsePendingMcpAuthRequest(req.body ?? {});
+      if (!parsed.ok) return safeError(res, 400, "opencode_invalid_request");
+      const { state, name, directory } = parsed.value;
       if (!state) {
         res.json({ success: true, context: null });
         return;
       }
-
-      const name = normalizePendingString(req.body?.name);
       if (!name) {
-        res.status(400).json({ error: "MCP server name is required" });
-        return;
+        return safeError(res, 400, "opencode_invalid_request");
       }
 
       const entry: PendingMcpAuthContext = {
         name,
-        directory: normalizePendingString(req.body?.directory),
+        directory,
         expiresAt: Date.now() + PENDING_MCP_AUTH_TTL_MS,
       };
       pendingMcpAuthContextByState.set(state, entry);
@@ -139,7 +168,7 @@ export function registerOpenCodeRoutes(
       });
     } catch (error) {
       console.error("Failed to store pending MCP auth context:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to store pending MCP auth context" });
+      safeError(res, 500, "opencode_internal_error");
     }
   });
 
@@ -164,7 +193,7 @@ export function registerOpenCodeRoutes(
       res.json(pendingMcpAuthContext);
     } catch (error) {
       console.error("Failed to read pending MCP auth context:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to read pending MCP auth context" });
+      safeError(res, 500, "opencode_internal_error");
     }
   });
 
@@ -182,17 +211,15 @@ export function registerOpenCodeRoutes(
       res.json({ success: true });
     } catch (error) {
       console.error("Failed to clear pending MCP auth context:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to clear pending MCP auth context" });
+      safeError(res, 500, "opencode_internal_error");
     }
   });
 
   app.get("/api/provider/:providerId/source", async (req: Request, res: Response) => {
     try {
-      const { providerId } = req.params;
-      if (!providerId) {
-        res.status(400).json({ error: "Provider ID is required" });
-        return;
-      }
+      const parsedProviderId = parseProviderId(req.params.providerId);
+      if (!parsedProviderId.ok) return safeError(res, 400, "opencode_invalid_request");
+      const providerId = parsedProviderId.value;
 
       const headerDirectory = typeof req.get === "function" ? req.get("x-opencode-directory") : null;
       const queryDirectory = Array.isArray(req.query?.directory)
@@ -205,36 +232,35 @@ export function registerOpenCodeRoutes(
       if (resolved.directory) {
         directory = resolved.directory;
       } else if (requestedDirectory) {
-        res.status(400).json({ error: resolved.error });
-        return;
+        return safeError(res, 400, "opencode_invalid_request");
       }
 
       const sources = getProviderSources(providerId, directory);
       const authLib = await getAuthLibrary();
       const { getProviderAuth } = authLib;
       const auth = getProviderAuth(providerId);
-      (sources.sources as any).auth.exists = Boolean(auth);
+      sources.sources.auth = { exists: Boolean(auth) };
 
-      res.json({
+      const response = {
         providerId,
         sources: sources.sources,
-      });
+      };
+      if (!parseProviderSourceResponse(response).ok) return safeError(res, 500, "opencode_invalid_response");
+      res.json(response);
     } catch (error) {
       console.error("Failed to get provider sources:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to get provider sources" });
+      safeError(res, 500, "opencode_internal_error");
     }
   });
 
   app.delete("/api/provider/:providerId/auth", async (req: Request, res: Response) => {
     try {
-      const { providerId } = req.params;
-      if (!providerId) {
-        res.status(400).json({ error: "Provider ID is required" });
-        return;
-      }
+      const parsedProviderId = parseProviderId(req.params.providerId);
+      if (!parsedProviderId.ok) return safeError(res, 400, "opencode_invalid_request");
+      const providerId = parsedProviderId.value;
 
-      const scope =
-        typeof req.query?.scope === "string" ? req.query.scope : "auth";
+      const scope = typeof req.query?.scope === "string" ? req.query.scope : "auth";
+      if (!(["auth", "user", "project", "custom", "all"] as const).includes(scope as "auth" | "user" | "project" | "custom" | "all")) return safeError(res, 400, "opencode_invalid_request");
       const headerDirectory = typeof req.get === "function" ? req.get("x-opencode-directory") : null;
       const queryDirectory = Array.isArray(req.query?.directory)
         ? req.query.directory[0]
@@ -245,8 +271,7 @@ export function registerOpenCodeRoutes(
       if (scope === "project" || requestedDirectory) {
         const resolved = await resolveProjectDirectory(req);
         if (!resolved.directory) {
-          res.status(400).json({ error: resolved.error });
-          return;
+          return safeError(res, 400, "opencode_invalid_request");
         }
         directory = resolved.directory;
       } else {
@@ -271,41 +296,36 @@ export function registerOpenCodeRoutes(
         const projectRemoved = directory ? removeProviderConfig(providerId, directory, "project") : false;
         const customRemoved = removeProviderConfig(providerId, directory, "custom");
         removed = authRemoved || userRemoved || projectRemoved || customRemoved;
-      } else {
-        res.status(400).json({ error: "Invalid scope" });
-        return;
       }
 
       if (removed) {
         await refreshOpenCodeAfterConfigChange(`provider ${providerId} disconnected (${scope})`);
       }
 
-      res.json({
+      const response = {
         success: true,
         removed,
         requiresReload: removed,
         message: removed ? "Provider disconnected successfully" : "Provider was not connected",
         reloadDelayMs: removed ? clientReloadDelayMs : undefined,
-      });
+      };
+      if (!parseProviderDisconnectResponse(response).ok) return safeError(res, 500, "opencode_invalid_response");
+      res.json(response);
     } catch (error) {
       console.error("Failed to disconnect provider:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to disconnect provider" });
+      safeError(res, 500, "opencode_internal_error");
     }
   });
 
   app.post("/api/opencode/directory", async (req: Request, res: Response) => {
     try {
-      const requestedPath =
-        typeof req.body?.path === "string" ? req.body.path.trim() : "";
-      if (!requestedPath) {
-        res.status(400).json({ error: "Path is required" });
-        return;
-      }
+      const parsed = parseDirectorySwitchRequest(req.body ?? {});
+      if (!parsed.ok) return safeError(res, 400, "opencode_invalid_request");
+      const requestedPath = parsed.value.path;
 
       const validated = await validateDirectoryPath(requestedPath);
       if (!validated.ok) {
-        res.status(400).json({ error: validated.error });
-        return;
+        return safeError(res, 400, "opencode_invalid_request");
       }
 
       const resolvedPath = validated.directory!;
@@ -341,7 +361,7 @@ export function registerOpenCodeRoutes(
       });
     } catch (error) {
       console.error("Failed to update OpenCode working directory:", error);
-      res.status(500).json({ error: (error as Error)?.message || "Failed to update working directory" });
+      safeError(res, 500, "opencode_internal_error");
     }
   });
 }

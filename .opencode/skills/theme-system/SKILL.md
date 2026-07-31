@@ -9,7 +9,7 @@ compatibility: opencode
 
 UI colors must use theme tokens. Never hardcoded hex colors or Tailwind color classes (e.g. `bg-blue-500`, `bg-white`).
 
-Themes live in `packages/ui/src/lib/theme/themes/`. Users can add custom themes via `~/.config/openchamber/themes/`.
+Themes live in `packages/web/src/ui/lib/theme/themes/`. Users can add custom themes via `~/.config/openchamber/themes/`.
 
 ## Quick decision tree
 
@@ -98,8 +98,8 @@ Via CSS variables:
 
 ## Key files
 
-- Theme types: `packages/ui/src/types/theme.ts`
-- Theme hook: `packages/ui/src/contexts/useThemeSystem.ts`
-- CSS generator: `packages/ui/src/lib/theme/cssGenerator.ts`
-- Built-in themes: `packages/ui/src/lib/theme/themes/`
+- Theme types: `packages/web/src/ui/types/theme.ts`
+- Theme hook: `packages/web/src/ui/contexts/useThemeSystem.ts`
+- CSS generator: `packages/web/src/ui/lib/theme/cssGenerator.ts`
+- Built-in themes: `packages/web/src/ui/lib/theme/themes/`
 - Adding themes: [references/adding-themes.md](references/adding-themes.md)

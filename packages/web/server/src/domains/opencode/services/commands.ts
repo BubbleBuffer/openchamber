@@ -273,7 +273,7 @@ export function updateCommand(
         layers,
         workingDirectory ? COMMAND_SCOPE.PROJECT : COMMAND_SCOPE.USER
       );
-  let config = (jsonTarget.config as Record<string, unknown>) || {};
+  const config = (jsonTarget.config as Record<string, unknown>) || {};
 
   const isBuiltinOverride = !mdExists && !hasJsonFields;
 

@@ -102,14 +102,14 @@ describe("event stream protocol helpers", () => {
 
     const sent = sendMessageStreamWsEvent(
       socket,
-      { type: "openchamber:heartbeat", timestamp: 1 },
+      { type: "session.updated", properties: {} },
       { eventId: "evt-2", directory: "/tmp/project" }
     );
 
     expect(sent).toBe(true);
     expect(JSON.parse(rawPayload!)).toEqual({
       type: "event",
-      payload: { type: "openchamber:heartbeat", timestamp: 1 },
+      payload: { type: "session.updated", properties: {} },
       eventId: "evt-2",
       directory: "/tmp/project",
     });

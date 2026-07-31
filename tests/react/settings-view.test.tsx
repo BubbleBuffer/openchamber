@@ -9,12 +9,6 @@ vi.mock("@/lib/device", () => ({
   getDeviceInfo: () => ({ isMobile: false, isTablet: false, deviceType: "desktop" }),
 }))
 
-vi.mock("@/lib/desktop/desktop", () => ({
-  isDesktopShell: () => false,
-  isVSCodeRuntime: () => false,
-  isWebRuntime: () => true,
-}))
-
 vi.mock("@/components/sections/projects/ProjectsPage", () => ({ ProjectsPage: () => <section aria-label="Projects page">Projects page</section> }))
 vi.mock("@/components/sections/projects/ProjectsSidebar", () => ({ ProjectsSidebar: ({ onItemSelect }: { onItemSelect?: () => void }) => <button type="button" onClick={onItemSelect}>Project item</button> }))
 vi.mock("@/components/sections/agents/AgentsPage", () => ({ AgentsPage: () => <section aria-label="Agents page">Agents page</section> }))
@@ -23,19 +17,14 @@ vi.mock("@/components/sections/commands/CommandsPage", () => ({ CommandsPage: ()
 vi.mock("@/components/sections/commands/CommandsSidebar", () => ({ CommandsSidebar: ({ onItemSelect }: { onItemSelect?: () => void }) => <button type="button" onClick={onItemSelect}>Command item</button> }))
 vi.mock("@/components/sections/mcp/McpPage", () => ({ McpPage: () => <section aria-label="MCP page">MCP page</section> }))
 vi.mock("@/components/sections/mcp/McpSidebar", () => ({ McpSidebar: ({ onItemSelect }: { onItemSelect?: () => void }) => <button type="button" onClick={onItemSelect}>MCP item</button> }))
-vi.mock("@/components/sections/skills/SkillsPage", () => ({ SkillsPage: ({ view }: { view?: string }) => <section aria-label="Skills page">Skills page {view}</section> }))
+vi.mock("@/components/sections/skills/SkillsPage", () => ({ SkillsPage: () => <section aria-label="Skills page">Skills page</section> }))
 vi.mock("@/components/sections/skills/SkillsSidebar", () => ({ SkillsSidebar: ({ onItemSelect }: { onItemSelect?: () => void }) => <button type="button" onClick={onItemSelect}>Skill item</button> }))
 vi.mock("@/components/sections/providers/ProvidersPage", () => ({ ProvidersPage: () => <section aria-label="Providers page">Providers page</section> }))
 vi.mock("@/components/sections/providers/ProvidersSidebar", () => ({ ProvidersSidebar: ({ onItemSelect }: { onItemSelect?: () => void }) => <button type="button" onClick={onItemSelect}>Provider item</button> }))
 vi.mock("@/components/sections/usage/UsagePage", () => ({ UsagePage: () => <section aria-label="Usage page">Usage page</section> }))
 vi.mock("@/components/sections/usage/UsageSidebar", () => ({ UsageSidebar: ({ onItemSelect }: { onItemSelect?: () => void }) => <button type="button" onClick={onItemSelect}>Usage item</button> }))
-vi.mock("@/components/sections/magic-prompts/MagicPromptsPage", () => ({ MagicPromptsPage: () => <section aria-label="Magic Prompts page">Magic Prompts page</section> }))
-vi.mock("@/components/sections/magic-prompts/MagicPromptsSidebar", () => ({ MagicPromptsSidebar: ({ onItemSelect }: { onItemSelect?: () => void }) => <button type="button" onClick={onItemSelect}>Magic prompt item</button> }))
 vi.mock("@/components/sections/openchamber/OpenChamberPage", () => ({ OpenChamberPage: ({ section }: { section: string }) => <section aria-label="OpenChamber page">OpenChamber {section}</section> }))
 vi.mock("@/components/sections/git-identities/GitPage", () => ({ GitPage: () => <section aria-label="Git page">Git page</section> }))
-vi.mock("@/components/sections/remote-instances/RemoteInstancesPage", () => ({ RemoteInstancesPage: () => <section aria-label="Remote Instances page">Remote Instances page</section> }))
-vi.mock("@/components/sections/remote-instances/RemoteInstancesSidebar", () => ({ RemoteInstancesSidebar: ({ onItemSelect }: { onItemSelect?: () => void }) => <button type="button" onClick={onItemSelect}>Remote instance item</button> }))
-
 vi.mock("@/stores/agents/useAgentsStore", () => ({
   reloadOpenCodeConfiguration: vi.fn(),
   useAgentsStore: { getState: () => ({ loadAgents: vi.fn() }) },
@@ -43,12 +32,12 @@ vi.mock("@/stores/agents/useAgentsStore", () => ({
 vi.mock("@/stores/useCommandsStore", () => ({ useCommandsStore: { getState: () => ({ loadCommands: vi.fn() }) } }))
 vi.mock("@/stores/mcp/useMcpConfigStore", () => ({ useMcpConfigStore: { getState: () => ({ loadMcpConfigs: vi.fn() }) } }))
 vi.mock("@/stores/skills/useSkillsStore", () => ({ useSkillsStore: { getState: () => ({ loadSkills: vi.fn() }) } }))
-vi.mock("@/stores/skills/useSkillsCatalogStore", () => ({ useSkillsCatalogStore: { getState: () => ({ loadCatalog: vi.fn() }) } }))
 vi.mock("@/stores/projects/useProjectsStore", () => ({ useProjectsStore: (selector: (state: { activeProjectId: string | null }) => unknown) => selector({ activeProjectId: "project-1" }) }))
 vi.mock("@/stores/files/useDirectoryStore", () => ({ useDirectoryStore: { getState: () => ({ currentDirectory: "/workspace/openchamber" }) } }))
 
 import { SettingsView } from "@/components/views/SettingsView"
 import { SettingsWindow } from "@/components/views/SettingsWindow"
+import { getSettingsPageMeta, resolveSettingsSlug } from "@/lib/settings/metadata"
 import { useUIStore } from "@/stores/useUIStore"
 
 describe("SettingsView", () => {
@@ -65,7 +54,19 @@ describe("SettingsView", () => {
     // Quick links appear in home page content; nav sidebar has items with same labels
     expect(screen.getAllByRole("button", { name: /Providers/i }).length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByRole("button", { name: /Agents/i }).length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByRole("button", { name: /Skills Catalog/i }).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByRole("button", { name: /Installed Skills/i }).length).toBeGreaterThanOrEqual(1)
+  })
+
+  test("does not expose remote instance settings", () => {
+    expect(getSettingsPageMeta(["remote", "instances"].join("-"))).toBeNull()
+  })
+
+  test("does not expose the removed prompt template editor", () => {
+    expect(getSettingsPageMeta(["magic", "prompts"].join("-"))).toBeNull()
+  })
+
+  test("redirects the removed skills catalog location to installed skills", () => {
+    expect(resolveSettingsSlug("skills.catalog")).toBe("skills.installed")
   })
 
   test("clicking a navigation item updates settingsPage and renders that page", async () => {

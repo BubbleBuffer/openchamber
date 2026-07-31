@@ -17,26 +17,36 @@ export interface ServerStartupRuntime {
     port: number;
     bindHost: string;
   }): Promise<{ activePort: number }>;
-  attachProcessHandlers(opts: { attachSignals?: boolean }): void;
+  attachProcessHandlers(opts: { attachSignals?: boolean }): ProcessHandlersDisposer;
+}
+
+export type ProcessHandlersDisposer = () => void;
+type RuntimeFactory = (...args: any[]) => any;
+
+export interface StartupPipelineRunResult {
+  terminalRuntime: any;
+  messageStreamRuntime: any;
+  activePort: number;
+  disposeProcessHandlers: ProcessHandlersDisposer;
 }
 
 export interface StartupPipelineDeps {
-  createTerminalRuntime: Function;
-  createMessageStreamWsRuntime: Function;
-  createServerStartupRuntime: Function;
+  createTerminalRuntime: RuntimeFactory;
+  createMessageStreamWsRuntime: RuntimeFactory;
+  createServerStartupRuntime: RuntimeFactory;
 }
 
 export interface StartupPipelineRuntime {
-  run(opts: any): Promise<{ terminalRuntime: any; messageStreamRuntime: any; activePort: number }>;
+  run(opts: any): Promise<StartupPipelineRunResult>;
 }
 
 export interface BootstrapDeps {
-  createUiAuth: Function;
-  registerServerStatusRoutes: Function;
-  registerCommonRequestMiddleware: Function;
-  registerAuthAndAccessRoutes: Function;
-  registerNotificationRoutes: Function;
-  registerOpenChamberRoutes: Function;
+  createUiAuth: RuntimeFactory;
+  registerServerStatusRoutes: RuntimeFactory;
+  registerCommonRequestMiddleware: RuntimeFactory;
+  registerAuthAndAccessRoutes: RuntimeFactory;
+  registerNotificationRoutes: RuntimeFactory;
+  registerOpenChamberRoutes: RuntimeFactory;
   express: typeof import("express");
 }
 
@@ -52,9 +62,9 @@ export interface ShutdownDeps {
   setIsShuttingDown: (value: boolean) => void;
   syncToHmrState: () => void;
   openCodeWatcherRuntime: any;
+  resetGlobalWatcherStartPromise?: () => void;
   sessionRuntime: any;
   notificationRuntime?: any;
-  scheduledTasksRuntime?: any;
   getHealthCheckInterval: () => number | null;
   clearHealthCheckInterval: (value: number) => void;
   getTerminalRuntime: () => any;
@@ -68,6 +78,8 @@ export interface ShutdownDeps {
   getServer: () => any;
   getUiAuthController: () => any;
   setUiAuthController: (value: any) => void;
+  getProcessHandlersDisposer?: () => ProcessHandlersDisposer | null;
+  setProcessHandlersDisposer?: (value: ProcessHandlersDisposer | null) => void;
   serverSessionMachineBridge: any;
   sessionActorRegistry: any;
   sessionEffectExecutor: any;
@@ -132,7 +144,7 @@ export interface CliEntryDeps {
   parseServeCliOptions: (deps: CliOptionsDeps) => ParseServeCliOptionsResult;
   defaultPort: number;
   setExitOnShutdown: (value: boolean) => void;
-  startServer: Function;
+  startServer: RuntimeFactory;
 }
 
 export interface BootstrapDomain {

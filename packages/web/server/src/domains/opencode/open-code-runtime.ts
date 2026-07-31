@@ -49,7 +49,6 @@ interface OpenCodeRuntimeConfig {
 }
 
 export function createOpenCodeRuntime({
-  eventBus,
   config,
 }: {
   eventBus: any;
@@ -98,8 +97,8 @@ export function createOpenCodeRuntime({
     resolvedWslDistro: null,
   };
 
-  // ── Auth module (async) ─────────────────────────────────────────
-  const authRuntimePromise = createOpenCodeAuthStateRuntime({
+  // ── Auth module ─────────────────────────────────────────────────
+  const authRuntime = createOpenCodeAuthStateRuntime({
     crypto,
     process,
     getAuthPassword: () => state.openCodeAuthPassword,
@@ -152,11 +151,8 @@ export function createOpenCodeRuntime({
   };
 
   const networkRuntime = createOpenCodeNetworkRuntime({
-    // @ts-ignore - state proxy types don't precisely match nullable internals
-    state: networkState,
-    getOpenCodeAuthHeaders: () =>
-      // @ts-ignore - authRuntime is a Promise, caller awaits below
-      authRuntimePromise.then((r) => r.getOpenCodeAuthHeaders()),
+    state: networkState as any,
+    getOpenCodeAuthHeaders: () => authRuntime.getOpenCodeAuthHeaders(),
   });
 
   // ── setOpenCodePort (provided to lifecycle as a dep) ───────────
@@ -206,24 +202,19 @@ export function createOpenCodeRuntime({
   };
 
   // ── Lifecycle module ───────────────────────────────────────────
-  // @ts-ignore - lifecycle.js has no types and uses `any`
   const lifecycleRuntime = createOpenCodeLifecycleRuntime({
     state,
     env,
     syncToHmrState,
     syncFromHmrState,
-    getOpenCodeAuthHeaders: () =>
-      // @ts-ignore - authRuntime is a Promise, caller awaits below
-      authRuntimePromise.then((r) => r.getOpenCodeAuthHeaders()),
+    getOpenCodeAuthHeaders: () => authRuntime.getOpenCodeAuthHeaders(),
     buildOpenCodeUrl: (path: any, prefix: any) =>
       networkRuntime.buildOpenCodeUrl(path, prefix),
     waitForReady: networkRuntime.waitForReady,
     normalizeApiPrefix: normalizeApiPrefix,
     applyOpencodeBinaryFromSettings,
     ensureOpencodeCliEnv,
-    ensureLocalOpenCodeServerPassword: () =>
-      // @ts-ignore - authRuntime is a Promise, caller awaits below
-      authRuntimePromise.then((r) => r.ensureLocalOpenCodeServerPassword()),
+    ensureLocalOpenCodeServerPassword: () => authRuntime.ensureLocalOpenCodeServerPassword(),
     buildWslExecArgs,
     resolveWslExecutablePath,
     resolveManagedOpenCodeLaunchSpec,
@@ -246,9 +237,7 @@ export function createOpenCodeRuntime({
     // Accessors
     getUrl: (path: any, prefixOverride: any) =>
       networkRuntime.buildOpenCodeUrl(path, prefixOverride),
-    getAuthHeaders: () =>
-      // @ts-ignore - authRuntime is a Promise
-      authRuntimePromise.then((r) => r.getOpenCodeAuthHeaders()),
+    getAuthHeaders: () => authRuntime.getOpenCodeAuthHeaders(),
     isReady: () => state.isOpenCodeReady,
     isRestarting: () => state.isRestartingOpenCode,
     getPort: () => state.openCodePort,
@@ -257,9 +246,7 @@ export function createOpenCodeRuntime({
     isExternal: () => state.isExternalOpenCode,
     getOpenCodeAuthSource: () => state.openCodeAuthSource,
     getLastError: () => state.lastOpenCodeError,
-    isConnectionSecure: () =>
-      // @ts-ignore - authRuntime is a Promise
-      authRuntimePromise.then((r) => r.isOpenCodeConnectionSecure()),
+    isConnectionSecure: () => authRuntime.isOpenCodeConnectionSecure(),
     getNotReadySince: () => state.openCodeNotReadySince,
     getIsShuttingDown: () => state.isShuttingDown,
     getHealthCheckInterval: () => state.healthCheckInterval,
@@ -303,6 +290,8 @@ export function createOpenCodeRuntime({
         state.openCodePort = restored.openCodePort;
       if (restored.openCodeBaseUrl !== undefined)
         state.openCodeBaseUrl = restored.openCodeBaseUrl;
+      if (restored.isExternalOpenCode !== undefined)
+        state.isExternalOpenCode = restored.isExternalOpenCode;
       if (restored.isShuttingDown !== undefined)
         state.isShuttingDown = restored.isShuttingDown;
       if (restored.openCodeWorkingDirectory !== undefined)
@@ -318,7 +307,7 @@ export function createOpenCodeRuntime({
 
     // Internal access
     getLifecycleRuntime: () => lifecycleRuntime,
-    getAuthRuntime: () => authRuntimePromise,
+    getAuthRuntime: () => authRuntime,
     getNetworkRuntime: () => networkRuntime,
     getState: () => state,
   };

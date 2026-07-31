@@ -7,6 +7,9 @@ import {
   generateRegistrationOptions,
   verifyAuthenticationResponse,
   verifyRegistrationResponse,
+  type AuthenticationResponseJSON,
+  type AuthenticatorTransportFuture,
+  type RegistrationResponseJSON,
 } from "@simplewebauthn/server";
 import type { Request } from "express";
 import type {
@@ -16,6 +19,10 @@ import type {
   PasskeyControllerDeps,
   PasskeyController,
 } from "./types.js";
+import {
+  getCurrentRequestOrigin,
+  getCurrentRpId,
+} from "./passkey-request.js";
 
 const DEFAULT_STORE_VERSION = 1;
 const DEFAULT_CHALLENGE_TTL_MS = 5 * 60 * 1000;
@@ -52,56 +59,6 @@ function normalizeLabel(value: unknown, fallback: string): string {
   }
   const normalized = value.trim().replace(/\s+/g, " ");
   return normalized ? normalized.slice(0, 120) : fallback;
-}
-
-function normalizeHost(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return "";
-  }
-
-  if (trimmed.startsWith("[")) {
-    const end = trimmed.indexOf("]");
-    return end >= 0
-      ? trimmed.slice(1, end).toLowerCase()
-      : trimmed.toLowerCase();
-  }
-
-  const colonIndex = trimmed.indexOf(":");
-  return (colonIndex >= 0 ? trimmed.slice(0, colonIndex) : trimmed).toLowerCase();
-}
-
-function getCurrentRequestOrigin(req: Request): string {
-  const forwardedProto =
-    typeof req.headers["x-forwarded-proto"] === "string"
-      ? req.headers["x-forwarded-proto"].split(",")[0].trim().toLowerCase()
-      : "";
-  const protocol =
-    forwardedProto || ((req as any).socket?.encrypted ? "https" : "http");
-  const forwardedHost =
-    typeof req.headers["x-forwarded-host"] === "string"
-      ? req.headers["x-forwarded-host"].split(",")[0].trim()
-      : "";
-  const host =
-    forwardedHost ||
-    (typeof req.headers.host === "string" ? req.headers.host.trim() : "");
-
-  if (!host) {
-    return "";
-  }
-
-  return `${protocol}://${host}`;
-}
-
-function getCurrentRpId(req: Request): string {
-  const forwardedHost =
-    typeof req.headers["x-forwarded-host"] === "string"
-      ? req.headers["x-forwarded-host"].split(",")[0].trim()
-      : "";
-  const host =
-    forwardedHost ||
-    (typeof req.headers.host === "string" ? req.headers.host.trim() : "");
-  return normalizeHost(host || (req as any).hostname || "");
 }
 
 function parseStoredPasskey(record: unknown): StoredPasskey | null {
@@ -250,12 +207,18 @@ export function createUiPasskeys({
 
     try {
       const settings = await readSettingsFromDiskMigrated?.();
+      const publicOrigin =
+        settings &&
+        typeof settings === "object" &&
+        "publicOrigin" in settings &&
+        typeof settings.publicOrigin === "string"
+          ? settings.publicOrigin.trim()
+          : "";
       if (
-        typeof (settings as any)?.publicOrigin === "string" &&
-        (settings as any).publicOrigin.trim().length > 0
+        publicOrigin.length > 0
       ) {
         origins.add(
-          new URL((settings as any).publicOrigin.trim()).origin,
+          new URL(publicOrigin).origin,
         );
       }
     } catch {
@@ -290,10 +253,10 @@ export function createUiPasskeys({
       hasPasskeys:
         Boolean(rpID) &&
         getPasskeysForRpId(store, rpID).length > 0,
-      passkeyCount: Boolean(rpID)
+      passkeyCount: rpID
         ? getPasskeysForRpId(store, rpID).length
         : 0,
-      rpID,
+      rpID: rpID || null,
     };
   }
 
@@ -428,7 +391,7 @@ export function createUiPasskeys({
       excludeCredentials: getPasskeysForRpId(store, rpID).map(
         (passkey) => ({
           id: passkey.id,
-          transports: passkey.transports as any,
+          transports: passkey.transports as AuthenticatorTransportFuture[],
         }),
       ),
       authenticatorSelection: {
@@ -456,16 +419,20 @@ export function createUiPasskeys({
     };
   }
 
-  async function finishRegistration(payload: any) {
+  async function finishRegistration(payload: unknown) {
     assertEnabled();
     cleanupChallengeMap(registrationChallenges);
 
     const store = loadStore();
+    const candidate =
+      payload && typeof payload === "object"
+        ? payload as Record<string, unknown>
+        : {};
     const requestId =
-      typeof payload?.requestId === "string"
-        ? payload.requestId
+      typeof candidate.requestId === "string"
+        ? candidate.requestId
         : "";
-    const response = payload?.response;
+    const response = candidate.response as RegistrationResponseJSON;
 
     const matchingRecord = requestId
       ? registrationChallenges.get(requestId)
@@ -517,7 +484,7 @@ export function createUiPasskeys({
           )
         : [],
       deviceType: credentialDeviceType,
-      backedUp: credentialBackedUp as boolean,
+      backedUp: credentialBackedUp,
       createdAt: Date.now(),
       lastUsedAt: null,
       label: matchingRecord.label || "Unnamed device",
@@ -559,7 +526,7 @@ export function createUiPasskeys({
       userVerification: "required",
       allowCredentials: passkeys.map((passkey) => ({
         id: passkey.id,
-        transports: passkey.transports as any,
+        transports: passkey.transports as AuthenticatorTransportFuture[],
       })),
     });
 
@@ -580,15 +547,19 @@ export function createUiPasskeys({
     };
   }
 
-  async function finishAuthentication(payload: any) {
+  async function finishAuthentication(payload: unknown) {
     assertEnabled();
     cleanupChallengeMap(authenticationChallenges);
 
+    const candidate =
+      payload && typeof payload === "object"
+        ? payload as Record<string, unknown>
+        : {};
     const requestId =
-      typeof payload?.requestId === "string"
-        ? payload.requestId
+      typeof candidate.requestId === "string"
+        ? candidate.requestId
         : "";
-    const response = payload?.response;
+    const response = candidate.response as AuthenticationResponseJSON;
     const store = loadStore();
     const passkey = store.passkeys.find(
       (item) => item.id === response?.id,
@@ -624,7 +595,7 @@ export function createUiPasskeys({
         id: passkey.id,
         publicKey: Buffer.from(passkey.publicKey, "base64url"),
         counter: passkey.counter,
-        transports: passkey.transports as any,
+        transports: passkey.transports as AuthenticatorTransportFuture[],
       },
       requireUserVerification: true,
     });

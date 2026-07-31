@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createProxyMiddleware } from "http-proxy-middleware";
+import { apiError } from "../../contracts/common.js";
 
 import {
   applyForwardProxyResponseHeaders,
@@ -98,6 +99,7 @@ export const registerOpenCodeProxy = (app: any, deps: {
         return resolved;
       }
     } catch {
+      // Fall through to the configured base URL and then the local-port fallback.
     }
 
     const externalBase = normalizeProxyTarget(openCodeRuntime.getBaseUrl());
@@ -123,7 +125,9 @@ export const registerOpenCodeProxy = (app: any, deps: {
       if (keepaliveInterval) return;
       keepaliveInterval = setInterval(() => {
         if (!res.writableEnded) {
-          try { res.write(": keepalive\n\n"); } catch {}
+          try { res.write(": keepalive\n\n"); } catch {
+            // A closed response is handled by the request close listener.
+          }
         }
       }, 15_000);
     };
@@ -198,7 +202,7 @@ export const registerOpenCodeProxy = (app: any, deps: {
       }
       console.error("[proxy] OpenCode SSE proxy error:", (error as Error)?.message ?? error);
       if (!res.headersSent) {
-        res.status(503).json({ error: "OpenCode service unavailable" });
+        res.status(503).json(apiError("opencode_unavailable"));
       } else {
         res.end();
       }
@@ -213,6 +217,7 @@ export const registerOpenCodeProxy = (app: any, deps: {
           await (upstream.body as any).cancel();
         }
       } catch {
+        // The upstream may already be closed or unlocked during teardown.
       }
     }
   };
@@ -243,10 +248,7 @@ export const registerOpenCodeProxy = (app: any, deps: {
       !openCodeRuntime.getPort();
 
     if (stillWaiting) {
-      return res.status(503).json({
-        error: "OpenCode is restarting",
-        restarting: true,
-      });
+      return res.status(503).json({ ...apiError("opencode_unavailable"), restarting: true });
     }
 
     next();
@@ -277,6 +279,7 @@ export const registerOpenCodeProxy = (app: any, deps: {
             .map((project: any) => (typeof project?.path === "string" ? project.path.trim() : ""))
             .filter(Boolean);
         } catch {
+          // Missing or malformed settings simply means there are no extra project directories.
         }
 
         const seen = new Set(
@@ -307,6 +310,7 @@ export const registerOpenCodeProxy = (app: any, deps: {
                 }
               }
             } catch {
+              // A single unavailable project must not fail the global session response.
             }
           }
         }
@@ -353,7 +357,7 @@ export const registerOpenCodeProxy = (app: any, deps: {
       error: (err: Error, _req: any, res: any) => {
         console.error("[proxy] OpenCode proxy error:", err.message);
         if (res && !res.headersSent && typeof res.status === "function") {
-          res.status(503).json({ error: "OpenCode service unavailable" });
+          res.status(503).json(apiError("opencode_unavailable"));
         }
       },
     },

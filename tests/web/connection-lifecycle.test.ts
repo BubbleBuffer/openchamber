@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest"
+import { expect, test } from "vitest"
 import { describeWithOpenChamber } from "../helpers/integration-suite"
 
 describeWithOpenChamber("OpenChamber web connection lifecycle", {}, (ctx) => {

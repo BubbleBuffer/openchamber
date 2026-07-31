@@ -1,4 +1,4 @@
-import type { SessionMachineContext } from './context'
+import type { SessionMachineContext } from './context.js'
 
 export type SessionMachineEffect =
   | SessionMachineEffectSendPrompt

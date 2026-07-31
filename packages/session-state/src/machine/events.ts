@@ -10,7 +10,7 @@ import type {
   SessionPartRecord,
   SessionPermissionRecord,
   SessionQuestionRecord,
-} from './context'
+} from './context.js'
 
 // ---------------------------------------------------------------------------
 // Identity / Load

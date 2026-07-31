@@ -92,12 +92,6 @@ function sanitizeByMode(text: string, mode: string): string {
   return sanitizeForNotification(text);
 }
 
-interface ZenOutputItem {
-  type: string;
-  text?: string;
-  content?: unknown;
-}
-
 function extractZenOutputText(data: unknown): string | null {
   if (!data || typeof data !== "object") return null;
   const record = data as Record<string, unknown>;

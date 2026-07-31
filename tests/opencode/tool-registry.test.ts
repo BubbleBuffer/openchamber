@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "vitest"
+import { beforeAll, expect, test } from "vitest"
 import { createOpencodeClient, type OpencodeClient } from "@opencode-ai/sdk/v2"
 import { describeWithOpenCode } from "../helpers/integration-suite"
 

@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest"
 import type { Part } from "@/lib/opencode/client"
 import { setViewport } from "./helpers/browser"
 import { renderWithApp } from "./helpers/render"
-import { seedUIStore, seedChatRenderingStore } from "./helpers/stores"
+import { seedChatRenderingStore } from "./helpers/stores"
 import ChatMessage from "@/components/chat/ChatMessage"
 
 // ---------------------------------------------------------------------------
@@ -276,7 +276,10 @@ describe("ChatMessage", () => {
     renderWithApp(
       <ChatMessage
         message={assistantMsg({
-          error: { name: "APIError", data: { message: "API key authentication failed", isRetryable: true } } as any,
+          error: {
+            name: "APIError",
+            data: { message: "API key authentication failed", isRetryable: true },
+          } as NonNullable<Extract<MessageProp["info"], { role: "assistant" }>["error"]>,
         })}
       />,
     )

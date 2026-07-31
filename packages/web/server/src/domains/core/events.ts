@@ -7,7 +7,6 @@ export const EVENTS = {
   SESSION_ACTIVITY_CHANGED: "session:activity-changed",
   SESSION_NEEDS_ATTENTION: "session:needs-attention",
   NOTIFICATION_SEND_UI: "notification:send-ui",
-  NOTIFICATION_SEND_DESKTOP: "notification:send-desktop",
   NOTIFICATION_SEND_PUSH: "notification:send-push",
   SERVER_PORT_BOUND: "server:port-bound",
 } as const;

@@ -8,8 +8,8 @@ vi.mock("./protocol.js", () => ({
     capturedFrames.push(payload);
     return true;
   },
-  sendMessageStreamWsEvent: (_socket: unknown, payload: unknown) => {
-    capturedEvents.push(payload);
+  sendMessageStreamWsEvent: (_socket: unknown, payload: unknown, options: unknown) => {
+    capturedEvents.push({ payload, options });
     return true;
   },
   parseSseEventEnvelope: () => null,
@@ -56,7 +56,7 @@ function stubHub(): any {
   };
 }
 
-describe("createGlobalMessageStreamWsBridge — stall/resume dispatch + heartbeat removal", () => {
+describe("createGlobalMessageStreamWsBridge — stall/resume dispatch", () => {
   beforeEach(() => {
     capturedFrames.length = 0;
     capturedEvents.length = 0;
@@ -114,28 +114,27 @@ describe("createGlobalMessageStreamWsBridge — stall/resume dispatch + heartbea
     });
   });
 
-  it("does NOT send openchamber:heartbeat data frames to clients", () => {
+  it("replays events strictly after the requested event ID", () => {
     const hub = stubHub();
+    hub.replayAfter = vi.fn(() => [
+      {
+        payload: { type: "session.updated", properties: { id: "session-after" } },
+        directory: "/projects/a",
+        eventId: "evt-after",
+      },
+    ]);
     const bridge = createBridge(hub);
     const socket = stubSocket();
 
-    bridge.accept(socket, { requestedLastEventId: "" });
+    bridge.accept(socket, { requestedLastEventId: "evt-before" });
 
-    // Clear any frames/events sent during accept
-    capturedFrames.length = 0;
-    capturedEvents.length = 0;
-
-    // Advance timers past several heartbeat intervals
-    vi.advanceTimersByTime(5000);
-
-    const heartbeatFrames = capturedFrames.filter(
-      (f: unknown) => (f as Record<string, unknown>).type === "openchamber:heartbeat",
-    );
-    const heartbeatEvents = capturedEvents.filter(
-      (e: unknown) => (e as Record<string, unknown>).type === "openchamber:heartbeat",
-    );
-
-    expect(heartbeatFrames).toHaveLength(0);
-    expect(heartbeatEvents).toHaveLength(0);
+    expect(hub.replayAfter).toHaveBeenCalledWith("evt-before");
+    expect(capturedEvents).toEqual([
+      {
+        payload: { type: "session.updated", properties: { id: "session-after" } },
+        options: { directory: "/projects/a", eventId: "evt-after" },
+      },
+    ]);
   });
+
 });

@@ -1,5 +1,16 @@
 import type { Express, Request, Response } from "express";
 import type { IncomingMessage } from "node:http";
+import {
+  parseTerminalCreateRequest,
+  parseTerminalInputRequest,
+  parseTerminalKillRequest,
+  parseTerminalResizeRequest,
+  parseTerminalRestartRequest,
+  parseTerminalSseEvent,
+  TERMINAL_SSE_CONTENT_TYPE,
+  terminalError,
+  type TerminalErrorCode,
+} from "../../contracts/terminal.js";
 import type { TerminalDomainDependencies, PtyProcess } from "./types.js";
 import { MAX_TERMINAL_SESSIONS } from "./types.js";
 import { getPtyProvider, getTerminalShellCandidates, spawnTerminalPtyWithFallback, sanitizeTerminalEnv } from "./pty.js";
@@ -20,6 +31,9 @@ export const registerTerminalRoutes = (
 ): void => {
   const { fs, buildAugmentedPath, searchPathFor, isExecutable } = deps;
   const terminalSessions = getTerminalSessions();
+  const respondError = (res: Response, status: number, code: TerminalErrorCode): void => {
+    res.status(status).json(terminalError(code));
+  };
 
   const getSessionIdParam = (params: Record<string, string | string[]>): string => {
     const val = params.sessionId;
@@ -29,24 +43,21 @@ export const registerTerminalRoutes = (
   app.post("/api/terminal/create", async (req: Request, res: Response) => {
     try {
       if (getSessionCount() >= MAX_TERMINAL_SESSIONS) {
-        res.status(429).json({ error: "Maximum terminal sessions reached" });
+        respondError(res, 429, "terminal_rate_limited");
         return;
       }
 
-      const { cwd, cols, rows } = req.body as {
-        cwd?: string;
-        cols?: number;
-        rows?: number;
-      };
-      if (!cwd) {
-        res.status(400).json({ error: "cwd is required" });
+      const parsedRequest = parseTerminalCreateRequest(req.body);
+      if (!parsedRequest.ok) {
+        respondError(res, 400, "terminal_invalid_request");
         return;
       }
+      const { cwd, cols, rows } = parsedRequest.value;
 
       try {
         await fs.promises.access(cwd);
       } catch {
-        res.status(400).json({ error: "Invalid working directory" });
+        respondError(res, 400, "terminal_invalid_request");
         return;
       }
 
@@ -105,8 +116,7 @@ export const registerTerminalRoutes = (
       });
     } catch (error) {
       console.error("Failed to create terminal session:", error);
-      const message = error instanceof Error ? error.message : "Failed to create terminal session";
-      res.status(500).json({ error: message });
+      respondError(res, 500, "terminal_process_failed");
     }
   });
 
@@ -117,11 +127,11 @@ export const registerTerminalRoutes = (
       const session = terminalSessions.get(sessionId);
 
       if (!session) {
-        res.status(404).json({ error: "Terminal session not found" });
+        respondError(res, 404, "terminal_session_not_found");
         return;
       }
 
-      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Content-Type", TERMINAL_SSE_CONTENT_TYPE);
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
       res.setHeader("X-Accel-Buffering", "no");
@@ -131,9 +141,8 @@ export const registerTerminalRoutes = (
       session.lastActivity = Date.now();
 
       const ptyBackend = session.ptyBackend || "unknown";
-      res.write(
-        `data: ${JSON.stringify({ type: "connected", runtime: terminalRuntimeName, ptyBackend })}\n\n`,
-      );
+      const connectedEvent = parseTerminalSseEvent({ type: "connected", runtime: terminalRuntimeName, ptyBackend });
+      if (connectedEvent.ok) res.write(`data: ${JSON.stringify(connectedEvent.value)}\n\n`);
 
       const heartbeatInterval = setInterval(() => {
         try {
@@ -146,9 +155,9 @@ export const registerTerminalRoutes = (
       const dataHandler = (data: string) => {
         try {
           session.lastActivity = Date.now();
-          const ok = res.write(
-            `data: ${JSON.stringify({ type: "data", data })}\n\n`,
-          );
+          const streamEvent = parseTerminalSseEvent({ type: "data", data });
+          if (!streamEvent.ok) return;
+          const ok = res.write(`data: ${JSON.stringify(streamEvent.value)}\n\n`);
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if (!ok && (session.ptyProcess as any).pause) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -174,9 +183,8 @@ export const registerTerminalRoutes = (
         signal: number;
       }) => {
         try {
-          res.write(
-            `data: ${JSON.stringify({ type: "exit", exitCode, signal })}\n\n`,
-          );
+          const streamEvent = parseTerminalSseEvent({ type: "exit", exitCode, signal });
+          if (streamEvent.ok) res.write(`data: ${JSON.stringify(streamEvent.value)}\n\n`);
           res.end();
         } catch {
           // ignore
@@ -226,11 +234,16 @@ export const registerTerminalRoutes = (
       const session = terminalSessions.get(sessionId);
 
       if (!session) {
-        res.status(404).json({ error: "Terminal session not found" });
+        respondError(res, 404, "terminal_session_not_found");
         return;
       }
 
-      const data = typeof req.body === "string" ? req.body : "";
+      const parsedInput = parseTerminalInputRequest(req.body);
+      if (!parsedInput.ok) {
+        respondError(res, 400, "terminal_invalid_request");
+        return;
+      }
+      const data = parsedInput.value;
 
       try {
         session.ptyProcess.write(data);
@@ -238,8 +251,7 @@ export const registerTerminalRoutes = (
         res.json({ success: true });
       } catch (error) {
         console.error("Failed to write to terminal:", error);
-        const message = error instanceof Error ? error.message : "Failed to write to terminal";
-        res.status(500).json({ error: message });
+        respondError(res, 500, "terminal_process_failed");
       }
     },
   );
@@ -251,15 +263,16 @@ export const registerTerminalRoutes = (
       const session = terminalSessions.get(sessionId);
 
       if (!session) {
-        res.status(404).json({ error: "Terminal session not found" });
+        respondError(res, 404, "terminal_session_not_found");
         return;
       }
 
-      const { cols, rows } = req.body as { cols?: number; rows?: number };
-      if (!cols || !rows) {
-        res.status(400).json({ error: "cols and rows are required" });
+      const parsedResize = parseTerminalResizeRequest(req.body);
+      if (!parsedResize.ok) {
+        respondError(res, 400, "terminal_invalid_request");
         return;
       }
+      const { cols, rows } = parsedResize.value;
 
       try {
         session.ptyProcess.resize(cols, rows);
@@ -267,8 +280,7 @@ export const registerTerminalRoutes = (
         res.json({ success: true, cols, rows });
       } catch (error) {
         console.error("Failed to resize terminal:", error);
-        const message = error instanceof Error ? error.message : "Failed to resize terminal";
-        res.status(500).json({ error: message });
+        respondError(res, 500, "terminal_process_failed");
       }
     },
   );
@@ -280,7 +292,7 @@ export const registerTerminalRoutes = (
       const session = terminalSessions.get(sessionId);
 
       if (!session) {
-        res.status(404).json({ error: "Terminal session not found" });
+        respondError(res, 404, "terminal_session_not_found");
         return;
       }
 
@@ -291,8 +303,7 @@ export const registerTerminalRoutes = (
         res.json({ success: true });
       } catch (error) {
         console.error("Failed to close terminal:", error);
-        const message = error instanceof Error ? error.message : "Failed to close terminal";
-        res.status(500).json({ error: message });
+        respondError(res, 500, "terminal_process_failed");
       }
     },
   );
@@ -301,16 +312,12 @@ export const registerTerminalRoutes = (
     "/api/terminal/:sessionId/restart",
     async (req: Request, res: Response) => {
       const sessionId = getSessionIdParam(req.params);
-      const { cwd, cols, rows } = req.body as {
-        cwd?: string;
-        cols?: number;
-        rows?: number;
-      };
-
-      if (!cwd) {
-        res.status(400).json({ error: "cwd is required" });
+      const parsedRequest = parseTerminalRestartRequest(req.body);
+      if (!parsedRequest.ok) {
+        respondError(res, 400, "terminal_invalid_request");
         return;
       }
+      const { cwd, cols, rows } = parsedRequest.value;
 
       const existingSession = terminalSessions.get(sessionId);
       if (existingSession) {
@@ -326,11 +333,11 @@ export const registerTerminalRoutes = (
         try {
           const stats = await fs.promises.stat(cwd);
           if (!stats.isDirectory()) {
-            res.status(400).json({ error: "Invalid working directory: not a directory" });
+            respondError(res, 400, "terminal_invalid_request");
             return;
           }
         } catch {
-          res.status(400).json({ error: "Invalid working directory: not accessible" });
+          respondError(res, 400, "terminal_invalid_request");
           return;
         }
 
@@ -392,8 +399,7 @@ export const registerTerminalRoutes = (
         });
       } catch (error) {
         console.error("Failed to restart terminal session:", error);
-        const message = error instanceof Error ? error.message : "Failed to restart terminal session";
-        res.status(500).json({ error: message });
+        respondError(res, 500, "terminal_process_failed");
       }
     },
   );
@@ -401,10 +407,12 @@ export const registerTerminalRoutes = (
   app.post(
     "/api/terminal/force-kill",
     (req: Request, res: Response) => {
-      const { sessionId, cwd } = req.body as {
-        sessionId?: string;
-        cwd?: string;
-      };
+      const parsedRequest = parseTerminalKillRequest(req.body);
+      if (!parsedRequest.ok) {
+        respondError(res, 400, "terminal_invalid_request");
+        return;
+      }
+      const { sessionId, cwd } = parsedRequest.value;
       let killedCount = 0;
 
       if (sessionId) {

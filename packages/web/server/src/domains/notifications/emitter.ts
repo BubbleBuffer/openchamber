@@ -8,9 +8,6 @@ export const createNotificationEmitterRuntime = (
   dependencies: NotificationEmitterDeps
 ): NotificationEmitterRuntime => {
   const {
-    process,
-    getDesktopNotifyEnabled,
-    desktopNotifyPrefix,
     getUiNotificationClients,
     getBroadcastGlobalUiEvent,
   } = dependencies;
@@ -19,25 +16,12 @@ export const createNotificationEmitterRuntime = (
     res.write(`data: ${JSON.stringify(payload)}\n\n`);
   };
 
-  const emitDesktopNotification = (payload: any): void => {
-    const desktopNotifyEnabled = getDesktopNotifyEnabled();
-    if (!desktopNotifyEnabled) return;
-    if (!payload || typeof payload !== "object") return;
-    try {
-      process.stdout.write(`${desktopNotifyPrefix}${JSON.stringify(payload)}\n`);
-    } catch {
-      // ignore
-    }
-  };
-
   const broadcastUiNotification = (payload: any): void => {
-    const desktopNotifyEnabled = getDesktopNotifyEnabled();
     if (!payload || typeof payload !== "object") return;
     const syntheticPayload = {
       type: "openchamber:notification",
       properties: {
         ...payload,
-        desktopStdoutActive: desktopNotifyEnabled,
       },
     };
 
@@ -63,7 +47,6 @@ export const createNotificationEmitterRuntime = (
 
   return {
     writeSseEvent,
-    emitDesktopNotification,
     broadcastUiNotification,
   };
 };
