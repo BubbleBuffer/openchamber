@@ -6,7 +6,7 @@ parent_spec: .superpawers/specs/2026-07-31-agent-ui-framework-design.md
 created: 2026-07-31
 updated: 2026-07-31
 active_child: .superpawers/plans/2026-07-31-agent-ui-framework-composer-slice.md
-next_action: Execute the composer child plan test-first while keeping both framework packages workspace-private.
+next_action: Keep composer deferred until the public 0.1.0-alpha.1 package gate is published and pinned in the lockfile.
 ---
 
 # Agent UI Framework: OpenChamber-First Extraction Program
@@ -126,9 +126,13 @@ packages do not require Tailwind.
 
 Status: pending
 
-Perform an independent public-API and packaging review. Choose a dedicated
-repository or an owned pinned prerelease artifact. Reject sibling filesystem
-links and unsynchronized source copying.
+The timeline slice has been promoted into the dedicated local `agent-ui`
+repository as lockstep `@bubblebuffer/agent-ui-core` and
+`@bubblebuffer/agent-ui-react` `0.1.0-alpha.1` packages. OpenChamber consumes
+the registry declaration and retains no framework source aliases or package
+directories. The prerelease is intentionally not yet published; regenerate its
+registry lock entry only after the staged trusted publish completes. Reject
+sibling filesystem links and unsynchronized source copying.
 
 Write a separate BubblePaw adoption plan covering its adapter, timeline,
 composer, activity/tool evidence, and visual regression proof. Do not begin

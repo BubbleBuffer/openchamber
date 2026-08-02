@@ -64,8 +64,6 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: '@opencode-ai/sdk/v2', replacement: path.resolve(__dirname, '../../node_modules/@opencode-ai/sdk/dist/v2/client.js') },
-      { find: '@openchamber/agent-ui-react', replacement: path.resolve(__dirname, '../agent-ui-react/src/index.ts') },
-      { find: '@openchamber/agent-ui-core', replacement: path.resolve(__dirname, '../agent-ui-core/src/index.ts') },
       { find: '@openchamber/session-state', replacement: path.resolve(__dirname, '../session-state/src/index.ts') },
       { find: '@web', replacement: path.resolve(__dirname, './src') },
       { find: '@contracts', replacement: path.resolve(__dirname, './server/src/contracts') },

@@ -14,8 +14,6 @@ export default defineConfig({
     alias: {
       "@": uiSrc,
       "@contracts": path.resolve(repoRoot, "packages/web/server/src/contracts"),
-      "@openchamber/agent-ui-react": path.resolve(repoRoot, "packages/agent-ui-react/src/index.ts"),
-      "@openchamber/agent-ui-core": path.resolve(repoRoot, "packages/agent-ui-core/src/index.ts"),
       "@tanstack/react-virtual": path.resolve(reactDir, "mocks/tanstack-react-virtual.ts"),
     },
   },

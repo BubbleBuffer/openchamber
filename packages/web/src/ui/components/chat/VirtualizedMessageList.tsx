@@ -1,6 +1,6 @@
 import React from 'react';
-import { AgentTimeline } from '@openchamber/agent-ui-react';
-import type { AgentTimelineHandle } from '@openchamber/agent-ui-react';
+import { AgentTimeline } from '@bubblebuffer/agent-ui-react';
+import type { AgentTimelineHandle } from '@bubblebuffer/agent-ui-react';
 import type { AnimationHandlers, ContentChangeReason } from '@/components/chat/timeline/types';
 import type { ChatMessageEntry } from './lib/turns/types';
 import type { StreamPhase } from './message/types';

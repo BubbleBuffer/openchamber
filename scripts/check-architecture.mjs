@@ -6,7 +6,6 @@ import {
   readdirSync,
 } from "node:fs";
 import {
-  dirname,
   extname,
   relative,
   resolve,
@@ -33,15 +32,6 @@ const EXCLUDED_DIRECTORY_NAMES = new Set([
 const TEST_FILE_PATTERN = /\.(?:bench|spec|test)\.[cm]?[jt]sx?$/;
 const DECLARATION_FILE_PATTERN = /\.d\.[cm]?ts$/;
 const METRIC_NAMES = Object.keys(DEFAULT_ARCHITECTURE_POLICY);
-const FRAMEWORK_PACKAGES = Object.freeze({
-  "agent-ui-core": new Set(),
-  "agent-ui-react": new Set([
-    "@openchamber/agent-ui-core",
-    "@tanstack/react-virtual",
-    "react",
-    "react-dom",
-  ]),
-});
 
 const normalizePath = (value) => value.split(sep).join("/");
 
@@ -243,46 +233,6 @@ function validateBaseline(policy, baseline, failures) {
   }
 }
 
-function importSpecifiers(source) {
-  const withoutComments = stripComments(source);
-  const specifiers = new Set();
-  const pattern = /(?:\bfrom\s*|\bimport\s*\(\s*|^\s*import\s*)["']([^"']+)["']/gm;
-  for (const match of withoutComments.matchAll(pattern)) specifiers.add(match[1]);
-  return [...specifiers];
-}
-
-function validateFrameworkImports(root, files, failures) {
-  for (const file of files) {
-    const path = normalizePath(relative(root, file));
-    const packageName = Object.keys(FRAMEWORK_PACKAGES).find((name) => (
-      path.startsWith(`packages/${name}/src/`)
-    ));
-    if (!packageName) continue;
-
-    const packageRoot = resolve(root, "packages", packageName);
-    const allowedExternals = FRAMEWORK_PACKAGES[packageName];
-    for (const specifier of importSpecifiers(readFileSync(file, "utf8"))) {
-      if (specifier.endsWith(".css") || specifier.includes("tailwind")) {
-        failures.push(`${path}: framework import is not headless: ${specifier}`);
-        continue;
-      }
-      if (specifier.startsWith(".")) {
-        const target = resolve(dirname(file), specifier);
-        if (target !== packageRoot && !target.startsWith(`${packageRoot}${sep}`)) {
-          failures.push(
-            `${path}: framework import escapes package boundary: ${normalizePath(relative(root, target))}`,
-          );
-        }
-        continue;
-      }
-
-      const allowed = [...allowedExternals].some((external) => (
-        specifier === external || specifier.startsWith(`${external}/`)
-      ));
-      if (!allowed) failures.push(`${path}: framework external import is not allowed: ${specifier}`);
-    }
-  }
-}
 
 export function createArchitectureSnapshot({
   root = process.cwd(),
@@ -346,7 +296,6 @@ export function auditArchitecture({
       measureSource(readFileSync(file, "utf8")),
     ]),
   );
-  validateFrameworkImports(root, files, failures);
 
   for (const path of Object.keys(baseline)) {
     if (classifications[path]) failures.push(`source is both classified and baselined: ${path}`);

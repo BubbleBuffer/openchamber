@@ -43,8 +43,6 @@
     "pack:session-state": "npm run --prefix packages/session-state pack",
     "pack:web": "npm run --prefix packages/web pack",
     "smoke:packages": "node scripts/smoke-package-tarballs.mjs",
-    "smoke:agent-ui": "node scripts/smoke-agent-ui-tarballs.mjs",
-    "verify:agent-ui-packages": "node scripts/verify-agent-ui-packages.mjs",
     "docs:validate": "node scripts/docs/validate-docs.mjs",
     "check:contracts": "node scripts/check-network-contracts.mjs",
     "architecture:check": "node scripts/check-architecture.mjs",
