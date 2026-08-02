@@ -1,0 +1,42 @@
+{
+  "name": "@openchamber/agent-ui-react",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun run --cwd ../agent-ui-core build && tsc -p tsconfig.build.json",
+    "type-check": "bun run --cwd ../agent-ui-core build && tsc --noEmit",
+    "test": "bun run --cwd ../agent-ui-core build && vitest run",
+    "lint": "eslint \"./src/**/*.{ts,tsx}\" --config ../../eslint.config.js"
+  },
+  "dependencies": {
+    "@openchamber/agent-ui-core": "0.0.0",
+    "@tanstack/react-virtual": "^3.13.24"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.2.0",
+    "happy-dom": "^15.11.7",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "typescript": "~5.8.3",
+    "vitest": "^4.1.5"
+  }
+}

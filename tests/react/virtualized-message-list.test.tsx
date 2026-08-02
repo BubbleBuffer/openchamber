@@ -8,8 +8,8 @@
  * - Imperative handle (scrollToMessageId) calls into virtualizer
  * - Streaming state correctly forwarded to MessageListEntry
  *
- * @tanstack/react-virtual is aliased in vitest.config.ts to a local mock
- * so that useVirtualizer and its helpers can be controlled from the test.
+ * The framework's @tanstack/react-virtual dependency is aliased in
+ * vitest.config.ts so layout and navigation can be controlled here.
  */
 
 import React from "react"
@@ -61,21 +61,6 @@ vi.mock("@/components/chat/message/FadeInOnReveal", () => ({
   FadeInDisabledProvider: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
   ),
-}))
-
-vi.mock("@/components/chat/hooks/useChatScrollManager", () => ({
-  useChatScrollManager: () => ({
-    isAtBottom: true,
-    isOverflowing: false,
-    scrollToBottom: vi.fn(),
-  }),
-}))
-
-vi.mock("@/components/chat/hooks/useViewportAnchor", () => ({
-  useViewportAnchor: () => ({
-    captureViewportAnchor: vi.fn(),
-    restoreViewportAnchor: vi.fn(),
-  }),
 }))
 
 vi.mock("@/components/chat/hooks/useVirtualizedChatEntries", () => ({
@@ -265,6 +250,7 @@ describe("VirtualizedMessageList", () => {
       />,
     )
 
+    mockScrollToIndex.mockClear()
     const result = ref.current!.scrollToMessageId("msg-1")
     expect(result).toBe(true)
     expect(mockScrollToIndex).toHaveBeenCalledTimes(1)

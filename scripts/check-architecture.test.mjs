@@ -167,3 +167,40 @@ test("rejects stale, malformed, and overlapping ledger entries", () => {
   assert.match(failures, /both classified and baselined/);
   assert.match(failures, /stale architecture baseline path/);
 });
+
+test("enforces runtime-neutral framework package imports", () => {
+  const rejected = audit({
+    "packages/agent-ui-core/src/core.ts": 'import React from "react";\nexport const core = React;\n',
+    "packages/agent-ui-react/src/view.tsx": [
+      'import { create } from "zustand";',
+      'import { product } from "../../web/src/ui/product";',
+      'import "./view.css";',
+      'export const view = [create, product];',
+    ].join("\n"),
+    "packages/web/src/ui/product.ts": "export const product = true;\n",
+  }, {});
+
+  assert.match(
+    rejected.failures.join("\n"),
+    /agent-ui-core.*react[\s\S]*agent-ui-react.*zustand[\s\S]*agent-ui-react.*packages\/web[\s\S]*agent-ui-react.*\.css/,
+  );
+
+  const acceptedFiles = {
+    "packages/agent-ui-core/src/model.ts": "export type Entry = { id: string };\n",
+    "packages/agent-ui-core/src/index.ts": 'export type { Entry } from "./model";\n',
+    "packages/agent-ui-react/src/index.tsx": [
+      'import * as React from "react";',
+      'import { useVirtualizer } from "@tanstack/react-virtual";',
+      'import type { Entry } from "@openchamber/agent-ui-core";',
+      'export const value: Entry | null = React.useMemo(() => null, []);',
+      'void useVirtualizer;',
+    ].join("\n"),
+  };
+  const accepted = audit(acceptedFiles, {
+    baseline: {
+      "packages/agent-ui-react/src/index.tsx": { effectiveLines: 5, imports: 3 },
+    },
+  });
+
+  assert.deepEqual(accepted.failures, []);
+});

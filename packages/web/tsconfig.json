@@ -19,6 +19,8 @@
       "@web/*": ["./src/*"],
       "@openchamber/web/*": ["./src/*"],
       "@contracts/*": ["./server/src/contracts/*"],
+      "@openchamber/agent-ui-react": ["../agent-ui-react/src/index.ts"],
+      "@openchamber/agent-ui-core": ["../agent-ui-core/src/index.ts"],
       "@openchamber/session-state": ["../session-state/src/index.ts"]
     }
   },

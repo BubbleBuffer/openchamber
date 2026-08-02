@@ -19,6 +19,9 @@ run_step "architecture" bun run architecture:check
 run_step "network contracts" bun run check:contracts
 run_step "documentation" bun run docs:validate
 run_step "script tests" bun run test:scripts
+run_step "agent UI core tests" bun run --cwd packages/agent-ui-core test
+run_step "agent UI React tests" bun run --cwd packages/agent-ui-react test
+run_step "agent UI package artifacts" bun run verify:agent-ui-packages
 run_step "session-state tests" bun run --cwd packages/session-state test
 run_step "web unit/contract tests" bun run --cwd packages/web test
 run_step "store tests" bun run test:stores

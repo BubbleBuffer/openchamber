@@ -14,6 +14,8 @@
     "paths": {
       "@/*": ["../packages/web/src/ui/*"],
       "@contracts/*": ["../packages/web/server/src/contracts/*"],
+      "@openchamber/agent-ui-react": ["../packages/agent-ui-react/src/index.ts"],
+      "@openchamber/agent-ui-core": ["../packages/agent-ui-core/src/index.ts"],
       "@openchamber/session-state": ["../packages/session-state/src/index.ts"],
       "@openchamber/web": ["../packages/web/server/src/index.ts"],
       "@tanstack/react-virtual": ["./react/mocks/tanstack-react-virtual.ts"]
