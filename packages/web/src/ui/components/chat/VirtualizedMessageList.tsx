@@ -1,16 +1,15 @@
 import React from 'react';
+import { AgentTimeline } from '@bubblebuffer/agent-ui-react';
+import type { AgentTimelineHandle } from '@bubblebuffer/agent-ui-react';
 import type { AnimationHandlers, ContentChangeReason } from '@/components/chat/timeline/types';
 import type { ChatMessageEntry } from './lib/turns/types';
 import type { StreamPhase } from './message/types';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import { useChatRenderingStore } from '@/stores/useChatRenderingStore';
 import { FadeInDisabledProvider } from './message/FadeInOnReveal';
 import { streamPerfCount } from '@/stores/utils/streamDebug';
 import { resolveMessageRole } from './message-list/normalizeMessages';
 import type { RenderEntry } from './message-list/MessageListEntry';
 import { MessageListEntry } from './message-list/MessageListEntry';
-import { useChatScrollManager } from './hooks/useChatScrollManager';
-import { useViewportAnchor } from './hooks/useViewportAnchor';
 import { useVirtualizedChatEntries } from './hooks/useVirtualizedChatEntries';
 import { useMessageEntryUiState } from './message-list/useMessageEntryUiState';
 import { useMessageAnimationState } from './message-list/useMessageAnimationState';
@@ -82,6 +81,7 @@ const VirtualizedMessageList = React.forwardRef<ChatViewerHandle, VirtualizedMes
   ) => {
     streamPerfCount('ui.virtual_list.render');
     void _disableStaging;
+    const timelineRef = React.useRef<AgentTimelineHandle>(null);
     const stickyUserHeader = useChatRenderingStore((state) => state.stickyUserHeader);
     const chatRenderMode = useChatRenderingStore((state) => state.chatRenderMode);
     const activityRenderMode = useChatRenderingStore((state) => state.activityRenderMode);
@@ -118,29 +118,6 @@ const VirtualizedMessageList = React.forwardRef<ChatViewerHandle, VirtualizedMes
       },
       [allEntries],
     );
-
-    const virtualizer = useVirtualizer({
-      count: allEntries.length,
-      getScrollElement: () => scrollRef.current,
-      estimateSize: estimateEntrySize,
-      overscan: OVERSCAN,
-    });
-
-    const scrollManager = useChatScrollManager({
-      virtualizer,
-      entryCount: allEntries.length,
-      isActive: true,
-      loadMore: stableOnLoadOlder,
-      canLoadMore: turnStart > 0 || hasMoreAbove,
-      isLoadingOlder,
-      onScrollStateChange,
-    });
-
-    React.useEffect(() => {
-      onAtBottomChange?.(scrollManager.isAtBottom);
-    }, [scrollManager.isAtBottom, onAtBottomChange]);
-
-    const { captureViewportAnchor, restoreViewportAnchor } = useViewportAnchor(scrollRef);
 
     const defaultActivityExpanded = activityRenderMode === 'summary';
 
@@ -187,7 +164,8 @@ const VirtualizedMessageList = React.forwardRef<ChatViewerHandle, VirtualizedMes
         const turnElement = container.querySelector<HTMLElement>(`[data-turn-id="${turnId}"]`);
         if (turnElement) { turnElement.scrollIntoView({ behavior, block: 'nearest' }); return true; }
         const index = allEntries.findIndex((e) => e.kind === 'turn' && e.turn.turnId === turnId);
-        if (index !== -1) { virtualizer.scrollToIndex(index, { behavior, align: 'start' }); return true; }
+        const entry = allEntries[index];
+        if (entry) return timelineRef.current?.scrollToKey(entry.key, { behavior, align: 'start' }) ?? false;
         return false;
       },
       scrollToMessageId: (messageId: string, options?: { behavior?: ScrollBehavior }) => {
@@ -197,54 +175,52 @@ const VirtualizedMessageList = React.forwardRef<ChatViewerHandle, VirtualizedMes
         const messageElement = container.querySelector<HTMLElement>(`[data-message-id="${messageId}"]`);
         if (messageElement) { messageElement.scrollIntoView({ behavior, block: 'nearest' }); return true; }
         const index = messageIndexMap.get(messageId);
-        if (typeof index === 'number') { virtualizer.scrollToIndex(index, { behavior, align: 'start' }); return true; }
+        const entry = typeof index === 'number' ? allEntries[index] : undefined;
+        if (entry) return timelineRef.current?.scrollToKey(entry.key, { behavior, align: 'start' }) ?? false;
         return false;
       },
       captureViewportAnchor: () => {
-        const anchor = captureViewportAnchor();
+        const anchor = timelineRef.current?.captureViewportAnchor();
         if (!anchor) return null;
-        return { entryKey: anchor.entryKey, offsetTop: anchor.offsetFromTop };
+        return anchor;
       },
       restoreViewportAnchor: (anchor: { entryKey: string; offsetTop: number }) => {
-        return restoreViewportAnchor({ entryKey: anchor.entryKey, offsetFromTop: anchor.offsetTop });
+        return timelineRef.current?.restoreViewportAnchor(anchor) ?? false;
       },
-    }), [allEntries, messageIndexMap, virtualizer, captureViewportAnchor, restoreViewportAnchor, scrollRef]);
+    }), [allEntries, messageIndexMap, scrollRef]);
 
     const disableFadeIn = false;
 
     return (
       <FadeInDisabledProvider disabled={disableFadeIn}>
-        <LoadOlderBoundary
-          isLoadingOlder={isLoadingOlder}
-          hasMoreAbove={hasMoreAbove}
-          turnStart={turnStart}
-          onLoadEarlier={stableOnLoadOlder}
-        />
-
-        <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
-          {virtualizer.getVirtualItems().map((virtualItem) => {
-            const entry = allEntries[virtualItem.index];
-            if (!entry) return null;
+        <AgentTimeline
+          ref={timelineRef}
+          entries={allEntries}
+          scrollRef={scrollRef}
+          estimateSize={estimateEntrySize}
+          overscan={OVERSCAN}
+          hasMoreBefore={turnStart > 0 || hasMoreAbove}
+          isLoadingBefore={isLoadingOlder}
+          onLoadBefore={stableOnLoadOlder}
+          onScrollStateChange={onScrollStateChange}
+          onAtBottomChange={onAtBottomChange}
+          leadingContent={(
+            <LoadOlderBoundary
+              isLoadingOlder={isLoadingOlder}
+              hasMoreAbove={hasMoreAbove}
+              turnStart={turnStart}
+              onLoadEarlier={stableOnLoadOlder}
+            />
+          )}
+          renderEntry={(entry) => {
             const isStreaming = entry === trailingStreamingEntry;
             return (
-              <div
-                key={virtualItem.key}
-                data-index={virtualItem.index}
-                ref={virtualizer.measureElement}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  transform: `translateY(${virtualItem.start}px)`,
-                  width: '100%',
-                }}
-              >
-                <div data-turn-entry={entry.key}>
-                  {renderEntry(entry, isStreaming)}
-                </div>
+              <div data-turn-entry={entry.key}>
+                {renderEntry(entry, isStreaming)}
               </div>
             );
-          })}
-        </div>
+          }}
+        />
       </FadeInDisabledProvider>
     );
   },

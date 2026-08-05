@@ -233,6 +233,7 @@ function validateBaseline(policy, baseline, failures) {
   }
 }
 
+
 export function createArchitectureSnapshot({
   root = process.cwd(),
   policy = DEFAULT_ARCHITECTURE_POLICY,

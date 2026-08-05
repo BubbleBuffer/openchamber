@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@clack/prompts": "^1.3.0",
+    "@bubblebuffer/agent-ui-react": "0.1.0-alpha.1",
     "@octokit/rest": "^22.0.1",
     "@opencode-ai/sdk": "^1.14.39",
     "@openchamber/session-state": "1.9.11",
