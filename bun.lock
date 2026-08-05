@@ -92,37 +92,6 @@
         "vite": "^7.3.2",
       },
     },
-    "packages/agent-ui-core": {
-      "name": "@openchamber/agent-ui-core",
-      "version": "0.0.0",
-      "devDependencies": {
-        "@types/bun": "^1.3.14",
-        "typescript": "~5.8.3",
-      },
-    },
-    "packages/agent-ui-react": {
-      "name": "@openchamber/agent-ui-react",
-      "version": "0.0.0",
-      "dependencies": {
-        "@openchamber/agent-ui-core": "0.0.0",
-        "@tanstack/react-virtual": "^3.13.24",
-      },
-      "devDependencies": {
-        "@testing-library/react": "^16.3.2",
-        "@types/react": "^19.2.14",
-        "@types/react-dom": "^19.2.3",
-        "@vitejs/plugin-react": "^5.2.0",
-        "happy-dom": "^15.11.7",
-        "react": "^19.2.6",
-        "react-dom": "^19.2.6",
-        "typescript": "~5.8.3",
-        "vitest": "^4.1.5",
-      },
-      "peerDependencies": {
-        "react": "^18.0.0 || ^19.0.0",
-        "react-dom": "^18.0.0 || ^19.0.0",
-      },
-    },
     "packages/session-state": {
       "name": "@openchamber/session-state",
       "version": "1.9.11",
@@ -141,6 +110,7 @@
         "openchamber": "./bin/cli.js",
       },
       "dependencies": {
+        "@bubblebuffer/agent-ui-react": "0.1.0-alpha.1",
         "@clack/prompts": "^1.3.0",
         "@octokit/rest": "^22.0.1",
         "@openchamber/session-state": "1.9.11",
@@ -192,7 +162,6 @@
         "@fontsource/ibm-plex-sans": "^5.2.8",
         "@ibm/plex": "^6.4.1",
         "@lezer/highlight": "^1.2.3",
-        "@openchamber/agent-ui-react": "workspace:*",
         "@pierre/diffs": "1.1.0-beta.13",
         "@radix-ui/react-collapsible": "^1.1.12",
         "@radix-ui/react-dialog": "^1.1.15",
@@ -502,6 +471,10 @@
 
     "@base-ui/utils": ["@base-ui/utils@0.2.8", "", { "dependencies": { "@babel/runtime": "^7.29.2", "@floating-ui/utils": "^0.2.11", "reselect": "^5.1.1", "use-sync-external-store": "^1.6.0" }, "peerDependencies": { "@types/react": "^17 || ^18 || ^19", "react": "^17 || ^18 || ^19", "react-dom": "^17 || ^18 || ^19" }, "optionalPeers": ["@types/react"] }, "sha512-jvOi+c+ftGlGotNcKnzPVg2IhCaDTB6/6R3JeqdjdXktuAJi3wKH9T7+svuaKh1mmfVU11UWzUZVH74JDfi/wQ=="],
 
+    "@bubblebuffer/agent-ui-core": ["@bubblebuffer/agent-ui-core@0.1.0-alpha.1", "", {}, "sha512-9UerKK2UPN+9FtgtVaQlDkSon/vquLDpXKp9+YF657nhegKHaYtHpBSF7eCOmfJ0ZHODNwhHw6kJibhCZhTMIg=="],
+
+    "@bubblebuffer/agent-ui-react": ["@bubblebuffer/agent-ui-react@0.1.0-alpha.1", "", { "dependencies": { "@bubblebuffer/agent-ui-core": "0.1.0-alpha.1", "@tanstack/react-virtual": "^3.13.24" }, "peerDependencies": { "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" } }, "sha512-t9rrynq0cuYN39lv5kVhZPkTJxFRLQSPu3SSf7cUdJGjCmXDutTmYsmkjqwsCr3WeJUpgui4iH7pYk0g2nXJEA=="],
+
     "@clack/core": ["@clack/core@1.3.0", "", { "dependencies": { "fast-wrap-ansi": "^0.2.0", "sisteransi": "^1.0.5" } }, "sha512-xJPHpAmEQUBrXSLx0gF+q5K/IyihXpsHZcha+jB+tyahsKRK3Dxo4D0coZDewHo12NhiuzC3dTtMPbm53GEAAA=="],
 
     "@clack/prompts": ["@clack/prompts@1.3.0", "", { "dependencies": { "@clack/core": "1.3.0", "fast-string-width": "^3.0.2", "fast-wrap-ansi": "^0.2.0", "sisteransi": "^1.0.5" } }, "sha512-GgcWwRCs/xPtaqlMy8qRhPnZf9vlWcWZNHAitnVQ3yk7JmSralSiq5q07yaffYE8SogtDm7zFeKccx1QNVARpw=="],
@@ -785,10 +758,6 @@
     "@octokit/rest": ["@octokit/rest@22.0.1", "", { "dependencies": { "@octokit/core": "^7.0.6", "@octokit/plugin-paginate-rest": "^14.0.0", "@octokit/plugin-request-log": "^6.0.0", "@octokit/plugin-rest-endpoint-methods": "^17.0.0" } }, "sha512-Jzbhzl3CEexhnivb1iQ0KJ7s5vvjMWcmRtq5aUsKmKDrRW6z3r84ngmiFKFvpZjpiU/9/S6ITPFRpn5s/3uQJw=="],
 
     "@octokit/types": ["@octokit/types@16.0.0", "", { "dependencies": { "@octokit/openapi-types": "^27.0.0" } }, "sha512-sKq+9r1Mm4efXW1FCk7hFSeJo4QKreL/tTbR0rz/qx/r1Oa2VV83LTA/H/MuCOX7uCIJmQVRKBcbmWoySjAnSg=="],
-
-    "@openchamber/agent-ui-core": ["@openchamber/agent-ui-core@workspace:packages/agent-ui-core"],
-
-    "@openchamber/agent-ui-react": ["@openchamber/agent-ui-react@workspace:packages/agent-ui-react"],
 
     "@openchamber/session-state": ["@openchamber/session-state@workspace:packages/session-state"],
 
